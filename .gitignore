@@ -1,3 +1,4 @@
 argos3-examples/build
+cmake-build-debug
 argos3-examples/cmake-build-debug
 .idea

@@ -10,17 +10,18 @@
 /****************************************/
 
 PiPuckHugo::PiPuckHugo() :
-   m_pcWheels(NULL),
-   m_pcRangeFindersSensor(NULL),
-   m_pcRadiosActuator(NULL),
-   m_pcRadiosSensor(NULL),
+        m_pcWheels(NULL),
+        m_pcRangeFindersSensor(NULL),
+        m_pcRadiosActuator(NULL),
+        m_pcRadiosSensor(NULL),
+        agentObject(NULL),
 //   m_pcRangeAndBearingActuator(NULL),
 //   m_pcRangeAndBearingSensor(NULL),
    m_cAlpha(10.0f),
-   m_fDelta(0.5f),
-   m_fWheelVelocity(2.5f),
-   m_cGoStraightAngleRange(-ToRadians(m_cAlpha),
-                           ToRadians(m_cAlpha)) {}
+        m_fDelta(0.5f),
+        m_fWheelVelocity(2.5f),
+        m_cGoStraightAngleRange(-ToRadians(m_cAlpha),
+                           ToRadians(m_cAlpha)){}
 
 /****************************************/
 /****************************************/
@@ -51,9 +52,7 @@ void PiPuckHugo::Init(TConfigurationNode& t_node) {
    m_pcWheels    = GetActuator<CCI_PiPuckDifferentialDriveActuator>("pipuck_differential_drive");
    m_pcRadiosActuator = GetActuator<CCI_SimpleRadiosActuator>("simple_radios");
    m_pcRadiosSensor = GetSensor<CCI_SimpleRadiosSensor>("simple_radios");
-//   m_pcRangeAndBearingActuator = GetActuator<CCI_RangeAndBearingActuator>("range_and_bearing");
-////   m_pcDistanceScannerActuator = GetActuator<CCI_PiPuckDistanceScannerActuator>("pipuck_distance_scanner");
-//   m_pcRangeAndBearingSensor = GetSensor<CCI_RangeAndBearingSensor>("range_and_bearing");
+   m_pcRangeFindersSensor = GetSensor<CCI_PiPuckRangefindersSensor>("pipuck_rangefinders");
    /*
     * Parse the configuration file
     *
@@ -65,49 +64,64 @@ void PiPuckHugo::Init(TConfigurationNode& t_node) {
    m_cGoStraightAngleRange.Set(-ToRadians(m_cAlpha), ToRadians(m_cAlpha));
    GetNodeAttributeOrDefault(t_node, "delta", m_fDelta, m_fDelta);
    GetNodeAttributeOrDefault(t_node, "velocity", m_fWheelVelocity, m_fWheelVelocity);
+
+   agentObject = new agent(this->m_strId);
+   agentObject->setWifi(radio(m_pcRadiosActuator, m_pcRadiosSensor));
+
+    L = luaL_newstate();
+    luaL_openlibs(L);
+
+    // Create a new table for rangefinders
+    lua_newtable(L);
+    lua_setglobal(L, "rangefinders");
+
+    // Create subtables for each rangefinder (1-based indexing)
+    lua_getglobal(L, "rangefinders");
+    for (int i = 1; i <= 3; ++i) {
+        lua_newtable(L);
+        lua_rawseti(L, -2, i);
+    }
+    lua_pop(L, 1);
+
+
 }
 
-void PiPuckHugo::BroadcastMessage(std::string message) {
-    UInt8* buff = (UInt8 *) message.c_str();
-//        for (char c : message) {
-//            cMessage << static_cast<UInt8>(c);
-//            RLOG << "cmessage size: " << cMessage.Size() << std::endl;
-//        }
-    CByteArray cMessage = CByteArray(buff,message.size()+1);
-    m_pcRadiosActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
-}
+//void PiPuckHugo::BroadcastMessage(std::string message) {
+//    UInt8* buff = (UInt8 *) message.c_str();
+////        for (char c : message) {
+////            cMessage << static_cast<UInt8>(c);
+////            RLOG << "cmessage size: " << cMessage.Size() << std::endl;
+////        }
+//    CByteArray cMessage = CByteArray(buff,message.size()+1);
+//    m_pcRadiosActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
+//}
 
 /****************************************/
 /****************************************/
 int i = 0;
 
 void PiPuckHugo::ControlStep() {
-//    std::vector<CCI_SimpleRadiosActuator::SInterface> interfaces = m_pcRadiosActuator->GetInterfaces();
-//    RLOG << "Interface id: " << interfaces[0].Id << std::endl;
-////    lua_State *L;
-////    m_pcRadiosActuator->CreateLuaState(L);
-////
-////    CCI_SimpleRadiosActuator::LuaSendMessage(L);
-//
-//    CByteArray cMessage;
-//    cMessage.AddBuffer((UInt8*)"Hello" + toascii(i++), 5);
-//    if (i==0) {
+    RLOG << agentObject->position->toString() << std::endl;
+    agentObject->broadcastMessage("Hello from agent " + agentObject->getId());
+    agentObject->readMessages();
+    std::vector<std::string> messages = agentObject->getMessages();
 
-//    }
-//    i++;
-    BroadcastMessage("Hello");
-//    std::vector<CByteArray> messages = interfaces[0].Messages;
-//    messages.insert(messages.end(), message);
-//    RLOG << "Message size: " << messages.size() << std::endl;
-////    CByteArray byteArray = new CByteArray()
-////    messages.insert(messages.begin(), CByteArray(charStr, charStr + message.size()));
-//
-    std::vector<CCI_SimpleRadiosSensor::SInterface> sensorInterfaces = m_pcRadiosSensor->GetInterfaces();
-    std::vector<CByteArray> sensorMessages = sensorInterfaces[0].Messages;
-//
-    RLOG << "Sensor message size: " << sensorMessages.size() << std::endl;
-    for (int i = 0; i < sensorMessages.size(); i++) {
-        RLOG << "Sensor message: " << sensorMessages[i].ToCArray() << std::endl;
+    if(i==0) {
+        // Call the function to populate the Lua state
+        lua_getglobal(L, "rangefinders");
+        m_pcRangeFindersSensor->ReadingsToLuaState(L);
+        lua_pop(L, 1);
+        // Retrieve proximity values
+        lua_getglobal(L, "rangefinders");
+        for (int i = 1; i <= 3; ++i) {
+            lua_rawgeti(L, -1, i);
+            lua_getfield(L, -1, "proximity");
+            double proximity = lua_tonumber(L, -1);
+            lua_pop(L, 2); // pop proximity and the subtable
+            RLOG << "Rangefinder " << i << " proximity: " << proximity << std::endl;
+        }
+        lua_pop(L, 1); // pop rangefinders
+        lua_close(L);
     }
 
 //    m_pcRangeAndBearingActuator->SetData(message);

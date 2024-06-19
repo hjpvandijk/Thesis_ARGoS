@@ -1,9 +1,7 @@
 include_directories(${ARGOS_QTOPENGL_INCLUDE_DIRS})
 add_library(radios_loop_functions MODULE 
-  radios_loop_functions.h
-#  radios_qtuser_functions.h
-  radios_loop_functions.cpp
-#  radios_qtuser_functions.cpp)
+    radios_loop_functions.h
+    radios_loop_functions.cpp
 )
 
 target_link_libraries(radios_loop_functions

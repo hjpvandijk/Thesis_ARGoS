@@ -37,4 +37,9 @@ add_subdirectory(controllers)
 add_subdirectory(loop_functions)
 
 # Descend into the embedding directory
-add_subdirectory(embedding)
+#add_subdirectory(embedding)
+
+add_subdirectory(agent_implementation)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -m64")

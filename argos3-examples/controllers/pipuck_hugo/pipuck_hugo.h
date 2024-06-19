@@ -34,7 +34,7 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_actuator.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_sensor.h>
-
+#include "agent_implementation/agent.h"
 
 
 /*
@@ -88,6 +88,10 @@ public:
    virtual void Destroy() {}
 
    void BroadcastMessage(std::string message);
+//    static const int nAgents = 2;
+//    agent agents[nAgents];
+    agent *agentObject;
+
 
 private:
 
@@ -101,6 +105,7 @@ private:
    CCI_PiPuckRangefindersSensor* m_pcRangeFindersSensor;
    CCI_PiPuckDifferentialDriveSensor* m_pcDiffDriveSensor;
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
+
 
    /*
     * The following variables are used as parameters for the
@@ -126,6 +131,7 @@ private:
     * It is set to [-alpha,alpha]. */
    CRange<CRadians> m_cGoStraightAngleRange;
 
+    lua_State *L;
 };
 
 #endif

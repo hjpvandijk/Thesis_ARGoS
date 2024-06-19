@@ -33,43 +33,8 @@
     <!-- *************** -->
     <controllers>
 
-        <!--
-             Here you list the controllers to be used in the experiment.
-             The XML tag is set by the REGISTER_CONTROLLER(class, "tag") macro.
-             You find it in the .cpp file of your controller.
-             For this example, the macro is called in
-             controllers/footbot_diffusion.cpp:100.
-        -->
+        <lua_controller id="pipuck_hugo_lua">
 
-        <!--
-            The attributes are:
-            - id: a unique a identifier for this controller, to be used in the
-              subsequent <arena> section to say which robots use which
-              controller
-            - library: the path to the compiled library containing you
-              controller.
-        -->
-        <pipuck_hugo_controller id="ppc"
-                                      library="build/controllers/pipuck_hugo/libpipuck_hugo">
-            <!--
-                The <actuators> section contains a list of the actuatocdrs used by
-                this controller.
-                If you forget a to mention an actuator here and then request it
-                in the controller, an error occurs.
-                For a list of the possible actuators, type at the command prompt:
-                $ launch_argos -q actuators
-
-                Multiple implementations of an actuator are possible. To
-                identify which one you want to use, pass it in the
-                'implementation' attribute below. When you type the 'argos3 -q'
-                command, the implementation is in the square brackets following
-                the name of the device:
-
-                $ argos3 -q actuators
-                ...
-                footbot_wheels [default]
-                ...
-            -->
             <actuators>
 <!--                <differential_steering implementation="default" />-->
 <!--                <footbot_distance_scanner implementation="default" />-->
@@ -77,31 +42,17 @@
                 <simple_radios implementation="default"/>
 <!--                <range_and_bearing implementation="default" medium="rab"/>-->
             </actuators>
-            <!--
-                The <sensors> section contains a list of the sensors used by
-                this controller.
-                If you forget a to mention a sensor here and then request it in
-                the controller, an error occurs.
-                For a list of the possible sensors, type at the command prompt:
-                $ argos3 -q sensors
-            -->
+
             <sensors>
 <!--                <footbot_proximity implementation="default" show_rays="true" />-->
 <!--                <footbot_distance_scanner implementation="rot_z_only" show_rays="false" />-->
-                <pipuck_rangefinders implementation="default" show_rays="false"/>
-                <simple_radios implementation="default" show_rays="true"/>
+                <pipuck_rangefinders implementation="default" show_rays="true"/>
+                <simple_radios implementation="default" show_rays="false"/>
 <!--                <range_and_bearing implementation="default" medium="rab"/>-->
             </sensors>
-            <!--
-                The <params> section is passed as-is to the controller's Init()
-                function.
-                The user, writing the controller, defines how it is organized.
-                To understand what these parameters are for, check the
-                controller's header file in
-                controllers/footbot_diffusion/footbot_diffusion.h.
-            -->
-            <params alpha="1" delta="0.01" velocity="20" />
-        </pipuck_hugo_controller>
+
+            <params script="build/controllers/pipuck_hugo_lua/pipuck_hugo.lua" alpha="1" delta="0.01" velocity="20"/>
+        </lua_controller>
 
     </controllers>
 
@@ -112,8 +63,8 @@
 <!--                    label="trajectory_loop_functions" />-->
 <!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
 <!--                        label="radios_loop_functions" />-->
-    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"
-                        label="position_loop_functions" />
+    <loop_functions library="build/loop_functions/position_loop_functions_lua/libposition_loop_functions_lua"
+                        label="position_loop_functions_lua" />
 
 
     <!-- *********************** -->
@@ -134,21 +85,21 @@
 
         $ argos3 -q box
     -->
-    <arena size="12,12,1" center="0, 0, 0">
+    <arena size="3, 3, 1" center="0,0,0.5">
 
         <!-- Place four boxes in a square to delimit the arena -->
-<!--        <box id="wall_north" size="2,0.1,0.5" movable="false">-->
-<!--            <body position="0,1,0" orientation="0,0,0" />-->
-<!--        </box>-->
-<!--        <box id="wall_south" size="2,0.1,0.5" movable="false">-->
-<!--            <body position="0,-1,0" orientation="0,0,0" />-->
-<!--        </box>-->
-<!--        <box id="wall_east" size="0.1,2,0.5" movable="false">-->
-<!--            <body position="1,0,0" orientation="0,0,0" />-->
-<!--        </box>-->
-<!--        <box id="wall_west" size="0.1,2,0.5" movable="false">-->
-<!--            <body position="-1,0,0" orientation="0,0,0" />-->
-<!--        </box>-->
+        <box id="wall_north" size="2,0.1,0.5" movable="false">
+            <body position="0,1,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_south" size="2,0.1,0.5" movable="false">
+            <body position="0,-1,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_east" size="0.1,2,0.5" movable="false">
+            <body position="1,0,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_west" size="0.1,2,0.5" movable="false">
+            <body position="-1,0,0" orientation="0,0,0" />
+        </box>
 
 <!--        &lt;!&ndash; Place a foot-bot in the origin and bind it to the controller &ndash;&gt;-->
 <!--        <foot-bot id="fb_0">-->
@@ -157,8 +108,8 @@
 <!--        </foot-bot>-->
 
         <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="5.0">
-            <body position="0,5,0" orientation="0,0,0"/>
-            <controller config="ppc"/>
+            <body position="0,0.5,0" orientation="0,0,0"/>
+            <controller config="pipuck_hugo_lua"/>
             <devices>
 <!--            <simple_radios>-->
 <!--                &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;-->
@@ -169,8 +120,8 @@
         </pipuck>
 
         <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="10.0">
-            <body position="0,-4,0" orientation="0,0,0"/>
-            <controller config="ppc"/>
+            <body position="0,-0.5,0" orientation="0,0,0"/>
+            <controller config="pipuck_hugo_lua"/>
 <!--            <devices>-->
 <!--                <simple_radios>-->
 <!--                    &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;-->
