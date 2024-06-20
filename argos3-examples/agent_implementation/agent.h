@@ -8,68 +8,101 @@
 #include "coordinate.h"
 #include "radio.h"
 #include <string>
-
+#include <argos3/core/utility/math/vector2.h>
+#include <argos3/core/utility/math/quaternion.h>
+#include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 
 class agent {
-    public:
-        std::string id{};
-        coordinate *position{};
-        double speed{};
-        radio wifi;
+public:
+    std::string id{};
+    coordinate position;
+    argos::CQuaternion heading;
+    argos::CQuaternion targetHeading;
+    double speed{};
+    radio wifi;
+    double lastRangeReading = 2;
+
+    std::map<std::string, coordinate> agentLocations;
+
+    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive;
 
 
-        //Distance sensor
-        //Infrared sensor
+    //Distance sensor
+    //Infrared sensor
+    //DIfferential drive
 
-        //Some sort of map or grid to keep track of the environment
-        //Some sort of list of agents to keep track of other agents
+    //Force vector deciding the next position
+    argos::CVector2 force_vector;
+
+    //Some sort of map or grid to keep track of the environment
+    //Some sort of list of agents to keep track of other agents
 
 
-        agent() {}
 
-        explicit agent(std::string id);
+    agent() {}
 
-        agent(std::string id, coordinate *position);
+    explicit agent(std::string id);
 
-        void setPosition(double new_x, double new_y) const;
+    agent(std::string id, coordinate position);
 
-        void setPosition(coordinate *position);
+    void setPosition(double new_x, double new_y);
 
-        coordinate *getPosition() const;
+    void setPosition(coordinate position);
 
-        std::string getId() const;
+    void setHeading(argos::CQuaternion new_heading);
 
-        void setId(std::string id);
+    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive);
 
-        void setSpeed(double speed);
+    coordinate getPosition();
 
-        double getSpeed() const;
+    std::string getId() const;
 
-        radio getWifi() const;
+    void setId(std::string id);
 
-        void setWifi(radio wifi);
+    void setSpeed(double speed);
 
-        void print();
+    double getSpeed() const;
 
-        void updateMap();
+    radio getWifi() const;
 
-        void readDistanceSensor();
+    void setWifi(radio wifi);
 
-        void readInfraredSensor();
+    void print();
 
-        void calculateNextPosition();
+    void updateMap();
 
-        void broadcastMessage(std::string message);
+    void setLastRangeReading(double new_range);
 
-        void readMessages();
+    void readDistanceSensor();
 
-        std::vector<std::string> getMessages();
+    void readInfraredSensor();
 
+    void calculateNextPosition();
+
+    void doStep();
+
+
+    void broadcastMessage(std::string message);
+
+    void checkMessages();
+
+    void parseMessages();
+
+
+    std::vector<std::string> getMessages();
 
 private:
+    argos::CQuaternion calculateObjectAvoidanceQT();
+
+    argos::CQuaternion calculateAgentAvoidanceQT();
+
     std::vector<std::string> *messages;
 
-    };
+    argos::CQuaternion averageQuaternions(std::vector<argos::CQuaternion> multipleRotations);
+
+
+        std::string GetId() const;
+};
 
 
 #endif //THESIS_ARGOS_AGENT_H

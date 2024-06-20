@@ -34,6 +34,7 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_actuator.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_sensor.h>
+#include <argos3/plugins/robots/generic/control_interface/ci_positioning_sensor.h>
 #include "agent_implementation/agent.h"
 
 
@@ -104,6 +105,7 @@ private:
    CCI_SimpleRadiosSensor *m_pcRadiosSensor;
    CCI_PiPuckRangefindersSensor* m_pcRangeFindersSensor;
    CCI_PiPuckDifferentialDriveSensor* m_pcDiffDriveSensor;
+   CCI_PositioningSensor* m_pcPositioningSensor;
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
 
 

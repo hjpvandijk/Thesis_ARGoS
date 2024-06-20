@@ -49,6 +49,8 @@
                 <pipuck_rangefinders implementation="default" show_rays="true"/>
                 <simple_radios implementation="default" show_rays="false"/>
 <!--                <range_and_bearing implementation="default" medium="rab"/>-->
+                <positioning implementation="default" />
+
             </sensors>
 
             <params script="build/controllers/pipuck_hugo_lua/pipuck_hugo.lua" alpha="1" delta="0.01" velocity="20"/>

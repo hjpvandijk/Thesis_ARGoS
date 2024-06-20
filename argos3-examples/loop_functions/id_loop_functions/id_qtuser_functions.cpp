@@ -4,13 +4,13 @@
 /****************************************/
 
 CIDQTUserFunctions::CIDQTUserFunctions() {
-   RegisterUserFunction<CIDQTUserFunctions,CFootBotEntity>(&CIDQTUserFunctions::Draw);
+   RegisterUserFunction<CIDQTUserFunctions,CPiPuckEntity>(&CIDQTUserFunctions::Draw);
 }
 
 /****************************************/
 /****************************************/
 
-void CIDQTUserFunctions::Draw(CFootBotEntity& c_entity) {
+void CIDQTUserFunctions::Draw(CPiPuckEntity& c_entity) {
    /* The position of the text is expressed wrt the reference point of the footbot
     * For a foot-bot, the reference point is the center of its base.
     * See also the description in

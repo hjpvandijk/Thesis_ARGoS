@@ -24,7 +24,7 @@
               message is displayed.
         -->
         <experiment length="0"
-                    ticks_per_second="10"
+                    ticks_per_second="60"
                     random_seed="124" />
     </framework>
 
@@ -88,9 +88,10 @@
             <sensors>
 <!--                <footbot_proximity implementation="default" show_rays="true" />-->
 <!--                <footbot_distance_scanner implementation="rot_z_only" show_rays="false" />-->
-                <pipuck_rangefinders implementation="default" show_rays="false"/>
-                <simple_radios implementation="default" show_rays="true"/>
+                <pipuck_rangefinders implementation="default" show_rays="true"/>
+                <simple_radios implementation="default" show_rays="false"/>
 <!--                <range_and_bearing implementation="default" medium="rab"/>-->
+                <positioning implementation="default" />
             </sensors>
             <!--
                 The <params> section is passed as-is to the controller's Init()
@@ -112,8 +113,10 @@
 <!--                    label="trajectory_loop_functions" />-->
 <!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
 <!--                        label="radios_loop_functions" />-->
-    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"
-                        label="position_loop_functions" />
+<!--    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"-->
+<!--                        label="position_loop_functions" />-->
+
+
 
 
     <!-- *********************** -->
@@ -134,21 +137,21 @@
 
         $ argos3 -q box
     -->
-    <arena size="12,12,1" center="0, 0, 0">
+    <arena size="10, 10, 1" center="0,0,0.5">
 
         <!-- Place four boxes in a square to delimit the arena -->
-<!--        <box id="wall_north" size="2,0.1,0.5" movable="false">-->
-<!--            <body position="0,1,0" orientation="0,0,0" />-->
-<!--        </box>-->
-<!--        <box id="wall_south" size="2,0.1,0.5" movable="false">-->
-<!--            <body position="0,-1,0" orientation="0,0,0" />-->
-<!--        </box>-->
-<!--        <box id="wall_east" size="0.1,2,0.5" movable="false">-->
-<!--            <body position="1,0,0" orientation="0,0,0" />-->
-<!--        </box>-->
-<!--        <box id="wall_west" size="0.1,2,0.5" movable="false">-->
-<!--            <body position="-1,0,0" orientation="0,0,0" />-->
-<!--        </box>-->
+        <box id="wall_north" size="9,0.1,0.5" movable="false">
+            <body position="0,4.5,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_south" size="9,0.1,0.5" movable="false">
+            <body position="0,-4.5,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_east" size="0.1,9,0.5" movable="false">
+            <body position="4.5,0,0" orientation="0,0,0" />
+        </box>
+        <box id="wall_west" size="0.1,9,0.5" movable="false">
+            <body position="-4.5,0,0" orientation="0,0,0" />
+        </box>
 
 <!--        &lt;!&ndash; Place a foot-bot in the origin and bind it to the controller &ndash;&gt;-->
 <!--        <foot-bot id="fb_0">-->
@@ -156,8 +159,8 @@
 <!--            <controller config="ppc"/>-->
 <!--        </foot-bot>-->
 
-        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="5.0">
-            <body position="0,5,0" orientation="0,0,0"/>
+        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="10.0">
+            <body position="0,0.5,0" orientation="270,0,0"/>
             <controller config="ppc"/>
             <devices>
 <!--            <simple_radios>-->
@@ -169,7 +172,7 @@
         </pipuck>
 
         <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="10.0">
-            <body position="0,-4,0" orientation="0,0,0"/>
+            <body position="0,-0.5,0" orientation="90,0,0"/>
             <controller config="ppc"/>
 <!--            <devices>-->
 <!--                <simple_radios>-->
@@ -250,9 +253,11 @@
         <qt-opengl>
 <!--            <user_functions library="build/loop_functions/trajectory_loop_functions/libtrajectory_loop_functions"-->
 <!--                            label="trajectory_qtuser_functions" />-->
+<!--            <user_functions library="build/loop_functions/id_loop_functions/libid_loop_functions"-->
+<!--                            label="id_qtuser_functions" />-->
             <camera>
                 <placements>
-                    <placement index="0" position="-6.83677,-0.0492575,7.1301" look_at="-6.14438,-0.0492575,6.40857" up="0.721522,-3.4075e-17,0.692391" lens_focal_length="65" />
+                    <placement index="0" position="-6.83677,-0.0492575,7.1301" look_at="-6.14438,-0.0492575,6.40857" up="0.721522,-3.4075e-17,0.692391" lens_focal_length="30" />
                 </placements>
             </camera>
         </qt-opengl>
