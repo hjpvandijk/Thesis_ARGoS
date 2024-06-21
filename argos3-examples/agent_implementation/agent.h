@@ -12,14 +12,15 @@
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 
-class agent {
+class Agent {
 public:
     std::string id{};
     coordinate position;
-    argos::CQuaternion heading;
-    argos::CQuaternion targetHeading;
+//    argos::CQuaternion heading;
+    argos::CRadians heading;
+    argos::CRadians targetHeading;
     double speed{};
-    radio wifi;
+    Radio wifi;
     double lastRangeReading = 2;
 
     std::map<std::string, coordinate> agentLocations;
@@ -39,17 +40,17 @@ public:
 
 
 
-    agent() {}
+    Agent() {}
 
-    explicit agent(std::string id);
+    explicit Agent(std::string id);
 
-    agent(std::string id, coordinate position);
+    Agent(std::string id, coordinate position);
 
     void setPosition(double new_x, double new_y);
 
     void setPosition(coordinate position);
 
-    void setHeading(argos::CQuaternion new_heading);
+    void setHeading(argos::CRadians new_heading);
 
     void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive);
 
@@ -63,9 +64,9 @@ public:
 
     double getSpeed() const;
 
-    radio getWifi() const;
+    Radio getWifi() const;
 
-    void setWifi(radio wifi);
+    void setWifi(Radio wifi);
 
     void print();
 
@@ -92,16 +93,17 @@ public:
     std::vector<std::string> getMessages();
 
 private:
-    argos::CQuaternion calculateObjectAvoidanceQT();
-
-    argos::CQuaternion calculateAgentAvoidanceQT();
+    argos::CVector2 calculateObjectAvoidanceVector();
+    argos::CVector2 calculateAgentAvoidanceVector();
 
     std::vector<std::string> *messages;
 
     argos::CQuaternion averageQuaternions(std::vector<argos::CQuaternion> multipleRotations);
 
 
-        std::string GetId() const;
+    std::string GetId() const;
+
+
 };
 
 

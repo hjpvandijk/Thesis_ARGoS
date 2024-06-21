@@ -160,7 +160,7 @@
 <!--        </foot-bot>-->
 
         <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="10.0">
-            <body position="0,0.5,0" orientation="270,0,0"/>
+            <body position="0,0.5,0" orientation="-45,0,0"/>
             <controller config="ppc"/>
             <devices>
 <!--            <simple_radios>-->

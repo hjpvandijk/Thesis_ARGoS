@@ -5,16 +5,16 @@
 #include <argos3/core/utility/logging/argos_log.h>
 #include "radio.h"
 
-radio::radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor) {
+Radio::Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor) {
     this->radioActuator = radioActuator;
     this->radioSensor = radioSensor;
 }
 
-void radio::broadcast_message(argos::CByteArray &message) const {
+void Radio::broadcast_message(argos::CByteArray &message) const {
     radioActuator->GetInterfaces()[0].Messages.emplace_back(message);
 }
 
-void radio::receive_messages(std::vector<std::string> *messages) const {
+void Radio::receive_messages(std::vector<std::string> *messages) const {
     messages->clear();
     std::vector<argos::CByteArray> sensorMessages = radioSensor->GetInterfaces()[0].Messages;
     for (const auto& sensorMessage : sensorMessages) {

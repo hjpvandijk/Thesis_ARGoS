@@ -91,7 +91,7 @@ public:
    void BroadcastMessage(std::string message);
 //    static const int nAgents = 2;
 //    agent agents[nAgents];
-    agent *agentObject;
+    Agent *agentObject;
 
 
 private:

@@ -66,34 +66,17 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     GetNodeAttributeOrDefault(t_node, "delta", m_fDelta, m_fDelta);
     GetNodeAttributeOrDefault(t_node, "velocity", m_fWheelVelocity, m_fWheelVelocity);
 
-    agentObject = new agent(this->m_strId);
-    agentObject->setWifi(radio(m_pcRadiosActuator, m_pcRadiosSensor));
+    agentObject = new Agent(this->m_strId);
+    agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
     agentObject->setDiffDrive(m_pcWheels);
 
 
 }
 
-//void PiPuckHugo::BroadcastMessage(std::string message) {
-//    UInt8* buff = (UInt8 *) message.c_str();
-////        for (char c : message) {
-////            cMessage << static_cast<UInt8>(c);
-////            RLOG << "cmessage size: " << cMessage.Size() << std::endl;
-////        }
-//    CByteArray cMessage = CByteArray(buff,message.size()+1);
-//    m_pcRadiosActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
-//}
-
 /****************************************/
 /****************************************/
-int i = 0;
-
 void PiPuckHugo::ControlStep() {
-//    RLOG << agentObject->position.toString() << std::endl;
-//    agentObject->broadcastMessage("Hello from agent " + agentObject->getId());
-//    agentObject->checkMessages();
-//    std::vector<std::string> messages = agentObject->getMessages();
-
     Real proxReadings[8] = {0};
     std::function<void(const CCI_PiPuckRangefindersSensor::SInterface &)> visitFn =
             [&proxReadings](const CCI_PiPuckRangefindersSensor::SInterface &sensor) {
@@ -111,7 +94,9 @@ void PiPuckHugo::ControlStep() {
     const auto position = positionSensorReading.Position;
     const auto orientation = positionSensorReading.Orientation;
     agentObject->setPosition(position.GetX(), position.GetY());
-    agentObject->setHeading(orientation);
+    CRadians zAngle, yAngle, xAngle;
+    orientation.ToEulerAngles(zAngle, yAngle, xAngle);
+    agentObject->setHeading(zAngle);
 
 //    RLOG << "Position: " << agentObject->position.x << std::endl;
 //    RLOG << "Orientation: " << agentObject->heading << std::endl;

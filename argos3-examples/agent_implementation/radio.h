@@ -9,14 +9,14 @@
 #include <argos3/plugins/robots/generic/control_interface/ci_simple_radios_sensor.h>
 
 
-class radio {
+class Radio {
 public:
     argos::CCI_SimpleRadiosActuator *radioActuator;
     argos::CCI_SimpleRadiosSensor *radioSensor;
 
-    radio() {}
+    Radio() {}
 
-    radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor);
+    Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor);
 
     void broadcast_message(argos::CByteArray &message) const;
 

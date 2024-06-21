@@ -8,281 +8,227 @@
 
 #define PROXIMITY_RANGE 2.0
 
-#define OBJECT_AVOIDANCE_WEIGHT 0.5
-#define AGENT_AVOIDANCE_WEIGHT 0.5
+#define OBJECT_AVOIDANCE_WEIGHT 1
+#define AGENT_AVOIDANCE_WEIGHT 1
 
-//agent::agent() {
-//    this->id = "";
-//    this->position = new coordinate(0, 0);
-//    this->speed = 0;
-//}
-//
-//agent::agent(){
-//    this->position = new coordinate(0, 0);
-//    this->speed = 0;
-//}
+#define AGENT_AVOIDANCE_RANGE 2.0
 
-agent::agent(std::string id){
+Agent::Agent(std::string id) {
     this->id = id;
     this->position = {0.0, 0.0};
-    this->heading = argos::CQuaternion();
-    this->targetHeading = argos::CQuaternion();
+    this->heading = argos::CRadians(0);
+    this->targetHeading = argos::CRadians(0);
     this->speed = 1;
-    this->force_vector = argos::CVector2(0,0);
+    this->force_vector = argos::CVector2(0, 1);
     this->messages = new std::vector<std::string>(0);
 }
 
-agent::agent(std::string id, coordinate position): id(id) {
-    this->position = position;
+Agent::Agent(std::string id, coordinate new_position) : id(id) {
+    this->position = new_position;
 }
 
-void agent::setPosition(double new_x, double new_y) {
-    argos::RLOG << "Setting position to: " << new_x << ", " << new_y << std::endl;
+void Agent::setPosition(double new_x, double new_y) {
     this->position = {new_x, new_y};
 }
 
 
-void agent::setPosition(coordinate new_position) {
+void Agent::setPosition(coordinate new_position) {
     this->position = new_position;
 }
 
-void agent::setHeading(argos::CQuaternion new_heading) {
+void Agent::setHeading(argos::CRadians new_heading) {
     this->heading = new_heading;
 };
 
-void agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator* diffdrive){
+void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive) {
     this->diffdrive = diffdrive;
 }
 
 
-coordinate agent::getPosition() {
+coordinate Agent::getPosition() {
     return this->position;
 }
 
-std::string agent::getId() const {
+std::string Agent::getId() const {
     return this->id;
 }
 
-std::string agent::GetId() const {
+std::string Agent::GetId() const {
     return this->id;
 }
 
-void agent::setId(std::string new_id) {
+void Agent::setId(std::string new_id) {
     this->id = new_id;
 }
 
-void agent::setSpeed(double new_speed) {
+void Agent::setSpeed(double new_speed) {
     this->speed = new_speed;
 }
 
-double agent::getSpeed() const {
+double Agent::getSpeed() const {
     return this->speed;
 }
 
 
-void agent::print() {
+void Agent::print() {
     std::cout << "Agent " << this->id << " is at position (" << this->position.x << ", " << this->position.y
               << ")" << std::endl;
 }
 
-void agent::updateMap(){
+void Agent::updateMap() {
     //Update map with new information
 }
 
-void agent::setLastRangeReading(double new_range) {
+void Agent::setLastRangeReading(double new_range) {
     this->lastRangeReading = new_range;
 }
 
-void agent::readDistanceSensor() {
+void Agent::readDistanceSensor() {
 
 }
 
-void agent::readInfraredSensor() {
+void Agent::readInfraredSensor() {
 
 }
 
-argos::CQuaternion agent::calculateObjectAvoidanceQT(){
-    //If proximity < 0.1 create a new heading opposite of the current quaternion heading
-    if(lastRangeReading < PROXIMITY_RANGE) {
-        argos::RLOG << "Object avoidance" << std::endl;
-        argos::RLOG << "Heading: " << heading << std::endl;
-        argos::RLOG << "Inverse heading: " << heading.Inverse() << std::endl;
-        return heading.Inverse();
-    } else {
-        return heading;
+/**
+ * Calculate the vector to avoid objects:
+ * If the rangefinder reading is less than the set PROXIMITY RANGE,
+ * meaning there is an object in front of the agent,
+ * create a vector in the opposite direction of the object.
+ * @return a vector pointing away from the object
+ */
+argos::CVector2 Agent::calculateObjectAvoidanceVector() {
+    if (this->lastRangeReading < PROXIMITY_RANGE) {
+        double opposite = argos::Sin(this->heading) * this->lastRangeReading;
+        double adjacent = argos::Cos(this->heading) * this->lastRangeReading;
+
+        coordinate object = {this->position.x + adjacent, this->position.y + opposite};
+
+        argos::CVector2 vectorToObject =
+                argos::CVector2(object.x, object.y)
+                - argos::CVector2(this->position.x, this->position.y);
+
+        //Reverse the vector
+        vectorToObject = vectorToObject * -1;
+
+        return vectorToObject;
     }
 
+    return argos::CVector2();
+
+
 }
 
-argos::CQuaternion agent::calculateAgentAvoidanceQT() {
-    for(auto agentLocation: agentLocations){
-//        argos::RLOG << "Agent location: " << agentLocation.second.toString() << std::endl;
-        //create a vector between this agent and the other agent
+/**
+ * Calculate the vector to avoid other agents:
+ * If the distance between other agents is less than a certain threshold,
+ * create a vector in the opposite direction of the average location of these agents.
+ * @return a vector pointing away from the average location other agents
+ */
+argos::CVector2 Agent::calculateAgentAvoidanceVector() {
+    int nAgentsWithinRange = 0;
+    coordinate averageNeighborLocation = {0, 0};
+    for (auto agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(agentLocation.second.x, agentLocation.second.y)
-                - argos::CVector2(position.x, position.y);
-        //If the distance between the agents is less than a certain threshold, create a new heading opposite of the quaternion heading between the agent position and the other agent position
-        if(vectorToOtherAgent.Length() < 2){
-            argos::CRadians angle = vectorToOtherAgent.Angle();
-//            argos::RLOG << "Angle between agents: " << ToDegrees(angle) << std::endl;
-            argos::CQuaternion agentAvoidanceHeading;
-            agentAvoidanceHeading.FromAngleAxis(angle, argos::CVector3(0,0,1));
-            agentAvoidanceHeading = agentAvoidanceHeading.Inverse();
-//            argos::RLOG << "Agent avoidance heading: " << agentAvoidanceHeading << std::endl;
-//            argos::RLOG <<"Own heading: " << heading << std::endl;
-            return agentAvoidanceHeading;
-        } else {
-            return heading;
+                - argos::CVector2(this->position.x, this->position.y);
+
+        if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) {
+            averageNeighborLocation.x += agentLocation.second.x;
+            averageNeighborLocation.y += agentLocation.second.y;
+            nAgentsWithinRange++;
         }
     }
+    //If no agents are within range, return a zero vector
+    if (nAgentsWithinRange == 0) return {0, 0};
 
-    return heading;
+    //Else calculate the average position of the agents within range
+    averageNeighborLocation.x /= nAgentsWithinRange;
+    averageNeighborLocation.y /= nAgentsWithinRange;
+
+    //Create a vector between this agent and the average position of the agents within range
+    argos::CVector2 vectorToOtherAgent =
+            argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
+            - argos::CVector2(this->position.x, this->position.y);
+
+    //Reverse the vector
+    vectorToOtherAgent = vectorToOtherAgent * -1;
+
+    return vectorToOtherAgent;
 }
 
+void Agent::calculateNextPosition() {
+    //Inspired by boids algorithm:
+        //Vector determining heading
+        //Vector is composed of:
+            //1. Attraction to unexplored frontier
+            //2. Repulsion from other agents
+            //3. Attraction to found target
+            //4. Repulsion from objects/walls
 
-argos::CQuaternion agent::averageQuaternions(std::vector<argos::CQuaternion> multipleRotations) {
-    //Global variable which holds the amount of rotations which
-//need to be averaged.
-    int addAmount = 3;
+    argos::CVector2 objectAvoidanceVector = calculateObjectAvoidanceVector();
+    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
 
-//Global variable which represents the additive quaternion
-    argos::CQuaternion addedRotation = argos::CQuaternion();
+    //Normalize vectors if they are not zero
+    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
+    if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
 
-//The averaged rotational value
-    argos::CQuaternion averageRotation;
+    argos::CVector2 total_vector = this->force_vector + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+                                   AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+    if (total_vector.Length() != 0) total_vector.Normalize();
 
-//Loop through all the rotational values.
-    for (argos::CQuaternion singleRotation: multipleRotations) {
+    this->force_vector = total_vector;
 
-        //Temporary values
-        float w;
-        float x;
-        float y;
-        float z;
-
-        //Amount of separate rotational values so far
-        addAmount++;
-
-        float addDet = 1.0f / (float) addAmount;
-        addedRotation.SetW(addedRotation.GetW() + singleRotation.GetW());
-        w = addedRotation.GetW() * addDet;
-        addedRotation.SetX(addedRotation.GetX() + singleRotation.GetX());
-        w = addedRotation.GetX() * addDet;
-        addedRotation.SetY(addedRotation.GetY() + singleRotation.GetY());
-        w = addedRotation.GetY() * addDet;
-        addedRotation.SetZ(addedRotation.GetZ() + singleRotation.GetZ());
-        w = addedRotation.GetZ() * addDet;
-
-        //Normalize. Note: experiment to see whether you
-        //can skip this step.
-        float D = 1.0f / (w * w + x * x + y * y + z * z);
-        w *= D;
-        x *= D;
-        y *= D;
-        z *= D;
-
-        //The result is valid right away, without
-        //first going through the entire array.
-        averageRotation = argos::CQuaternion(x, y, z, w);
-        return averageRotation;
-    }
-    return averageRotation;
-
+    argos::CRadians angle = total_vector.Angle();
+    this->targetHeading = angle;
 }
 
-void agent::calculateNextPosition() {
-    argos::CQuaternion objectAvoidanceHeading=  calculateObjectAvoidanceQT();
-    argos::CQuaternion agentAvoidanceHeading = calculateAgentAvoidanceQT();
-    //Set target heading to the combination of the object avoidance and agent avoidance headings using their weights
-    //Use the lerp technique to average the two quaternions
-
-//    targetHeading = averageQuaternions({objectAvoidanceHeading, agentAvoidanceHeading});
-    targetHeading = agentAvoidanceHeading;
-
-}
-
-void agent::doStep() {
-    broadcastMessage("C:"+ position.toString());
+void Agent::doStep() {
+    broadcastMessage("C:" + this->position.toString());
 
     checkMessages();
 
     calculateNextPosition();
 
-//    diffdrive->SetLinearVelocity(speed, speed);
+    argos::CRadians diff = this->heading - this->targetHeading;
 
-    argos::RLOG << "Target heading: " << targetHeading << std::endl;
-    argos::RLOG << "Heading: " << heading << std::endl;
+    argos::CDegrees diffDeg = ToDegrees(diff);
 
-    argos::CQuaternion diff = heading * targetHeading.Inverse();
-
-    argos::CRadians cZAngle, cYAngle, cXAngle;
-    diff.ToEulerAngles(cZAngle, cYAngle, cXAngle);
-
-    argos::CDegrees cZAngleDeg = ToDegrees(cZAngle);
-    argos::RLOG << "Angle between headings: " << cZAngleDeg << std::endl;
-
-    if (cZAngleDeg > argos::CDegrees(-5) && cZAngleDeg < argos::CDegrees(5)){
+    if (diffDeg > argos::CDegrees(-10) && diffDeg < argos::CDegrees(10)) {
         //Go straight
-        diffdrive->SetLinearVelocity(speed, speed);
-        argos::RLOG << "Going straight" << std::endl;
-    }
-    else if(cZAngleDeg > argos::CDegrees(0)){
+        this->diffdrive->SetLinearVelocity(this->speed, this->speed);
+//        argos::RLOG << "Going straight" << std::endl;
+    } else if (diffDeg > argos::CDegrees(0)) {
         //turn right
-        diffdrive->SetLinearVelocity(speed, 0);
-        argos::RLOG << "Turning right" << std::endl;
+        this->diffdrive->SetLinearVelocity(this->speed, 0);
+//        argos::RLOG << "Turning right" << std::endl;
 
     } else {
         //turn left
-        diffdrive->SetLinearVelocity(0, speed);
-        argos::RLOG << "Turning left" << std::endl;
+        this->diffdrive->SetLinearVelocity(0, this->speed);
+//        argos::RLOG << "Turning left" << std::endl;
 
     }
 
-
-//    argos::CRadians angle;
-//    argos::CVector3 axis;
-//    diff.ToAngleAxis(angle, axis);
-//    argos::RLOG << "Angle between headings: " << ToDegrees(angle) << std::endl;
-//    argos::RLOG << "Axis between headings: " << axis << std::endl;
-//    if (ToDegrees(angle) < argos::CDegrees(1) || ToDegrees(angle) > argos::CDegrees(359)){
-//        //Go straight
-//        diffdrive->SetLinearVelocity(speed, speed);
-//        argos::RLOG << "Going straight" << std::endl;
-//    }
-//    else if(ToDegrees(angle)> argos::CDegrees(180)){
-//        //turn right
-//        diffdrive->SetLinearVelocity(speed, 0);
-//        argos::RLOG << "Turning right" << std::endl;
-//
-//    } else {
-//        //turn left
-//        diffdrive->SetLinearVelocity(0, speed);
-//        argos::RLOG << "Turning left" << std::endl;
-//
-//    }
 }
 
-//TODO: send bytes instead of string
-void agent::broadcastMessage(std::string message) {
+void Agent::broadcastMessage(std::string message) {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
-    argos::UInt8* buff = (argos::UInt8 *) messagePrependedWithId.c_str();
-    argos::CByteArray cMessage = argos::CByteArray(buff,messagePrependedWithId.size()+1);
-    wifi.broadcast_message(cMessage);
-//    argos::LOG << "[" << getId() << "] " << "Broadcasted message: " << message << std::endl;
+    argos::UInt8 *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
+    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
+    this->wifi.broadcast_message(cMessage);
 }
 
-void agent::checkMessages() {
+void Agent::checkMessages() {
     //Read messages from other agents
-    wifi.receive_messages(messages);
-//    for (const auto & message : *messages) {
-//        argos::LOG << "[" << getId() << "] " << "Received message: " << message << std::endl;
-//    }
-    if(!messages->empty()) parseMessages();
+    this->wifi.receive_messages(this->messages);
+    if (!this->messages->empty()) parseMessages();
 
 }
 
-std::string getIdFromMessage(std::string message){
-    return message.substr(1, message.find(']')-1);
+std::string getIdFromMessage(std::string message) {
+    return message.substr(1, message.find(']') - 1);
 
 }
 
@@ -299,40 +245,27 @@ coordinate coordinateFromString(std::string str) {
     return newCoordinate;
 }
 
-void agent::parseMessages() {
-    for(std::string message: *messages){
+void Agent::parseMessages() {
+    for (std::string message: *this->messages) {
         std::string senderId = getIdFromMessage(message);
-        std::string messageContent = message.substr(message.find(']')+1);
-        if(messageContent[0] == 'C'){
+        std::string messageContent = message.substr(message.find(']') + 1);
+        if (messageContent[0] == 'C') {
             coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
-            agentLocations[senderId] = receivedPosition;
+            this->agentLocations[senderId] = receivedPosition;
         }
     }
 
 }
 
-radio agent::getWifi() const {
+Radio Agent::getWifi() const {
     return this->wifi;
 }
 
-void agent::setWifi(radio wifi) {
+void Agent::setWifi(Radio wifi) {
     this->wifi = wifi;
 
 }
 
-std::vector<std::string> agent::getMessages() {
+std::vector<std::string> Agent::getMessages() {
     return *this->messages;
 }
-
-
-//void calculateNextPosition() {
-//
-//    //Inspired by boids algorithm:
-//        //Vector determining heading
-//        //Vector is composed of:
-//            //1. Attraction to unexplored frontier
-//            //2. Repulsion from other agents
-//            //3. Attraction to found target
-//            //4. Repulsion from objects/walls
-//
-//}
