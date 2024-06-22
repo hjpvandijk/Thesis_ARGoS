@@ -21,6 +21,8 @@ add_subdirectory(position_loop_functions_lua)
 # If Qt+OpenGL dependencies were found, descend into these directories
 if(ARGOS_QTOPENGL_FOUND)
   add_subdirectory(trajectory_loop_functions)
+  add_subdirectory(trajectory_loop_functions_pipuck)
+  add_subdirectory(coverage_loop_functions_pipuck)
   add_subdirectory(id_loop_functions)
 #  add_subdirectory(manualcontrol_loop_functions)
 endif(ARGOS_QTOPENGL_FOUND)
