@@ -6,15 +6,16 @@
 #define THESIS_ARGOS_COORDINATE_H
 
 #include <string>
+#include <argos3/core/utility/math/angles.h>
 
 
-struct coordinate {
+struct Coordinate {
     double x;
     double y;
 //
-//    coordinate() {}
+//    Coordinate() {}
 //
-//    coordinate(double x, double y);
+//    Coordinate(double x, double y);
 //
 //    void setCoordinates(double new_x, double new_y);
 //
@@ -28,8 +29,26 @@ struct coordinate {
 
 //    std::string toString();
 
+
+
     std::string toString() {
         return std::to_string(this->x) + ";" + std::to_string(this->y);
+    }
+
+    static argos::CRadians OwnHeadingToArgos(argos::CRadians radians) {
+        return argos::CRadians(radians - argos::CRadians::PI_OVER_TWO);
+    }
+
+    static argos::CRadians ArgosHeadingToOwn(argos::CRadians radians) {
+        return argos::CRadians(radians + argos::CRadians::PI_OVER_TWO);
+    }
+
+    Coordinate FromOwnToArgos() {
+        return Coordinate{y, -x};
+    }
+
+    Coordinate FromArgosToOwn() {
+        return Coordinate{-y, x};
     }
 
 

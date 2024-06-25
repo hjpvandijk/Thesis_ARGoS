@@ -13,31 +13,48 @@
 
 #define AGENT_AVOIDANCE_RANGE 2.0
 
+#define TURNING_SPEED_RATIO 0.1
+
 Agent::Agent(std::string id) {
     this->id = id;
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
     this->targetHeading = argos::CRadians(0);
-    this->speed = 1;
+    this->speed = 5;
     this->force_vector = argos::CVector2(0, 1);
     this->messages = new std::vector<std::string>(0);
+    auto box = quadtree::Box(-5,5,10);
+    this->quadtree = new quadtree::Quadtree(box);
 }
 
-Agent::Agent(std::string id, coordinate new_position) : id(id) {
+int i = 0;
+
+Agent::Agent(std::string id, Coordinate new_position) : id(id) {
     this->position = new_position;
 }
 
 void Agent::setPosition(double new_x, double new_y) {
     this->position = {new_x, new_y};
+    argos::RLOG << " is at position (" << this->position.x << ", " << this->position.y
+                << ")" << std::endl;
+
+////    quadtree::Box posBox = quadtree::Box(this->position.x, this->position.y, 0.1f, 0.1f);
+////
+////    quadtree::QuadNode qn = quadtree::QuadNode{;
+//
+    quadtree->add(Coordinate{this->position.x, this->position.y});
+//    argos::RLOG << "Quadtree: " << quadtree->toString() << std::endl;
+    i++;
+    if(i%100==0) quadtree->exportQuadtreeToFile(this->getId());
 }
 
 
-void Agent::setPosition(coordinate new_position) {
+void Agent::setPosition(Coordinate new_position) {
     this->position = new_position;
 }
 
 void Agent::setHeading(argos::CRadians new_heading) {
-    this->heading = new_heading;
+    this->heading = Coordinate::ArgosHeadingToOwn(new_heading).SignedNormalize();
 };
 
 void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive) {
@@ -45,7 +62,7 @@ void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive) 
 }
 
 
-coordinate Agent::getPosition() {
+Coordinate Agent::getPosition() {
     return this->position;
 }
 
@@ -91,6 +108,10 @@ void Agent::readInfraredSensor() {
 
 }
 
+void Agent::addObjectLocation(Coordinate objectCoordinate){
+    this->objectLocations.push_back(objectCoordinate);
+}
+
 /**
  * Calculate the vector to avoid objects:
  * If the rangefinder reading is less than the set PROXIMITY RANGE,
@@ -100,10 +121,17 @@ void Agent::readInfraredSensor() {
  */
 argos::CVector2 Agent::calculateObjectAvoidanceVector() {
     if (this->lastRangeReading < PROXIMITY_RANGE) {
+
+        argos::RLOG << "Heading: " << this->heading << std::endl;
+        argos::RLOG << "Last range reading: " << this->lastRangeReading << std::endl;
         double opposite = argos::Sin(this->heading) * this->lastRangeReading;
         double adjacent = argos::Cos(this->heading) * this->lastRangeReading;
 
-        coordinate object = {this->position.x + adjacent, this->position.y + opposite};
+        argos::RLOG << "Opposite: " << opposite << std::endl;
+        argos::RLOG << "Adjacent: " << adjacent << std::endl;
+
+        Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
+        addObjectLocation(object);
 
         argos::CVector2 vectorToObject =
                 argos::CVector2(object.x, object.y)
@@ -128,7 +156,7 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
  */
 argos::CVector2 Agent::calculateAgentAvoidanceVector() {
     int nAgentsWithinRange = 0;
-    coordinate averageNeighborLocation = {0, 0};
+    Coordinate averageNeighborLocation = {0, 0};
     for (auto agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(agentLocation.second.x, agentLocation.second.y)
@@ -170,6 +198,9 @@ void Agent::calculateNextPosition() {
     argos::CVector2 objectAvoidanceVector = calculateObjectAvoidanceVector();
     argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
 
+    argos::RLOG << "Object avoidance vector: " << objectAvoidanceVector << std::endl;
+    argos::RLOG << "Agent avoidance vector: " << agentAvoidanceVector << std::endl;
+
     //Normalize vectors if they are not zero
     if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
@@ -179,6 +210,8 @@ void Agent::calculateNextPosition() {
     if (total_vector.Length() != 0) total_vector.Normalize();
 
     this->force_vector = total_vector;
+
+    argos::RLOG << "Total vector: " << total_vector << std::endl;
 
     argos::CRadians angle = total_vector.Angle();
     this->targetHeading = angle;
@@ -191,9 +224,14 @@ void Agent::doStep() {
 
     calculateNextPosition();
 
-    argos::CRadians diff = this->heading - this->targetHeading;
+    argos::RLOG << "Heading: " << ToDegrees(this->heading) << std::endl;
+    argos::RLOG << "Target heading: " << ToDegrees(this->targetHeading) << std::endl;
+
+    argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
 
     argos::CDegrees diffDeg = ToDegrees(diff);
+
+    argos::RLOG << "Diff: " << diffDeg << std::endl;
 
     if (diffDeg > argos::CDegrees(-10) && diffDeg < argos::CDegrees(10)) {
         //Go straight
@@ -201,15 +239,17 @@ void Agent::doStep() {
 //        argos::RLOG << "Going straight" << std::endl;
     } else if (diffDeg > argos::CDegrees(0)) {
         //turn right
-        this->diffdrive->SetLinearVelocity(this->speed, 0);
+        this->diffdrive->SetLinearVelocity(this->speed*TURNING_SPEED_RATIO, 0);
 //        argos::RLOG << "Turning right" << std::endl;
 
     } else {
         //turn left
-        this->diffdrive->SetLinearVelocity(0, this->speed);
+        this->diffdrive->SetLinearVelocity(0, this->speed*TURNING_SPEED_RATIO);
 //        argos::RLOG << "Turning left" << std::endl;
 
     }
+
+    argos::RLOG << std::endl;
 
 }
 
@@ -232,13 +272,13 @@ std::string getIdFromMessage(std::string message) {
 
 }
 
-coordinate coordinateFromString(std::string str) {
+Coordinate coordinateFromString(std::string str) {
     std::string delimiter = ";";
     size_t pos = 0;
     std::string token;
     pos = str.find(delimiter);
     token = str.substr(0, pos);
-    coordinate newCoordinate;
+    Coordinate newCoordinate;
     newCoordinate.x = std::stod(token);
     str.erase(0, pos + delimiter.length());
     newCoordinate.y = std::stod(str);
@@ -250,7 +290,7 @@ void Agent::parseMessages() {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent[0] == 'C') {
-            coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
+            Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
         }
     }

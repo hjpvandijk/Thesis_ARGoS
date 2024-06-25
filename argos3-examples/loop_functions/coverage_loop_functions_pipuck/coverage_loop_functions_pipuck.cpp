@@ -53,7 +53,8 @@ void CCoverageLoopFunctions::Init(TConfigurationNode &t_tree) {
         double opposite = argos::Sin(agent->heading) * agent->lastRangeReading;
         double adjacent = argos::Cos(agent->heading) * agent->lastRangeReading;
 
-        coordinate rayEnd = {agent->position.x + adjacent, agent->position.y + opposite};
+
+        Coordinate rayEnd = Coordinate{(agent->position.x + adjacent), (agent->position.y + opposite)}.FromOwnToArgos();
 
         CVector3 rayEnd3 = CVector3(rayEnd.x, rayEnd.y, 0.0f);
 
@@ -102,7 +103,8 @@ void CCoverageLoopFunctions::Reset() {
         double opposite = argos::Sin(agent->heading) * agent->lastRangeReading;
         double adjacent = argos::Cos(agent->heading) * agent->lastRangeReading;
 
-        coordinate rayEnd = {agent->position.x + adjacent, agent->position.y + opposite};
+
+        Coordinate rayEnd = Coordinate{(agent->position.x + adjacent), (agent->position.y + opposite)}.FromOwnToArgos();
 
         CVector3 rayEnd3 = CVector3(rayEnd.x, rayEnd.y, 0.0f);
         /* Clear the waypoint vector */
@@ -147,7 +149,8 @@ void CCoverageLoopFunctions::PostStep() {
         double opposite = argos::Sin(agent->heading) * agent->lastRangeReading;
         double adjacent = argos::Cos(agent->heading) * agent->lastRangeReading;
 
-        coordinate rayEnd = {agent->position.x + adjacent, agent->position.y + opposite};
+
+        Coordinate rayEnd = Coordinate{(agent->position.x + adjacent), (agent->position.y + opposite)}.FromOwnToArgos();
 
         CVector3 rayEnd3 = CVector3(rayEnd.x, rayEnd.y, 0.0f);
 

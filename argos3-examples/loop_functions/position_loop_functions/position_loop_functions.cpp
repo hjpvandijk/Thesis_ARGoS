@@ -32,7 +32,7 @@ void CPositionLoopFunctions::PreStep() {
         cPos.Set(cPiPuck.GetEmbodiedEntity().GetOriginAnchor().Position.GetX(),
                  cPiPuck.GetEmbodiedEntity().GetOriginAnchor().Position.GetY());
 
-        cController.agentObject->setPosition(cPos.GetX(), cPos.GetY());
+        cController.agentObject->setPosition(cPos.GetY(), cPos.GetX()); // x and y are swapped in the Position sensor
 
 
 

@@ -1,6 +1,6 @@
 include_directories(${CMAKE_SOURCE_DIR}/controllers)
 
-#add_subdirectory(footbot_diffusion)
+add_subdirectory(footbot_diffusion)
 add_subdirectory(pipuck_hugo)
 add_subdirectory(pipuck_hugo_lua)
 #add_subdirectory(footbot_synchronization)
