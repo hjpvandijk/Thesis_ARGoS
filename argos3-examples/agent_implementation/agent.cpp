@@ -37,13 +37,7 @@ void Agent::setPosition(double new_x, double new_y) {
     this->position = {new_x, new_y};
     argos::RLOG << " is at position (" << this->position.x << ", " << this->position.y
                 << ")" << std::endl;
-
-////    quadtree::Box posBox = quadtree::Box(this->position.x, this->position.y, 0.1f, 0.1f);
-////
-////    quadtree::QuadNode qn = quadtree::QuadNode{;
-//
     quadtree->add(Coordinate{this->position.x, this->position.y}, quadtree::Occupancy::FREE);
-//    argos::RLOG << "Quadtree: " << quadtree->toString() << std::endl;
     i++;
     if(i%100==0) quadtree->exportQuadtreeToFile(this->getId());
 }
@@ -127,11 +121,6 @@ void Agent::addFreeAreaBetween(Coordinate agentCoordinate, Coordinate objectCoor
 }
 
 void Agent::addObjectLocation(Coordinate agentCoordinate, Coordinate objectCoordinate){
-//    this->objectLocations.push_back(objectCoordinate);
-
-    //Create coordinates at quadtree MinSize steps between agent and object
-
-
     quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED);
 }
 
@@ -154,6 +143,7 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
         argos::RLOG << "Adjacent: " << adjacent << std::endl;
 
         Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
+        addFreeAreaBetween(this->position, object);
         addObjectLocation(this->position, object);
 
         argos::CVector2 vectorToObject =

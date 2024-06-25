@@ -101,12 +101,7 @@ public:
 private:
     argos::CVector2 calculateObjectAvoidanceVector();
     argos::CVector2 calculateAgentAvoidanceVector();
-    std::vector<Coordinate> objectLocations;
     std::vector<std::string> *messages;
-
-//    static quadtree::Box<float> getBox(Node* node) {
-//        return node->box;
-//    }
 
 
     quadtree::Quadtree *quadtree;

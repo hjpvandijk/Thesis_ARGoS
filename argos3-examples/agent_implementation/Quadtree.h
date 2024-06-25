@@ -21,28 +21,15 @@ namespace quadtree {
 
 
     struct QuadNode {
-        Box box;
+        Coordinate coordinate;
         Occupancy occupancy;
-//        std::size_t id;
-
-        Box getBox() const {
-            return box;
-        }
 
         bool operator==(const QuadNode &rhs) const {
-            return box == rhs.box;
+            return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
         }
     };
 
-//    template<typename T, typename GetBox, typename Equal = std::equal_to<T>>
     class Quadtree {
-//    static_assert(std::is_convertible<std::__invoke_result<GetBox, const T&>, Box>,
-//        "GetBox must be a callable of signature Box(const T&)");
-//    static_assert(std::is_convertible<std::__invoke_result<Equal, const T&, const T&>, bool>,
-//        "Equal must be a callable of signature bool(const T&, const T&)");
-//    static_assert(std::is_arithmetic<float>);
-
-
 
     public:
         Quadtree(const Box &box) :
@@ -53,10 +40,7 @@ namespace quadtree {
         }
 
         void add(Coordinate coordinate, Occupancy occupancy) {
-            auto box = Box(Coordinate{coordinate.x - MinSize / 2.0, coordinate.y + MinSize / 2.0}, MinSize);
-//            argos::LOG << "Adding box " << box.left << " , " << box.getRight() << " , " << box.getBottom() << " , "
-//                       << box.top << std::endl;
-            auto node = QuadNode{box, occupancy};
+            auto node = QuadNode{coordinate, occupancy};
             add(node);
         }
 
@@ -102,9 +86,7 @@ namespace quadtree {
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
                 for (const auto& value : node->values) {
-                    Box nodebox = value.getBox();
-//                    argos::LOG << nodebox.getSize() << std::endl;
-                    file << nodebox.left << " " << nodebox.top << " " <<  nodebox.size << " " << value.occupancy << " " << "\n";
+                    file << box.left << " " << box.top << " " <<  box.size << " " << value.occupancy << " " << "\n";
                 }
 
                 // Traverse the children
@@ -126,7 +108,7 @@ namespace quadtree {
     private:
         static constexpr auto Threshold = std::size_t(16);
         static constexpr auto MaxDepth = std::size_t(8);
-        static constexpr double MinSize = 0.1;
+        static constexpr double MinSize = 0.5;
 
         struct Node {
             std::array<std::unique_ptr<Node>, 4> children;
@@ -135,8 +117,6 @@ namespace quadtree {
 
         Box mBox;
         std::unique_ptr<Node> mRoot;
-//        GetBox mGetBox;
-//        Equal mEqual;
 
         bool isLeaf(const Node *node) const {
             return !static_cast<bool>(node->children[0]);
@@ -199,9 +179,44 @@ namespace quadtree {
                 return -1;
         }
 
+        int getQuadrant(const Box &nodeBox, const Coordinate& valueCoordinate) const {
+            auto center = nodeBox.getCenter();
+
+//            argos::LOG << "valueBox: " << valueBox.left << " , " << valueBox.getRight() << " , " << valueBox.getBottom()
+//                       << " , " << valueBox.top << std::endl;
+//            argos::LOG << "center: " << center.x << " , " << center.y << std::endl;
+            // West
+            if (valueCoordinate.x < center.x) {
+                // North West
+                if (valueCoordinate.y > center.y)
+                    return 0;
+                    // South West
+                else if (valueCoordinate.y <= center.y)
+                    return 2;
+                    // Not contained in any quadrant
+                else
+                    return -1;
+            }
+                // East
+            else if (valueCoordinate.x >= center.x) {
+                // North East
+                if (valueCoordinate.y > center.y)
+                    return 1;
+                    // South East
+                else if (valueCoordinate.y <= center.y)
+                    return 3;
+                    // Not contained in any quadrant
+                else
+                    return -1;
+            }
+                // Not contained in any quadrant
+            else
+                return -1;
+        }
+
         void add(Node *node, std::size_t depth, const Box &box, const QuadNode &value) {
             assert(node != nullptr);
-            assert(box.contains(value.getBox()));
+            assert(box.contains(value.coordinate));
 //            box.contains(value.getBox());
 //            argos::LOG << "WITH BOX " << box.left << " , " << box.getRight() << " , " << box.getBottom() << " , "
 //                       << box.top << std::endl;
@@ -214,10 +229,11 @@ namespace quadtree {
                     node->values.clear();
                     node->values.push_back(value);
                     //Else we can add more QuadNodes if there is space.
-                } else if (node->values.size() < Threshold) {
-//                    argos::LOG << "Adding value to node" << std::endl;
-                    node->values.push_back(value);
                 }
+//                else if (node->values.size() < Threshold) {
+//                    argos::LOG << "Adding value to node" << std::endl;
+//                    node->values.push_back(value);
+//                }
                     // Otherwise, we split and we try again
                 else {
 //                    argos::LOG << "Splitting node" << std::endl;
@@ -226,7 +242,7 @@ namespace quadtree {
                 }
             } else {
 //                argos::LOG << "Node is not a leaf" << std::endl;
-                auto i = getQuadrant(box, value.getBox());
+                auto i = getQuadrant(box, value.coordinate);
 //                argos::LOG << "Adding note to quadrant " << i << std::endl;
                 // Add the value in a child if the value is entirely contained in it
                 if (i != -1)
@@ -246,7 +262,7 @@ namespace quadtree {
             // Assign values to children
             auto newValues = std::vector<QuadNode>(); // New values for this node
             for (const auto &value: node->values) {
-                auto i = getQuadrant(box, value.getBox());
+                auto i = getQuadrant(box, value.coordinate);
 //                argos::LOG << "Adding note to quadrant " << i << std::endl;
                 if (i != -1)
                     node->children[static_cast<std::size_t>(i)]->values.push_back(value);
@@ -258,14 +274,14 @@ namespace quadtree {
 
         bool remove(Node *node, const Box &box, const QuadNode &value) {
             assert(node != nullptr);
-            assert(box.contains(value.getBox()));
+            assert(box.contains(value.coordinate));
             if (isLeaf(node)) {
                 // Remove the value from node
                 removeValue(node, value);
                 return true;
             } else {
                 // Remove the value in a child if the value is entirely contained in it
-                auto i = getQuadrant(box, value.getBox());
+                auto i = getQuadrant(box, value.coordinate);
                 if (i != -1) {
                     if (remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value))
                         return tryMerge(node);
@@ -312,55 +328,55 @@ namespace quadtree {
         }
 
         void query(Node *node, const Box &box, const Box &queryBox, std::vector<QuadNode> &values) const {
-            assert(node != nullptr);
-            assert(queryBox.intersects(box));
-            for (const auto &value: node->values) {
-                if (queryBox.intersects(value.getBox()))
-                    values.push_back(value);
-            }
-            if (!isLeaf(node)) {
-                for (auto i = std::size_t(0); i < node->children.size(); ++i) {
-                    auto childBox = computeBox(box, static_cast<int>(i));
-                    if (queryBox.intersects(childBox))
-                        query(node->children[i].get(), childBox, queryBox, values);
-                }
-            }
+//            assert(node != nullptr);
+//            assert(queryBox.intersects(box));
+//            for (const auto &value: node->values) {
+//                if (queryBox.intersects(value.getBox()))
+//                    values.push_back(value);
+//            }
+//            if (!isLeaf(node)) {
+//                for (auto i = std::size_t(0); i < node->children.size(); ++i) {
+//                    auto childBox = computeBox(box, static_cast<int>(i));
+//                    if (queryBox.intersects(childBox))
+//                        query(node->children[i].get(), childBox, queryBox, values);
+//                }
+//            }
         }
 
         void findAllIntersections(Node *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
             // Find intersections between values stored in this node
             // Make sure to not report the same intersection twice
-            for (auto i = std::size_t(0); i < node->values.size(); ++i) {
-                for (auto j = std::size_t(0); j < i; ++j) {
-                    if (node->values[i].getBox().intersects(node->values[j].getBox()))
-                        intersections.emplace_back(node->values[i], node->values[j]);
-                }
-            }
-            if (!isLeaf(node)) {
-                // Values in this node can intersect values in descendants
-                for (const auto &child: node->children) {
-                    for (const auto &value: node->values)
-                        findIntersectionsInDescendants(child.get(), value, intersections);
-                }
-                // Find intersections in children
-                for (const auto &child: node->children)
-                    findAllIntersections(child.get(), intersections);
-            }
+//            for (auto i = std::size_t(0); i < node->values.size(); ++i) {
+//                for (auto j = std::size_t(0); j < i; ++j) {
+//                    if (node->values[i].getBox().intersects(node->values[j].getBox()))
+//                        intersections.emplace_back(node->values[i], node->values[j]);
+//                }
+//            }
+//            if (!isLeaf(node)) {
+//                // Values in this node can intersect values in descendants
+//                for (const auto &child: node->children) {
+//                    for (const auto &value: node->values)
+//                        findIntersectionsInDescendants(child.get(), value, intersections);
+//                }
+//                // Find intersections in children
+//                for (const auto &child: node->children)
+//                    findAllIntersections(child.get(), intersections);
+//            }
         }
 
         void
         findIntersectionsInDescendants(Node *node, const QuadNode &value,
                                        std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
             // Test against the values stored in this node
-            for (const auto &other: node->values) {
-                if (value.getBox().intersects(other.getBox()))
-                    intersections.emplace_back(value, other);
-            }
-            // Test against values stored into descendants of this node
-            if (!isLeaf(node)) {
-                for (const auto &child: node->children)
-                    findIntersectionsInDescendants(child.get(), value, intersections);
-            }
+//            for (const auto &other: node->values) {
+//                if (value.getBox().intersects(other.getBox()))
+//                    intersections.emplace_back(value, other);
+//            }
+//            // Test against values stored into descendants of this node
+//            if (!isLeaf(node)) {
+//                for (const auto &child: node->children)
+//                    findIntersectionsInDescendants(child.get(), value, intersections);
+//            }
         }
     };
 

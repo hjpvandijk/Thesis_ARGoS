@@ -68,6 +68,20 @@ public:
 
     }
 
+        [[nodiscard]] bool contains(const Coordinate& coordinate) const noexcept
+        {
+            bool result = left <= coordinate.x && getRight() >= coordinate.x &&
+                          top >= coordinate.y && getBottom() <= coordinate.y;
+
+            if(!result) {
+                argos::LOG << "contains: " << left << " <= " << coordinate.x << " && " << getRight() << " >= " << coordinate.x
+                           << " && "
+                           << top << " >= " << coordinate.y << " && " << getBottom() << " <= " << coordinate.y << std::endl;
+            }
+            return result;
+
+        }
+
     constexpr bool intersects(const Box& box) const noexcept
     {
         return !(left >= box.getRight() || getRight() <= box.left ||

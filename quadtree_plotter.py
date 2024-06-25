@@ -39,8 +39,8 @@ def plot_boxes(filename):
         ax.add_patch(rect)
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-10, 10)
-    plt.ylim(-10, 10)
+    plt.xlim(-5, 5)
+    plt.ylim(-5, 5)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('Boxes Plot')
