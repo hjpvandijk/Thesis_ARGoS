@@ -10,10 +10,19 @@
 #include <iostream>
 #include <fstream>
 
+//Adapted from https://github.com/pvigier/Quadtree
+
 namespace quadtree {
+    enum Occupancy {
+        UNKNOWN,
+        FREE,
+        OCCUPIED,
+    };
+
 
     struct QuadNode {
         Box box;
+        Occupancy occupancy;
 //        std::size_t id;
 
         Box getBox() const {
@@ -38,14 +47,16 @@ namespace quadtree {
     public:
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Node>()) {
-            argos::LOG << "CREATED QUADTREE WITH BOX " << box.left << " , " << box.getRight() << " , " << box.getBottom() << " , " << box.top << std::endl;
+            argos::LOG << "CREATED QUADTREE WITH BOX " << box.left << " , " << box.getRight() << " , "
+                       << box.getBottom() << " , " << box.top << std::endl;
 
         }
 
-        void add(Coordinate coordinate) {
+        void add(Coordinate coordinate, Occupancy occupancy) {
             auto box = Box(Coordinate{coordinate.x - MinSize / 2.0, coordinate.y + MinSize / 2.0}, MinSize);
-            argos::LOG << "Adding box " << box.left << " , " << box.getRight() << " , " << box.getBottom() << " , " << box.top << std::endl;
-            auto node = QuadNode{box};
+//            argos::LOG << "Adding box " << box.left << " , " << box.getRight() << " , " << box.getBottom() << " , "
+//                       << box.top << std::endl;
+            auto node = QuadNode{box, occupancy};
             add(node);
         }
 
@@ -74,37 +85,48 @@ namespace quadtree {
             return mBox;
         }
 
-        void exportQuadtreeToFile(std::string filename) {
-            std::ofstream file;
-            file.open (filename + ".txt");
+        void exportQuadtreeToFile(const std::string& filename) {
+            std::ofstream file(filename + ".txt");
             if (!file.is_open()) {
                 std::cerr << "Failed to open file: " << filename << std::endl;
                 return;
             }
 
-            std::function<void(const quadtree::Quadtree::Node*, const quadtree::Box&, int)> traverse;
-            traverse = [&](const quadtree::Quadtree::Node* node, const quadtree::Box& box, int depth) {
+            std::function<void(const Node*, const Box&, int)> traverse;
+            traverse = [&](const Node* node, const Box& box, int depth) {
                 if (node == nullptr) return;
 
-                // Write the bounding box and depth of this node to the file
+                file << box.left << " " << box.top << " " << box.size << " " << "\n";
+
+                // Write the bounding box, occupancy and depth of this node to the file
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
-                file << topLeft.x << " " << topLeft.y << " " << size << " " << size << " " << depth << "\n";
+                for (const auto& value : node->values) {
+                    Box nodebox = value.getBox();
+//                    argos::LOG << nodebox.getSize() << std::endl;
+                    file << nodebox.left << " " << nodebox.top << " " <<  nodebox.size << " " << value.occupancy << " " << "\n";
+                }
 
                 // Traverse the children
                 for (int i = 0; i < 4; ++i) {
-                    traverse(node->children[i].get(), this->computeBox(box, i), depth + 1);
+                    if (node->children[i]) {
+                        traverse(node->children[i].get(), computeBox(box, i), depth + 1);
+                    }
                 }
             };
 
-            traverse(this->mRoot.get(), this->getBox(), 0);
+            traverse(mRoot.get(), mBox, 0);
             file.close();
+        }
+
+        double getMinSize(){
+            return this->MinSize;
         }
 
     private:
         static constexpr auto Threshold = std::size_t(16);
         static constexpr auto MaxDepth = std::size_t(8);
-        static constexpr auto MinSize = std::size_t(1.0);
+        static constexpr double MinSize = 0.1;
 
         struct Node {
             std::array<std::unique_ptr<Node>, 4> children;
@@ -145,8 +167,9 @@ namespace quadtree {
         int getQuadrant(const Box &nodeBox, const Box &valueBox) const {
             auto center = nodeBox.getCenter();
 
-            argos::LOG << "valueBox: " << valueBox.left << " , " << valueBox.getRight() << " , " << valueBox.getBottom() <<" , " << valueBox.top << std::endl;
-            argos::LOG << "center: " << center.x << " , " << center.y << std::endl;
+//            argos::LOG << "valueBox: " << valueBox.left << " , " << valueBox.getRight() << " , " << valueBox.getBottom()
+//                       << " , " << valueBox.top << std::endl;
+//            argos::LOG << "center: " << center.x << " , " << center.y << std::endl;
             // West
             if (valueBox.getRight() < center.x) {
                 // North West
@@ -180,24 +203,31 @@ namespace quadtree {
             assert(node != nullptr);
             assert(box.contains(value.getBox()));
 //            box.contains(value.getBox());
-            argos::LOG << "WITH BOX " << box.left << " , " << box.getRight() << " , " << box.getBottom() << " , " << box.top << std::endl;
+//            argos::LOG << "WITH BOX " << box.left << " , " << box.getRight() << " , " << box.getBottom() << " , "
+//                       << box.top << std::endl;
             if (isLeaf(node)) {
-                argos::LOG << "Node is a leaf" << std::endl;
+//                argos::LOG << "Node is a leaf" << std::endl;
                 // Insert the value in this node if possible
-                if (depth >= MaxDepth || node->values.size() < Threshold) {
-                    argos::LOG << "Adding value to node" << std::endl;
+
+                //If the box size is the minimum size we allow (corresponding to finest mapping level), then we only contain a single QuadNode.
+                if (box.size <= MinSize) {
+                    node->values.clear();
+                    node->values.push_back(value);
+                    //Else we can add more QuadNodes if there is space.
+                } else if (node->values.size() < Threshold) {
+//                    argos::LOG << "Adding value to node" << std::endl;
                     node->values.push_back(value);
                 }
                     // Otherwise, we split and we try again
                 else {
-                    argos::LOG << "Splitting node" << std::endl;
+//                    argos::LOG << "Splitting node" << std::endl;
                     split(node, box);
                     add(node, depth, box, value);
                 }
             } else {
-                argos::LOG << "Node is not a leaf" << std::endl;
+//                argos::LOG << "Node is not a leaf" << std::endl;
                 auto i = getQuadrant(box, value.getBox());
-                argos::LOG << "Adding note to quadrant " << i << std::endl;
+//                argos::LOG << "Adding note to quadrant " << i << std::endl;
                 // Add the value in a child if the value is entirely contained in it
                 if (i != -1)
                     add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
@@ -217,7 +247,7 @@ namespace quadtree {
             auto newValues = std::vector<QuadNode>(); // New values for this node
             for (const auto &value: node->values) {
                 auto i = getQuadrant(box, value.getBox());
-                argos::LOG << "Adding note to quadrant " << i << std::endl;
+//                argos::LOG << "Adding note to quadrant " << i << std::endl;
                 if (i != -1)
                     node->children[static_cast<std::size_t>(i)]->values.push_back(value);
                 else

@@ -3,6 +3,8 @@
 #include "coordinate.h"
 #include <argos3/core/utility/logging/argos_log.h>
 
+//Adapted from https://github.com/pvigier/Quadtree
+
 
 namespace quadtree
 {

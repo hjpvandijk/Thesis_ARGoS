@@ -42,7 +42,7 @@ void Agent::setPosition(double new_x, double new_y) {
 ////
 ////    quadtree::QuadNode qn = quadtree::QuadNode{;
 //
-    quadtree->add(Coordinate{this->position.x, this->position.y});
+    quadtree->add(Coordinate{this->position.x, this->position.y}, quadtree::Occupancy::FREE);
 //    argos::RLOG << "Quadtree: " << quadtree->toString() << std::endl;
     i++;
     if(i%100==0) quadtree->exportQuadtreeToFile(this->getId());
@@ -108,8 +108,31 @@ void Agent::readInfraredSensor() {
 
 }
 
-void Agent::addObjectLocation(Coordinate objectCoordinate){
-    this->objectLocations.push_back(objectCoordinate);
+void Agent::addFreeAreaBetween(Coordinate agentCoordinate, Coordinate objectCoordinate){
+    double x = agentCoordinate.x;
+    double y = agentCoordinate.y;
+    double dx = objectCoordinate.x - agentCoordinate.x;
+    double dy = objectCoordinate.y - agentCoordinate.y;
+    double distance = sqrt(dx*dx + dy*dy);
+    double stepSize = quadtree->getMinSize();
+    int nSteps = std::ceil(distance / stepSize);
+    double stepX = dx / nSteps;
+    double stepY = dy / nSteps;
+
+    for(int s = 0; s < nSteps; s++){
+        quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE);
+        x += stepX;
+        y += stepY;
+    }
+}
+
+void Agent::addObjectLocation(Coordinate agentCoordinate, Coordinate objectCoordinate){
+//    this->objectLocations.push_back(objectCoordinate);
+
+    //Create coordinates at quadtree MinSize steps between agent and object
+
+
+    quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED);
 }
 
 /**
@@ -131,7 +154,7 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
         argos::RLOG << "Adjacent: " << adjacent << std::endl;
 
         Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
-        addObjectLocation(object);
+        addObjectLocation(this->position, object);
 
         argos::CVector2 vectorToObject =
                 argos::CVector2(object.x, object.y)
@@ -141,9 +164,19 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
         vectorToObject = vectorToObject * -1;
 
         return vectorToObject;
+    } else {
+        double opposite = argos::Sin(this->heading) * PROXIMITY_RANGE;
+        double adjacent = argos::Cos(this->heading) * PROXIMITY_RANGE;
+
+        argos::RLOG << "Opposite: " << opposite << std::endl;
+        argos::RLOG << "Adjacent: " << adjacent << std::endl;
+
+        Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
+        addFreeAreaBetween(this->position, end_of_ray);
+        return argos::CVector2();
     }
 
-    return argos::CVector2();
+
 
 
 }

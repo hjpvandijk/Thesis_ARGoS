@@ -117,7 +117,8 @@ private:
     std::string GetId() const;
 
 
-    void addObjectLocation(Coordinate objectCoordinate);
+    void addObjectLocation(Coordinate agentCoordinate, Coordinate objectCoordinate);
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate objectCoordinate);
 
 
 

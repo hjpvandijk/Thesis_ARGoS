@@ -1,5 +1,7 @@
 #pragma once
 
+//Adapted from https://github.com/pvigier/Quadtree
+
 namespace quadtree
 {
 
