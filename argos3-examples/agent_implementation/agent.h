@@ -15,6 +15,7 @@
 
 
 
+
 class Agent {
 public:
     std::string id{};
@@ -96,15 +97,28 @@ public:
     std::vector<std::string> getMessages();
 
 
+    quadtree::Quadtree *quadtree;
+
+
+    double PROXIMITY_RANGE = 2.0;
+
+    double OBJECT_AVOIDANCE_WEIGHT = 1;
+    double AGENT_AVOIDANCE_WEIGHT = 1;
+
+    double AGENT_AVOIDANCE_RANGE = 2.0;
+
+    double TURNING_SPEED_RATIO = 0.1;
+
 
 
 private:
+    void checkForObstacles();
     argos::CVector2 calculateObjectAvoidanceVector();
     argos::CVector2 calculateAgentAvoidanceVector();
     std::vector<std::string> *messages;
 
 
-    quadtree::Quadtree *quadtree;
+
 
 
 

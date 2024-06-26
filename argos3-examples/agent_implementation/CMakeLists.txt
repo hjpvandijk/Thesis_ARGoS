@@ -12,8 +12,8 @@ add_library(agent_implementation SHARED
         coordinate.cpp
         radio.h
         radio.cpp
-        quadtree.h
-        quadtree.cpp
+        Quadtree.h
+        Box.h
             )
 
 # Make sure CMake can find the SWIG generated files

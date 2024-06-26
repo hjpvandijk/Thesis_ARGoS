@@ -6,14 +6,7 @@
 #include <argos3/core/utility/logging/argos_log.h>
 #include "agent.h"
 
-#define PROXIMITY_RANGE 2.0
 
-#define OBJECT_AVOIDANCE_WEIGHT 1
-#define AGENT_AVOIDANCE_WEIGHT 1
-
-#define AGENT_AVOIDANCE_RANGE 2.0
-
-#define TURNING_SPEED_RATIO 0.1
 
 Agent::Agent(std::string id) {
     this->id = id;
@@ -124,14 +117,7 @@ void Agent::addObjectLocation(Coordinate agentCoordinate, Coordinate objectCoord
     quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED);
 }
 
-/**
- * Calculate the vector to avoid objects:
- * If the rangefinder reading is less than the set PROXIMITY RANGE,
- * meaning there is an object in front of the agent,
- * create a vector in the opposite direction of the object.
- * @return a vector pointing away from the object
- */
-argos::CVector2 Agent::calculateObjectAvoidanceVector() {
+void Agent::checkForObstacles() {
     if (this->lastRangeReading < PROXIMITY_RANGE) {
 
         argos::RLOG << "Heading: " << this->heading << std::endl;
@@ -145,15 +131,6 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
         Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
         addFreeAreaBetween(this->position, object);
         addObjectLocation(this->position, object);
-
-        argos::CVector2 vectorToObject =
-                argos::CVector2(object.x, object.y)
-                - argos::CVector2(this->position.x, this->position.y);
-
-        //Reverse the vector
-        vectorToObject = vectorToObject * -1;
-
-        return vectorToObject;
     } else {
         double opposite = argos::Sin(this->heading) * PROXIMITY_RANGE;
         double adjacent = argos::Cos(this->heading) * PROXIMITY_RANGE;
@@ -163,10 +140,39 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
         Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
         addFreeAreaBetween(this->position, end_of_ray);
-        return argos::CVector2();
     }
+}
 
+/**
+ * Calculate the vector to avoid objects:
+ * If the rangefinder reading is less than the set PROXIMITY RANGE,
+ * meaning there is an object in front of the agent,
+ * create a vector in the opposite direction of the object.
+ * @return a vector pointing away from the object
+ */
+argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
+        std::vector<quadtree::QuadNode> occupiedNodes = quadtree->queryOccupied(this->position, PROXIMITY_RANGE*2.0);
+
+        argos::RLOG << "Occupied nodes: " << occupiedNodes.size() << std::endl;
+
+        argos::CVector2 totalObjectRepulsionVector = {0, 0};
+
+        //Calculate a repulsion vector for each object within range
+        for(auto node: occupiedNodes){
+            Coordinate nodeCoordinate = node.coordinate;
+            argos::CVector2 vectorToObject =
+                    argos::CVector2(nodeCoordinate.x, nodeCoordinate.y)
+                    - argos::CVector2(this->position.x, this->position.y);
+
+            //Reverse the vector
+            totalObjectRepulsionVector += (vectorToObject * -1);
+        }
+
+        //Normalize the vector
+        if (totalObjectRepulsionVector.Length() != 0) totalObjectRepulsionVector.Normalize();
+
+        return totalObjectRepulsionVector;
 
 
 }
@@ -244,6 +250,8 @@ void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
 
     checkMessages();
+
+    checkForObstacles();
 
     calculateNextPosition();
 
