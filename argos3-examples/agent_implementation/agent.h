@@ -109,6 +109,8 @@ public:
 
     double TURNING_SPEED_RATIO = 0.1;
 
+    double ANGLE_INTERVAL_STEPS = 18;
+
 
 
 private:

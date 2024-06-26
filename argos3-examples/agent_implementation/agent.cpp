@@ -145,10 +145,10 @@ void Agent::checkForObstacles() {
 
 /**
  * Calculate the vector to avoid objects:
- * If the rangefinder reading is less than the set PROXIMITY RANGE,
- * meaning there is an object in front of the agent,
- * create a vector in the opposite direction of the object.
- * @return a vector pointing away from the object
+ * Find the closest relative angle that is free of objects within a certain range.
+ * According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
+ * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+ * @return The vector towards the free direction
  */
 argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
@@ -156,7 +156,10 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
         argos::RLOG << "Occupied nodes: " << occupiedNodes.size() << std::endl;
 
-        argos::CVector2 totalObjectRepulsionVector = {0, 0};
+        std::vector<argos::CDegrees> blockedAngles = {};
+        std::vector<argos::CDegrees> freeAngles = {};
+        double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
+
 
         //Calculate a repulsion vector for each object within range
         for(auto node: occupiedNodes){
@@ -165,14 +168,38 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
                     argos::CVector2(nodeCoordinate.x, nodeCoordinate.y)
                     - argos::CVector2(this->position.x, this->position.y);
 
-            //Reverse the vector
-            totalObjectRepulsionVector += (vectorToObject * -1);
+            argos::RLOG << "Node coordinate: " << nodeCoordinate.x << ", " << nodeCoordinate.y << std::endl;
+            argos::RLOG << "Vector to object: " << vectorToObject << std::endl;
+
+            argos::CDegrees angleBetweenAgentAndObject = ToDegrees((vectorToObject.Angle()-this->heading).SignedNormalize());
+
+
+            auto roundedAngle = argos::CDegrees((int)(angleBetweenAgentAndObject.GetValue() / angleInterval) * angleInterval);
+            argos::RLOG << "Blocked angle: " << roundedAngle << std::endl;
+            blockedAngles.push_back(roundedAngle);
+        //
+        }
+        for(int a=0; a<ANGLE_INTERVAL_STEPS; a++){
+            auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS);
+            if(std::find(blockedAngles.begin(), blockedAngles.end(), angle) == blockedAngles.end()){
+                argos::RLOG << "Free angle: " << angle.SignedNormalize() << std::endl;
+                freeAngles.push_back(angle.SignedNormalize());
+            }
         }
 
-        //Normalize the vector
-        if (totalObjectRepulsionVector.Length() != 0) totalObjectRepulsionVector.Normalize();
+//        auto closestFreeAngle = std::min_element(freeAngles.begin(), freeAngles.end());
+        //Get free angle closest to 0,
+        auto closestFreeAngle = std::min_element(freeAngles.begin(), freeAngles.end(), [](argos::CDegrees a, argos::CDegrees b){
+            return std::abs(0-(a.GetValue())) < std::abs(0-(b.GetValue()));});
+        argos::RLOG << "Closest free angle: " << *closestFreeAngle << std::endl;
 
-        return totalObjectRepulsionVector;
+        argos::CRadians closestFreeAngleRadians = ToRadians(*closestFreeAngle);
+
+        double opposite = argos::Sin(this->heading + closestFreeAngleRadians) * 1.0;
+        double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
+        //Create a vector towards the closestFreeAngle
+        argos::CVector2 vectorToFreeAngle = argos::CVector2(adjacent, opposite);
+        return vectorToFreeAngle;
 
 
 }
@@ -234,6 +261,8 @@ void Agent::calculateNextPosition() {
     if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
 
+    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
+    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
     argos::CVector2 total_vector = this->force_vector + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
                                    AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
     if (total_vector.Length() != 0) total_vector.Normalize();
