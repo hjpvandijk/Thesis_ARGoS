@@ -30,9 +30,9 @@ void Agent::setPosition(double new_x, double new_y) {
     this->position = {new_x, new_y};
     argos::RLOG << " is at position (" << this->position.x << ", " << this->position.y
                 << ")" << std::endl;
-    quadtree->add(Coordinate{this->position.x, this->position.y}, quadtree::Occupancy::FREE);
+//    quadtree->add(Coordinate{this->position.x, this->position.y}, quadtree::Occupancy::FREE);
     i++;
-    if(i%100==0) quadtree->exportQuadtreeToFile(this->getId());
+//    if(i%100==0) quadtree->exportQuadtreeToFile(this->getId());
 }
 
 
@@ -293,7 +293,7 @@ void Agent::doStep() {
 
     argos::RLOG << "Diff: " << diffDeg << std::endl;
 
-    if (diffDeg > argos::CDegrees(-10) && diffDeg < argos::CDegrees(10)) {
+    if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
         //Go straight
         this->diffdrive->SetLinearVelocity(this->speed, this->speed);
 //        argos::RLOG << "Going straight" << std::endl;

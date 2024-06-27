@@ -110,6 +110,34 @@ namespace quadtree {
             file.close();
         }
 
+        std::vector<std::pair<Box, int>> getAllBoxes(){
+//            std::map<Box*, int> boxesAndOccupancy;
+            std::vector<std::pair<Box, int>> boxesAndOccupancy = {};
+            std::function<void(const Node*, const Box&, int, std::vector<std::pair<Box, int>> *)> traverse;
+            traverse = [&](const Node* node, const Box& box, int depth, std::vector<std::pair<Box, int>> * boxesAndOccupancy) {
+                if (node == nullptr) return;
+//                boxes.push_back(box);
+                // Write the bounding box, occupancy and depth of this node to the file
+                auto topLeft = box.getTopLeft();
+                auto size = box.getSize();
+                for (const auto& value : node->values) {
+                    boxesAndOccupancy->emplace_back(std::pair(box, value.occupancy));
+                }
+
+                // Traverse the children
+                for (int i = 0; i < 4; ++i) {
+                    if (node->children[i]) {
+                        traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancy);
+                    }
+                }
+            };
+
+            traverse(mRoot.get(), mBox, 0, &boxesAndOccupancy);
+            return boxesAndOccupancy;
+//            return {};
+
+        }
+
         double getMinSize(){
             return this->MinSize;
         }
@@ -117,7 +145,7 @@ namespace quadtree {
     private:
         static constexpr auto Threshold = std::size_t(16);
         static constexpr auto MaxDepth = std::size_t(8);
-        static constexpr double MinSize = 0.5;
+        static constexpr double MinSize = 0.2;
 
         struct Node {
             std::array<std::unique_ptr<Node>, 4> children;

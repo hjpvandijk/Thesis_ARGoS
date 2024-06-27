@@ -165,17 +165,17 @@
         <!--            <controller config="ppc"/>-->
         <!--        </foot-bot>-->
 
-        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">
-            <body position="1,3,0" orientation="-45,0,0"/>
-            <controller config="ppc"/>
-            <devices>
-                <!--            <simple_radios>-->
-                <!--                &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;-->
-                <!--                <simple_radio id="wifi" anchor="base" position="0,0,.0125"-->
-                <!--                              medium="wifi" range="0.01" />-->
-                <!--            </simple_radios>-->
-            </devices>
-        </pipuck>
+<!--        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">-->
+<!--            <body position="1,3,0" orientation="-45,0,0"/>-->
+<!--            <controller config="ppc"/>-->
+<!--            <devices>-->
+<!--                &lt;!&ndash;            <simple_radios>&ndash;&gt;-->
+<!--                &lt;!&ndash;                &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;&ndash;&gt;-->
+<!--                &lt;!&ndash;                <simple_radio id="wifi" anchor="base" position="0,0,.0125"&ndash;&gt;-->
+<!--                &lt;!&ndash;                              medium="wifi" range="0.01" />&ndash;&gt;-->
+<!--                &lt;!&ndash;            </simple_radios>&ndash;&gt;-->
+<!--            </devices>-->
+<!--        </pipuck>-->
 
                 <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
                     <body position="0,-3,0" orientation="90,0,0"/>

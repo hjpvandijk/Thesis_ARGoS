@@ -102,6 +102,8 @@ public:
 
     double PROXIMITY_RANGE = 2.0;
 
+    double TURN_THRESHOLD_DEGREES = 5;
+
     double OBJECT_AVOIDANCE_WEIGHT = 1;
     double AGENT_AVOIDANCE_WEIGHT = 1;
 
@@ -109,7 +111,7 @@ public:
 
     double TURNING_SPEED_RATIO = 0.1;
 
-    double ANGLE_INTERVAL_STEPS = 18;
+    double ANGLE_INTERVAL_STEPS = 36;
 
 
 

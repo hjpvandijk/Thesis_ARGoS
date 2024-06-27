@@ -40,6 +40,15 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
 
 }
 
+void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, Agent *agent) {
+    std::vector<std::pair<quadtree::Box, int>> boxesAndOccupancy = agent->quadtree->getAllBoxes();
+
+    m_tQuadTree[pcFB] = boxesAndOccupancy;
+
+
+
+}
+
 /****************************************/
 /****************************************/
 
@@ -94,6 +103,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     /* Go through them */
     m_tObjectCoordinates.clear();
     m_tOtherAgentCoordinates.clear();
+    m_tQuadTree.clear();
     for (CSpace::TMapPerType::iterator it = tFBMap.begin();
          it != tFBMap.end();
          ++it) {
@@ -104,12 +114,14 @@ void CAgentVisionLoopFunctions::PostStep() {
         Agent *agent = cController.agentObject;
 
 
-        findAndPushObjectCoordinates(pcFB, agent);
-        findAndPushOtherAgentCoordinates(pcFB, agent);
+//        findAndPushObjectCoordinates(pcFB, agent);
+//        findAndPushOtherAgentCoordinates(pcFB, agent);
+//
+//        Coordinate pos = agent->position.FromOwnToArgos();
+//        CVector3 agentPos = CVector3(pos.x, pos.y, 0.01f);
+//        m_tAgentCoordinates[pcFB] = agentPos;
 
-        Coordinate pos = agent->position.FromOwnToArgos();
-        CVector3 agentPos = CVector3(pos.x, pos.y, 0.01f);
-        m_tAgentCoordinates[pcFB] = agentPos;
+        pushQuadTree(pcFB, agent);
 
 
     }
