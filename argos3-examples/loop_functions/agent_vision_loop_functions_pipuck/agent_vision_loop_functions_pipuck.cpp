@@ -22,7 +22,7 @@ void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB
 
     for (auto node: occupiedNodes) {
         Coordinate nodePos = node.coordinate.FromOwnToArgos();
-        CVector3 pos = CVector3(nodePos.x, nodePos.y, 0.02f);
+        CVector3 pos = CVector3(nodePos.x, nodePos.y, 0.03f);
         m_tObjectCoordinates[pcFB].push_back(pos);
     }
 
@@ -114,12 +114,12 @@ void CAgentVisionLoopFunctions::PostStep() {
         Agent *agent = cController.agentObject;
 
 
-//        findAndPushObjectCoordinates(pcFB, agent);
-//        findAndPushOtherAgentCoordinates(pcFB, agent);
+        findAndPushObjectCoordinates(pcFB, agent);
+        findAndPushOtherAgentCoordinates(pcFB, agent);
 //
-//        Coordinate pos = agent->position.FromOwnToArgos();
-//        CVector3 agentPos = CVector3(pos.x, pos.y, 0.01f);
-//        m_tAgentCoordinates[pcFB] = agentPos;
+        Coordinate pos = agent->position.FromOwnToArgos();
+        CVector3 agentPos = CVector3(pos.x, pos.y, 0.01f);
+        m_tAgentCoordinates[pcFB] = agentPos;
 
         pushQuadTree(pcFB, agent);
 

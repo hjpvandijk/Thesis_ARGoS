@@ -13,17 +13,7 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
-//    for(std::map<CPiPuckEntity*, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
-//        it != m_cAgVisLF.GetAgentCoordinates().end();
-//        ++it){
-////        DrawBox(it->second, CQuaternion(), 0.1f, CColor::GRAY50);
-//        DrawBox(it->second, CQuaternion(), CVector3(4,4,0), CColor::GRAY80);
-//    }
-//    for (CAgentVisionLoopFunctions::TCoordinateMap::const_iterator it = m_cAgVisLF.GetObjectCoordinates().begin();
-//         it != m_cAgVisLF.GetObjectCoordinates().end();
-//         ++it) {
-//        DrawCoordinates(it->second, CColor::RED);
-//    }
+
 //    for(CAgentVisionLoopFunctions::TCoordinateMap ::const_iterator it = m_cAgVisLF.GetOtherAgentCoordinates().begin();
 //        it != m_cAgVisLF.GetOtherAgentCoordinates().end();
 //        ++it){
@@ -61,6 +51,18 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
         }
     }
+
+    for(std::map<CPiPuckEntity*, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
+        it != m_cAgVisLF.GetAgentCoordinates().end();
+        ++it){
+//        DrawBox(it->second, CQuaternion(), 0.1f, CColor::GRAY50);
+        DrawBox(it->second, CQuaternion(), CVector3(4,4,0), CColor::GRAY80);
+    }
+//    for (CAgentVisionLoopFunctions::TCoordinateMap::const_iterator it = m_cAgVisLF.GetObjectCoordinates().begin();
+//         it != m_cAgVisLF.GetObjectCoordinates().end();
+//         ++it) {
+//        DrawCoordinates(it->second, CColor::RED);
+//    }
 
 
 }

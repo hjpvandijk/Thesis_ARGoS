@@ -52,7 +52,7 @@ namespace quadtree {
             remove(mRoot.get(), mBox, value);
         }
 
-        // Returns all the values surrounding the given coordinate within the given area size
+        // Returns all the occupied coordinates surrounding the given coordinate within the given area size
         std::vector<QuadNode> queryOccupied(Coordinate coordinate, double areaSize) const {
             // Create a box centered at the given coordinate
             Box box = Box(Coordinate{coordinate.x-areaSize/2.0, coordinate.y+areaSize/2.0}, areaSize);
@@ -61,11 +61,27 @@ namespace quadtree {
             return query(box, OCCUPIED);
         }
 
+        // Returns all the occupied boxes surrounding the given coordinate within the given area size
+        std::vector<Box> queryOccupiedBoxes(Coordinate coordinate, double areaSize) const {
+            // Create a box centered at the given coordinate
+            Box box = Box(Coordinate{coordinate.x-areaSize/2.0, coordinate.y+areaSize/2.0}, areaSize);
+
+
+            return queryBoxes(box, OCCUPIED);
+        }
+
         // Returns all the values that intersect with the given box
         std::vector<QuadNode> query(const Box &box, Occupancy occupancy) const {
             auto values = std::vector<QuadNode>();
             query(mRoot.get(), mBox, box, values, occupancy);
             return values;
+        }
+
+        // Returns all the values that intersect with the given box
+        std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy) const {
+            auto boxes = std::vector<Box>();
+            queryBoxes(mRoot.get(), mBox, box, boxes, occupancy);
+            return boxes;
         }
 
         std::vector<std::pair<QuadNode, QuadNode>> findAllIntersections() const {
@@ -381,6 +397,27 @@ namespace quadtree {
 //                    argos::LOG << "NESTED" << std::endl;
                     if (queryBox.intersects_or_contains(childBox))
                         query(node->children[i].get(), childBox, queryBox, values, occupancy);
+                }
+            }
+        }
+
+        void queryBoxes(Node *node, const Box &box, const Box &queryBox, std::vector<Box> &boxes, Occupancy occupancy) const {
+            assert(node != nullptr);
+//            assert(queryBox.intersects(box)||box.contains(queryBox) && "Query box must intersect or contain the node box");
+//            bool assert = queryBox.intersects(box)||box.contains(queryBox);
+            assert(queryBox.intersects_or_contains(box));
+//            assert(queryBox.contains(box) && "Query box must contain the node box");
+
+            for (const auto &value: node->values) {
+                if (value.occupancy == occupancy && (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
+                    boxes.push_back(box);
+            }
+            if (!isLeaf(node)) {
+                for (auto i = std::size_t(0); i < node->children.size(); ++i) {
+                    auto childBox = computeBox(box, static_cast<int>(i));
+//                    argos::LOG << "NESTED" << std::endl;
+                    if (queryBox.intersects_or_contains(childBox))
+                        queryBoxes(node->children[i].get(), childBox, queryBox, boxes, occupancy);
                 }
             }
         }
