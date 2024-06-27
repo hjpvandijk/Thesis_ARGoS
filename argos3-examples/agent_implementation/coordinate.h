@@ -35,18 +35,36 @@ struct Coordinate {
         return std::to_string(this->x) + ";" + std::to_string(this->y);
     }
 
+    /**
+     * @brief Converts a heading from the own coordinate system to the argos coordinate system
+     * @param radians
+     * @return
+     */
     static argos::CRadians OwnHeadingToArgos(argos::CRadians radians) {
         return argos::CRadians(radians - argos::CRadians::PI_OVER_TWO);
     }
 
+    /**
+     * @brief Converts a heading from the argos coordinate system to the own coordinate system
+     * @param radians
+     * @return
+     */
     static argos::CRadians ArgosHeadingToOwn(argos::CRadians radians) {
         return argos::CRadians(radians + argos::CRadians::PI_OVER_TWO);
     }
 
+    /**
+     * @brief Converts the coordinate from the own coordinate system to the argos coordinate system
+     * @return
+     */
     Coordinate FromOwnToArgos() {
         return Coordinate{y, -x};
     }
 
+    /**
+     * @brief Converts the coordinate from the argos coordinate system to the own coordinate system
+     * @return
+     */
     Coordinate FromArgosToOwn() {
         return Coordinate{-y, x};
     }

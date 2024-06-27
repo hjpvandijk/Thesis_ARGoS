@@ -45,43 +45,38 @@ namespace quadtree {
             return size;
         }
 
+        /**
+         * @brief Check if the box contains another box
+         * @param box
+         * @return
+         */
         [[nodiscard]] bool contains(const Box &box) const noexcept {
             bool result = left <= box.left && getRight() >= box.getRight() &&
                           top >= box.top && getBottom() <= box.getBottom();
 
-//            if (!result) {
-//                argos::LOG << "contains: " << left << " <= " << box.left << " && " << getRight() << " >= "
-//                           << box.getRight()
-//                           << " && "
-//                           << top << " >= " << box.top << " && " << getBottom() << " <= " << box.getBottom()
-//                           << std::endl;
-//            }
             return result;
 
         }
 
+        /**
+         * @brief Check if the box contains a coordinate
+         * @param coordinate
+         * @return
+         */
         [[nodiscard]] bool contains(const Coordinate &coordinate) const noexcept {
             bool result = left <= coordinate.x && getRight() >= coordinate.x &&
                           top >= coordinate.y && getBottom() <= coordinate.y;
 
-//            if (!result) {
-//                argos::LOG << "contains: " << left << " <= " << coordinate.x << " && " << getRight() << " >= "
-//                           << coordinate.x
-//                           << " && "
-//                           << top << " >= " << coordinate.y << " && " << getBottom() << " <= " << coordinate.y
-//                           << std::endl;
-//            }
             return result;
 
         }
 
+        /**
+         * @brief Check if the box intersects or contains another box
+         * @param box
+         * @return
+         */
         bool intersects_or_contains(const Box &box) const noexcept {
-
-            //        return !(left >= box.getRight() || getRight() <= box.left ||
-//            top >= box.getBottom() || getBottom() <= box.top);
-//        return (left <= box.getRight() && getRight() >= box.left &&
-//                 top <= box.getBottom() && getBottom() <= box.top);
-
 
             Coordinate topLeft = getTopLeft();
             Coordinate bottomRight = {getRight(), getBottom()};
@@ -99,11 +94,6 @@ namespace quadtree {
                      contains(boxTopLeft) || contains(boxBottomRight) || contains(boxTopRight) ||
                      contains(boxBottomLeft));
 
-//            if (!result){
-//                argos::LOG << "querybox: " << topLeft.toString() << " " << bottomRight.toString() << " " << topRight.toString() << " " << bottomLeft.toString() << std::endl;
-//                argos::LOG << "box: " << boxTopLeft.toString() << " " << boxBottomRight.toString() << " " << boxTopRight.toString() << " " << boxBottomLeft.toString() << std::endl;
-//
-//            }
             return result;
         }
 

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <argos3/core/utility/logging/argos_log.h>
+#include <set>
 #include "agent.h"
 
 
@@ -94,11 +95,16 @@ void Agent::readInfraredSensor() {
 
 }
 
-void Agent::addFreeAreaBetween(Coordinate agentCoordinate, Coordinate objectCoordinate) {
-    double x = agentCoordinate.x;
-    double y = agentCoordinate.y;
-    double dx = objectCoordinate.x - agentCoordinate.x;
-    double dy = objectCoordinate.y - agentCoordinate.y;
+/**
+ * Add free (unoccupied) coordinates between two coordinates
+ * @param coordinate1
+ * @param coordinate2
+ */
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
+    double x = coordinate1.x;
+    double y = coordinate1.y;
+    double dx = coordinate2.x - coordinate1.x;
+    double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
     double stepSize = quadtree->getMinSize();
     int nSteps = std::ceil(distance / stepSize);
@@ -112,10 +118,19 @@ void Agent::addFreeAreaBetween(Coordinate agentCoordinate, Coordinate objectCoor
     }
 }
 
-void Agent::addObjectLocation(Coordinate agentCoordinate, Coordinate objectCoordinate) {
+/**
+ * Add occupied object location to the quadtree
+ * @param objectCoordinate
+ */
+void Agent::addObjectLocation(Coordinate objectCoordinate) {
     quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED);
 }
 
+/**
+ * Check for obstacles in front of the agent
+ * If there is an obstacle within a certain range, add the free area between the agent and the obstacle to the quadtree
+ * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
+ */
 void Agent::checkForObstacles() {
     if (this->lastRangeReading < PROXIMITY_RANGE) {
 
@@ -129,7 +144,7 @@ void Agent::checkForObstacles() {
 
         Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
         addFreeAreaBetween(this->position, object);
-        addObjectLocation(this->position, object);
+        addObjectLocation(object);
     } else {
         double opposite = argos::Sin(this->heading) * PROXIMITY_RANGE;
         double adjacent = argos::Cos(this->heading) * PROXIMITY_RANGE;
@@ -151,24 +166,17 @@ void Agent::checkForObstacles() {
  */
 argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
-//        std::vector<quadtree::QuadNode> occupiedNodes = quadtree->queryOccupied(this->position, PROXIMITY_RANGE*2.0);
+    //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = quadtree->queryOccupiedBoxes(this->position, PROXIMITY_RANGE * 2.0);
 
-    argos::RLOG << "Occupied nodes: " << occupiedBoxes.size() << std::endl;
-
-    std::vector<argos::CDegrees> blockedAngles = {};
-    std::vector<argos::CDegrees> freeAngles = {};
+    std::set<argos::CDegrees> blockedAngles = {};
+    std::set<argos::CDegrees> freeAngles = {};
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
 
-
-    //Calculate a repulsion vector for each object within range
+    //For each occupied box, find the angles that are blocked relative to the agent
     for (auto box: occupiedBoxes) {
-//            Coordinate nodeCoordinate = node.coordinate;
 
-//            argos::CVector2 vectorToObject =
-//                    argos::CVector2(nodeCoordinate.x, nodeCoordinate.y)
-//                    - argos::CVector2(this->position.x, this->position.y);
-
+        //Get the relative angle of the corners of the box
         argos::CVector2 vectorToObjectTopLeft =
                 argos::CVector2(box.left, box.top) - argos::CVector2(this->position.x, this->position.y);
         argos::CVector2 vectorToObjectTopRight =
@@ -187,19 +195,18 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
         argos::CDegrees angleToObjectBottomRight = ToDegrees(
                 vectorToObjectBottomRight.Angle() - this->heading).SignedNormalize();
 
-        //Find min and maximum angle
+        //Find min and maximum angle so that you can find the blocked range
         argos::CDegrees minAngle = std::min(
                 {angleToObjectTopLeft, angleToObjectTopRight, angleToObjectBottomLeft, angleToObjectBottomRight});
         argos::CDegrees maxAngle = std::max(
                 {angleToObjectTopLeft, angleToObjectTopRight, angleToObjectBottomLeft, angleToObjectBottomRight});
 
 
-        argos::RLOG << "Min angle: " << minAngle << std::endl;
-        argos::RLOG << "Max angle: " << maxAngle << std::endl;
+//        argos::RLOG << "Min angle: " << minAngle << std::endl;
+//        argos::RLOG << "Max angle: " << maxAngle << std::endl;
 
 
         //Round to multiples of 360/ANGLE_INTERVAL_STEPS
-
         double minAngleVal = minAngle.GetValue();
         double intervalDirectionMin = (minAngleVal < 0) ? -angleInterval : angleInterval;
 //
@@ -219,70 +226,50 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
         auto roundedMaxAngle = argos::CDegrees(
                 (abs(maxAngleVal - maxRoundedAngle1) >= abs(maxRoundedAngle2 - maxAngleVal)) ? maxRoundedAngle2
                                                                                              : maxRoundedAngle1);
-
-
-        argos::RLOG << "Min angle: " << roundedMinAngle << std::endl;
-        argos::RLOG << "Max angle: " << roundedMaxAngle << std::endl;
+//        argos::RLOG << "Min angle: " << roundedMinAngle << std::endl;
+//        argos::RLOG << "Max angle: " << roundedMaxAngle << std::endl;
 
         //Block all angles within range
         for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
             auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
             if (roundedMaxAngle - roundedMinAngle <= argos::CDegrees(180)) {
                 if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
-                    blockedAngles.push_back(angle);
+                    blockedAngles.insert(angle);
                     argos::RLOG << "Blocked angle: " << angle << std::endl;
                 }
             } else {
                 if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
-                    blockedAngles.push_back(angle);
+                    blockedAngles.insert(angle);
                     argos::RLOG << "Blocked angle: " << angle << std::endl;
                 }
 
             }
         }
 
-
-//            argos::RLOG << "Node coordinate: " << nodeCoordinate.x << ", " << nodeCoordinate.y << std::endl;
-//            argos::RLOG << "Vector to object: " << vectorToObject << std::endl;
-
-//            argos::CDegrees angleBetweenAgentAndObject = ToDegrees((vectorToObject.Angle()-this->heading).SignedNormalize());
-//            double angleVal = angleBetweenAgentAndObject.GetValue();
-//
-//            argos::RLOG << "Blocked angle: " << angleBetweenAgentAndObject << std::endl;
-//
-//            auto roundedAngle1 = (int)(angleVal / angleInterval) * angleInterval;
-//            auto roundedAngle2 = roundedAngle1 + 10;
-//
-//            argos::CDegrees roundedAngle = argos::CDegrees((angleVal-roundedAngle1 >= roundedAngle2 - angleVal)? roundedAngle2 : roundedAngle1);
-
-//            argos::RLOG << "Blocked angle rounded: " << roundedAngle << std::endl;
-//            blockedAngles.push_back(roundedAngle);
-        //
     }
+
+    //Find free angles
     for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
         auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS);
-        if (std::find(blockedAngles.begin(), blockedAngles.end(), angle) == blockedAngles.end()) {
-//                argos::RLOG << "Free angle: " << angle.SignedNormalize() << std::endl;
-            freeAngles.push_back(angle.SignedNormalize());
+        if (blockedAngles.find(angle) == blockedAngles.end()) {
+            freeAngles.insert(angle.SignedNormalize());
         }
     }
 
-//        auto closestFreeAngle = std::min_element(freeAngles.begin(), freeAngles.end());
-    //Get free angle closest to 0,
+    //Get free angle closest to 0
     auto closestFreeAngle = std::min_element(freeAngles.begin(), freeAngles.end(),
                                              [](argos::CDegrees a, argos::CDegrees b) {
                                                  return std::abs(0 - (a.GetValue())) < std::abs(0 - (b.GetValue()));
                                              });
-    argos::RLOG << "Closest free angle: " << *closestFreeAngle << std::endl;
+//    argos::RLOG << "Closest free angle: " << *closestFreeAngle << std::endl;
 
     argos::CRadians closestFreeAngleRadians = ToRadians(*closestFreeAngle);
 
+    //Create a vector towards the closestFreeAngle
     double opposite = argos::Sin(this->heading + closestFreeAngleRadians) * 1.0;
     double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
-    //Create a vector towards the closestFreeAngle
     argos::CVector2 vectorToFreeAngle = argos::CVector2(adjacent, opposite);
     return vectorToFreeAngle;
-
 
 }
 
@@ -295,7 +282,7 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 argos::CVector2 Agent::calculateAgentAvoidanceVector() {
     int nAgentsWithinRange = 0;
     Coordinate averageNeighborLocation = {0, 0};
-    for (auto agentLocation: this->agentLocations) {
+    for (const auto& agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(agentLocation.second.x, agentLocation.second.y)
                 - argos::CVector2(this->position.x, this->position.y);
@@ -329,9 +316,9 @@ void Agent::calculateNextPosition() {
     //Vector determining heading
     //Vector is composed of:
     //1. Attraction to unexplored frontier
-    //2. Repulsion from other agents
+    //2. Repulsion from other agents (done)
     //3. Attraction to found target
-    //4. Repulsion from objects/walls
+    //4. Repulsion from objects/walls (done)
 
     argos::CVector2 objectAvoidanceVector = calculateObjectAvoidanceVector();
     argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
@@ -395,6 +382,11 @@ void Agent::doStep() {
 
 }
 
+
+/**
+ * Broadcast a message to all agents
+ * @param message
+ */
 void Agent::broadcastMessage(std::string message) {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
     argos::UInt8 *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
@@ -402,6 +394,10 @@ void Agent::broadcastMessage(std::string message) {
     this->wifi.broadcast_message(cMessage);
 }
 
+/**
+ * Check for messages from other agents
+ * If there are messages, parse them
+ */
 void Agent::checkMessages() {
     //Read messages from other agents
     this->wifi.receive_messages(this->messages);
@@ -409,11 +405,21 @@ void Agent::checkMessages() {
 
 }
 
+/**
+ * Get the id from a message
+ * @param message
+ * @return
+ */
 std::string getIdFromMessage(std::string message) {
     return message.substr(1, message.find(']') - 1);
 
 }
 
+/**
+ * Get a coordinate from a string
+ * @param str
+ * @return
+ */
 Coordinate coordinateFromString(std::string str) {
     std::string delimiter = ";";
     size_t pos = 0;
@@ -427,6 +433,9 @@ Coordinate coordinateFromString(std::string str) {
     return newCoordinate;
 }
 
+/**
+ * Parse messages from other agents
+ */
 void Agent::parseMessages() {
     for (std::string message: *this->messages) {
         std::string senderId = getIdFromMessage(message);

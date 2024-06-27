@@ -34,16 +34,22 @@ namespace quadtree {
     public:
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Node>()) {
-            argos::LOG << "CREATED QUADTREE WITH BOX " << box.left << " , " << box.getRight() << " , "
-                       << box.getBottom() << " , " << box.top << std::endl;
-
         }
 
+        /**
+         * @brief Add a coordinate to the quadtree with the given occupancy
+         * @param coordinate
+         * @param occupancy
+         */
         void add(Coordinate coordinate, Occupancy occupancy) {
             auto node = QuadNode{coordinate, occupancy};
             add(node);
         }
 
+        /**
+         * @brief Add a QuadNode to the quadtreee
+         * @param value
+         */
         void add(const QuadNode &value) {
             add(mRoot.get(), 0, mBox, value);
         }
@@ -52,38 +58,63 @@ namespace quadtree {
             remove(mRoot.get(), mBox, value);
         }
 
-        // Returns all the occupied coordinates surrounding the given coordinate within the given area size
+        /**
+         * Returns all the occupied coordinates surrounding the given coordinate within the given area size
+         * @param coordinate
+         * @param areaSize
+         * @return
+         */
         std::vector<QuadNode> queryOccupied(Coordinate coordinate, double areaSize) const {
             // Create a box centered at the given coordinate
-            Box box = Box(Coordinate{coordinate.x-areaSize/2.0, coordinate.y+areaSize/2.0}, areaSize);
+            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
 
             return query(box, OCCUPIED);
         }
 
-        // Returns all the occupied boxes surrounding the given coordinate within the given area size
+        /**
+         * Returns all the occupied boxes surrounding the given coordinate within the given area size
+         * @param coordinate
+         * @param areaSize
+         * @return
+         */
         std::vector<Box> queryOccupiedBoxes(Coordinate coordinate, double areaSize) const {
             // Create a box centered at the given coordinate
-            Box box = Box(Coordinate{coordinate.x-areaSize/2.0, coordinate.y+areaSize/2.0}, areaSize);
+            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
 
             return queryBoxes(box, OCCUPIED);
         }
 
-        // Returns all the values that intersect with the given box
+        /**
+         * Returns QuadNodes that intersect with or are contained by the given box
+         * @param box
+         * @param occupancy
+         * @return
+         */
+
         std::vector<QuadNode> query(const Box &box, Occupancy occupancy) const {
             auto values = std::vector<QuadNode>();
             query(mRoot.get(), mBox, box, values, occupancy);
             return values;
         }
 
-        // Returns all the values that intersect with the given box
+        /**
+         * Returns all the values that intersect with or are contained by given box
+         * @param box
+         * @param occupancy
+         * @return
+         */
         std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy) const {
             auto boxes = std::vector<Box>();
             queryBoxes(mRoot.get(), mBox, box, boxes, occupancy);
             return boxes;
         }
 
+        /**
+         * @brief Find all intersections between values stored in the quadtree
+         * @return
+         */
         std::vector<std::pair<QuadNode, QuadNode>> findAllIntersections() const {
             auto intersections = std::vector<std::pair<QuadNode, QuadNode>>();
             findAllIntersections(mRoot.get(), intersections);
@@ -94,15 +125,19 @@ namespace quadtree {
             return mBox;
         }
 
-        void exportQuadtreeToFile(const std::string& filename) {
+        /**
+         * @brief Export the quadtree to a file
+         * @param filename
+         */
+        void exportQuadtreeToFile(const std::string &filename) {
             std::ofstream file(filename + ".txt");
             if (!file.is_open()) {
                 std::cerr << "Failed to open file: " << filename << std::endl;
                 return;
             }
 
-            std::function<void(const Node*, const Box&, int)> traverse;
-            traverse = [&](const Node* node, const Box& box, int depth) {
+            std::function<void(const Node *, const Box &, int)> traverse;
+            traverse = [&](const Node *node, const Box &box, int depth) {
                 if (node == nullptr) return;
 
                 file << box.left << " " << box.top << " " << box.size << " " << "\n";
@@ -110,8 +145,8 @@ namespace quadtree {
                 // Write the bounding box, occupancy and depth of this node to the file
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
-                for (const auto& value : node->values) {
-                    file << box.left << " " << box.top << " " <<  box.size << " " << value.occupancy << " " << "\n";
+                for (const auto &value: node->values) {
+                    file << box.left << " " << box.top << " " << box.size << " " << value.occupancy << " " << "\n";
                 }
 
                 // Traverse the children
@@ -126,17 +161,19 @@ namespace quadtree {
             file.close();
         }
 
-        std::vector<std::pair<Box, int>> getAllBoxes(){
-//            std::map<Box*, int> boxesAndOccupancy;
+        /**
+         * Get all the boxes in the quadtree
+         * @return
+         */
+        std::vector<std::pair<Box, int>> getAllBoxes() {
             std::vector<std::pair<Box, int>> boxesAndOccupancy = {};
-            std::function<void(const Node*, const Box&, int, std::vector<std::pair<Box, int>> *)> traverse;
-            traverse = [&](const Node* node, const Box& box, int depth, std::vector<std::pair<Box, int>> * boxesAndOccupancy) {
+            std::function<void(const Node *, const Box &, int, std::vector<std::pair<Box, int>> *)> traverse;
+            traverse = [&](const Node *node, const Box &box, int depth,
+                           std::vector<std::pair<Box, int>> *boxesAndOccupancy) {
                 if (node == nullptr) return;
-//                boxes.push_back(box);
-                // Write the bounding box, occupancy and depth of this node to the file
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
-                for (const auto& value : node->values) {
+                for (const auto &value: node->values) {
                     boxesAndOccupancy->emplace_back(std::pair(box, value.occupancy));
                 }
 
@@ -150,11 +187,10 @@ namespace quadtree {
 
             traverse(mRoot.get(), mBox, 0, &boxesAndOccupancy);
             return boxesAndOccupancy;
-//            return {};
 
         }
 
-        double getMinSize(){
+        double getMinSize() {
             return this->MinSize;
         }
 
@@ -171,10 +207,21 @@ namespace quadtree {
         Box mBox;
         std::unique_ptr<Node> mRoot;
 
+        /**
+         * @brief Check if the given node is a leaf i.e. had no children
+         * @param node
+         * @return
+         */
         bool isLeaf(const Node *node) const {
             return !static_cast<bool>(node->children[0]);
         }
 
+        /**
+         * @brief Compute the box of the i-th child of the given box
+         * @param box
+         * @param i
+         * @return
+         */
         Box computeBox(const Box &box, int i) const {
             auto origin = box.getTopLeft();
             auto childSize = box.getSize() / 2.0;
@@ -197,6 +244,12 @@ namespace quadtree {
             }
         }
 
+        /**
+         * @brief Get the quadrant which the given box should go in in the node box
+         * @param nodeBox
+         * @param valueBox
+         * @return
+         */
         int getQuadrant(const Box &nodeBox, const Box &valueBox) const {
             auto center = nodeBox.getCenter();
 
@@ -232,7 +285,13 @@ namespace quadtree {
                 return -1;
         }
 
-        int getQuadrant(const Box &nodeBox, const Coordinate& valueCoordinate) const {
+        /**
+         * @brief Get the quadrant which the given coordinate should go in in the node box
+         * @param nodeBox
+         * @param valueCoordinate
+         * @return
+         */
+        int getQuadrant(const Box &nodeBox, const Coordinate &valueCoordinate) const {
             auto center = nodeBox.getCenter();
 
 //            argos::LOG << "valueBox: " << valueBox.left << " , " << valueBox.getRight() << " , " << valueBox.getBottom()
@@ -267,6 +326,13 @@ namespace quadtree {
                 return -1;
         }
 
+        /**
+         * @brief Add a value to the quadtree
+         * @param node
+         * @param depth
+         * @param box
+         * @param value
+         */
         void add(Node *node, std::size_t depth, const Box &box, const QuadNode &value) {
             assert(node != nullptr);
             assert(box.contains(value.coordinate));
@@ -283,10 +349,6 @@ namespace quadtree {
                     node->values.push_back(value);
                     //Else we can add more QuadNodes if there is space.
                 }
-//                else if (node->values.size() < Threshold) {
-//                    argos::LOG << "Adding value to node" << std::endl;
-//                    node->values.push_back(value);
-//                }
                     // Otherwise, we split and we try again
                 else {
 //                    argos::LOG << "Splitting node" << std::endl;
@@ -306,6 +368,11 @@ namespace quadtree {
             }
         }
 
+        /**
+         * @brief Split a leaf node into four children
+         * @param node
+         * @param box
+         */
         void split(Node *node, const Box &box) {
             assert(node != nullptr);
             assert(isLeaf(node) && "Only leaves can be split");
@@ -325,6 +392,13 @@ namespace quadtree {
             node->values = std::move(newValues);
         }
 
+        /**
+         * @brief Remove a value from the quadtree
+         * @param node
+         * @param box
+         * @param value
+         * @return
+         */
         bool remove(Node *node, const Box &box, const QuadNode &value) {
             assert(node != nullptr);
             assert(box.contains(value.coordinate));
@@ -380,15 +454,22 @@ namespace quadtree {
                 return false;
         }
 
-        void query(Node *node, const Box &box, const Box &queryBox, std::vector<QuadNode> &values, Occupancy occupancy) const {
+        /**
+         * @brief Query the quadtree for QuadNodes that intersect with or are contained by the given box
+         * @param node
+         * @param box
+         * @param queryBox
+         * @param values
+         * @param occupancy
+         */
+        void query(Node *node, const Box &box, const Box &queryBox, std::vector<QuadNode> &values,
+                   Occupancy occupancy) const {
             assert(node != nullptr);
-//            assert(queryBox.intersects(box)||box.contains(queryBox) && "Query box must intersect or contain the node box");
-//            bool assert = queryBox.intersects(box)||box.contains(queryBox);
             assert(queryBox.intersects_or_contains(box));
-//            assert(queryBox.contains(box) && "Query box must contain the node box");
 
             for (const auto &value: node->values) {
-                if (value.occupancy == occupancy && (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
+                if (value.occupancy == occupancy &&
+                    (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     values.push_back(value);
             }
             if (!isLeaf(node)) {
@@ -401,15 +482,22 @@ namespace quadtree {
             }
         }
 
-        void queryBoxes(Node *node, const Box &box, const Box &queryBox, std::vector<Box> &boxes, Occupancy occupancy) const {
+        /**
+         * @brief Query the quadtree for boxes that intersect with or are contained by the given box
+         * @param node
+         * @param box
+         * @param queryBox
+         * @param boxes
+         * @param occupancy
+         */
+        void queryBoxes(Node *node, const Box &box, const Box &queryBox, std::vector<Box> &boxes,
+                        Occupancy occupancy) const {
             assert(node != nullptr);
-//            assert(queryBox.intersects(box)||box.contains(queryBox) && "Query box must intersect or contain the node box");
-//            bool assert = queryBox.intersects(box)||box.contains(queryBox);
             assert(queryBox.intersects_or_contains(box));
-//            assert(queryBox.contains(box) && "Query box must contain the node box");
 
             for (const auto &value: node->values) {
-                if (value.occupancy == occupancy && (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
+                if (value.occupancy == occupancy &&
+                    (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     boxes.push_back(box);
             }
             if (!isLeaf(node)) {
