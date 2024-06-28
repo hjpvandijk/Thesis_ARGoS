@@ -16,6 +16,11 @@ static const Real MIN_DISTANCE = 0.05f;
 /* Convenience constant to avoid calculating the square root in PostStep() */
 static const Real MIN_DISTANCE_SQUARED = MIN_DISTANCE * MIN_DISTANCE;
 
+/**
+ * Get the coordinates in all occupied boxes of the quadtrees a given agent
+ * @param pcFB
+ * @param agent
+ */
 void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, Agent *agent) {
     std::vector<quadtree::QuadNode> occupiedNodes = agent->quadtree->queryOccupied(agent->position,
                                                                                    agent->PROXIMITY_RANGE * 2.0);
@@ -28,6 +33,11 @@ void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB
 
 }
 
+/**
+ * Get the coordinates of all other agents, received through messages
+ * @param pcFB
+ * @param agent
+ */
 void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, Agent *agent) {
     for (std::map<std::string, Coordinate>::const_iterator it = agent->agentLocations.begin();
          it != agent->agentLocations.end();
@@ -40,13 +50,15 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
 
 }
 
+/**
+ * Get all the boxes and their occupancy from the quadtree of a given agent
+ * @param pcFB
+ * @param agent
+ */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, Agent *agent) {
     std::vector<std::pair<quadtree::Box, int>> boxesAndOccupancy = agent->quadtree->getAllBoxes();
 
     m_tQuadTree[pcFB] = boxesAndOccupancy;
-
-
-
 }
 
 /****************************************/
@@ -69,8 +81,9 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
 //    }
 }
 
-/****************************************/
-/****************************************/
+/**
+ * Clear all the vectors
+ */
 
 void CAgentVisionLoopFunctions::Reset() {
     /*
@@ -94,9 +107,10 @@ void CAgentVisionLoopFunctions::Reset() {
     m_tOtherAgentCoordinates.clear();
 }
 
-/****************************************/
-/****************************************/
 
+/**
+ * Get the coordinates of all agents and objects in the environment
+ */
 void CAgentVisionLoopFunctions::PostStep() {
     /* Get the map of all pi-pucks from the space */
     CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");

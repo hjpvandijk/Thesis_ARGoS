@@ -8,8 +8,11 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
         m_cAgVisLF(dynamic_cast<CAgentVisionLoopFunctions &>(CSimulator::GetInstance().GetLoopFunctions())) {
 }
 
-/****************************************/
-/****************************************/
+/**
+ * Draw the explored boxes of the quadtree in the world
+ * Red if it is occupied, green if it is free
+ * Also draw the 'vision' area of the agents
+ */
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
