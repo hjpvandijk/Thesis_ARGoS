@@ -106,6 +106,7 @@ public:
 
     double OBJECT_AVOIDANCE_WEIGHT = 1;
     double AGENT_AVOIDANCE_WEIGHT = 1;
+    double UNEXPLORED_FRONTIER_WEIGHT = 1;
 
     double AGENT_AVOIDANCE_RANGE = 2.0;
 
@@ -119,6 +120,7 @@ private:
     void checkForObstacles();
     argos::CVector2 calculateObjectAvoidanceVector();
     argos::CVector2 calculateAgentAvoidanceVector();
+    argos::CVector2 calculateUnexploredFrontierVector();
     std::vector<std::string> *messages;
 
 

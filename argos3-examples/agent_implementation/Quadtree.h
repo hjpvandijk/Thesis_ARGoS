@@ -34,6 +34,7 @@ namespace quadtree {
     public:
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Node>()) {
+            mRoot->values.push_back(QuadNode{box.getCenter(), UNKNOWN});
         }
 
         /**
@@ -84,6 +85,20 @@ namespace quadtree {
 
 
             return queryBoxes(box, OCCUPIED);
+        }
+
+        /**
+         * Returns all the unexplored boxes surrounding the given coordinate within the given area size
+         * @param coordinate
+         * @param areaSize
+         * @return
+         */
+        std::vector<Box> queryUnexploredBoxes(Coordinate coordinate, double areaSize) const {
+            // Create a box centered at the given coordinate
+            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+
+
+            return queryBoxes(box, UNKNOWN);
         }
 
         /**

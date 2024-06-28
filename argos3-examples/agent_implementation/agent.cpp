@@ -6,6 +6,7 @@
 #include <argos3/core/utility/logging/argos_log.h>
 #include <set>
 #include "agent.h"
+#include <random>
 
 
 Agent::Agent(std::string id) {
@@ -282,7 +283,7 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 argos::CVector2 Agent::calculateAgentAvoidanceVector() {
     int nAgentsWithinRange = 0;
     Coordinate averageNeighborLocation = {0, 0};
-    for (const auto& agentLocation: this->agentLocations) {
+    for (const auto &agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(agentLocation.second.x, agentLocation.second.y)
                 - argos::CVector2(this->position.x, this->position.y);
@@ -311,6 +312,24 @@ argos::CVector2 Agent::calculateAgentAvoidanceVector() {
     return vectorToOtherAgent;
 }
 
+argos::CVector2 Agent::calculateUnexploredFrontierVector() {
+    std::vector<quadtree::Box> occupiedBoxes = quadtree->queryUnexploredBoxes(this->position, PROXIMITY_RANGE * 2.0);
+
+    std::random_device rd; // obtain a random number from hardware
+    std::mt19937 gen(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(0, occupiedBoxes.size()); // define the range
+
+
+    quadtree::Box randomBox = occupiedBoxes[0];
+
+    Coordinate coordOfRandomBox = randomBox.getCenter();
+
+    argos::CVector2 vectorToUnexploredBox = argos::CVector2(coordOfRandomBox.x - this->position.x,
+                                                            coordOfRandomBox.y - this->position.y);
+
+    return vectorToUnexploredBox;
+}
+
 void Agent::calculateNextPosition() {
     //Inspired by boids algorithm:
     //Vector determining heading
@@ -322,18 +341,22 @@ void Agent::calculateNextPosition() {
 
     argos::CVector2 objectAvoidanceVector = calculateObjectAvoidanceVector();
     argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
+    argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
 
     argos::RLOG << "Object avoidance vector: " << objectAvoidanceVector << std::endl;
     argos::RLOG << "Agent avoidance vector: " << agentAvoidanceVector << std::endl;
+    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector << std::endl;
 
     //Normalize vectors if they are not zero
     if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
+    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
     argos::CVector2 total_vector = this->force_vector + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
-                                   AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+                                   AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector +
+                                   UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
     if (total_vector.Length() != 0) total_vector.Normalize();
 
     this->force_vector = total_vector;
