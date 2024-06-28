@@ -168,7 +168,7 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
     //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = quadtree->queryOccupiedBoxes(this->position, PROXIMITY_RANGE * 2.0);
-
+//    argos::RLOG << "Occupied boxes: " << occupiedBoxes.size() << std::endl;
     std::set<argos::CDegrees> blockedAngles = {};
     std::set<argos::CDegrees> freeAngles = {};
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
@@ -235,12 +235,12 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
             if (roundedMaxAngle - roundedMinAngle <= argos::CDegrees(180)) {
                 if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
                     blockedAngles.insert(angle);
-                    argos::RLOG << "Blocked angle: " << angle << std::endl;
+//                    argos::RLOG << "Blocked angle: " << angle << std::endl;
                 }
             } else {
                 if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
                     blockedAngles.insert(angle);
-                    argos::RLOG << "Blocked angle: " << angle << std::endl;
+//                    argos::RLOG << "Blocked angle: " << angle << std::endl;
                 }
 
             }
@@ -250,8 +250,9 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
     //Find free angles
     for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
-        auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS);
+        auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS-180);
         if (blockedAngles.find(angle) == blockedAngles.end()) {
+//            argos::RLOG << "Free angle: " << angle.SignedNormalize() << std::endl;
             freeAngles.insert(angle.SignedNormalize());
         }
     }
@@ -262,6 +263,11 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
                                                  return std::abs(0 - (a.GetValue())) < std::abs(0 - (b.GetValue()));
                                              });
 //    argos::RLOG << "Closest free angle: " << *closestFreeAngle << std::endl;
+    if(freeAngles.find(-*closestFreeAngle) != blockedAngles.end()){
+        if (rand() > 0.5) {
+
+        }
+    }
 
     argos::CRadians closestFreeAngleRadians = ToRadians(*closestFreeAngle);
 
