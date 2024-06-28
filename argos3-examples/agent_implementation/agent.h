@@ -7,15 +7,19 @@
 
 #include "coordinate.h"
 #include "radio.h"
+#include "Quadtree.h"
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 
+
+
+
 class Agent {
 public:
     std::string id{};
-    coordinate position;
+    Coordinate position;
 //    argos::CQuaternion heading;
     argos::CRadians heading;
     argos::CRadians targetHeading;
@@ -23,7 +27,7 @@ public:
     Radio wifi;
     double lastRangeReading = 2;
 
-    std::map<std::string, coordinate> agentLocations;
+    std::map<std::string, Coordinate> agentLocations;
 
     argos::CCI_PiPuckDifferentialDriveActuator *diffdrive;
 
@@ -44,17 +48,17 @@ public:
 
     explicit Agent(std::string id);
 
-    Agent(std::string id, coordinate position);
+    Agent(std::string id, Coordinate position);
 
     void setPosition(double new_x, double new_y);
 
-    void setPosition(coordinate position);
+    void setPosition(Coordinate position);
 
     void setHeading(argos::CRadians new_heading);
 
     void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive);
 
-    coordinate getPosition();
+    Coordinate getPosition();
 
     std::string getId() const;
 
@@ -92,16 +96,43 @@ public:
 
     std::vector<std::string> getMessages();
 
+
+    quadtree::Quadtree *quadtree;
+
+
+    double PROXIMITY_RANGE = 2.0;
+
+    double TURN_THRESHOLD_DEGREES = 5;
+
+    double OBJECT_AVOIDANCE_WEIGHT = 1;
+    double AGENT_AVOIDANCE_WEIGHT = 1;
+
+    double AGENT_AVOIDANCE_RANGE = 2.0;
+
+    double TURNING_SPEED_RATIO = 0.1;
+
+    double ANGLE_INTERVAL_STEPS = 36;
+
+
+
 private:
+    void checkForObstacles();
     argos::CVector2 calculateObjectAvoidanceVector();
     argos::CVector2 calculateAgentAvoidanceVector();
-
     std::vector<std::string> *messages;
 
-    argos::CQuaternion averageQuaternions(std::vector<argos::CQuaternion> multipleRotations);
+
+
+
+
 
 
     std::string GetId() const;
+
+
+    void addObjectLocation(Coordinate objectCoordinate);
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+
 
 
 };

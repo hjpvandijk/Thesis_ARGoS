@@ -77,7 +77,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 /****************************************/
 /****************************************/
 void PiPuckHugo::ControlStep() {
-    Real proxReadings[8] = {0};
+    Real proxReadings[1] = {0};
     std::function<void(const CCI_PiPuckRangefindersSensor::SInterface &)> visitFn =
             [&proxReadings](const CCI_PiPuckRangefindersSensor::SInterface &sensor) {
                 proxReadings[sensor.Label] = sensor.Proximity;
@@ -93,7 +93,7 @@ void PiPuckHugo::ControlStep() {
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
     const auto orientation = positionSensorReading.Orientation;
-    agentObject->setPosition(position.GetX(), position.GetY());
+    agentObject->setPosition(-position.GetY(), position.GetX()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
     CRadians zAngle, yAngle, xAngle;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
     agentObject->setHeading(zAngle);

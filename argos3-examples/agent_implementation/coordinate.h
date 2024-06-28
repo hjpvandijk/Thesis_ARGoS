@@ -6,15 +6,16 @@
 #define THESIS_ARGOS_COORDINATE_H
 
 #include <string>
+#include <argos3/core/utility/math/angles.h>
 
 
-struct coordinate {
+struct Coordinate {
     double x;
     double y;
 //
-//    coordinate() {}
+//    Coordinate() {}
 //
-//    coordinate(double x, double y);
+//    Coordinate(double x, double y);
 //
 //    void setCoordinates(double new_x, double new_y);
 //
@@ -28,9 +29,46 @@ struct coordinate {
 
 //    std::string toString();
 
+
+
     std::string toString() {
         return std::to_string(this->x) + ";" + std::to_string(this->y);
     }
+
+    /**
+     * @brief Converts a heading from the own coordinate system to the argos coordinate system
+     * @param radians
+     * @return
+     */
+    static argos::CRadians OwnHeadingToArgos(argos::CRadians radians) {
+        return argos::CRadians(radians - argos::CRadians::PI_OVER_TWO);
+    }
+
+    /**
+     * @brief Converts a heading from the argos coordinate system to the own coordinate system
+     * @param radians
+     * @return
+     */
+    static argos::CRadians ArgosHeadingToOwn(argos::CRadians radians) {
+        return argos::CRadians(radians + argos::CRadians::PI_OVER_TWO);
+    }
+
+    /**
+     * @brief Converts the coordinate from the own coordinate system to the argos coordinate system
+     * @return
+     */
+    Coordinate FromOwnToArgos() {
+        return Coordinate{y, -x};
+    }
+
+    /**
+     * @brief Converts the coordinate from the argos coordinate system to the own coordinate system
+     * @return
+     */
+    Coordinate FromArgosToOwn() {
+        return Coordinate{-y, x};
+    }
+
 
 
 };

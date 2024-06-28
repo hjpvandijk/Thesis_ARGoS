@@ -3,7 +3,7 @@ rangerfinder = nil
 function init()
    package.cpath = package.cpath .. ";build/agent_implementation/lib?.so"
    local agent = require("agent_implementation");
-   local agentCoordinate = agent.coordinate;
+   local agentCoordinate = agent.Coordinate;
    myAgent = agent.agent(robot.id);
    rangefinder = robot.rangefinders[1]
 

@@ -13,7 +13,7 @@
               the computation is not parallelized: the main thread does
               everything.
         -->
-        <system threads="0" />
+        <system threads="0"/>
         <!--
             Experiment configuration:
             - length: total experiment time in seconds (0 means the experiment
@@ -24,8 +24,8 @@
               message is displayed.
         -->
         <experiment length="0"
-                    ticks_per_second="60"
-                    random_seed="124" />
+                    ticks_per_second="120"
+                    random_seed="124"/>
     </framework>
 
     <!-- *************** -->
@@ -50,7 +50,7 @@
               controller.
         -->
         <pipuck_hugo_controller id="ppc"
-                                      library="build/controllers/pipuck_hugo/libpipuck_hugo">
+                                library="build/controllers/pipuck_hugo/libpipuck_hugo">
             <!--
                 The <actuators> section contains a list of the actuatocdrs used by
                 this controller.
@@ -71,11 +71,11 @@
                 ...
             -->
             <actuators>
-<!--                <differential_steering implementation="default" />-->
-<!--                <footbot_distance_scanner implementation="default" />-->
+                <!--                <differential_steering implementation="default" />-->
+                <!--                <footbot_distance_scanner implementation="default" />-->
                 <pipuck_differential_drive implementation="default"/>
                 <simple_radios implementation="default"/>
-<!--                <range_and_bearing implementation="default" medium="rab"/>-->
+                <!--                <range_and_bearing implementation="default" medium="rab"/>-->
             </actuators>
             <!--
                 The <sensors> section contains a list of the sensors used by
@@ -86,12 +86,12 @@
                 $ argos3 -q sensors
             -->
             <sensors>
-<!--                <footbot_proximity implementation="default" show_rays="true" />-->
-<!--                <footbot_distance_scanner implementation="rot_z_only" show_rays="false" />-->
+                <!--                <footbot_proximity implementation="default" show_rays="true" />-->
+                <!--                <footbot_distance_scanner implementation="rot_z_only" show_rays="false" />-->
                 <pipuck_rangefinders implementation="default" show_rays="true"/>
                 <simple_radios implementation="default" show_rays="false"/>
-<!--                <range_and_bearing implementation="default" medium="rab"/>-->
-                <positioning implementation="default" />
+                <!--                <range_and_bearing implementation="default" medium="rab"/>-->
+                <positioning implementation="default"/>
             </sensors>
             <!--
                 The <params> section is passed as-is to the controller's Init()
@@ -101,7 +101,7 @@
                 controller's header file in
                 controllers/footbot_diffusion/footbot_diffusion.h.
             -->
-            <params alpha="1" delta="0.01" velocity="20" />
+            <params alpha="1" delta="0.01" velocity="20"/>
         </pipuck_hugo_controller>
 
     </controllers>
@@ -109,14 +109,16 @@
     <!-- ****************** -->
     <!-- * Loop functions * -->
     <!-- ****************** -->
-<!--    <loop_functions library="build/loop_functions/trajectory_loop_functions/libtrajectory_loop_functions"-->
-<!--                    label="trajectory_loop_functions" />-->
-<!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
-<!--                        label="radios_loop_functions" />-->
-<!--    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"-->
-<!--                        label="position_loop_functions" />-->
-
-
+    <!--    <loop_functions library="build/loop_functions/trajectory_loop_functions_pipuck/libtrajectory_loop_functions_pipuck"-->
+    <!--                    label="trajectory_loop_functions_pipuck" />-->
+<!--    <loop_functions library="build/loop_functions/coverage_loop_functions_pipuck/libcoverage_loop_functions_pipuck"-->
+<!--                    label="coverage_loop_functions_pipuck"/>-->
+    <loop_functions library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
+                    label="agent_vision_loop_functions_pipuck"/>
+    <!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
+    <!--                        label="radios_loop_functions" />-->
+    <!--    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"-->
+    <!--                        label="position_loop_functions" />-->
 
 
     <!-- *********************** -->
@@ -141,64 +143,67 @@
 
         <!-- Place four boxes in a square to delimit the arena -->
         <box id="wall_north" size="9,0.1,0.5" movable="false">
-            <body position="0,4.5,0" orientation="0,0,0" />
+            <body position="0,4.5,0" orientation="0,0,0"/>
         </box>
         <box id="wall_south" size="9,0.1,0.5" movable="false">
-            <body position="0,-4.5,0" orientation="0,0,0" />
+            <body position="0,-4.5,0" orientation="0,0,0"/>
         </box>
         <box id="wall_east" size="0.1,9,0.5" movable="false">
-            <body position="4.5,0,0" orientation="0,0,0" />
+            <body position="4.5,0,0" orientation="0,0,0"/>
         </box>
         <box id="wall_west" size="0.1,9,0.5" movable="false">
-            <body position="-4.5,0,0" orientation="0,0,0" />
+            <body position="-4.5,0,0" orientation="0,0,0"/>
         </box>
 
-<!--        &lt;!&ndash; Place a foot-bot in the origin and bind it to the controller &ndash;&gt;-->
-<!--        <foot-bot id="fb_0">-->
-<!--            <body position="0,0,0" orientation="0,0,0" />-->
+        <box id="object" size="3,4,0.5" movable="false">
+            <body position="0,0,0" orientation="0,0,0"/>
+        </box>
+
+        <!--        &lt;!&ndash; Place a foot-bot in the origin and bind it to the controller &ndash;&gt;-->
+        <!--        <foot-bot id="fb_0">-->
+        <!--            <body position="0,0,0" orientation="0,0,0" />-->
+        <!--            <controller config="ppc"/>-->
+        <!--        </foot-bot>-->
+
+<!--        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">-->
+<!--            <body position="1,3,0" orientation="-45,0,0"/>-->
 <!--            <controller config="ppc"/>-->
-<!--        </foot-bot>-->
-
-        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="10.0">
-            <body position="0,0.5,0" orientation="-45,0,0"/>
-            <controller config="ppc"/>
-            <devices>
-<!--            <simple_radios>-->
-<!--                &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;-->
-<!--                <simple_radio id="wifi" anchor="base" position="0,0,.0125"-->
-<!--                              medium="wifi" range="0.01" />-->
-<!--            </simple_radios>-->
-            </devices>
-        </pipuck>
-
-        <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="10.0">
-            <body position="0,-0.5,0" orientation="90,0,0"/>
-            <controller config="ppc"/>
 <!--            <devices>-->
-<!--                <simple_radios>-->
-<!--                    &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;-->
-<!--                    <simple_radio id="wifi" anchor="base" position="0,0,.0125"-->
-<!--                                  medium="wifi" range="0.01" />-->
-<!--                </simple_radios>-->
+<!--                &lt;!&ndash;            <simple_radios>&ndash;&gt;-->
+<!--                &lt;!&ndash;                &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;&ndash;&gt;-->
+<!--                &lt;!&ndash;                <simple_radio id="wifi" anchor="base" position="0,0,.0125"&ndash;&gt;-->
+<!--                &lt;!&ndash;                              medium="wifi" range="0.01" />&ndash;&gt;-->
+<!--                &lt;!&ndash;            </simple_radios>&ndash;&gt;-->
 <!--            </devices>-->
-        </pipuck>
-
-<!--        <pipuck id="pipuck3" wifi_medium="wifi">-->
-<!--            <body position="0.7,0,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
 <!--        </pipuck>-->
 
-<!--        <distribute>-->
-<!--            <position method="uniform" min="-2,-2,0" max="2,2,0" />-->
-<!--            <orientation method="gaussian" mean="0,0,0" std_dev="360,0,0" />-->
-<!--            <entity quantity="2" max_trials="100">-->
-<!--                <pipuck id="pp">-->
-<!--                    <controller config="ppc" />-->
-<!--                </pipuck>-->
-<!--            </entity>-->
-<!--        </distribute>-->
-    </arena>
+                <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
+                    <body position="0,-3,0" orientation="90,0,0"/>
+                    <controller config="ppc"/>
+        <!--            <devices>-->
+        <!--                <simple_radios>-->
+        <!--                    &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;-->
+        <!--                    <simple_radio id="wifi" anchor="base" position="0,0,.0125"-->
+        <!--                                  medium="wifi" range="0.01" />-->
+        <!--                </simple_radios>-->
+        <!--            </devices>-->
+                </pipuck>
 
+        <!--        <pipuck id="pipuck3" wifi_medium="wifi">-->
+        <!--            <body position="0.7,0,0" orientation="0,0,0"/>-->
+        <!--            <controller config="ppc"/>-->
+        <!--        </pipuck>-->
+
+        <!--        <distribute>-->
+        <!--            <position method="uniform" min="-2,-2,0" max="2,2,0" />-->
+        <!--            <orientation method="gaussian" mean="0,0,0" std_dev="360,0,0" />-->
+        <!--            <entity quantity="2" max_trials="100">-->
+        <!--                <pipuck id="pp">-->
+        <!--                    <controller config="ppc" />-->
+        <!--                </pipuck>-->
+        <!--            </entity>-->
+        <!--        </distribute>-->
+    </arena>
 
 
     <!-- ******************* -->
@@ -215,8 +220,8 @@
         <!--
             Use a 2D dynamics engine.
         -->
-        <dynamics2d id="dyn2d" />
-<!--        <dynamics3d id="dyn3d" iterations="1" />-->
+        <dynamics2d id="dyn2d"/>
+        <!--        <dynamics3d id="dyn3d" iterations="1" />-->
     </physics_engines>
 
     <!-- ********* -->
@@ -231,8 +236,8 @@
         $ argos3 -q media
     -->
     <media>
-<!--        <range_and_bearing id="rab" />-->
-        <simple_radio id="wifi" index="grid" grid_size="20,20,20" />
+        <!--        <range_and_bearing id="rab" />-->
+        <simple_radio id="wifi" index="grid" grid_size="20,20,20"/>
     </media>
 
     <!-- ****************** -->
@@ -251,13 +256,19 @@
     -->
     <visualization>
         <qt-opengl>
-<!--            <user_functions library="build/loop_functions/trajectory_loop_functions/libtrajectory_loop_functions"-->
-<!--                            label="trajectory_qtuser_functions" />-->
-<!--            <user_functions library="build/loop_functions/id_loop_functions/libid_loop_functions"-->
-<!--                            label="id_qtuser_functions" />-->
+            <!--            <user_functions library="build/loop_functions/trajectory_loop_functions_pipuck/libtrajectory_loop_functions_pipuck"-->
+            <!--                            label="trajectory_qtuser_functions_pipuck" />-->
+            <!--            <user_functions library="build/loop_functions/coverage_loop_functions_pipuck/libcoverage_loop_functions_pipuck"-->
+            <!--                            label="coverage_qtuser_functions_pipuck" />-->
+            <!--            <user_functions library="build/loop_functions/id_loop_functions/libid_loop_functions"-->
+            <!--                            label="id_qtuser_functions" />-->
+            <user_functions
+                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
+                    label="agent_vision_qtuser_functions_pipuck"/>
             <camera>
                 <placements>
-                    <placement index="0" position="-6.83677,-0.0492575,7.1301" look_at="-6.14438,-0.0492575,6.40857" up="0.721522,-3.4075e-17,0.692391" lens_focal_length="30" />
+                    <placement index="0" position="-6.83677,-0.0492575,7.1301" look_at="-6.14438,-0.0492575,6.40857"
+                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="30"/>
                 </placements>
             </camera>
         </qt-opengl>
