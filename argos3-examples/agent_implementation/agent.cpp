@@ -236,12 +236,12 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
             if (roundedMaxAngle - roundedMinAngle <= argos::CDegrees(180)) {
                 if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
                     blockedAngles.insert(angle);
-                    argos::RLOG << "Blocked angle: " << angle << std::endl;
+//                    argos::RLOG << "Blocked angle: " << angle << std::endl;
                 }
             } else {
                 if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
                     blockedAngles.insert(angle);
-                    argos::RLOG << "Blocked angle: " << angle << std::endl;
+//                    argos::RLOG << "Blocked angle: " << angle << std::endl;
                 }
 
             }
@@ -391,7 +391,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //Calculate the score of the frontier region
         double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * frontierRegionSize;
 
-        //If the score is better than the best score, update the best score and best frontier region
+        //If the score is lower than the best score, update the best score and best frontier region
         if (score < bestFrontierScore) {
             bestFrontierScore = score;
             bestFrontierRegion = region;
@@ -408,14 +408,6 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
     return vectorToBestFrontier;
 //    return {0, 0};
-}
-
-/**
- * Calculate the euclidean vector-2 norm
- */
-
-double euclideanNorm(argos::CVector2 vector) {
-    return sqrt(vector.GetX() * vector.GetX() + vector.GetY() * vector.GetY());
 }
 
 void Agent::calculateNextPosition() {
