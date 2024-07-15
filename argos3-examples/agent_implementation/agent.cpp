@@ -313,21 +313,109 @@ argos::CVector2 Agent::calculateAgentAvoidanceVector() {
 }
 
 argos::CVector2 Agent::calculateUnexploredFrontierVector() {
-    std::vector<quadtree::Box> occupiedBoxes = quadtree->queryUnexploredBoxes(this->position, PROXIMITY_RANGE * 2.0);
+    //According to Dynamic frontier-led swarming:
+    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+    //F* = arg min (Ψ_D||p-G^f||_2 - Ψ_S * J^f) for all frontiers F^f in F
+    //F^f is a frontier, a segment that separates explored cells from unexplored cells.
 
-    std::random_device rd; // obtain a random number from hardware
-    std::mt19937 gen(rd()); // seed the generator
-    std::uniform_int_distribution<> distr(0, occupiedBoxes.size()); // define the range
+    //Where Ψ_D is the frontier distance weight
+    //p is the agent position
+    //G^f is the frontier position defined as G^f = (Sum(F_j^f))/J^f So the sum of the cell locations divided by the amount of cells
+    //Ψ_S is the frontier size weight
+    //J^f is the number of cells in the frontier F^f
 
+    //A cell is a frontier iff:
+    //1. Occupancy = explored
+    //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
-    quadtree::Box randomBox = occupiedBoxes[0];
+    std::vector<quadtree::Box> frontiers = quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0);
 
-    Coordinate coordOfRandomBox = randomBox.getCenter();
+    // Initialize an empty vector of vectors to store frontier regions
+    std::vector<std::vector<quadtree::Box>> frontierRegions = {};
 
-    argos::CVector2 vectorToUnexploredBox = argos::CVector2(coordOfRandomBox.x - this->position.x,
-                                                            coordOfRandomBox.y - this->position.y);
+// Iterate over each frontier box to merge adjacent ones into regions
+    for (auto frontier: frontiers) {
+        bool added = false; // Flag to check if the current frontier has been added to a region
 
-    return vectorToUnexploredBox;
+        // Iterate over existing regions to find a suitable one for the current frontier
+        for (auto &region: frontierRegions) {
+            for (auto box: region) {
+                // Calculate the center coordinates of the current box and the frontier
+                Coordinate boxCenter = box.getCenter();
+                Coordinate frontierCenter = frontier.getCenter();
+
+                // Check if the distance between the box and the frontier is less than or equal to
+                // the diagonal of a box with minimum size (ensuring adjacency)
+                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
+                    sqrt(2 * pow(quadtree->getMinSize(), 2))) {
+                    region.push_back(frontier); // Add the frontier to the current region
+                    added = true; // Mark the frontier as added
+                    break; // Exit the loop since the frontier has been added to a region
+                }
+            }
+//            if (added) break; // If the frontier has been added to a region, exit the loop
+        }
+
+        // If the frontier was not added to any existing region, create a new region with it
+        if (!added) {
+            frontierRegions.push_back({frontier});
+        }
+    }
+
+    //Now we have all frontier cells merged into frontier regions
+    //Find F* by using the formula above
+    //Ψ_D = FRONTIER_DISTANCE_WEIGHT
+    //Ψ_S = FRONTIER_SIZE_WEIGHT
+
+    //Initialize variables to store the best frontier region and its score
+    std::vector<quadtree::Box> bestFrontierRegion = {};
+    Coordinate bestFrontierRegionCenter = {0, 0};
+    double bestFrontierScore = std::numeric_limits<double>::max();
+
+    //Iterate over all frontier regions to find the best one
+    for (auto region: frontierRegions) {
+        //Calculate the average position of the frontier region
+        double sumX = 0;
+        double sumY = 0;
+        for (auto box: region) {
+            sumX += box.getCenter().x;
+            sumY += box.getCenter().y;
+        }
+        double frontierRegionSize = region.size();
+        double frontierRegionX = sumX / frontierRegionSize;
+        double frontierRegionY = sumY / frontierRegionSize;
+
+        //Calculate the distance between the agent and the frontier region
+        double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
+
+        //Calculate the score of the frontier region
+        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * frontierRegionSize;
+
+        //If the score is better than the best score, update the best score and best frontier region
+        if (score < bestFrontierScore) {
+            bestFrontierScore = score;
+            bestFrontierRegion = region;
+            bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
+        }
+    }
+
+    argos::RLOG << "Best frontier region center: " << bestFrontierRegionCenter.x << ", " << bestFrontierRegionCenter.y
+                << std::endl;
+
+    //Calculate the vector to the best frontier region
+    argos::CVector2 vectorToBestFrontier = argos::CVector2(bestFrontierRegionCenter.x, bestFrontierRegionCenter.y)
+                                            - argos::CVector2(this->position.x, this->position.y);
+
+    return vectorToBestFrontier;
+//    return {0, 0};
+}
+
+/**
+ * Calculate the euclidean vector-2 norm
+ */
+
+double euclideanNorm(argos::CVector2 vector) {
+    return sqrt(vector.GetX() * vector.GetX() + vector.GetY() * vector.GetY());
 }
 
 void Agent::calculateNextPosition() {
@@ -345,16 +433,17 @@ void Agent::calculateNextPosition() {
 
     argos::RLOG << "Object avoidance vector: " << objectAvoidanceVector << std::endl;
     argos::RLOG << "Agent avoidance vector: " << agentAvoidanceVector << std::endl;
-    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector << std::endl;
+//    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector << std::endl;
 
     //Normalize vectors if they are not zero
     if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
-    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
+//    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    argos::CVector2 total_vector = this->force_vector + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+    argos::CVector2 total_vector = this->force_vector
+                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
                                    AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector +
                                    UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
     if (total_vector.Length() != 0) total_vector.Normalize();

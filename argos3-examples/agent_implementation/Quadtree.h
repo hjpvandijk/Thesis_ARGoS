@@ -17,6 +17,7 @@ namespace quadtree {
         UNKNOWN,
         FREE,
         OCCUPIED,
+        ANY
     };
 
 
@@ -60,7 +61,7 @@ namespace quadtree {
         }
 
         /**
-         * Returns all the occupied coordinates surrounding the given coordinate within the given area size
+         * Returns all the occupied QuadNodes surrounding the given coordinate within the given area size
          * @param coordinate
          * @param areaSize
          * @return
@@ -72,6 +73,7 @@ namespace quadtree {
 
             return query(box, OCCUPIED);
         }
+
 
         /**
          * Returns all the occupied boxes surrounding the given coordinate within the given area size
@@ -102,6 +104,127 @@ namespace quadtree {
         }
 
         /**
+         * Returns all the frontier boxes surrounding the given coordinate within the given area size
+         */
+        std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize) const {
+            // Create a box centered at the given coordinate
+            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+
+
+            //A cell is a frontier iff (according to dynamic frontier-led swarming):
+            //1. Occupancy = explored
+            //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
+
+            //Get all the explored but free boxes
+            std::vector<Box> exploredBoxes = queryBoxes(box, FREE);
+//
+//            //Get all the unexplored boxes
+//            std::vector<Box> unexploredBoxes = queryBoxes(box, UNKNOWN);
+
+            //Get all the frontier boxes
+            std::vector<Box> frontierBoxes = {};
+            for (Box exploredBox: exploredBoxes) {
+                //Get the 8-connected Moore neighbours of the explored box
+                bool isFrontier = false;
+                if (isMooreNeighbourUnknown(exploredBox)) {
+                    isFrontier = true;
+                }
+                if (isFrontier) {
+                    frontierBoxes.push_back(exploredBox);
+                }
+            }
+
+            return frontierBoxes;
+
+        }
+
+        /**
+         * Find 8-connected moore neighboring quadnodes of a given box
+         * @param box
+         * @return
+         */
+        bool isMooreNeighbourUnknown(const Box &box) const {
+//            std::vector<Occupancy> neighbours;
+//            return true;
+            //See if coordinate to the left is in the quadtree and get its occupancy
+            Coordinate left = Coordinate{box.getCenter().x - box.size, box.getCenter().y};
+//            argos::LOG << "LEFT: " << left.x << " , " << left.y << std::endl;
+            if (mBox.contains(left)) {
+//                neighbours.push_back({left, queryCoordinate(left).occupancy});
+//                argos::LOG << "CONTAINED" << std::endl;
+                if(queryCoordinate(left).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            //See if coordinate to the right is in the quadtree and get its occupancy
+            Coordinate right = Coordinate{box.getRight() + box.size, box.top};
+            if (mBox.contains(right)) {
+//                neighbours.push_back({right, queryCoordinate(right).occupancy});
+                if(queryCoordinate(right).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            //See if coordinate to the top is in the quadtree and get its occupancy
+            Coordinate top = Coordinate{box.left, box.top + box.size};
+            if (mBox.contains(top)) {
+//                neighbours.push_back({top, queryCoordinate(top).occupancy});
+                if(queryCoordinate(top).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            //See if coordinate to the bottom is in the quadtree and get its occupancy
+            Coordinate bottom = Coordinate{box.left, box.getBottom() - box.size};
+            if (mBox.contains(bottom)) {
+//                neighbours.push_back({bottom, queryCoordinate(bottom).occupancy});
+                if(queryCoordinate(bottom).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            //See if coordinate to the top left is in the quadtree and get its occupancy
+            Coordinate topLeft = Coordinate{box.left - box.size, box.top + box.size};
+            if (mBox.contains(topLeft)) {
+//                neighbours.push_back({topLeft, queryCoordinate(topLeft).occupancy});
+                if(queryCoordinate(topLeft).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            //See if coordinate to the top right is in the quadtree and get its occupancy
+            Coordinate topRight = Coordinate{box.getRight() + box.size, box.top + box.size};
+            if (mBox.contains(topRight)) {
+//                neighbours.push_back({topRight, queryCoordinate(topRight).occupancy});
+                if(queryCoordinate(topRight).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            //See if coordinate to the bottom left is in the quadtree and get its occupancy
+            Coordinate bottomLeft = Coordinate{box.left - box.size, box.getBottom() - box.size};
+            if (mBox.contains(bottomLeft)) {
+//                neighbours.push_back({bottomLeft, queryCoordinate(bottomLeft).occupancy});
+                if(queryCoordinate(bottomLeft).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            //See if coordinate to the bottom right is in the quadtree and get its occupancy
+            Coordinate bottomRight = Coordinate{box.getRight() + box.size, box.getBottom() - box.size};
+            if (mBox.contains(bottomRight)) {
+//                neighbours.push_back({bottomRight, queryCoordinate(bottomRight).occupancy});
+                if(queryCoordinate(bottomRight).occupancy == UNKNOWN){
+                    return true;
+                }
+            }
+
+            return false;
+
+        }
+
+        /**
          * Returns QuadNodes that intersect with or are contained by the given box
          * @param box
          * @param occupancy
@@ -126,6 +249,16 @@ namespace quadtree {
             return boxes;
         }
 
+        /**
+         * Returns the QuadNode containing the coordinate
+         * @param coordinate
+         */
+         QuadNode queryCoordinate(Coordinate coordinate) const {
+            auto values = std::vector<QuadNode>();
+            query(mRoot.get(), mBox, Box(coordinate, 0.0), values, ANY);
+            assert(values.size() == 1);
+            return QuadNode();
+         }
         /**
          * @brief Find all intersections between values stored in the quadtree
          * @return
@@ -483,7 +616,7 @@ namespace quadtree {
             assert(queryBox.intersects_or_contains(box));
 
             for (const auto &value: node->values) {
-                if (value.occupancy == occupancy &&
+                if ((occupancy==ANY || value.occupancy == occupancy) &&
                     (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     values.push_back(value);
             }
