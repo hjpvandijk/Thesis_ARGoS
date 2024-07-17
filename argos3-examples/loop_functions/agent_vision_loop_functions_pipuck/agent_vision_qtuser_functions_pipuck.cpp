@@ -43,10 +43,13 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             CVector2 bottomRightVec = CVector2(bottomRight.x-boxCenterArgos.x, bottomRight.y-boxCenterArgos.y);
             std::vector<CVector2> posVec = {topLeftVec, topRightVec, bottomRightVec, bottomLeftVec};
 
-            CColor color = CColor::GREEN;
-            bool fill = true;
+            CColor color = CColor::GRAY80;
+            bool fill = false;
             if (occupancy == quadtree::Occupancy::OCCUPIED) {
                 color = CColor::RED;
+                fill = true;
+            } else if (occupancy == quadtree::Occupancy::FREE){
+                color = CColor::GREEN;
                 fill = true;
             }
 

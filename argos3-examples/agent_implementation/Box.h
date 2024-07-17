@@ -100,6 +100,23 @@ namespace quadtree {
         bool operator==(const Box &b) const {
             return this->left == b.left && this->top == b.top && this->size == b.size;
         }
+
+        /**
+         * Get the 8-connected moore neighbours of the box
+         * @return vector of neighboors
+         */
+        std::vector<Box> getMooreNeighbours(){
+            std::vector<Box> neighbours;
+            neighbours.push_back(Box(left-size, top, size));
+            neighbours.push_back(Box(left-size, top+size, size));
+            neighbours.push_back(Box(left, top+size, size));
+            neighbours.push_back(Box(left+size, top+size, size));
+            neighbours.push_back(Box(left+size, top, size));
+            neighbours.push_back(Box(left+size, top-size, size));
+            neighbours.push_back(Box(left, top-size, size));
+            neighbours.push_back(Box(left-size, top-size, size));
+            return neighbours;
+        }
     };
 
 }
