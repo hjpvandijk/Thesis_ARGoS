@@ -450,6 +450,12 @@ void Agent::calculateNextPosition() {
 
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
+    std::vector<std::string> quadTreeToStrings = {};
+    quadtree->toStringVector(&quadTreeToStrings);
+    argos::RLOG << "quadTreeStringSize: " << quadTreeToStrings.size() << std::endl;
+    for (const std::string& str: quadTreeToStrings) {
+        broadcastMessage("M:" + str);
+    }
 
     checkMessages();
 
@@ -538,15 +544,42 @@ Coordinate coordinateFromString(std::string str) {
 }
 
 /**
+ * Get a QuadNode from a string
+ * @param str
+ * @return
+ */
+quadtree::QuadNode quadNodeFromString(std::string str) {
+//    std::string coorDelimiter = ";";
+    std::string occDelimiter = ":";
+//    size_t coorPos = 0;
+    size_t occPos = 0;
+    std::string coordinate;
+    std::string occ;
+//    coorPos = str.find(coorDelimiter);
+    occPos = str.find(occDelimiter);
+    coordinate = str.substr(0, occPos);
+    quadtree::QuadNode newQuadNode;
+//    argos::LOG << "Coordinate: " << coordinate << std::endl;
+    newQuadNode.coordinate = coordinateFromString(coordinate);
+    str.erase(0, occPos + occDelimiter.length());
+//    argos::LOG << "Occupancy: " << str << std::endl;
+    newQuadNode.occupancy = static_cast<quadtree::Occupancy>(std::stoi(str));
+    return newQuadNode;
+}
+
+/**
  * Parse messages from other agents
  */
 void Agent::parseMessages() {
     for (std::string message: *this->messages) {
+//        argos::RLOG << "Received message: " << message << std::endl;
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent[0] == 'C') {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
+        } else if (messageContent[0] == 'M') {
+            quadtree->add(quadNodeFromString(messageContent.substr(2)));
         }
     }
 
