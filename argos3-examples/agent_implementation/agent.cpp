@@ -274,42 +274,55 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 
 }
 
-/**
- * Calculate the vector to avoid other agents:
- * If the distance between other agents is less than a certain threshold,
- * create a vector in the opposite direction of the average location of these agents.
- * @return a vector pointing away from the average location other agents
- */
-argos::CVector2 Agent::calculateAgentAvoidanceVector() {
+bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation) {
     int nAgentsWithinRange = 0;
-    Coordinate averageNeighborLocation = {0, 0};
     for (const auto &agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(agentLocation.second.x, agentLocation.second.y)
                 - argos::CVector2(this->position.x, this->position.y);
 
         if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) {
-            averageNeighborLocation.x += agentLocation.second.x;
-            averageNeighborLocation.y += agentLocation.second.y;
+            averageNeighborLocation->x += agentLocation.second.x;
+            averageNeighborLocation->y += agentLocation.second.y;
             nAgentsWithinRange++;
         }
     }
-    //If no agents are within range, return a zero vector
-    if (nAgentsWithinRange == 0) return {0, 0};
-
+    //If no agents are within range, there is no average location
+    if (nAgentsWithinRange == 0) {
+        return false;
+    }
     //Else calculate the average position of the agents within range
-    averageNeighborLocation.x /= nAgentsWithinRange;
-    averageNeighborLocation.y /= nAgentsWithinRange;
+    averageNeighborLocation->x /= nAgentsWithinRange;
+    averageNeighborLocation->y /= nAgentsWithinRange;
+
+    return true;
+}
+
+argos::CVector2 Agent::calculateAgentCohesionVector(){
+    Coordinate averageNeighborLocation = {0, 0};
+
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation);
+    if(!neighborsWithinRange){
+        argos::RLOG << "No agents within range" << std::endl;
+        return {0, 0};
+    }
 
     //Create a vector between this agent and the average position of the agents within range
     argos::CVector2 vectorToOtherAgent =
             argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
             - argos::CVector2(this->position.x, this->position.y);
+}
 
-    //Reverse the vector
-    vectorToOtherAgent = vectorToOtherAgent * -1;
 
-    return vectorToOtherAgent;
+/**
+ * Calculate the vector to avoid other agents:
+ * If the distance between other agents is less than a certain threshold,
+ * create a vector in the opposite direction of the average location of these agents.
+ * @return a vector pointing away from the average location other agents
+ */
+argos::CVector2 Agent::calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector){
+
+    return agentCohesionVector * -1;
 }
 
 argos::CVector2 Agent::calculateUnexploredFrontierVector() {
@@ -404,7 +417,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
     //Calculate the vector to the best frontier region
     argos::CVector2 vectorToBestFrontier = argos::CVector2(bestFrontierRegionCenter.x, bestFrontierRegionCenter.y)
-                                            - argos::CVector2(this->position.x, this->position.y);
+                                           - argos::CVector2(this->position.x, this->position.y);
 
     return vectorToBestFrontier;
 //    return {0, 0};
@@ -420,22 +433,27 @@ void Agent::calculateNextPosition() {
     //4. Repulsion from objects/walls (done)
 
     argos::CVector2 objectAvoidanceVector = calculateObjectAvoidanceVector();
-    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
+    argos::CVector2 agentCohesionVector = calculateAgentCohesionVector();
+    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector(agentCohesionVector);
     argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
 
     argos::RLOG << "Object avoidance vector: " << objectAvoidanceVector << std::endl;
     argos::RLOG << "Agent avoidance vector: " << agentAvoidanceVector << std::endl;
 //    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector << std::endl;
 
+    //If there are objects or agents to avoid, do not explore
+    if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
+
     //Normalize vectors if they are not zero
     if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
-//    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
+    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
     argos::CVector2 total_vector = this->force_vector
                                    + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+                                   AGENT_COHESION_WEIGHT * agentCohesionVector +
                                    AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector +
                                    UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
     if (total_vector.Length() != 0) total_vector.Normalize();

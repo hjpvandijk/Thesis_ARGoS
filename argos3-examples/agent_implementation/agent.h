@@ -104,8 +104,10 @@ public:
 
     double TURN_THRESHOLD_DEGREES = 5;
 
-    double OBJECT_AVOIDANCE_WEIGHT = 0;
-    double AGENT_AVOIDANCE_WEIGHT = 0;
+    double OBJECT_AVOIDANCE_WEIGHT = 1;
+    double AGENT_COHESION_WEIGHT = 1;
+    double AGENT_AVOIDANCE_WEIGHT = 1;
+    double AGENT_ALIGNMENT_WEIGHT = 1;
     double UNEXPLORED_FRONTIER_WEIGHT = 1;
 
     double FRONTIER_DISTANCE_WEIGHT = 0.001;
@@ -121,8 +123,12 @@ public:
 
 private:
     void checkForObstacles();
+
     argos::CVector2 calculateObjectAvoidanceVector();
-    argos::CVector2 calculateAgentAvoidanceVector();
+
+    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
+    argos::CVector2 calculateAgentCohesionVector();
+    argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
     argos::CVector2 calculateUnexploredFrontierVector();
     std::vector<std::string> *messages;
 
