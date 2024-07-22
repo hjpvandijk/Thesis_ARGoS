@@ -281,7 +281,7 @@ bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation) {
                 argos::CVector2(agentLocation.second.x, agentLocation.second.y)
                 - argos::CVector2(this->position.x, this->position.y);
 
-        if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) {
+        if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) { //TODO: make different for cohesion and separation
             averageNeighborLocation->x += agentLocation.second.x;
             averageNeighborLocation->y += agentLocation.second.y;
             nAgentsWithinRange++;
@@ -347,7 +347,7 @@ argos::CVector2 Agent::calculateAgentAlignmentVector(){
         double agentSpeed = agentVelocity.second.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
                                              - argos::CVector2(this->position.x, this->position.y);
-        if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) {
+        if (vectorToOtherAgent.Length() < AGENT_ALIGNMENT_RANGE) {
             argos::RLOG << "Agent within range" << std::endl;
             argos::RLOG << "Agent vector: " << agentVector << std::endl;
             argos::RLOG << "Agent speed: " << agentSpeed << std::endl;
