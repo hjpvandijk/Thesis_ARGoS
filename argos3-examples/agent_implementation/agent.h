@@ -28,6 +28,7 @@ public:
     double lastRangeReading = 2;
 
     std::map<std::string, Coordinate> agentLocations;
+    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
 
     argos::CCI_PiPuckDifferentialDriveActuator *diffdrive;
 
@@ -105,10 +106,10 @@ public:
     double TURN_THRESHOLD_DEGREES = 5;
 
     double OBJECT_AVOIDANCE_WEIGHT = 1;
-    double AGENT_COHESION_WEIGHT = 1;
+    double AGENT_COHESION_WEIGHT = 0;
     double AGENT_AVOIDANCE_WEIGHT = 1;
     double AGENT_ALIGNMENT_WEIGHT = 1;
-    double UNEXPLORED_FRONTIER_WEIGHT = 1;
+    double UNEXPLORED_FRONTIER_WEIGHT = 0;
 
     double FRONTIER_DISTANCE_WEIGHT = 0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
@@ -129,6 +130,7 @@ private:
     bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
     argos::CVector2 calculateAgentCohesionVector();
     argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
+    argos::CVector2 calculateAgentAlignmentVector();
     argos::CVector2 calculateUnexploredFrontierVector();
     std::vector<std::string> *messages;
 
