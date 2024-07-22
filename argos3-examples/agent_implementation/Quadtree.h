@@ -13,6 +13,7 @@
 //Adapted from https://github.com/pvigier/Quadtree
 
 namespace quadtree {
+
     enum Occupancy {
         UNKNOWN,
         FREE,
@@ -152,7 +153,7 @@ namespace quadtree {
             if (mBox.contains(left)) {
 //                neighbours.push_back({left, queryCoordinate(left).occupancy});
 //                argos::LOG << "CONTAINED" << std::endl;
-                if(getOccupancyFromCoordinate(left) == UNKNOWN){
+                if (getOccupancyFromCoordinate(left) == UNKNOWN) {
                     return true;
                 }
             }
@@ -161,7 +162,7 @@ namespace quadtree {
             Coordinate right = Coordinate{box.getCenter().x + box.size, box.getCenter().y};
             if (mBox.contains(right)) {
 //                neighbours.push_back({right, queryCoordinate(right).occupancy});
-                if(getOccupancyFromCoordinate(right) == UNKNOWN){
+                if (getOccupancyFromCoordinate(right) == UNKNOWN) {
                     return true;
                 }
             }
@@ -170,7 +171,7 @@ namespace quadtree {
             Coordinate top = Coordinate{box.getCenter().x, box.getCenter().y + box.size};
             if (mBox.contains(top)) {
 //                neighbours.push_back({top, queryCoordinate(top).occupancy});
-                if(getOccupancyFromCoordinate(top) == UNKNOWN){
+                if (getOccupancyFromCoordinate(top) == UNKNOWN) {
                     return true;
                 }
             }
@@ -179,7 +180,7 @@ namespace quadtree {
             Coordinate bottom = Coordinate{box.getCenter().x, box.getCenter().y - box.size};
             if (mBox.contains(bottom)) {
 //                neighbours.push_back({bottom, queryCoordinate(bottom).occupancy});
-                if(getOccupancyFromCoordinate(bottom) == UNKNOWN){
+                if (getOccupancyFromCoordinate(bottom) == UNKNOWN) {
                     return true;
                 }
             }
@@ -188,7 +189,7 @@ namespace quadtree {
             Coordinate topLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y + box.size};
             if (mBox.contains(topLeft)) {
 //                neighbours.push_back({topLeft, queryCoordinate(topLeft).occupancy});
-                if(getOccupancyFromCoordinate(topLeft) == UNKNOWN){
+                if (getOccupancyFromCoordinate(topLeft) == UNKNOWN) {
                     return true;
                 }
             }
@@ -197,7 +198,7 @@ namespace quadtree {
             Coordinate topRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y + box.size};
             if (mBox.contains(topRight)) {
 //                neighbours.push_back({topRight, queryCoordinate(topRight).occupancy});
-                if(getOccupancyFromCoordinate(topRight) == UNKNOWN){
+                if (getOccupancyFromCoordinate(topRight) == UNKNOWN) {
                     return true;
                 }
             }
@@ -206,7 +207,7 @@ namespace quadtree {
             Coordinate bottomLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y - box.size};
             if (mBox.contains(bottomLeft)) {
 //                neighbours.push_back({bottomLeft, queryCoordinate(bottomLeft).occupancy});
-                if(getOccupancyFromCoordinate(bottomLeft) == UNKNOWN){
+                if (getOccupancyFromCoordinate(bottomLeft) == UNKNOWN) {
                     return true;
                 }
             }
@@ -215,7 +216,7 @@ namespace quadtree {
             Coordinate bottomRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y - box.size};
             if (mBox.contains(bottomRight)) {
 //                neighbours.push_back({bottomRight, queryCoordinate(bottomRight).occupancy});
-                if(getOccupancyFromCoordinate(bottomRight) == UNKNOWN){
+                if (getOccupancyFromCoordinate(bottomRight) == UNKNOWN) {
                     return true;
                 }
             }
@@ -253,10 +254,11 @@ namespace quadtree {
          * Returns the QuadNode containing the coordinate
          * @param coordinate
          */
-         Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
+        Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
             auto values = std::vector<QuadNode>();
             return getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate).occupancy;
-         }
+        }
+
         /**
          * @brief Find all intersections between values stored in the quadtree
          * @return
@@ -305,6 +307,39 @@ namespace quadtree {
 
             traverse(mRoot.get(), mBox, 0);
             file.close();
+        }
+
+        /**
+         * @brief Create a vector of strings from the quadtree
+         */
+        void toStringVector(std::vector<std::string> *strings) {
+            std::function<void(const Node *, const Box &, int)> traverse;
+            traverse = [&](const Node *node, const Box &box, int depth) {
+                if (node == nullptr) return;
+
+//                file << box.left << " " << box.top << " " << box.size << " " << "\n";
+
+                // Write the bounding box, occupancy and depth of this node to the file
+                auto topLeft = box.getTopLeft();
+                auto size = box.getSize();
+                for (const auto &value: node->values) {
+//                    file << box.left << " " << box.top << " " << box.size << " " << value.occupancy << " " << "\n";
+                    QuadNode curQuadNode = value;
+//                    argos::LOG << "Emplacing back: " << std::to_string(box.getCenter().x) << ';' << std::to_string(box.getCenter().y) << ':' << std::to_string(curQuadNode.occupancy) << std::endl;
+                    strings->emplace_back(
+                            std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
+                            std::to_string(curQuadNode.occupancy));
+                }
+
+                // Traverse the children
+                for (int i = 0; i < 4; ++i) {
+                    if (node->children[i]) {
+                        traverse(node->children[i].get(), computeBox(box, i), depth + 1);
+                    }
+                }
+            };
+
+            traverse(mRoot.get(), mBox, 0);
         }
 
         /**
@@ -489,10 +524,21 @@ namespace quadtree {
 //                argos::LOG << "Node is a leaf" << std::endl;
                 // Insert the value in this node if possible
 
-                //If the box size is the minimum size we allow (corresponding to finest mapping level), then we only contain a single QuadNode.
+                //If the box size is the minimum size we allow (corresponding to finest mapping level), then we only contain a single QuadNode. Update the occupancy of this node to more important information.
                 if (box.size <= MinSize) {
+                    QuadNode newNode = QuadNode();
+                    newNode.coordinate = value.coordinate;
+                    if (node->values.size() == 0) {
+                        newNode.occupancy = value.occupancy;
+                    } else {
+
+                        if (node->values.front().occupancy == FREE || value.occupancy == FREE)
+                            newNode.occupancy = FREE;
+                        if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
+                            newNode.occupancy = OCCUPIED;
+                    }
                     node->values.clear();
-                    node->values.push_back(value);
+                    node->values.push_back(newNode);
                     //Else we can add more QuadNodes if there is space.
                 }
                     // Otherwise, we split and we try again
@@ -614,7 +660,7 @@ namespace quadtree {
             assert(queryBox.intersects_or_contains(box));
 
             for (const auto &value: node->values) {
-                if ((occupancy==ANY || value.occupancy == occupancy) &&
+                if ((occupancy == ANY || value.occupancy == occupancy) &&
                     (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     values.push_back(value);
             }
@@ -672,14 +718,14 @@ namespace quadtree {
 //                    boxes.push_back(box);
 //            }
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
-            if(isLeaf(node)){
-                if(node->values.size() == 0){
+            if (isLeaf(node)) {
+                if (node->values.size() == 0) {
                     return QuadNode{queryCoordinate, UNKNOWN};
                 } else {
                     return node->values.front();
                 }
-            // If it is not a leaf node, find the nested nodes, and search them.
-            }else {
+                // If it is not a leaf node, find the nested nodes, and search them.
+            } else {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
 //                    argos::LOG << "NESTED" << std::endl;

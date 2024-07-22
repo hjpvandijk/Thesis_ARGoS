@@ -124,8 +124,9 @@ void CAgentVisionLoopFunctions::PostStep() {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it->second);
         PiPuckHugo &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-
         Agent *agent = cController.agentObject;
+
+        if(agent->getId() != "pipuck1") continue;
 
 
         findAndPushObjectCoordinates(pcFB, agent);

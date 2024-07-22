@@ -177,17 +177,17 @@
             </devices>
         </pipuck>
 
-<!--                <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">-->
-<!--                    <body position="0,-3,0" orientation="120,0,0"/>-->
-<!--                    <controller config="ppc"/>-->
-<!--        &lt;!&ndash;            <devices>&ndash;&gt;-->
-<!--        &lt;!&ndash;                <simple_radios>&ndash;&gt;-->
-<!--        &lt;!&ndash;                    &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;&ndash;&gt;-->
-<!--        &lt;!&ndash;                    <simple_radio id="wifi" anchor="base" position="0,0,.0125"&ndash;&gt;-->
-<!--        &lt;!&ndash;                                  medium="wifi" range="0.01" />&ndash;&gt;-->
-<!--        &lt;!&ndash;                </simple_radios>&ndash;&gt;-->
-<!--        &lt;!&ndash;            </devices>&ndash;&gt;-->
-<!--                </pipuck>-->
+                <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
+                    <body position="0,-3,0" orientation="120,0,0"/>
+                    <controller config="ppc"/>
+        <!--            <devices>-->
+        <!--                <simple_radios>-->
+        <!--                    &lt;!&ndash; this radio is just in range of the other radio &ndash;&gt;-->
+        <!--                    <simple_radio id="wifi" anchor="base" position="0,0,.0125"-->
+        <!--                                  medium="wifi" range="0.01" />-->
+        <!--                </simple_radios>-->
+        <!--            </devices>-->
+                </pipuck>
 
         <!--        <pipuck id="pipuck3" wifi_medium="wifi">-->
         <!--            <body position="0.7,0,0" orientation="0,0,0"/>-->
