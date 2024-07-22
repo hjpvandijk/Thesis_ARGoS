@@ -37,6 +37,8 @@ public:
     //Infrared sensor
     //DIfferential drive
 
+    //Vector affected by swarm
+    argos::CVector2 swarm_vector;
     //Force vector deciding the next position
     argos::CVector2 force_vector;
 
@@ -107,9 +109,9 @@ public:
 
     double OBJECT_AVOIDANCE_WEIGHT = 1;
 
-    double AGENT_COHESION_WEIGHT = 0.23;
+    double AGENT_COHESION_WEIGHT = 0;//0.23;
     double AGENT_AVOIDANCE_WEIGHT = 1.15;
-    double AGENT_ALIGNMENT_WEIGHT = 0.5;
+    double AGENT_ALIGNMENT_WEIGHT = 0;//0.5;
     double UNEXPLORED_FRONTIER_WEIGHT = 0.08;
 
     double FRONTIER_DISTANCE_WEIGHT = 0.001;
@@ -128,7 +130,7 @@ public:
 private:
     void checkForObstacles();
 
-    argos::CVector2 calculateObjectAvoidanceVector();
+    argos::CRadians calculateObjectAvoidanceVector();
 
     bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
     argos::CVector2 calculateAgentCohesionVector();

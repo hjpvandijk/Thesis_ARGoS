@@ -15,6 +15,7 @@ Agent::Agent(std::string id) {
     this->heading = argos::CRadians(0);
     this->targetHeading = argos::CRadians(0);
     this->speed = 1;
+    this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = new std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
@@ -165,7 +166,7 @@ void Agent::checkForObstacles() {
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * @return The vector towards the free direction
  */
-argos::CVector2 Agent::calculateObjectAvoidanceVector() {
+argos::CRadians Agent::calculateObjectAvoidanceVector() {
 
     //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = quadtree->queryOccupiedBoxes(this->position, PROXIMITY_RANGE * 2.0);
@@ -265,12 +266,13 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 //    argos::RLOG << "Closest free angle: " << *closestFreeAngle << std::endl;
 
     argos::CRadians closestFreeAngleRadians = ToRadians(*closestFreeAngle);
+    return closestFreeAngleRadians;
 
     //Create a vector towards the closestFreeAngle
-    double opposite = argos::Sin(this->heading + closestFreeAngleRadians) * 1.0;
-    double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
-    argos::CVector2 vectorToFreeAngle = argos::CVector2(adjacent, opposite);
-    return vectorToFreeAngle;
+//    double opposite = argos::Sin(this->heading + closestFreeAngleRadians) * 1.0;
+//    double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
+//    argos::CVector2 vectorToFreeAngle = argos::CVector2(adjacent, opposite);
+//    return vectorToFreeAngle;
 
 }
 
@@ -298,11 +300,11 @@ bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation) {
     return true;
 }
 
-argos::CVector2 Agent::calculateAgentCohesionVector(){
+argos::CVector2 Agent::calculateAgentCohesionVector() {
     Coordinate averageNeighborLocation = {0, 0};
 
     bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation);
-    if(!neighborsWithinRange){
+    if (!neighborsWithinRange) {
         argos::RLOG << "No agents within range" << std::endl;
         return {0, 0};
     }
@@ -322,7 +324,7 @@ argos::CVector2 Agent::calculateAgentCohesionVector(){
  * create a vector in the opposite direction of the average location of these agents.
  * @return a vector pointing away from the average location other agents
  */
-argos::CVector2 Agent::calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector){
+argos::CVector2 Agent::calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector) {
 
     return agentCohesionVector * -1;
 }
@@ -333,14 +335,14 @@ argos::CVector2 Agent::calculateAgentAvoidanceVector(argos::CVector2 agentCohesi
  * create a vector in the direction of the average vector of these agents, considering speed.
  * @return
  */
-argos::CVector2 Agent::calculateAgentAlignmentVector(){
+argos::CVector2 Agent::calculateAgentAlignmentVector() {
     argos::CVector2 alignmentVector = {0, 0};
     int nAgentsWithinRange = 0;
 
     argos::RLOG << "Agent velocities size: " << this->agentVelocities.size() << std::endl;
 
     //Get the velocities of the agents within range
-    for(const auto& agentVelocity: agentVelocities) {
+    for (const auto &agentVelocity: agentVelocities) {
         std::string agentID = agentVelocity.first;
         Coordinate otherAgentLocation = agentLocations[agentID];
         argos::CVector2 agentVector = agentVelocity.second.first;
@@ -473,7 +475,8 @@ void Agent::calculateNextPosition() {
     //3. Attraction to found target
     //4. Repulsion from objects/walls (done)
 
-    argos::CVector2 objectAvoidanceVector = calculateObjectAvoidanceVector();
+    argos::CRadians objectAvoidanceAngle = calculateObjectAvoidanceVector();
+
     argos::CVector2 agentCohesionVector = calculateAgentCohesionVector();
     argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector(agentCohesionVector);
     argos::CVector2 agentAlignmentVector = calculateAgentAlignmentVector();
@@ -490,7 +493,7 @@ void Agent::calculateNextPosition() {
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
 
     //Normalize vectors if they are not zero
-    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
+//    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
     if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
     if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
@@ -498,19 +501,27 @@ void Agent::calculateNextPosition() {
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    argos::CVector2 total_vector = this->force_vector
-                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+    argos::CVector2 total_vector = this->swarm_vector +
+                                   //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
                                    AGENT_COHESION_WEIGHT * agentCohesionVector +
                                    AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector +
-                                  AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector +
+                                   AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector +
                                    UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
     if (total_vector.Length() != 0) total_vector.Normalize();
 
-    this->force_vector = total_vector;
+    this->swarm_vector = total_vector;
 
-    argos::RLOG << "Total vector: " << total_vector << std::endl;
+    this->force_vector = {(this->swarm_vector.GetX() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetX()) *
+                          argos::Cos(objectAvoidanceAngle) -
+                          (this->swarm_vector.GetX() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetX()) *
+                          argos::Sin(objectAvoidanceAngle),
+                          (this->swarm_vector.GetY() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetY()) *
+                          argos::Sin(objectAvoidanceAngle) +
+                          (this->swarm_vector.GetY() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetY()) *
+                          argos::Cos(objectAvoidanceAngle)};
+    argos::RLOG << "Total vector: " << this->force_vector << std::endl;
 
-    argos::CRadians angle = total_vector.Angle();
+    argos::CRadians angle = this->force_vector.Angle();
     this->targetHeading = angle;
 }
 
@@ -519,10 +530,12 @@ void Agent::doStep() {
     std::vector<std::string> quadTreeToStrings = {};
     quadtree->toStringVector(&quadTreeToStrings);
     argos::RLOG << "quadTreeStringSize: " << quadTreeToStrings.size() << std::endl;
-//    for (const std::string& str: quadTreeToStrings) {
-//        broadcastMessage("M:" + str);
-//    }
-    broadcastMessage("V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) + ":" + std::to_string(this->speed));
+    for (const std::string& str: quadTreeToStrings) {
+        broadcastMessage("M:" + str);
+    }
+    broadcastMessage(
+            "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
+            ":" + std::to_string(this->speed));
 
     checkMessages();
 
@@ -648,13 +661,12 @@ argos::CVector2 vector2FromString(std::string str) {
 }
 
 
-
 /**
  * Parse messages from other agents
  */
 void Agent::parseMessages() {
     for (std::string message: *this->messages) {
-        argos::RLOG << "Received message: " << message << std::endl;
+//        argos::RLOG << "Received message: " << message << std::endl;
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent[0] == 'C') {
