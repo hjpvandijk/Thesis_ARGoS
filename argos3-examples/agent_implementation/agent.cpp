@@ -114,7 +114,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE);
+        quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks);
         x += stepX;
         y += stepY;
     }
@@ -125,7 +125,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
  * @param objectCoordinate
  */
 void Agent::addObjectLocation(Coordinate objectCoordinate) {
-    quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED);
+    quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks);
 }
 
 /**
@@ -544,11 +544,11 @@ void Agent::calculateNextPosition() {
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::vector<std::string> quadTreeToStrings = {};
-    quadtree->toStringVector(&quadTreeToStrings);
-    argos::RLOG << "quadTreeStringSize: " << quadTreeToStrings.size() << std::endl;
-    for (const std::string& str: quadTreeToStrings) {
-        broadcastMessage("M:" + str);
-    }
+//    quadtree->toStringVector(&quadTreeToStrings);
+//    argos::RLOG << "quadTreeStringSize: " << quadTreeToStrings.size() << std::endl;
+//    for (const std::string& str: quadTreeToStrings) {
+//        broadcastMessage("M:" + str);
+//    }
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
             ":" + std::to_string(this->speed));
@@ -586,6 +586,7 @@ void Agent::doStep() {
 
     argos::RLOG << std::endl;
 
+    elapsed_ticks++;
 }
 
 

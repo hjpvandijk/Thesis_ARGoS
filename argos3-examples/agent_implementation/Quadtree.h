@@ -25,6 +25,7 @@ namespace quadtree {
     struct QuadNode {
         Coordinate coordinate;
         Occupancy occupancy;
+        uint32_t visitedAtTicks;
 
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
@@ -36,7 +37,7 @@ namespace quadtree {
     public:
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Node>()) {
-            mRoot->values.push_back(QuadNode{box.getCenter(), UNKNOWN});
+            mRoot->values.push_back(QuadNode{box.getCenter(), UNKNOWN, 0});
         }
 
         /**
@@ -44,8 +45,9 @@ namespace quadtree {
          * @param coordinate
          * @param occupancy
          */
-        void add(Coordinate coordinate, Occupancy occupancy) {
-            auto node = QuadNode{coordinate, occupancy};
+        void add(Coordinate coordinate, Occupancy occupancy, uint32_t elapsed_ticks) {
+            auto node = QuadNode{coordinate, occupancy, elapsed_ticks};
+//            argos::LOG << "Adding node with elapsed ticks: " << node.visitedAtTicks << std::endl;
             add(node);
         }
 
@@ -346,28 +348,28 @@ namespace quadtree {
          * Get all the boxes in the quadtree
          * @return
          */
-        std::vector<std::pair<Box, int>> getAllBoxes() {
-            std::vector<std::pair<Box, int>> boxesAndOccupancy = {};
-            std::function<void(const Node *, const Box &, int, std::vector<std::pair<Box, int>> *)> traverse;
+        std::vector<std::tuple<Box, int, uint32_t>> getAllBoxes() {
+            std::vector<std::tuple<Box, int, uint32_t>> boxesAndOccupancyAndTicks = {};
+            std::function<void(const Node *, const Box &, int, std::vector<std::tuple<Box, int, uint32_t>> *)> traverse;
             traverse = [&](const Node *node, const Box &box, int depth,
-                           std::vector<std::pair<Box, int>> *boxesAndOccupancy) {
+                           std::vector<std::tuple<Box, int, uint32_t>> *boxesAndOccupancyAndTicks) {
                 if (node == nullptr) return;
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
                 for (const auto &value: node->values) {
-                    boxesAndOccupancy->emplace_back(std::pair(box, value.occupancy));
+                    boxesAndOccupancyAndTicks->emplace_back(std::tuple(box, value.occupancy, value.visitedAtTicks));
                 }
 
                 // Traverse the children
                 for (int i = 0; i < 4; ++i) {
                     if (node->children[i]) {
-                        traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancy);
+                        traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancyAndTicks);
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0, &boxesAndOccupancy);
-            return boxesAndOccupancy;
+            traverse(mRoot.get(), mBox, 0, &boxesAndOccupancyAndTicks);
+            return boxesAndOccupancyAndTicks;
 
         }
 
@@ -528,18 +530,22 @@ namespace quadtree {
                 if (box.size <= MinSize) {
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
-                    if (node->values.size() == 0) {
+                    if (node->values.empty()) {
                         newNode.occupancy = value.occupancy;
+                        newNode.visitedAtTicks = value.visitedAtTicks;
                     } else {
 
                         if (node->values.front().occupancy == FREE || value.occupancy == FREE)
                             newNode.occupancy = FREE;
                         if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
                             newNode.occupancy = OCCUPIED;
+
+                        newNode.visitedAtTicks = std::max(node->values.front().visitedAtTicks, value.visitedAtTicks);
+//                        argos::LOG << "Setting elapsed ticks: " << newNode.visitedAtTicks << std::endl;
+
                     }
                     node->values.clear();
                     node->values.push_back(newNode);
-                    //Else we can add more QuadNodes if there is space.
                 }
                     // Otherwise, we split and we try again
                 else {
@@ -720,7 +726,7 @@ namespace quadtree {
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
                 if (node->values.size() == 0) {
-                    return QuadNode{queryCoordinate, UNKNOWN};
+                    return QuadNode{queryCoordinate, UNKNOWN, 0};
                 } else {
                     return node->values.front();
                 }

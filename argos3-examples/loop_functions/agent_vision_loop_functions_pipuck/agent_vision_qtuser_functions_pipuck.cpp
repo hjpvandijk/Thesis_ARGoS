@@ -23,12 +23,19 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //        DrawCoordinates(it->second, CColor::BLUE);
 //    }
 
-    for (std::map<CPiPuckEntity *, std::vector<std::pair<quadtree::Box, int>>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
+    for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, uint32_t >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
          it != m_cAgVisLF.GetQuadTree().end();
          ++it) {
-        for (std::pair<quadtree::Box, int> boxAndOccupancy: it->second) {
-            quadtree::Box box = boxAndOccupancy.first;
-            int occupancy = boxAndOccupancy.second;
+        for (std::tuple<quadtree::Box, int, uint32_t > boxAndOccupancyAndTicks: it->second) {
+            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
+            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
+            uint32_t ticks = std::get<2>(boxAndOccupancyAndTicks);
+
+            uint32_t agent_ticks = m_cAgVisLF.GetAgentElapsedTicks().at(it->first);
+            double pheromone = 1.0-std::min(((agent_ticks - ticks)/30)/100.0, 1.0);
+//            argos::LOG << "Pheromone: " << agent_ticks << " - " << ticks << " = " << agent_ticks - ticks << " = " << pheromone << std::endl;
+
+
             Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
             CVector3 pos = CVector3(boxCenterArgos.x, boxCenterArgos.y, 0.02f);
 
@@ -50,6 +57,9 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
                 fill = true;
             } else if (occupancy == quadtree::Occupancy::FREE) {
                 color = CColor::GREEN;
+//                argos::LOG << "Green: " << pheromone*255 << std::endl;
+                color.SetAlpha(pheromone*255);
+//                color.SetAlpha(127);
                 fill = true;
             }
 
@@ -58,12 +68,12 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         }
     }
 
-    for (std::map<CPiPuckEntity *, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
-         it != m_cAgVisLF.GetAgentCoordinates().end();
-         ++it) {
-//        DrawBox(it->second, CQuaternion(), 0.1f, CColor::GRAY50);
-        DrawBox(it->second, CQuaternion(), CVector3(4, 4, 0), CColor::GRAY80);
-    }
+//    for (std::map<CPiPuckEntity *, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
+//         it != m_cAgVisLF.GetAgentCoordinates().end();
+//         ++it) {
+////        DrawBox(it->second, CQuaternion(), 0.1f, CColor::GRAY50);
+//        DrawBox(it->second, CQuaternion(), CVector3(4, 4, 0), CColor::GRAY80);
+//    }
 //    for (CAgentVisionLoopFunctions::TCoordinateMap::const_iterator it = m_cAgVisLF.GetObjectCoordinates().begin();
 //         it != m_cAgVisLF.GetObjectCoordinates().end();
 //         ++it) {

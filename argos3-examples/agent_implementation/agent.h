@@ -127,6 +127,9 @@ public:
 
     Coordinate currentBestFrontier = {0,0};
 
+    double ticks_per_second = 10;
+    uint32_t elapsed_ticks = 0;
+
 private:
     void checkForObstacles();
 
@@ -137,6 +140,9 @@ private:
     argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
     argos::CVector2 calculateAgentAlignmentVector();
     argos::CVector2 calculateUnexploredFrontierVector();
+
+    void updatePheromones();
+
     std::vector<std::string> *messages;
 
 

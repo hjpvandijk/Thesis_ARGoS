@@ -56,9 +56,9 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param agent
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, Agent *agent) {
-    std::vector<std::pair<quadtree::Box, int>> boxesAndOccupancy = agent->quadtree->getAllBoxes();
+    std::vector<std::tuple<quadtree::Box, int, uint32_t>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 
-    m_tQuadTree[pcFB] = boxesAndOccupancy;
+    m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
 }
 
 /****************************************/
@@ -70,15 +70,20 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
      * and create an entry in the waypoint map for each of them
      */
     /* Get the map of all pi-pucks from the space */
-//    CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
-//    /* Go through them */
-//    for (CSpace::TMapPerType::iterator it = tFBMap.begin();
-//         it != tFBMap.end();
-//         ++it) {
-//        /* Create a pointer to the current pi-puck */
-//        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it->second);
-//        findAndPushObjectCoordinates(pcFB);
-//    }
+    CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
+    //Get ticks per second
+    Real ticksPerSecond = GetSimulator().GetPhysicsEngines()[0]->GetInverseSimulationClockTick();
+    /* Go through them */
+    for (CSpace::TMapPerType::iterator it = tFBMap.begin();
+         it != tFBMap.end();
+         ++it) {
+        /* Create a pointer to the current pi-puck */
+        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it->second);
+        PiPuckHugo &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+        Agent *agent = cController.agentObject;
+
+        agent->ticks_per_second = ticksPerSecond;
+    }
 }
 
 /**
@@ -114,7 +119,7 @@ void CAgentVisionLoopFunctions::Reset() {
 void CAgentVisionLoopFunctions::PostStep() {
     /* Get the map of all pi-pucks from the space */
     CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
-    /* Go through them */
+/* Go through them */
     m_tObjectCoordinates.clear();
     m_tOtherAgentCoordinates.clear();
     m_tQuadTree.clear();
@@ -125,6 +130,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it->second);
         PiPuckHugo &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         Agent *agent = cController.agentObject;
+
+        m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks;
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.05f);
