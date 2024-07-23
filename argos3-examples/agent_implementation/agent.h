@@ -125,7 +125,7 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 36;
 
-
+    Coordinate currentBestFrontier = {0,0};
 
 private:
     void checkForObstacles();

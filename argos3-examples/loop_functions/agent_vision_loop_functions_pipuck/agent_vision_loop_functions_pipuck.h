@@ -15,6 +15,7 @@ public:
     TCoordinateMap m_tObjectCoordinates;
     TCoordinateMap m_tOtherAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
+    std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
     std::map<CPiPuckEntity*, std::vector<std::pair<quadtree::Box, int>>> m_tQuadTree;
 
 public:

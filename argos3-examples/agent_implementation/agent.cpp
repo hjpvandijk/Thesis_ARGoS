@@ -468,6 +468,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         }
     }
 
+    this->currentBestFrontier = bestFrontierRegionCenter;
+
     argos::RLOG << "Best frontier region center: " << bestFrontierRegionCenter.x << ", " << bestFrontierRegionCenter.y
                 << std::endl;
 

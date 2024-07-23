@@ -126,6 +126,10 @@ void CAgentVisionLoopFunctions::PostStep() {
         PiPuckHugo &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         Agent *agent = cController.agentObject;
 
+        Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
+        CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.05f);
+        m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
+
         if(agent->getId() != "pipuck1") continue;
 
 
