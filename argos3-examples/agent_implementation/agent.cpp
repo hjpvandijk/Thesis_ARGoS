@@ -146,7 +146,20 @@ void Agent::checkForObstacles() {
 
         Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
         addFreeAreaBetween(this->position, object);
-        addObjectLocation(object);
+
+        //If the detected object is actually another agent, add it as a free area
+        //So check if the object coordinate is close to another agent
+        for (const auto &agentLocation: this->agentLocations) {
+            argos::CVector2 objectToAgent =
+                    argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                    - argos::CVector2(object.x, object.y);
+
+            //If detected object and another agent are not close, add the object as an obstacle
+            if (objectToAgent.Length() > quadtree->getMinSize()) {
+                addObjectLocation(object);
+            }
+        }
+
     } else {
         double opposite = argos::Sin(this->heading) * PROXIMITY_RANGE;
         double adjacent = argos::Cos(this->heading) * PROXIMITY_RANGE;
@@ -384,7 +397,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //1. Occupancy = explored
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
-    std::vector<quadtree::Box> frontiers = quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0);
+    std::vector<quadtree::Box> frontiers = quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 8.0);
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<quadtree::Box>> frontierRegions = {};
