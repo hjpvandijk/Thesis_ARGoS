@@ -28,6 +28,7 @@ public:
     double lastRangeReading = 2;
 
     std::map<std::string, Coordinate> agentLocations;
+    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
 
     argos::CCI_PiPuckDifferentialDriveActuator *diffdrive;
 
@@ -36,6 +37,8 @@ public:
     //Infrared sensor
     //DIfferential drive
 
+    //Vector affected by swarm
+    argos::CVector2 swarm_vector;
     //Force vector deciding the next position
     argos::CVector2 force_vector;
 
@@ -105,24 +108,34 @@ public:
     double TURN_THRESHOLD_DEGREES = 5;
 
     double OBJECT_AVOIDANCE_WEIGHT = 1;
-    double AGENT_AVOIDANCE_WEIGHT = 1;
-    double UNEXPLORED_FRONTIER_WEIGHT = 0.5;
 
-    double FRONTIER_DISTANCE_WEIGHT = 0.001;
+    double AGENT_COHESION_WEIGHT = 0;//0.23;
+    double AGENT_AVOIDANCE_WEIGHT = 1.15;
+    double AGENT_ALIGNMENT_WEIGHT = 0;//0.5;
+    double UNEXPLORED_FRONTIER_WEIGHT = 0.08;
+
+    double FRONTIER_DISTANCE_WEIGHT = 1.0;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
 
-    double AGENT_AVOIDANCE_RANGE = 2.0;
+    double AGENT_COHESION_RADIUS = 1.5;
+    double AGENT_AVOIDANCE_RANGE = 0.68;
+    double AGENT_ALIGNMENT_RANGE = 1.5;
 
     double TURNING_SPEED_RATIO = 0.1;
 
     double ANGLE_INTERVAL_STEPS = 36;
 
-
+    Coordinate currentBestFrontier = {0,0};
 
 private:
     void checkForObstacles();
-    argos::CVector2 calculateObjectAvoidanceVector();
-    argos::CVector2 calculateAgentAvoidanceVector();
+
+    argos::CRadians calculateObjectAvoidanceVector();
+
+    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
+    argos::CVector2 calculateAgentCohesionVector();
+    argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
+    argos::CVector2 calculateAgentAlignmentVector();
     argos::CVector2 calculateUnexploredFrontierVector();
     std::vector<std::string> *messages;
 

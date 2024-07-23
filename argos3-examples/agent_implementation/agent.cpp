@@ -15,6 +15,7 @@ Agent::Agent(std::string id) {
     this->heading = argos::CRadians(0);
     this->targetHeading = argos::CRadians(0);
     this->speed = 1;
+    this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = new std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
@@ -145,7 +146,20 @@ void Agent::checkForObstacles() {
 
         Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
         addFreeAreaBetween(this->position, object);
-        addObjectLocation(object);
+
+        //If the detected object is actually another agent, add it as a free area
+        //So check if the object coordinate is close to another agent
+        for (const auto &agentLocation: this->agentLocations) {
+            argos::CVector2 objectToAgent =
+                    argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                    - argos::CVector2(object.x, object.y);
+
+            //If detected object and another agent are not close, add the object as an obstacle
+            if (objectToAgent.Length() > quadtree->getMinSize()) {
+                addObjectLocation(object);
+            }
+        }
+
     } else {
         double opposite = argos::Sin(this->heading) * PROXIMITY_RANGE;
         double adjacent = argos::Cos(this->heading) * PROXIMITY_RANGE;
@@ -165,7 +179,7 @@ void Agent::checkForObstacles() {
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * @return The vector towards the free direction
  */
-argos::CVector2 Agent::calculateObjectAvoidanceVector() {
+argos::CRadians Agent::calculateObjectAvoidanceVector() {
 
     //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = quadtree->queryOccupiedBoxes(this->position, PROXIMITY_RANGE * 2.0);
@@ -265,14 +279,57 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
 //    argos::RLOG << "Closest free angle: " << *closestFreeAngle << std::endl;
 
     argos::CRadians closestFreeAngleRadians = ToRadians(*closestFreeAngle);
+    return closestFreeAngleRadians;
 
     //Create a vector towards the closestFreeAngle
-    double opposite = argos::Sin(this->heading + closestFreeAngleRadians) * 1.0;
-    double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
-    argos::CVector2 vectorToFreeAngle = argos::CVector2(adjacent, opposite);
-    return vectorToFreeAngle;
+//    double opposite = argos::Sin(this->heading + closestFreeAngleRadians) * 1.0;
+//    double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
+//    argos::CVector2 vectorToFreeAngle = argos::CVector2(adjacent, opposite);
+//    return vectorToFreeAngle;
 
 }
+
+bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation) {
+    int nAgentsWithinRange = 0;
+    for (const auto &agentLocation: this->agentLocations) {
+        argos::CVector2 vectorToOtherAgent =
+                argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                - argos::CVector2(this->position.x, this->position.y);
+
+        if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) { //TODO: make different for cohesion and separation
+            averageNeighborLocation->x += agentLocation.second.x;
+            averageNeighborLocation->y += agentLocation.second.y;
+            nAgentsWithinRange++;
+        }
+    }
+    //If no agents are within range, there is no average location
+    if (nAgentsWithinRange == 0) {
+        return false;
+    }
+    //Else calculate the average position of the agents within range
+    averageNeighborLocation->x /= nAgentsWithinRange;
+    averageNeighborLocation->y /= nAgentsWithinRange;
+
+    return true;
+}
+
+argos::CVector2 Agent::calculateAgentCohesionVector() {
+    Coordinate averageNeighborLocation = {0, 0};
+
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation);
+    if (!neighborsWithinRange) {
+        argos::RLOG << "No agents within range" << std::endl;
+        return {0, 0};
+    }
+
+    //Create a vector between this agent and the average position of the agents within range
+    argos::CVector2 vectorToOtherAgents =
+            argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
+            - argos::CVector2(this->position.x, this->position.y);
+
+    return vectorToOtherAgents;
+}
+
 
 /**
  * Calculate the vector to avoid other agents:
@@ -280,36 +337,48 @@ argos::CVector2 Agent::calculateObjectAvoidanceVector() {
  * create a vector in the opposite direction of the average location of these agents.
  * @return a vector pointing away from the average location other agents
  */
-argos::CVector2 Agent::calculateAgentAvoidanceVector() {
-    int nAgentsWithinRange = 0;
-    Coordinate averageNeighborLocation = {0, 0};
-    for (const auto &agentLocation: this->agentLocations) {
-        argos::CVector2 vectorToOtherAgent =
-                argos::CVector2(agentLocation.second.x, agentLocation.second.y)
-                - argos::CVector2(this->position.x, this->position.y);
+argos::CVector2 Agent::calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector) {
 
-        if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) {
-            averageNeighborLocation.x += agentLocation.second.x;
-            averageNeighborLocation.y += agentLocation.second.y;
+    return agentCohesionVector * -1;
+}
+
+/**
+ * Calculate the vector to align with other agents:
+ * If the distance between other agents is less than a certain threshold,
+ * create a vector in the direction of the average vector of these agents, considering speed.
+ * @return
+ */
+argos::CVector2 Agent::calculateAgentAlignmentVector() {
+    argos::CVector2 alignmentVector = {0, 0};
+    int nAgentsWithinRange = 0;
+
+    argos::RLOG << "Agent velocities size: " << this->agentVelocities.size() << std::endl;
+
+    //Get the velocities of the agents within range
+    for (const auto &agentVelocity: agentVelocities) {
+        std::string agentID = agentVelocity.first;
+        Coordinate otherAgentLocation = agentLocations[agentID];
+        argos::CVector2 agentVector = agentVelocity.second.first;
+        double agentSpeed = agentVelocity.second.second;
+        argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
+                                             - argos::CVector2(this->position.x, this->position.y);
+        if (vectorToOtherAgent.Length() < AGENT_ALIGNMENT_RANGE) {
+            argos::RLOG << "Agent within range" << std::endl;
+            argos::RLOG << "Agent vector: " << agentVector << std::endl;
+            argos::RLOG << "Agent speed: " << agentSpeed << std::endl;
+            alignmentVector += agentVector * agentSpeed;
             nAgentsWithinRange++;
         }
     }
-    //If no agents are within range, return a zero vector
-    if (nAgentsWithinRange == 0) return {0, 0};
 
-    //Else calculate the average position of the agents within range
-    averageNeighborLocation.x /= nAgentsWithinRange;
-    averageNeighborLocation.y /= nAgentsWithinRange;
+    //If no agents are within range, there is no average velocity
+    if (nAgentsWithinRange == 0) {
+        return {0, 0};
+    }
 
-    //Create a vector between this agent and the average position of the agents within range
-    argos::CVector2 vectorToOtherAgent =
-            argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
-            - argos::CVector2(this->position.x, this->position.y);
-
-    //Reverse the vector
-    vectorToOtherAgent = vectorToOtherAgent * -1;
-
-    return vectorToOtherAgent;
+    //Else calculate the average velocity of the agents within range
+    alignmentVector /= nAgentsWithinRange;
+    return alignmentVector;
 }
 
 argos::CVector2 Agent::calculateUnexploredFrontierVector() {
@@ -328,6 +397,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //1. Occupancy = explored
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
+    //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
     std::vector<quadtree::Box> frontiers = quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0);
 
     // Initialize an empty vector of vectors to store frontier regions
@@ -399,12 +469,14 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         }
     }
 
+    this->currentBestFrontier = bestFrontierRegionCenter;
+
     argos::RLOG << "Best frontier region center: " << bestFrontierRegionCenter.x << ", " << bestFrontierRegionCenter.y
                 << std::endl;
 
     //Calculate the vector to the best frontier region
     argos::CVector2 vectorToBestFrontier = argos::CVector2(bestFrontierRegionCenter.x, bestFrontierRegionCenter.y)
-                                            - argos::CVector2(this->position.x, this->position.y);
+                                           - argos::CVector2(this->position.x, this->position.y);
 
     return vectorToBestFrontier;
 //    return {0, 0};
@@ -419,32 +491,53 @@ void Agent::calculateNextPosition() {
     //3. Attraction to found target
     //4. Repulsion from objects/walls (done)
 
-    argos::CVector2 objectAvoidanceVector = calculateObjectAvoidanceVector();
-    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
+    argos::CRadians objectAvoidanceAngle = calculateObjectAvoidanceVector();
+
+    argos::CVector2 agentCohesionVector = calculateAgentCohesionVector();
+    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector(agentCohesionVector);
+    argos::CVector2 agentAlignmentVector = calculateAgentAlignmentVector();
+    argos::RLOG << "Agent alignment vector: " << agentAlignmentVector << std::endl;
+
     argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
 
-    argos::RLOG << "Object avoidance vector: " << objectAvoidanceVector << std::endl;
-    argos::RLOG << "Agent avoidance vector: " << agentAvoidanceVector << std::endl;
+//    argos::RLOG << "Object avoidance vector: " << objectAvoidanceVector << std::endl;
+//    argos::RLOG << "Agent avoidance vector: " << agentAvoidanceVector << std::endl;
+//    argos::RLOG << "Agent cohesion vector: " << agentCohesionVector << std::endl;
 //    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector << std::endl;
 
+    //If there are objects or agents to avoid, do not explore
+    if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
+
     //Normalize vectors if they are not zero
-    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
+//    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
+    if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
-//    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
+    if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
+    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    argos::CVector2 total_vector = this->force_vector
-                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+    argos::CVector2 total_vector = this->swarm_vector +
+                                   //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+                                   AGENT_COHESION_WEIGHT * agentCohesionVector +
                                    AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector +
+                                   AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector +
                                    UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
     if (total_vector.Length() != 0) total_vector.Normalize();
 
-    this->force_vector = total_vector;
+    this->swarm_vector = total_vector;
 
-    argos::RLOG << "Total vector: " << total_vector << std::endl;
+    this->force_vector = {(this->swarm_vector.GetX() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetX()) *
+                          argos::Cos(objectAvoidanceAngle) -
+                          (this->swarm_vector.GetX() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetX()) *
+                          argos::Sin(objectAvoidanceAngle),
+                          (this->swarm_vector.GetY() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetY()) *
+                          argos::Sin(objectAvoidanceAngle) +
+                          (this->swarm_vector.GetY() + UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector.GetY()) *
+                          argos::Cos(objectAvoidanceAngle)};
+    argos::RLOG << "Total vector: " << this->force_vector << std::endl;
 
-    argos::CRadians angle = total_vector.Angle();
+    argos::CRadians angle = this->force_vector.Angle();
     this->targetHeading = angle;
 }
 
@@ -456,6 +549,9 @@ void Agent::doStep() {
     for (const std::string& str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
     }
+    broadcastMessage(
+            "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
+            ":" + std::to_string(this->speed));
 
     checkMessages();
 
@@ -567,6 +663,20 @@ quadtree::QuadNode quadNodeFromString(std::string str) {
     return newQuadNode;
 }
 
+argos::CVector2 vector2FromString(std::string str) {
+    std::string delimiter = ";";
+    size_t pos = 0;
+    std::string token;
+    pos = str.find(delimiter);
+    token = str.substr(0, pos);
+    argos::CVector2 newVector;
+    newVector.SetX(std::stod(token));
+    str.erase(0, pos + delimiter.length());
+    newVector.SetY(std::stod(str));
+    return newVector;
+}
+
+
 /**
  * Parse messages from other agents
  */
@@ -580,6 +690,17 @@ void Agent::parseMessages() {
             this->agentLocations[senderId] = receivedPosition;
         } else if (messageContent[0] == 'M') {
             quadtree->add(quadNodeFromString(messageContent.substr(2)));
+        } else if (messageContent[0] == 'V') {
+            std::string vectorString = messageContent.substr(2);
+            std::string delimiter = ":";
+            size_t speedPos = 0;
+            std::string vector;
+            speedPos = vectorString.find(delimiter);
+            vector = vectorString.substr(0, speedPos);
+            argos::CVector2 newVector = vector2FromString(vector);
+            vectorString.erase(0, speedPos + delimiter.length());
+            double newSpeed = std::stod(vectorString);
+            agentVelocities[senderId] = {newVector, newSpeed};
         }
     }
 

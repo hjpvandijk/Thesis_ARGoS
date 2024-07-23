@@ -37,10 +37,10 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             Coordinate bottomLeft = Coordinate{box.left, box.getBottom()}.FromOwnToArgos();
             Coordinate bottomRight = Coordinate{box.getRight(), box.getBottom()}.FromOwnToArgos();
 
-            CVector2 topLeftVec = CVector2(topLeft.x-boxCenterArgos.x, topLeft.y-boxCenterArgos.y);
-            CVector2 topRightVec = CVector2(topRight.x-boxCenterArgos.x, topRight.y-boxCenterArgos.y);
-            CVector2 bottomLeftVec = CVector2(bottomLeft.x-boxCenterArgos.x, bottomLeft.y-boxCenterArgos.y);
-            CVector2 bottomRightVec = CVector2(bottomRight.x-boxCenterArgos.x, bottomRight.y-boxCenterArgos.y);
+            CVector2 topLeftVec = CVector2(topLeft.x - boxCenterArgos.x, topLeft.y - boxCenterArgos.y);
+            CVector2 topRightVec = CVector2(topRight.x - boxCenterArgos.x, topRight.y - boxCenterArgos.y);
+            CVector2 bottomLeftVec = CVector2(bottomLeft.x - boxCenterArgos.x, bottomLeft.y - boxCenterArgos.y);
+            CVector2 bottomRightVec = CVector2(bottomRight.x - boxCenterArgos.x, bottomRight.y - boxCenterArgos.y);
             std::vector<CVector2> posVec = {topLeftVec, topRightVec, bottomRightVec, bottomLeftVec};
 
             CColor color = CColor::GRAY80;
@@ -48,7 +48,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             if (occupancy == quadtree::Occupancy::OCCUPIED) {
                 color = CColor::RED;
                 fill = true;
-            } else if (occupancy == quadtree::Occupancy::FREE){
+            } else if (occupancy == quadtree::Occupancy::FREE) {
                 color = CColor::GREEN;
                 fill = true;
             }
@@ -58,17 +58,27 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         }
     }
 
-    for(std::map<CPiPuckEntity*, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
-        it != m_cAgVisLF.GetAgentCoordinates().end();
-        ++it){
+    for (std::map<CPiPuckEntity *, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
+         it != m_cAgVisLF.GetAgentCoordinates().end();
+         ++it) {
 //        DrawBox(it->second, CQuaternion(), 0.1f, CColor::GRAY50);
-        DrawBox(it->second, CQuaternion(), CVector3(4,4,0), CColor::GRAY80);
+        DrawBox(it->second, CQuaternion(), CVector3(4, 4, 0), CColor::GRAY80);
     }
 //    for (CAgentVisionLoopFunctions::TCoordinateMap::const_iterator it = m_cAgVisLF.GetObjectCoordinates().begin();
 //         it != m_cAgVisLF.GetObjectCoordinates().end();
 //         ++it) {
 //        DrawCoordinates(it->second, CColor::RED);
 //    }
+    for (auto it = m_cAgVisLF.m_tAgentBestFrontierCoordinate.begin();
+         it != m_cAgVisLF.m_tAgentBestFrontierCoordinate.end();
+         ++it) {
+        if (it->first->GetId() == "pipuck1")
+            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::MAGENTA);
+        else
+            if (it->first->GetId() == "pipuck2")
+            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
+
+    }
 
 
 }
