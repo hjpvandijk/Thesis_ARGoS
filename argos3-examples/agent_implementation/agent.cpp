@@ -397,7 +397,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //1. Occupancy = explored
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
-    std::vector<quadtree::Box> frontiers = quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 8.0);
+    //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
+    std::vector<quadtree::Box> frontiers = quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0);
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<quadtree::Box>> frontierRegions = {};
