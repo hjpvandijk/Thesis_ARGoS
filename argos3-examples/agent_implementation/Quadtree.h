@@ -327,10 +327,10 @@ namespace quadtree {
                 for (const auto &value: node->values) {
 //                    file << box.left << " " << box.top << " " << box.size << " " << value.occupancy << " " << "\n";
                     QuadNode curQuadNode = value;
-//                    argos::LOG << "Emplacing back: " << std::to_string(box.getCenter().x) << ';' << std::to_string(box.getCenter().y) << ':' << std::to_string(curQuadNode.occupancy) << std::endl;
-                    strings->emplace_back(
-                            std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
-                            std::to_string(curQuadNode.occupancy));
+                    std::string str = std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
+                                      std::to_string(curQuadNode.occupancy) + '@' + std::to_string(curQuadNode.visitedAtTicks);
+//                    argos::LOG << "Emplacing back: " << str << std::endl;
+                    strings->emplace_back(str);
                 }
 
                 // Traverse the children
