@@ -23,16 +23,16 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //        DrawCoordinates(it->second, CColor::BLUE);
 //    }
 
-    for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, uint32_t >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
+    for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, double >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
          it != m_cAgVisLF.GetQuadTree().end();
          ++it) {
-        for (std::tuple<quadtree::Box, int, uint32_t > boxAndOccupancyAndTicks: it->second) {
+        for (std::tuple<quadtree::Box, int, double > boxAndOccupancyAndTicks: it->second) {
             quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
             int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-            uint32_t ticks = std::get<2>(boxAndOccupancyAndTicks);
+            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
 
-            uint32_t agent_ticks = m_cAgVisLF.GetAgentElapsedTicks().at(it->first);
-            double pheromone = 1.0-std::min(((agent_ticks - ticks)/30)/100.0, 1.0);
+            double currentTimeS = m_cAgVisLF.GetAgentElapsedTicks().at(it->first);
+            double pheromone = 1.0-std::min((currentTimeS - visitedTimeS)/100.0, 1.0);
 //            argos::LOG << "Pheromone: " << agent_ticks << " - " << ticks << " = " << agent_ticks - ticks << " = " << pheromone << std::endl;
 
 
@@ -55,16 +55,18 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             if (occupancy == quadtree::Occupancy::OCCUPIED) {
                 color = CColor::RED;
                 fill = true;
+                DrawPolygon(pos, CQuaternion(), posVec, color, fill);
             } else if (occupancy == quadtree::Occupancy::FREE) {
                 color = CColor::GREEN;
 //                argos::LOG << "Green: " << pheromone*255 << std::endl;
                 color.SetAlpha(pheromone*255);
 //                color.SetAlpha(127);
                 fill = true;
+                DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+
             }
 
 
-            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
         }
     }
 

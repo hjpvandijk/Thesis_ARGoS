@@ -114,7 +114,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks);
+        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks/ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -125,7 +125,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
  * @param objectCoordinate
  */
 void Agent::addObjectLocation(Coordinate objectCoordinate) {
-    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks);
+    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks/ticks_per_second);
 }
 
 /**
@@ -182,7 +182,7 @@ void Agent::checkForObstacles() {
 argos::CRadians Agent::calculateObjectAvoidanceVector() {
 
     //Get occupied boxes within range
-    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position, PROXIMITY_RANGE * 2.0);
+    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position, PROXIMITY_RANGE * 2.0, this->elapsed_ticks/this->ticks_per_second);
 
     std::set<argos::CDegrees> blockedAngles = {};
     std::set<argos::CDegrees> freeAngles = {};
@@ -398,7 +398,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0);
+    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0, this->elapsed_ticks/this->ticks_per_second);
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<quadtree::Box>> frontierRegions = {};
@@ -646,13 +646,13 @@ Coordinate coordinateFromString(std::string str) {
  * @return
  */
 quadtree::QuadNode quadNodeFromString(std::string str) {
-    std::string ticksDelimiter = "@";
+    std::string visitedDelimiter = "@";
     std::string occDelimiter = ":";
-    size_t ticksPos = 0;
+    size_t visitedPos = 0;
     size_t occPos = 0;
     std::string coordinate;
     std::string occ;
-    std::string ticks;
+    std::string visited;
     occPos = str.find(occDelimiter);
     coordinate = str.substr(0, occPos);
     quadtree::QuadNode newQuadNode;
@@ -661,13 +661,13 @@ quadtree::QuadNode quadNodeFromString(std::string str) {
     str.erase(0, occPos + occDelimiter.length());
     //Now we have the occupancy and ticks
 
-    ticksPos = str.find(ticksDelimiter);
-    occ = str.substr(0, ticksPos);
+    visitedPos = str.find(visitedDelimiter);
+    occ = str.substr(0, visitedPos);
 //    argos::LOG << "Occupancy: " << occ << std::endl;
     newQuadNode.occupancy = static_cast<quadtree::Occupancy>(std::stoi(occ));
-    str.erase(0, ticksPos + ticksDelimiter.length());
-    ticks = str;
-    newQuadNode.visitedAtTicks = std::stoi(ticks);
+    str.erase(0, visitedPos + visitedDelimiter.length());
+    visited = str;
+    newQuadNode.visitedAtS = std::stod(visited);
 //    argos::LOG << "Ticks: " << ticks << std::endl;
     return newQuadNode;
 }

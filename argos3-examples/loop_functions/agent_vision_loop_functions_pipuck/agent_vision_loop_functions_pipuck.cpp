@@ -56,7 +56,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param agent
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, Agent *agent) {
-    std::vector<std::tuple<quadtree::Box, int, uint32_t>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
+    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 
     m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
 }
@@ -131,7 +131,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         PiPuckHugo &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         Agent *agent = cController.agentObject;
 
-        m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks;
+        m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.05f);
