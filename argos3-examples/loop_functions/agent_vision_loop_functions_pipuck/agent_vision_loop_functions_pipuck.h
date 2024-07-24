@@ -16,7 +16,8 @@ public:
     TCoordinateMap m_tOtherAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
-    std::map<CPiPuckEntity*, std::vector<std::pair<quadtree::Box, int>>> m_tQuadTree;
+    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
+    std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
 
 public:
 
@@ -40,8 +41,12 @@ public:
         return m_tAgentCoordinates;
     }
 
-    inline const std::map<CPiPuckEntity*, std::vector<std::pair<quadtree::Box, int>>>& GetQuadTree() const {
+    inline const std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>>& GetQuadTree() const {
         return m_tQuadTree;
+    }
+
+    inline const std::map<CPiPuckEntity*, double>& GetAgentElapsedTicks() const {
+        return m_tAgentElapsedTicks;
     }
 
 private:

@@ -25,6 +25,8 @@ namespace quadtree {
     struct QuadNode {
         Coordinate coordinate;
         Occupancy occupancy;
+//        uint32_t visitedAtTicks;
+        double visitedAtS;
 
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
@@ -36,7 +38,7 @@ namespace quadtree {
     public:
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Node>()) {
-            mRoot->values.push_back(QuadNode{box.getCenter(), UNKNOWN});
+            mRoot->values.push_back(QuadNode{box.getCenter(), UNKNOWN, 0});
         }
 
         /**
@@ -44,8 +46,9 @@ namespace quadtree {
          * @param coordinate
          * @param occupancy
          */
-        void add(Coordinate coordinate, Occupancy occupancy) {
-            auto node = QuadNode{coordinate, occupancy};
+        void add(Coordinate coordinate, Occupancy occupancy, double visitedAtS) {
+            auto node = QuadNode{coordinate, occupancy, visitedAtS};
+//            argos::LOG << "Adding node with elapsed ticks: " << node.visitedAtTicks << std::endl;
             add(node);
         }
 
@@ -82,12 +85,12 @@ namespace quadtree {
          * @param areaSize
          * @return
          */
-        std::vector<Box> queryOccupiedBoxes(Coordinate coordinate, double areaSize) const {
+        std::vector<Box> queryOccupiedBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
             // Create a box centered at the given coordinate
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
 
-            return queryBoxes(box, OCCUPIED);
+            return queryBoxes(box, OCCUPIED, currentTimeS);
         }
 
         /**
@@ -96,18 +99,18 @@ namespace quadtree {
          * @param areaSize
          * @return
          */
-        std::vector<Box> queryUnexploredBoxes(Coordinate coordinate, double areaSize) const {
+        std::vector<Box> queryUnexploredBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
             // Create a box centered at the given coordinate
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
 
-            return queryBoxes(box, UNKNOWN);
+            return queryBoxes(box, UNKNOWN, currentTimeS);
         }
 
         /**
          * Returns all the frontier boxes surrounding the given coordinate within the given area size
          */
-        std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize) const {
+        std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
             // Create a box centered at the given coordinate
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
@@ -117,7 +120,7 @@ namespace quadtree {
             //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
             //Get all the explored but free boxes
-            std::vector<Box> exploredBoxes = queryBoxes(box, FREE);
+            std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
 //
 //            //Get all the unexplored boxes
 //            std::vector<Box> unexploredBoxes = queryBoxes(box, UNKNOWN);
@@ -244,9 +247,9 @@ namespace quadtree {
          * @param occupancy
          * @return
          */
-        std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy) const {
+        std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy, double currentTimeS) const {
             auto boxes = std::vector<Box>();
-            queryBoxes(mRoot.get(), mBox, box, boxes, occupancy);
+            queryBoxes(mRoot.get(), mBox, box, boxes, occupancy, currentTimeS);
             return boxes;
         }
 
@@ -325,10 +328,10 @@ namespace quadtree {
                 for (const auto &value: node->values) {
 //                    file << box.left << " " << box.top << " " << box.size << " " << value.occupancy << " " << "\n";
                     QuadNode curQuadNode = value;
-//                    argos::LOG << "Emplacing back: " << std::to_string(box.getCenter().x) << ';' << std::to_string(box.getCenter().y) << ':' << std::to_string(curQuadNode.occupancy) << std::endl;
-                    strings->emplace_back(
-                            std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
-                            std::to_string(curQuadNode.occupancy));
+                    std::string str = std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
+                                      std::to_string(curQuadNode.occupancy) + '@' + std::to_string(curQuadNode.visitedAtS);
+//                    argos::LOG << "Emplacing back: " << str << std::endl;
+                    strings->emplace_back(str);
                 }
 
                 // Traverse the children
@@ -346,28 +349,28 @@ namespace quadtree {
          * Get all the boxes in the quadtree
          * @return
          */
-        std::vector<std::pair<Box, int>> getAllBoxes() {
-            std::vector<std::pair<Box, int>> boxesAndOccupancy = {};
-            std::function<void(const Node *, const Box &, int, std::vector<std::pair<Box, int>> *)> traverse;
+        std::vector<std::tuple<Box, int, double>> getAllBoxes() {
+            std::vector<std::tuple<Box, int, double>> boxesAndOccupancyAndTicks = {};
+            std::function<void(const Node *, const Box &, int, std::vector<std::tuple<Box, int, double>> *)> traverse;
             traverse = [&](const Node *node, const Box &box, int depth,
-                           std::vector<std::pair<Box, int>> *boxesAndOccupancy) {
+                           std::vector<std::tuple<Box, int, double>> *boxesAndOccupancyAndTicks) {
                 if (node == nullptr) return;
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
                 for (const auto &value: node->values) {
-                    boxesAndOccupancy->emplace_back(std::pair(box, value.occupancy));
+                    boxesAndOccupancyAndTicks->emplace_back(std::tuple(box, value.occupancy, value.visitedAtS));
                 }
 
                 // Traverse the children
                 for (int i = 0; i < 4; ++i) {
                     if (node->children[i]) {
-                        traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancy);
+                        traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancyAndTicks);
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0, &boxesAndOccupancy);
-            return boxesAndOccupancy;
+            traverse(mRoot.get(), mBox, 0, &boxesAndOccupancyAndTicks);
+            return boxesAndOccupancyAndTicks;
 
         }
 
@@ -379,6 +382,8 @@ namespace quadtree {
         static constexpr auto Threshold = std::size_t(16);
         static constexpr auto MaxDepth = std::size_t(8);
         static constexpr double MinSize = 0.2;
+        static constexpr double EvaporationTime = 100.0;
+
 
         struct Node {
             std::array<std::unique_ptr<Node>, 4> children;
@@ -528,18 +533,22 @@ namespace quadtree {
                 if (box.size <= MinSize) {
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
-                    if (node->values.size() == 0) {
+                    if (node->values.empty()) {
                         newNode.occupancy = value.occupancy;
+                        newNode.visitedAtS = value.visitedAtS;
                     } else {
 
                         if (node->values.front().occupancy == FREE || value.occupancy == FREE)
                             newNode.occupancy = FREE;
                         if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
                             newNode.occupancy = OCCUPIED;
+
+                        newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+//                        argos::LOG << "Setting elapsed ticks: " << newNode.visitedAtTicks << std::endl;
+
                     }
                     node->values.clear();
                     node->values.push_back(newNode);
-                    //Else we can add more QuadNodes if there is space.
                 }
                     // Otherwise, we split and we try again
                 else {
@@ -683,11 +692,17 @@ namespace quadtree {
          * @param occupancy
          */
         void queryBoxes(Node *node, const Box &box, const Box &queryBox, std::vector<Box> &boxes,
-                        Occupancy occupancy) const {
+                        Occupancy occupancy, double currentTimeS) const {
             assert(node != nullptr);
             assert(queryBox.intersects_or_contains(box));
 
-            for (const auto &value: node->values) {
+            for (auto &value: node->values) {
+                //Check if pheromone is expired, if so, set the occupancy to unknown
+                if(value.occupancy==Occupancy::FREE && calculatePheromone(value.visitedAtS, currentTimeS)<0.05){
+                    value.occupancy = Occupancy::UNKNOWN;
+                }
+
+
                 if (value.occupancy == occupancy &&
                     (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     boxes.push_back(box);
@@ -697,10 +712,17 @@ namespace quadtree {
                     auto childBox = computeBox(box, static_cast<int>(i));
 //                    argos::LOG << "NESTED" << std::endl;
                     if (queryBox.intersects_or_contains(childBox))
-                        queryBoxes(node->children[i].get(), childBox, queryBox, boxes, occupancy);
+                        queryBoxes(node->children[i].get(), childBox, queryBox, boxes, occupancy, currentTimeS);
                 }
             }
         }
+
+        double calculatePheromone(double visitedTime, double currentTime) const {
+            double pheromone = 1.0-std::min((currentTime - visitedTime)/EvaporationTime, 1.0);
+            return pheromone;
+        }
+
+
 
         /**
          * @brief Get the QuadNode that contains the given coordinate
@@ -720,7 +742,7 @@ namespace quadtree {
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
                 if (node->values.size() == 0) {
-                    return QuadNode{queryCoordinate, UNKNOWN};
+                    return QuadNode{queryCoordinate, UNKNOWN, 0};
                 } else {
                     return node->values.front();
                 }
