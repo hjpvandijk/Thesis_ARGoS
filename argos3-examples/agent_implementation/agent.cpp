@@ -108,13 +108,13 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getMinSize();
+    double stepSize = this->quadtree->getMinSize() / 2;
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks/ticks_per_second);
+        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -125,7 +125,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
  * @param objectCoordinate
  */
 void Agent::addObjectLocation(Coordinate objectCoordinate) {
-    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks/ticks_per_second);
+    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
 }
 
 /**
@@ -179,17 +179,19 @@ void Agent::checkForObstacles() {
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * @return The vector towards the free direction
  */
-argos::CRadians Agent::calculateObjectAvoidanceAngle(argos::CRadians targetAngle) {
+bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
 
     //Get occupied boxes within range
-    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position, PROXIMITY_RANGE * 2.0, this->elapsed_ticks/this->ticks_per_second);
+    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position, OBJECT_AVOIDANCE_RANGE,
+                                                                                  this->elapsed_ticks /
+                                                                                  this->ticks_per_second);
 
     std::set<argos::CDegrees> blockedAngles = {};
     std::set<argos::CDegrees> freeAngles = {};
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
 
 //Add free angles from -180 to 170 degrees
- for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
+    for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
         auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
         freeAngles.insert(angle);
     }
@@ -199,8 +201,10 @@ argos::CRadians Agent::calculateObjectAvoidanceAngle(argos::CRadians targetAngle
 
 //        argos::RLOG << "Box: " << box.getCenter().x << " ; " << box.getCenter().y << std::endl;
 
-        argos::CVector2 OC = argos::CVector2(box.getCenter().x - this->position.x, box.getCenter().y - this->position.y);
-        argos::CRadians Bq = argos::ASin((AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS)/OC.Length());
+        argos::CVector2 OC = argos::CVector2(box.getCenter().x - this->position.x,
+                                             box.getCenter().y - this->position.y);
+        argos::CRadians Bq = argos::ASin(
+                std::min(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
         argos::CRadians Eta_q = OC.Angle();
 
 //        argos::RLOG << "OC: " << OC.Length() << std::endl;
@@ -280,8 +284,10 @@ argos::CRadians Agent::calculateObjectAvoidanceAngle(argos::CRadians targetAngle
             auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
 //            argos::RLOG << "Angle: " << angle << std::endl;
 //            argos::RLOG << "Diff: " << (roundedMaxAngle - roundedMinAngle) << std::endl;
-//            argos::RLOG << "Diff normalized: " << (roundedMaxAngle - roundedMinAngle).SignedNormalize() << std::endl;
-            if (roundedMaxAngle - roundedMinAngle <= argos::CDegrees(180)) {
+//            argos::RLOG << "Normalized diff minangle etaq: " << NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) << std::endl;
+//            argos::RLOG << "Normalized diff maxangle etaq: " << NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) << std::endl;
+//            if (minAngle <= ToDegrees(Eta_q) && ToDegrees(Eta_q) <= maxAngle) {
+            if(NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) && NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
                 if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
 //                    blockedAngles.insert(angle);
                     freeAngles.erase(angle);
@@ -291,7 +297,8 @@ argos::CRadians Agent::calculateObjectAvoidanceAngle(argos::CRadians targetAngle
 //                    freeAngles.insert(angle);
 //                    argos::RLOG << "Free angle: " << angle << std::endl;
 //                }
-            } else {
+            } else if(NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) && NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) <= argos::CRadians(0)) {
+
                 if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
 //                    blockedAngles.insert(angle);
                     freeAngles.erase(angle);
@@ -302,6 +309,8 @@ argos::CRadians Agent::calculateObjectAvoidanceAngle(argos::CRadians targetAngle
 //                    argos::RLOG << "Free angle: " << angle << std::endl;
 //                }
 
+            } else {
+                argos::LOGERR << "Error: Eta_q not within range" << std::endl;
             }
         }
 
@@ -318,19 +327,25 @@ argos::CRadians Agent::calculateObjectAvoidanceAngle(argos::CRadians targetAngle
 //    }
 
 //    argos::RLOG <<"Heading: " << ToDegrees(this->heading) << std::endl;
+
+    if(freeAngles.empty()) return false;
+
     //Get free angle closest to heading
-    auto closestFreeAngle = *freeAngles.begin();
+    auto closestFreeAngle = * freeAngles.begin();
     for (auto freeAngle: freeAngles) {
-//        argos::RLOG << "Free angle: " << freeAngle << std::endl;
-        if (std::abs((freeAngle - ToDegrees(targetAngle)).GetValue()) < abs((closestFreeAngle - ToDegrees(targetAngle)).GetValue())) {
+        argos::RLOG << "Free angle: " << freeAngle << std::endl;
+        if (std::abs((freeAngle - ToDegrees(targetAngle)).GetValue()) <
+            abs((closestFreeAngle - ToDegrees(targetAngle)).GetValue())) {
             closestFreeAngle = freeAngle;
         }
     }
 
 //    argos::RLOG << "Closest free angle: " << closestFreeAngle << std::endl;
+//    argos::RLOG << "Target angle: " << ToDegrees(targetAngle) << std::endl;
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
-    return NormalizedDifference(closestFreeAngleRadians, targetAngle);
+    *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+    return true;
     //Create a vector towards the closestFreeAngle
 //    double opposite = argos::Sin(this->heading + closestFreeAngleRadians) * 1.0;
 //    double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
@@ -448,7 +463,9 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0, this->elapsed_ticks/this->ticks_per_second);
+    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, PROXIMITY_RANGE * 2.0,
+                                                                              this->elapsed_ticks /
+                                                                              this->ticks_per_second);
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<quadtree::Box>> frontierRegions = {};
@@ -555,61 +572,71 @@ void Agent::calculateNextPosition() {
     //If there are objects or agents to avoid, do not explore
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
 
+    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector;
+    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
+    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
+
     //Normalize vectors if they are not zero
 //    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
-//    if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
-//    if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
-//    if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
-//    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
+    if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
+    if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
+    if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
+    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
     argos::CVector2 total_vector = this->swarm_vector +
                                    //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
-                                   AGENT_COHESION_WEIGHT * agentCohesionVector +
-                                   AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector +
-                                   AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector
+                                   agentCohesionVector +
+                                   agentAvoidanceVector +
+                                   agentAlignmentVector
                                    +
-                                   UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector
-                                   ;
+                                   unexploredFrontierVector;
     if (total_vector.Length() != 0) total_vector.Normalize();
 
     this->swarm_vector = total_vector;
-
-    argos::CRadians objectAvoidanceAngle = calculateObjectAvoidanceAngle(this->swarm_vector.Angle());
-    argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
-
-
     argos::RLOG << "Swarm vector: " << this->swarm_vector << std::endl;
-    argos::RLOG << "Unexploredfrontier angle" << (UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector).Angle() << std::endl;
+    argos::CRadians objectAvoidanceAngle;
+    bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
+    //If there is not a free angle to move to, do not move
+    if(!isThereAFreeAngle) this->force_vector = {0,0};
+    else {
+        argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
 
-    argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
-    argos::RLOG << "Object avoidance angle 0-2PI: " << objectAvoidanceAngle.UnsignedNormalize() << std::endl;
 
-    argos::RLOG << "Force vector calculation: {(" << this->swarm_vector.GetX() << " + " << UNEXPLORED_FRONTIER_WEIGHT
-                << " * " << unexploredFrontierVector.GetX() << ") * cos(" << objectAvoidanceAngle << ") - ("
-                << this->swarm_vector.GetX() << " + " << UNEXPLORED_FRONTIER_WEIGHT << " * "
-                << unexploredFrontierVector.GetX() << ") * sin(" << objectAvoidanceAngle << "), "
-                << "(" << this->swarm_vector.GetY() << " + " << UNEXPLORED_FRONTIER_WEIGHT
-                << " * " << unexploredFrontierVector.GetY() << ") * sin(" << objectAvoidanceAngle << ") + ("
-                << this->swarm_vector.GetY() << " + " << UNEXPLORED_FRONTIER_WEIGHT << " * "
-                << unexploredFrontierVector.GetY() << ") * cos(" << objectAvoidanceAngle << ")}" << std::endl;
+        argos::RLOG << "Unexploredfrontier angle" << (UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector).Angle()
+                    << std::endl;
 
-    this->force_vector = {(this->swarm_vector.GetX()) *
-                          argos::Cos(objectAvoidanceAngle) -
-                          (this->swarm_vector.GetX()) *
-                          argos::Sin(objectAvoidanceAngle),
-                          (this->swarm_vector.GetY()) *
-                          argos::Sin(objectAvoidanceAngle) +
-                          (this->swarm_vector.GetY()) *
-                          argos::Cos(objectAvoidanceAngle)};
-    argos::RLOG << "Force vector: " << this->force_vector << std::endl;
-    argos::RLOG <<"Force vector angle" << this->force_vector.Angle() << std::endl;
+        argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
+        argos::RLOG << "Object avoidance angle 0-2PI: " << objectAvoidanceAngle.UnsignedNormalize() << std::endl;
 
-    argos::RLOG <<"Heading: " << this->heading << std::endl;
+        argos::RLOG << "Force vector calculation: {(" << this->swarm_vector.GetX() << " + "
+                    << UNEXPLORED_FRONTIER_WEIGHT
+                    << " * " << unexploredFrontierVector.GetX() << ") * cos(" << objectAvoidanceAngle << ") - ("
+                    << this->swarm_vector.GetX() << " + " << UNEXPLORED_FRONTIER_WEIGHT << " * "
+                    << unexploredFrontierVector.GetX() << ") * sin(" << objectAvoidanceAngle << "), "
+                    << "(" << this->swarm_vector.GetY() << " + " << UNEXPLORED_FRONTIER_WEIGHT
+                    << " * " << unexploredFrontierVector.GetY() << ") * sin(" << objectAvoidanceAngle << ") + ("
+                    << this->swarm_vector.GetY() << " + " << UNEXPLORED_FRONTIER_WEIGHT << " * "
+                    << unexploredFrontierVector.GetY() << ") * cos(" << objectAvoidanceAngle << ")}" << std::endl;
 
-    argos::CRadians angle = this->force_vector.Angle();
-    this->targetHeading = angle;
+        this->force_vector = {(this->swarm_vector.GetX()) *
+                              argos::Cos(objectAvoidanceAngle) -
+                              (this->swarm_vector.GetX()) *
+                              argos::Sin(objectAvoidanceAngle),
+                              (this->swarm_vector.GetY()) *
+                              argos::Sin(objectAvoidanceAngle) +
+                              (this->swarm_vector.GetY()) *
+                              argos::Cos(objectAvoidanceAngle)};
+        argos::RLOG << "Force vector: " << this->force_vector << std::endl;
+        argos::RLOG << "Force vector angle" << this->force_vector.Angle() << std::endl;
+
+        argos::RLOG << "Heading: " << this->heading << std::endl;
+
+        argos::CRadians angle = this->force_vector.Angle();
+        this->targetHeading = angle;
+    }
 }
 
 void Agent::doStep() {
@@ -617,7 +644,7 @@ void Agent::doStep() {
     std::vector<std::string> quadTreeToStrings = {};
     this->quadtree->toStringVector(&quadTreeToStrings);
 //    argos::RLOG << "quadTreeStringSize: " << quadTreeToStrings.size() << std::endl;
-    for (const std::string& str: quadTreeToStrings) {
+    for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
     }
     broadcastMessage(
@@ -630,29 +657,33 @@ void Agent::doStep() {
 
     calculateNextPosition();
 
-    argos::RLOG << "Heading: " << ToDegrees(this->heading) << std::endl;
-    argos::RLOG << "Target heading: " << ToDegrees(this->targetHeading) << std::endl;
+    //If there is no force vector, do not move
+    if(this->force_vector == argos::CVector2{0,0}) this->diffdrive->SetLinearVelocity(0,0);
+    else {
+        argos::RLOG << "Heading: " << ToDegrees(this->heading) << std::endl;
+        argos::RLOG << "Target heading: " << ToDegrees(this->targetHeading) << std::endl;
 
-    argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
+        argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
 
-    argos::CDegrees diffDeg = ToDegrees(diff);
+        argos::CDegrees diffDeg = ToDegrees(diff);
 
-    argos::RLOG << "Diff: " << diffDeg << std::endl;
+        argos::RLOG << "Diff: " << diffDeg << std::endl;
 
-    if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
-        //Go straight
-        this->diffdrive->SetLinearVelocity(this->speed, this->speed);
+        if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
+            //Go straight
+            this->diffdrive->SetLinearVelocity(this->speed, this->speed);
 //        argos::RLOG << "Going straight" << std::endl;
-    } else if (diffDeg > argos::CDegrees(0)) {
-        //turn right
-        this->diffdrive->SetLinearVelocity(this->speed * TURNING_SPEED_RATIO, 0);
+        } else if (diffDeg > argos::CDegrees(0)) {
+            //turn right
+            this->diffdrive->SetLinearVelocity(this->speed * TURNING_SPEED_RATIO, 0);
 //        argos::RLOG << "Turning right" << std::endl;
 
-    } else {
-        //turn left
-        this->diffdrive->SetLinearVelocity(0, this->speed * TURNING_SPEED_RATIO);
+        } else {
+            //turn left
+            this->diffdrive->SetLinearVelocity(0, this->speed * TURNING_SPEED_RATIO);
 //        argos::RLOG << "Turning left" << std::endl;
 
+        }
     }
 
 //    argos::RLOG << std::endl;
