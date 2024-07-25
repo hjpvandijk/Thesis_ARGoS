@@ -178,7 +178,7 @@
         </pipuck>
 
                 <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
-                    <body position="0,3,0" orientation="120,0,0"/>
+                    <body position="0,3,0" orientation="85,0,0"/>
                     <controller config="ppc"/>
         <!--            <devices>-->
         <!--                <simple_radios>-->

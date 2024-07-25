@@ -105,9 +105,11 @@ public:
 
     double PROXIMITY_RANGE = 2.0;
 
-    double TURN_THRESHOLD_DEGREES = 5;
+    double TURN_THRESHOLD_DEGREES = 2;
 
     double OBJECT_AVOIDANCE_WEIGHT = 1;
+    double OBJECT_SAFETY_RADIUS = 0.25;
+    double AGENT_SAFETY_RADIUS = 0.5;
 
     double AGENT_COHESION_WEIGHT = 0;//0.23;
     double AGENT_AVOIDANCE_WEIGHT = 1.15;
@@ -133,7 +135,7 @@ public:
 private:
     void checkForObstacles();
 
-    argos::CRadians calculateObjectAvoidanceVector();
+    argos::CRadians calculateObjectAvoidanceAngle(argos::CRadians targetAngle);
 
     bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
     argos::CVector2 calculateAgentCohesionVector();

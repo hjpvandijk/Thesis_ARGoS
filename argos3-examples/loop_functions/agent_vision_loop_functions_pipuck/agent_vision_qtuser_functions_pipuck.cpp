@@ -56,6 +56,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
                 color = CColor::RED;
                 fill = true;
                 DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+//                DrawCircle(pos, CQuaternion(), 0.25f, CColor::MAGENTA);
             } else if (occupancy == quadtree::Occupancy::FREE) {
                 color = CColor::GREEN;
 //                argos::LOG << "Green: " << pheromone*255 << std::endl;
@@ -74,7 +75,9 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //         it != m_cAgVisLF.GetAgentCoordinates().end();
 //         ++it) {
 ////        DrawBox(it->second, CQuaternion(), 0.1f, CColor::GRAY50);
-//        DrawBox(it->second, CQuaternion(), CVector3(4, 4, 0), CColor::GRAY80);
+////        DrawBox(it->second, CQuaternion(), CVector3(4, 4, 0), CColor::GRAY80);
+//        DrawCircle(it->second, CQuaternion(), 0.5f, CColor::GRAY80);
+//
 //    }
 //    for (CAgentVisionLoopFunctions::TCoordinateMap::const_iterator it = m_cAgVisLF.GetObjectCoordinates().begin();
 //         it != m_cAgVisLF.GetObjectCoordinates().end();

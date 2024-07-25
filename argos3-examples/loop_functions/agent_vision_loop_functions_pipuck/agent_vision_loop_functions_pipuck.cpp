@@ -137,7 +137,6 @@ void CAgentVisionLoopFunctions::PostStep() {
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.05f);
         m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
 
-        if(agent->getId() != "pipuck1") continue;
 
 
         findAndPushObjectCoordinates(pcFB, agent);
@@ -146,7 +145,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate pos = agent->position.FromOwnToArgos();
         CVector3 agentPos = CVector3(pos.x, pos.y, 0.01f);
         m_tAgentCoordinates[pcFB] = agentPos;
-
+//        if(agent->getId() != "pipuck1") continue;
+//
         pushQuadTree(pcFB, agent);
 
 
