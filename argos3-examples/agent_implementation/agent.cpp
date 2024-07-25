@@ -108,7 +108,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getMinSize();
+    double stepSize = this->quadtree->getMinSize()/2;
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
