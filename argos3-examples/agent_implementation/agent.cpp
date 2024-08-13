@@ -333,7 +333,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
     //Get free angle closest to heading
     auto closestFreeAngle = * freeAngles.begin();
     for (auto freeAngle: freeAngles) {
-        argos::RLOG << "Free angle: " << freeAngle << std::endl;
+//        argos::RLOG << "Free angle: " << freeAngle << std::endl;
         if (std::abs((freeAngle - ToDegrees(targetAngle)).GetValue()) <
             abs((closestFreeAngle - ToDegrees(targetAngle)).GetValue())) {
             closestFreeAngle = freeAngle;
@@ -351,6 +351,39 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
 //    double adjacent = argos::Cos(this->heading + closestFreeAngleRadians) * 1.0;
 //    argos::CVector2 vectorToFreeAngle = argos::CVector2(adjacent, opposite);
 //    return vectorToFreeAngle;
+
+}
+
+/** Calculate the vector to avoid the virtual walls
+ * If the agent is close to the border, create a vector pointing away from the border
+ * Implemented according to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
+ * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+ * However, the vector directions are flipped compared to the paper, as the paper uses a different coordinate system
+ * @return a vector pointing away from the border
+ */
+argos::CVector2 Agent::getVirtualWallAvoidanceVector(){
+    //If the agent is close to the border, create a vector pointing away from the border
+    argos::CVector2 virtualWallAvoidanceVector = {0, 0};
+
+    if(this->position.x < this->left_right_borders.x){
+        virtualWallAvoidanceVector.SetX(1);
+    } else if (this->left_right_borders.x <= this->position.x && this->position.x <= this->left_right_borders.y){
+        virtualWallAvoidanceVector.SetX(0);
+    } else if(this->position.x > this->left_right_borders.y){
+        virtualWallAvoidanceVector.SetX(-1);
+    }
+
+    if(this->position.y < this->upper_lower_borders.y){
+        virtualWallAvoidanceVector.SetY(1);
+    } else if (this->upper_lower_borders.y <= this->position.y && this->position.y <= this->upper_lower_borders.x){
+        virtualWallAvoidanceVector.SetY(0);
+    } else if(this->position.y > this->upper_lower_borders.x){
+        virtualWallAvoidanceVector.SetY(-1);
+    }
+
+    argos::RLOG << "Position: " << this->position.x << " ; " << this->position.y << " : " << virtualWallAvoidanceVector << std::endl;
+
+    return virtualWallAvoidanceVector;
 
 }
 
@@ -559,6 +592,7 @@ void Agent::calculateNextPosition() {
     //4. Repulsion from objects/walls (done)
 
 
+    argos::CVector2 virtualWallAvoidanceVector = getVirtualWallAvoidanceVector();
     argos::CVector2 agentCohesionVector = calculateAgentCohesionVector();
     argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector(agentCohesionVector);
     argos::CVector2 agentAlignmentVector = calculateAgentAlignmentVector();
@@ -575,11 +609,13 @@ void Agent::calculateNextPosition() {
 
     //Normalize vectors if they are not zero
 //    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
+    if (virtualWallAvoidanceVector.Length() != 0) virtualWallAvoidanceVector.Normalize();
     if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
     if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
     if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
+    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
     agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
     agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
     agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
@@ -589,6 +625,7 @@ void Agent::calculateNextPosition() {
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
     argos::CVector2 total_vector = this->swarm_vector +
                                    //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+                                   virtualWallAvoidanceVector +
                                    agentCohesionVector +
                                    agentAvoidanceVector +
                                    agentAlignmentVector +
