@@ -569,13 +569,9 @@ void Agent::calculateNextPosition() {
     argos::RLOG << "Agent cohesion vector: " << agentCohesionVector << std::endl;
     argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector << std::endl;
 
-    //If there are objects or agents to avoid, do not explore
+    //If there are agents to avoid, do not explore
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
 
-    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector;
-    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
-    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
 
     //Normalize vectors if they are not zero
 //    if (objectAvoidanceVector.Length() != 0) objectAvoidanceVector.Normalize();
@@ -584,14 +580,18 @@ void Agent::calculateNextPosition() {
     if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
     if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
+    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
+    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
+    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
+
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
     argos::CVector2 total_vector = this->swarm_vector +
                                    //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
                                    agentCohesionVector +
                                    agentAvoidanceVector +
-                                   agentAlignmentVector
-                                   +
+                                   agentAlignmentVector +
                                    unexploredFrontierVector;
     if (total_vector.Length() != 0) total_vector.Normalize();
 
