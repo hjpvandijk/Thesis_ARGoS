@@ -132,6 +132,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         Agent *agent = cController.agentObject;
 
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
+        globalElapsedTicks = agent->elapsed_ticks/agent->ticks_per_second;
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);

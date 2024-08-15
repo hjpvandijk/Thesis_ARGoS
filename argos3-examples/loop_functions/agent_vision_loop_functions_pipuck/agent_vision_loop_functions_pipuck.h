@@ -18,6 +18,7 @@ public:
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
+    double globalElapsedTicks;
 
 public:
 
