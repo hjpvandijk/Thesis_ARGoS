@@ -346,7 +346,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
         }
     }
 
-    argos::RLOG << "Closest free angle: " << closestFreeAngle << std::endl;
+//    argos::RLOG << "Closest free angle: " << closestFreeAngle << std::endl;
 //    argos::RLOG << "Target angle: " << ToDegrees(targetAngle) << std::endl;
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
@@ -603,10 +603,10 @@ void Agent::calculateNextPosition() {
 
     argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
 
-    argos::RLOG << "Virtual wall avoidance vector angle: " << virtualWallAvoidanceVector.Angle() << std::endl;
-    argos::RLOG << "Agent avoidance vector angle: " << agentAvoidanceVector.Angle() << std::endl;
-    argos::RLOG << "Agent cohesion vector angle: " << agentCohesionVector.Angle() << std::endl;
-    argos::RLOG << "Unexplored frontier vector angle: " << unexploredFrontierVector.Angle() << std::endl;
+//    argos::RLOG << "Virtual wall avoidance vector angle: " << virtualWallAvoidanceVector.Angle() << std::endl;
+//    argos::RLOG << "Agent avoidance vector angle: " << agentAvoidanceVector.Angle() << std::endl;
+//    argos::RLOG << "Agent cohesion vector angle: " << agentCohesionVector.Angle() << std::endl;
+//    argos::RLOG << "Unexplored frontier vector angle: " << unexploredFrontierVector.Angle() << std::endl;
 
     //If there are agents to avoid, do not explore
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
@@ -638,17 +638,17 @@ void Agent::calculateNextPosition() {
     if (total_vector.Length() != 0) total_vector.Normalize();
 
     this->swarm_vector = total_vector;
-    argos::RLOG << "Swarm vector: " << this->swarm_vector << std::endl;
+//    argos::RLOG << "Swarm vector: " << this->swarm_vector << std::endl;
     argos::CRadians objectAvoidanceAngle;
     bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
     //If there is not a free angle to move to, do not move
     if(!isThereAFreeAngle){
         this->force_vector = {0,0};
-        argos::RLOG << "No free angle to move to" << std::endl;
+//        argos::RLOG << "No free angle to move to" << std::endl;
     }
     else {
-        argos::RLOG <<"Object avoidance angle:" << objectAvoidanceAngle << std::endl;
-        argos::RLOG << "Swarm vector angle" << this->swarm_vector.Angle() << std::endl;
+//        argos::RLOG <<"Object avoidance angle:" << objectAvoidanceAngle << std::endl;
+//        argos::RLOG << "Swarm vector angle" << this->swarm_vector.Angle() << std::endl;
 //
 //
 
@@ -656,18 +656,18 @@ void Agent::calculateNextPosition() {
 //        argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
 //        argos::RLOG << "Object avoidance angle 0-2PI: " << objectAvoidanceAngle.UnsignedNormalize() << std::endl;
 //
-        argos::RLOG << "Force vector calculation: {(" << this->swarm_vector.GetX()
-//                << " + " << unexploredFrontierVector.GetX()
-                    << ") * cos(" << objectAvoidanceAngle << ") - ("
-                    << this->swarm_vector.GetX()
-                    << " + " << unexploredFrontierVector.GetX()
-                    << ") * sin(" << objectAvoidanceAngle << "), "
-                    << "(" << this->swarm_vector.GetY()
-//                    << " + " << unexploredFrontierVector.GetY()
-                    << ") * sin(" << objectAvoidanceAngle << ") + ("
-                    << this->swarm_vector.GetY()
-//                    << " + "
-                    << ") * cos(" << objectAvoidanceAngle << ")}" << std::endl;
+//        argos::RLOG << "Force vector calculation: {(" << this->swarm_vector.GetX()
+////                << " + " << unexploredFrontierVector.GetX()
+//                    << ") * cos(" << objectAvoidanceAngle << ") - ("
+//                    << this->swarm_vector.GetX()
+//                    << " + " << unexploredFrontierVector.GetX()
+//                    << ") * sin(" << objectAvoidanceAngle << "), "
+//                    << "(" << this->swarm_vector.GetY()
+////                    << " + " << unexploredFrontierVector.GetY()
+//                    << ") * sin(" << objectAvoidanceAngle << ") + ("
+//                    << this->swarm_vector.GetY()
+////                    << " + "
+//                    << ") * cos(" << objectAvoidanceAngle << ")}" << std::endl;
 
 
 // According to the paper, the formula should be:
@@ -690,8 +690,8 @@ void Agent::calculateNextPosition() {
                               argos::Sin(objectAvoidanceAngle) +
                               (this->swarm_vector.GetY()) *
                               argos::Cos(objectAvoidanceAngle)};
-        argos::RLOG << "Force vector: " << this->force_vector << std::endl;
-        argos::RLOG << "Force vector angle" << this->force_vector.Angle() << std::endl;
+//        argos::RLOG << "Force vector: " << this->force_vector << std::endl;
+//        argos::RLOG << "Force vector angle" << this->force_vector.Angle() << std::endl;
 //
 //        argos::RLOG << "Heading: " << this->heading << std::endl;
 
@@ -721,28 +721,28 @@ void Agent::doStep() {
     //If there is no force vector, do not move
     if(this->force_vector == argos::CVector2{0,0}) this->diffdrive->SetLinearVelocity(0,0);
     else {
-        argos::RLOG << "Heading: " << ToDegrees(this->heading) << std::endl;
-        argos::RLOG << "Target heading: " << ToDegrees(this->targetHeading) << std::endl;
+//        argos::RLOG << "Heading: " << ToDegrees(this->heading) << std::endl;
+//        argos::RLOG << "Target heading: " << ToDegrees(this->targetHeading) << std::endl;
 
         argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
 
         argos::CDegrees diffDeg = ToDegrees(diff);
 
-        argos::RLOG << "Diff: " << diffDeg << std::endl;
+//        argos::RLOG << "Diff: " << diffDeg << std::endl;
 
         if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
             //Go straight
             this->diffdrive->SetLinearVelocity(this->speed, this->speed);
-        argos::RLOG << "Going straight" << std::endl;
+//        argos::RLOG << "Going straight" << std::endl;
         } else if (diffDeg > argos::CDegrees(0)) {
             //turn right
             this->diffdrive->SetLinearVelocity(this->speed * TURNING_SPEED_RATIO, 0);
-        argos::RLOG << "Turning right" << std::endl;
+//        argos::RLOG << "Turning right" << std::endl;
 
         } else {
             //turn left
             this->diffdrive->SetLinearVelocity(0, this->speed * TURNING_SPEED_RATIO);
-        argos::RLOG << "Turning left" << std::endl;
+//        argos::RLOG << "Turning left" << std::endl;
 
         }
     }
