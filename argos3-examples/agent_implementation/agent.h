@@ -123,14 +123,14 @@ public:
     double AGENT_COHESION_RADIUS = 1.5;
     double AGENT_AVOIDANCE_RANGE = 0.68;
     double AGENT_ALIGNMENT_RANGE = 1.5;
-    double OBJECT_AVOIDANCE_RANGE = OBJECT_SAFETY_RADIUS+AGENT_SAFETY_RADIUS+0.5;
+    double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS + 0.5;
 
     Coordinate left_right_borders = {-10,10};
     Coordinate upper_lower_borders = {10,-10};
 
     double TURNING_SPEED_RATIO = 0.1;
 
-    double ANGLE_INTERVAL_STEPS = 36;
+    double ANGLE_INTERVAL_STEPS = 360;
 
     Coordinate currentBestFrontier = {0,0};
 

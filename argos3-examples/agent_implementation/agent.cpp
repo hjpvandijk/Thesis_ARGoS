@@ -182,7 +182,7 @@ void Agent::checkForObstacles() {
 bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
 
     //Get occupied boxes within range
-    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position, OBJECT_AVOIDANCE_RANGE,
+    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position, OBJECT_AVOIDANCE_RADIUS*2,
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
 
@@ -196,6 +196,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
         freeAngles.insert(angle);
     }
 
+//    argos::RLOG << "Occupied boxes:" << occupiedBoxes.size() << std::endl;
     //For each occupied box, find the angles that are blocked relative to the agent
     for (auto box: occupiedBoxes) {
 
@@ -206,6 +207,9 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
         argos::CRadians Bq = argos::ASin(
                 std::min(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
         argos::CRadians Eta_q = OC.Angle();
+        if(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS > OC.Length())
+        argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << AGENT_SAFETY_RADIUS << " + " << OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+
 
 //        argos::RLOG << "OC: " << OC.Length() << std::endl;
 //
@@ -321,7 +325,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
 //    for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
 //        auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS);
 //        if (blockedAngles.find(angle) == blockedAngles.end()) {
-//            freeAngles.insert(angle.SignedNormalize());
+////            freeAngles.insert(angle.SignedNormalize());
 //            argos::RLOG << "Free angle: " << angle << std::endl;
 //        }
 //    }
@@ -329,6 +333,8 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
 //    argos::RLOG <<"Heading: " << ToDegrees(this->heading) << std::endl;
 
     if(freeAngles.empty()) return false;
+
+//    argos::RLOG << "Target angle: " <<ToDegrees(targetAngle) << std::endl;
 
     //Get free angle closest to heading
     auto closestFreeAngle = * freeAngles.begin();
@@ -340,7 +346,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
         }
     }
 
-//    argos::RLOG << "Closest free angle: " << closestFreeAngle << std::endl;
+    argos::RLOG << "Closest free angle: " << closestFreeAngle << std::endl;
 //    argos::RLOG << "Target angle: " << ToDegrees(targetAngle) << std::endl;
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
@@ -381,7 +387,6 @@ argos::CVector2 Agent::getVirtualWallAvoidanceVector(){
         virtualWallAvoidanceVector.SetY(-1);
     }
 
-    argos::RLOG << "Position: " << this->position.x << " ; " << this->position.y << " : " << virtualWallAvoidanceVector << std::endl;
 
     return virtualWallAvoidanceVector;
 
@@ -416,7 +421,6 @@ argos::CVector2 Agent::calculateAgentCohesionVector() {
 
     bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation);
     if (!neighborsWithinRange) {
-        argos::RLOG << "No agents within range" << std::endl;
         return {0, 0};
     }
 
@@ -599,9 +603,10 @@ void Agent::calculateNextPosition() {
 
     argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
 
-    argos::RLOG << "Agent avoidance vector: " << agentAvoidanceVector << std::endl;
-    argos::RLOG << "Agent cohesion vector: " << agentCohesionVector << std::endl;
-    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector << std::endl;
+    argos::RLOG << "Virtual wall avoidance vector angle: " << virtualWallAvoidanceVector.Angle() << std::endl;
+    argos::RLOG << "Agent avoidance vector angle: " << agentAvoidanceVector.Angle() << std::endl;
+    argos::RLOG << "Agent cohesion vector angle: " << agentCohesionVector.Angle() << std::endl;
+    argos::RLOG << "Unexplored frontier vector angle: " << unexploredFrontierVector.Angle() << std::endl;
 
     //If there are agents to avoid, do not explore
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
@@ -637,39 +642,58 @@ void Agent::calculateNextPosition() {
     argos::CRadians objectAvoidanceAngle;
     bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
     //If there is not a free angle to move to, do not move
-    if(!isThereAFreeAngle) this->force_vector = {0,0};
+    if(!isThereAFreeAngle){
+        this->force_vector = {0,0};
+        argos::RLOG << "No free angle to move to" << std::endl;
+    }
     else {
-        argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
+        argos::RLOG <<"Object avoidance angle:" << objectAvoidanceAngle << std::endl;
+        argos::RLOG << "Swarm vector angle" << this->swarm_vector.Angle() << std::endl;
+//
+//
+
+//
+//        argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
+//        argos::RLOG << "Object avoidance angle 0-2PI: " << objectAvoidanceAngle.UnsignedNormalize() << std::endl;
+//
+        argos::RLOG << "Force vector calculation: {(" << this->swarm_vector.GetX()
+//                << " + " << unexploredFrontierVector.GetX()
+                    << ") * cos(" << objectAvoidanceAngle << ") - ("
+                    << this->swarm_vector.GetX()
+                    << " + " << unexploredFrontierVector.GetX()
+                    << ") * sin(" << objectAvoidanceAngle << "), "
+                    << "(" << this->swarm_vector.GetY()
+//                    << " + " << unexploredFrontierVector.GetY()
+                    << ") * sin(" << objectAvoidanceAngle << ") + ("
+                    << this->swarm_vector.GetY()
+//                    << " + "
+                    << ") * cos(" << objectAvoidanceAngle << ")}" << std::endl;
 
 
-        argos::RLOG << "Unexploredfrontier angle" << (UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector).Angle()
-                    << std::endl;
+// According to the paper, the formula should be:
+//        this->force_vector = {(this->swarm_vector.GetX()) *
+//                              argos::Cos(objectAvoidanceAngle) -
+//                              (this->swarm_vector.GetX()) *
+//                              argos::Sin(objectAvoidanceAngle),
+//                              (this->swarm_vector.GetY()) *
+//                              argos::Sin(objectAvoidanceAngle) +
+//                              (this->swarm_vector.GetY()) *
+//                              argos::Cos(objectAvoidanceAngle)};
 
-        argos::RLOG << "Object avoidance angle: " << objectAvoidanceAngle << std::endl;
-        argos::RLOG << "Object avoidance angle 0-2PI: " << objectAvoidanceAngle.UnsignedNormalize() << std::endl;
-
-        argos::RLOG << "Force vector calculation: {(" << this->swarm_vector.GetX() << " + "
-                    << UNEXPLORED_FRONTIER_WEIGHT
-                    << " * " << unexploredFrontierVector.GetX() << ") * cos(" << objectAvoidanceAngle << ") - ("
-                    << this->swarm_vector.GetX() << " + " << UNEXPLORED_FRONTIER_WEIGHT << " * "
-                    << unexploredFrontierVector.GetX() << ") * sin(" << objectAvoidanceAngle << "), "
-                    << "(" << this->swarm_vector.GetY() << " + " << UNEXPLORED_FRONTIER_WEIGHT
-                    << " * " << unexploredFrontierVector.GetY() << ") * sin(" << objectAvoidanceAngle << ") + ("
-                    << this->swarm_vector.GetY() << " + " << UNEXPLORED_FRONTIER_WEIGHT << " * "
-                    << unexploredFrontierVector.GetY() << ") * cos(" << objectAvoidanceAngle << ")}" << std::endl;
-
+// However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
+// This also seems to give better performance.
         this->force_vector = {(this->swarm_vector.GetX()) *
                               argos::Cos(objectAvoidanceAngle) -
-                              (this->swarm_vector.GetX()) *
-                              argos::Sin(objectAvoidanceAngle),
                               (this->swarm_vector.GetY()) *
+                              argos::Sin(objectAvoidanceAngle),
+                              (this->swarm_vector.GetX()) *
                               argos::Sin(objectAvoidanceAngle) +
                               (this->swarm_vector.GetY()) *
                               argos::Cos(objectAvoidanceAngle)};
         argos::RLOG << "Force vector: " << this->force_vector << std::endl;
         argos::RLOG << "Force vector angle" << this->force_vector.Angle() << std::endl;
-
-        argos::RLOG << "Heading: " << this->heading << std::endl;
+//
+//        argos::RLOG << "Heading: " << this->heading << std::endl;
 
         argos::CRadians angle = this->force_vector.Angle();
         this->targetHeading = angle;
@@ -709,16 +733,16 @@ void Agent::doStep() {
         if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
             //Go straight
             this->diffdrive->SetLinearVelocity(this->speed, this->speed);
-//        argos::RLOG << "Going straight" << std::endl;
+        argos::RLOG << "Going straight" << std::endl;
         } else if (diffDeg > argos::CDegrees(0)) {
             //turn right
             this->diffdrive->SetLinearVelocity(this->speed * TURNING_SPEED_RATIO, 0);
-//        argos::RLOG << "Turning right" << std::endl;
+        argos::RLOG << "Turning right" << std::endl;
 
         } else {
             //turn left
             this->diffdrive->SetLinearVelocity(0, this->speed * TURNING_SPEED_RATIO);
-//        argos::RLOG << "Turning left" << std::endl;
+        argos::RLOG << "Turning left" << std::endl;
 
         }
     }
