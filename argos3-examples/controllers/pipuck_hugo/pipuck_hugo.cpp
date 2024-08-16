@@ -89,7 +89,7 @@ void PiPuckHugo::ControlStep() {
     }
 
 
-    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
+//    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
 
     m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
 
