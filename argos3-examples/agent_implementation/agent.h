@@ -25,7 +25,10 @@ public:
     argos::CRadians targetHeading;
     double speed{};
     Radio wifi;
-    double lastRangeReading = 2;
+//    double lastRangeReadings = 2;
+    static constexpr double num_sensors = 4;
+    double lastRangeReadings[static_cast<int>(num_sensors)] = {};
+
 
     std::map<std::string, Coordinate> agentLocations;
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
@@ -79,7 +82,7 @@ public:
 
     void updateMap();
 
-    void setLastRangeReading(double new_range);
+    void setLastRangeReadings(int index, double new_range);
 
     void readDistanceSensor();
 

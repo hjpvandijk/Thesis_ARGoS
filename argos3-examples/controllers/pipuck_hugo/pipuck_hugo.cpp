@@ -77,16 +77,19 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 /****************************************/
 /****************************************/
 void PiPuckHugo::ControlStep() {
-    Real proxReadings[1] = {0};
+    static constexpr size_t num_sensors = 4; // Define num_sensors as a static constexpr
+    Real proxReadings[num_sensors] = {};
     std::function<void(const CCI_PiPuckRangefindersSensor::SInterface &)> visitFn =
             [&proxReadings](const CCI_PiPuckRangefindersSensor::SInterface &sensor) {
                 proxReadings[sensor.Label] = sensor.Proximity;
             };
     m_pcRangeFindersSensor->Visit(visitFn);
-    agentObject->setLastRangeReading(proxReadings[0]);
+    for(int i = 0; i < num_sensors; i++){
+        agentObject->setLastRangeReadings(i, proxReadings[i]);
+    }
 
 
-//    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
+    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
 
     m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
 
