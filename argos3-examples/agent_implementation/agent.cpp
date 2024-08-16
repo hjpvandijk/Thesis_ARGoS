@@ -85,8 +85,9 @@ void Agent::updateMap() {
     //Update map with new information
 }
 
-void Agent::setLastRangeReading(double new_range) {
-    this->lastRangeReading = new_range;
+void Agent::setLastRangeReadings(int index, double new_range) {
+//    argos::RLOG << "Setting last range reading: " << index << ": " << new_range << std::endl;
+    this->lastRangeReadings[index] = new_range;
 }
 
 void Agent::readDistanceSensor() {
@@ -134,41 +135,48 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) {
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
  */
 void Agent::checkForObstacles() {
-    if (this->lastRangeReading < PROXIMITY_RANGE) {
+    for(int sensor_index=0; sensor_index < this->num_sensors; sensor_index++) {
+        argos::CRadians sensor_rotation = this->heading - sensor_index*argos::CRadians::PI_OVER_TWO;
+        if (this->lastRangeReadings[sensor_index] < PROXIMITY_RANGE) {
 
 //        argos::RLOG << "Heading: " << this->heading << std::endl;
 //        argos::RLOG << "Last range reading: " << this->lastRangeReading << std::endl;
-        double opposite = argos::Sin(this->heading) * this->lastRangeReading;
-        double adjacent = argos::Cos(this->heading) * this->lastRangeReading;
+
+            double opposite = argos::Sin(sensor_rotation) * this->lastRangeReadings[sensor_index];
+            double adjacent = argos::Cos(sensor_rotation) * this->lastRangeReadings[sensor_index];
 
 //        argos::RLOG << "Opposite: " << opposite << std::endl;
 //        argos::RLOG << "Adjacent: " << adjacent << std::endl;
 
-        Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
-        addFreeAreaBetween(this->position, object);
+            Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
+            addFreeAreaBetween(this->position, object);
+            //If the detected object is actually another agent, add it as a free area
+            //So check if the object coordinate is close to another agent
+            bool close_to_other_agent = false;
+            for (const auto &agentLocation: this->agentLocations) {
+                argos::CVector2 objectToAgent =
+                        argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                        - argos::CVector2(object.x, object.y);
 
-        //If the detected object is actually another agent, add it as a free area
-        //So check if the object coordinate is close to another agent
-        for (const auto &agentLocation: this->agentLocations) {
-            argos::CVector2 objectToAgent =
-                    argos::CVector2(agentLocation.second.x, agentLocation.second.y)
-                    - argos::CVector2(object.x, object.y);
-
-            //If detected object and another agent are not close, add the object as an obstacle
-            if (objectToAgent.Length() > this->quadtree->getMinSize()) {
-                addObjectLocation(object);
+                //If detected object and another agent are not close, add the object as an obstacle
+                if (objectToAgent.Length() <= this->quadtree->getMinSize()) {
+                    close_to_other_agent = true;
+                }
             }
-        }
+            //Only add the object as an obstacle if it is not close to another agent
+            if(!close_to_other_agent) addObjectLocation(object);
 
-    } else {
-        double opposite = argos::Sin(this->heading) * PROXIMITY_RANGE;
-        double adjacent = argos::Cos(this->heading) * PROXIMITY_RANGE;
+
+        } else {
+            double opposite = argos::Sin(sensor_rotation) * PROXIMITY_RANGE;
+            double adjacent = argos::Cos(sensor_rotation) * PROXIMITY_RANGE;
 
 //        argos::RLOG << "Opposite: " << opposite << std::endl;
 //        argos::RLOG << "Adjacent: " << adjacent << std::endl;
 
-        Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
-        addFreeAreaBetween(this->position, end_of_ray);
+            Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
+            addFreeAreaBetween(this->position, end_of_ray);
+        }
     }
 }
 
