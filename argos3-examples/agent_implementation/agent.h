@@ -111,8 +111,8 @@ public:
     double TURN_THRESHOLD_DEGREES = 2;
 
     double OBJECT_AVOIDANCE_WEIGHT = 1;
-    double OBJECT_SAFETY_RADIUS = 0.25;
-    double AGENT_SAFETY_RADIUS = 0.5;
+    double OBJECT_SAFETY_RADIUS = 0.1;
+    double AGENT_SAFETY_RADIUS = 0.1;
 
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
     double AGENT_COHESION_WEIGHT = 0;//0.23;
@@ -122,6 +122,8 @@ public:
 
     double FRONTIER_DISTANCE_WEIGHT = 1.0;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
+
+    double FRONTIER_SEARCH_DIAMETER = 8.0;
 
     double AGENT_COHESION_RADIUS = 1.5;
     double AGENT_AVOIDANCE_RANGE = 0.68;
