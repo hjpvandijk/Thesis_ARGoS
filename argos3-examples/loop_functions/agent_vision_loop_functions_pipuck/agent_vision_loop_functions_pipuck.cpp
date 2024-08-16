@@ -132,21 +132,22 @@ void CAgentVisionLoopFunctions::PostStep() {
         Agent *agent = cController.agentObject;
 
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
+        globalElapsedTicks = agent->elapsed_ticks/agent->ticks_per_second;
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
-        CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.05f);
+        CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
         m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
 
-        if(agent->getId() != "pipuck1") continue;
 
 
         findAndPushObjectCoordinates(pcFB, agent);
         findAndPushOtherAgentCoordinates(pcFB, agent);
 //
         Coordinate pos = agent->position.FromOwnToArgos();
-        CVector3 agentPos = CVector3(pos.x, pos.y, 0.01f);
+        CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
         m_tAgentCoordinates[pcFB] = agentPos;
-
+//        if(agent->getId() != "pipuck1") continue;
+//
         pushQuadTree(pcFB, agent);
 
 
