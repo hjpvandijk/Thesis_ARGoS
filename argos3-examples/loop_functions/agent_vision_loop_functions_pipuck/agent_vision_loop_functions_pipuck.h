@@ -54,18 +54,38 @@ public:
 
 //    CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
 
+//    <box id="box_6" size="1.41,0.97,0.5" movable="false">
+//                                                 <body position="-1.585,1.385,0" orientation="0,0,0"/>
+//                                                                                             </box>
+//    <box id="box_7" size="4.07,0.37,0.5" movable="false">
+//                                                 <body position="2.325,-3.465,0" orientation="0,0,0"/>
+//                                                                                             </box>
+//    <box id="box_8" size="2.76,0.32,0.5" movable="false">
+//                                                 <body position="0.77,-4.61,0" orientation="0,0,0"/>
+//                                                                                           </box>
+//    <box id="box_9" size="0.16,1.09,0.5" movable="false">
+//                                                 <body position="-1.03,-2.915,0" orientation="0,0,0"/>
+//                                                                                             </box>
+//    <box id="box_10" size="1.17,1.84,0.5" movable="false">
+//                                                  <body position="-3.175,-2.27,0" orientation="0,0,0"/>
+//                                                                                              </box>
     std::tuple<argos::CVector3, argos::CVector3, int> spawnableObjects[6] = {
-            std::make_tuple(argos::CVector3(-3, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 100),
-            std::make_tuple(argos::CVector3(2.5, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 400),
-            std::make_tuple(argos::CVector3(0, 4, 0), argos::CVector3(1.0, 1.0, 0.5), 600),
-            std::make_tuple(argos::CVector3(-2, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 800),
-            std::make_tuple(argos::CVector3(2, -4, 0), argos::CVector3(1.0, 1.0, 0.5), 1000),
-            std::make_tuple(argos::CVector3(0, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 1200),
-//            std::make_tuple(argos::CVector3(-2, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 70),
-//            std::make_tuple(argos::CVector3(2, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 80),
-//            std::make_tuple(argos::CVector3(0, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 90),
-//            std::make_tuple(argos::CVector3(0, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 100)
+//            std::make_tuple(argos::CVector3(-3, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 100),
+//            std::make_tuple(argos::CVector3(2.5, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 400),
+//            std::make_tuple(argos::CVector3(0, 4, 0), argos::CVector3(1.0, 1.0, 0.5), 600),
+//            std::make_tuple(argos::CVector3(-2, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 800),
+//            std::make_tuple(argos::CVector3(2, -4, 0), argos::CVector3(1.0, 1.0, 0.5), 1000),
+//            std::make_tuple(argos::CVector3(0, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 1200),
+    std::make_tuple(argos::CVector3(-1.585,1.385,0), argos::CVector3(1.41,0.97,0.5), 500),
+    std::make_tuple(argos::CVector3(2.325,-3.465,0), argos::CVector3(4.07,0.37,0.5), 700),
+    std::make_tuple(argos::CVector3(0.77,-4.61,0), argos::CVector3(2.76,0.32,0.5), 1000),
+    std::make_tuple(argos::CVector3(-1.03,-2.915,0), argos::CVector3(0.16,1.09,0.5), 1200),
+    std::make_tuple(argos::CVector3(-3.175,-2.27,0), argos::CVector3(1.17,1.84,0.5), 1500),
+
+
     };
+
+
 
 private:
 
