@@ -3,6 +3,8 @@
 
 #include <argos3/core/simulator/loop_functions.h>
 #include <argos3/plugins/robots/pi-puck/simulator/pipuck_entity.h>
+#include <argos3/plugins/simulator/entities/box_entity.h>
+
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
 #include "agent_implementation/Quadtree.h"
 using namespace argos;
@@ -49,6 +51,21 @@ public:
     inline const std::map<CPiPuckEntity*, double>& GetAgentElapsedTicks() const {
         return m_tAgentElapsedTicks;
     }
+
+//    CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
+
+    std::tuple<argos::CVector3, argos::CVector3, int> spawnableObjects[6] = {
+            std::make_tuple(argos::CVector3(-3, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 100),
+            std::make_tuple(argos::CVector3(2.5, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 400),
+            std::make_tuple(argos::CVector3(0, 4, 0), argos::CVector3(1.0, 1.0, 0.5), 600),
+            std::make_tuple(argos::CVector3(-2, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 800),
+            std::make_tuple(argos::CVector3(2, -4, 0), argos::CVector3(1.0, 1.0, 0.5), 1000),
+            std::make_tuple(argos::CVector3(0, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 1200),
+//            std::make_tuple(argos::CVector3(-2, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 70),
+//            std::make_tuple(argos::CVector3(2, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 80),
+//            std::make_tuple(argos::CVector3(0, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 90),
+//            std::make_tuple(argos::CVector3(0, 0, 0), argos::CVector3(1.0, 1.0, 0.5), 100)
+    };
 
 private:
 

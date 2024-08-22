@@ -16,6 +16,8 @@ static const Real MIN_DISTANCE = 0.05f;
 /* Convenience constant to avoid calculating the square root in PostStep() */
 static const Real MIN_DISTANCE_SQUARED = MIN_DISTANCE * MIN_DISTANCE;
 
+int loop_function_steps = 0;
+
 /**
  * Get the coordinates in all occupied boxes of the quadtrees a given agent
  * @param pcFB
@@ -152,6 +154,36 @@ void CAgentVisionLoopFunctions::PostStep() {
 
 
     }
+
+
+    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
+//    for(CSpace::TMapPerType::iterator it = theMap.begin();
+//        it != theMap.end();
+//        ++it) {
+//        argos::LOG << "box name: " << it->first << std::endl;
+//        CBoxEntity *box = any_cast<CBoxEntity*>(it->second);
+//
+//    }
+
+    for(auto spawnObj: spawnableObjects) {
+        int spawn_time = std::get<2>(spawnObj);
+        if(loop_function_steps == spawn_time) {
+            CBoxEntity *box = new CBoxEntity("spawn_box" + std::to_string(spawn_time), std::get<0>(
+                    spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
+            GetSpace().AddEntity(*box);
+            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
+            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+        }
+    }
+
+//    if(loop_function_steps == 2) {
+//        CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
+//        GetSpace().AddEntity(*box);
+//        CEmbodiedEntity* embodiedEntity = &box->GetEmbodiedEntity();
+//        GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+//    }
+
+    loop_function_steps++;
 }
 
 /****************************************/
