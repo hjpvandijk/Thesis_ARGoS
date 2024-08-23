@@ -30,7 +30,10 @@ public:
 
    virtual void Reset();
 
-   virtual void PostStep();
+    virtual void PreStep();
+
+
+    virtual void PostStep();
 
    inline const TCoordinateMap& GetObjectCoordinates() const {
       return m_tObjectCoordinates;
@@ -92,6 +95,7 @@ private:
     void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, Agent* agent);
     void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, Agent* agent);
     void pushQuadTree(CPiPuckEntity* pcFB, Agent* agent);
+
 };
 
 #endif

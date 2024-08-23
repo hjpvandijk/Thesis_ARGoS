@@ -525,11 +525,32 @@ namespace quadtree {
             } else {
                 auto i = getQuadrant(box, value.coordinate);
                 // Add the value in a child if the value is entirely contained in it
-                if (i != -1)
-                    add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
-                    // Otherwise, we add the value in the current node
-                else
-                    node->values.push_back(value);
+                assert(i != -1 && "A value should be contained in a quadrant");
+                add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
+
+//                Check if all children have the same occupancy
+                Occupancy firstOccupancy = UNKNOWN;
+                bool allSameOccupancy = true;
+                if(node->children[0]->values.empty())
+                    allSameOccupancy = false;
+                else {
+                    //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
+                    firstOccupancy = node->children[0]->values.front().occupancy;
+                    for (const auto &child: node->children) {
+                        //If a child is empty, it is not the same occupancy as the others
+                        //If a child has a different occupancy than the first child, it is not the same occupancy as all others
+                        if (child->values.empty() || child->values.front().occupancy != firstOccupancy) {
+                            allSameOccupancy = false;
+                            break;
+                        }
+                    }
+                }
+//                assert(!node->values.empty() && "A non-leaf node should have a value");
+
+//
+//                //If all children have the same occupancy, give the parent that occupancy
+                node->values.front().occupancy = allSameOccupancy ? firstOccupancy : UNKNOWN;
+
             }
         }
 
@@ -542,20 +563,23 @@ namespace quadtree {
             assert(node != nullptr);
             assert(isLeaf(node) && "Only leaves can be split");
             // Create children
+//            argos::LOG << node->children.size() << std::endl;
+//            argos::LOG << node->children[0]->children.size() << std::endl;
+//            auto newValues = std::vector<QuadNode>(); // New values for this node
+
             for (auto &child: node->children)
                 child = std::make_unique<Node>();
+//
             // Assign values to children
-            auto newValues = std::vector<QuadNode>(); // New values for this node
             for (const auto &value: node->values) {
                 auto i = getQuadrant(box, value.coordinate);
-                if (i != -1)
-                    node->children[static_cast<std::size_t>(i)]->values.push_back(value);
-                else
-                    newValues.push_back(value);
+                assert(i != -1 && "A value should be contained in a quadrant");
+                node->children[static_cast<std::size_t>(i)]->values.push_back(value);
             }
-            node->values = std::move(newValues);
+//            node->values = std::move(newValues);
+            node->values.clear();
+            node->values.push_back(QuadNode{box.getCenter(), UNKNOWN, 0});
         }
-
         /**
          * @brief Remove a value from the quadtree
          * @param node
@@ -636,7 +660,8 @@ namespace quadtree {
                     (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     values.push_back(value);
             }
-            if (!isLeaf(node)) {
+            //Only check further if the occupancy of the non-leaf node is not all the same for its children, so UNKNOWN.
+            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==UNKNOWN)) {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
                     if (queryBox.intersects_or_contains(childBox))
@@ -669,7 +694,8 @@ namespace quadtree {
                     (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     boxes.push_back(box);
             }
-            if (!isLeaf(node)) {
+            //Only check further if the occupancy of the non-leaf node is not all the same for its children, so UNKNOWN.
+            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==UNKNOWN)) {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
                     if (queryBox.intersects_or_contains(childBox))

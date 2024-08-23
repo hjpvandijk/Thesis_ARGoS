@@ -139,7 +139,7 @@ public:
 
     Coordinate currentBestFrontier = {0,0};
 
-    double ticks_per_second = 10;
+    double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
 
 private:
