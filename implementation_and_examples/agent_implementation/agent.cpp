@@ -719,7 +719,6 @@ argos::CVector2 vector2FromString(std::string str) {
  */
 void Agent::parseMessages() {
     for (std::string message: *this->messages) {
-//        argos::RLOG << "Received message: " << message << std::endl;
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent[0] == 'C') {

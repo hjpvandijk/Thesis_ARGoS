@@ -47,7 +47,6 @@ namespace quadtree {
          */
         void add(Coordinate coordinate, Occupancy occupancy, double visitedAtS) {
             auto node = QuadNode{coordinate, occupancy, visitedAtS};
-//            argos::LOG << "Adding node with elapsed ticks: " << node.visitedAtTicks << std::endl;
             add(node);
         }
 
@@ -147,7 +146,6 @@ namespace quadtree {
         bool isMooreNeighbourUnknown(const Box &box) const {
             //See if coordinate to the left is in the quadtree and get its occupancy
             Coordinate left = Coordinate{box.getCenter().x - box.size, box.getCenter().y};
-//            argos::LOG << "LEFT: " << left.x << " , " << left.y << std::endl;
             if (mBox.contains(left)) {
                 if (getOccupancyFromCoordinate(left) == UNKNOWN) {
                     return true;
@@ -641,7 +639,6 @@ namespace quadtree {
             if (!isLeaf(node)) {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
-//                    argos::LOG << "NESTED" << std::endl;
                     if (queryBox.intersects_or_contains(childBox))
                         query(node->children[i].get(), childBox, queryBox, values, occupancy);
                 }
@@ -675,7 +672,6 @@ namespace quadtree {
             if (!isLeaf(node)) {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
-//                    argos::LOG << "NESTED" << std::endl;
                     if (queryBox.intersects_or_contains(childBox))
                         queryBoxes(node->children[i].get(), childBox, queryBox, boxes, occupancy, currentTimeS);
                 }
