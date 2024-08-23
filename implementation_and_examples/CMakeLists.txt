@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8.0)
-project(argos3_examples)
+project(implementation_and_examples)
 
 # Set the compilation type
 if(CMAKE_BUILD_TYPE STREQUAL "")

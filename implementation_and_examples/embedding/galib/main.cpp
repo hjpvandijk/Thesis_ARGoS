@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
    argos::CSimulator& cSimulator = argos::CSimulator::GetInstance();
    /* Set the .argos configuration file
     * This is a relative path which assumed that you launch the executable
-    * from argos3-examples (as said also in the README) */
+    * from implementation_and_examples (as said also in the README) */
    cSimulator.SetExperimentFileName("experiments/galib.argos");
    /* Load it to configure ARGoS */
    cSimulator.LoadExperiment();

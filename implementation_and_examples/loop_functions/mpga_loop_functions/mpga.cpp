@@ -217,7 +217,7 @@ void CMPGA::LaunchARGoS(UInt32 un_slave_id) {
    try {
       /* Set the .argos configuration file
        * This is a relative path which assumed that you launch the executable
-       * from argos3-examples (as said also in the README) */
+       * from implementation_and_examples (as said also in the README) */
       cSimulator.SetExperimentFileName(m_strARGoSConf);
       /* Load it to configure ARGoS */
       cSimulator.LoadExperiment();
