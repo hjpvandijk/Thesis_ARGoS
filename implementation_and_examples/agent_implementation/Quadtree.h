@@ -372,19 +372,30 @@ namespace quadtree {
             traverse = [&](const Node *node, const Box &box, int depth,
                            std::vector<std::tuple<Box, int, double>> *boxesAndOccupancyAndTicks) {
                 if (node == nullptr) return;
+                bool allSameOccupancy = false;
                 for (const auto &value: node->values) {
+                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
+                        continue;
+                    // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                    if (value.occupancy == OCCUPIED || value.occupancy == FREE)
+                        allSameOccupancy = true;
+
                     boxesAndOccupancyAndTicks->emplace_back(std::tuple(box, value.occupancy, value.visitedAtS));
                 }
 
-                // Traverse the children
+                // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
+                if (!allSameOccupancy) {
                 for (int i = 0; i < 4; ++i) {
                     if (node->children[i]) {
                         traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancyAndTicks);
                     }
                 }
+                }
             };
 
             traverse(mRoot.get(), mBox, 0, &boxesAndOccupancyAndTicks);
+
+
             return boxesAndOccupancyAndTicks;
 
         }
