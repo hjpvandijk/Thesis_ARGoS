@@ -69,6 +69,15 @@ struct Coordinate {
         return Coordinate{-y, x};
     }
 
+    /**
+     * @brief Compares two coordinates for equality
+     * @return
+     */
+    bool operator==(const Coordinate &rhs) const {
+        return x == rhs.x &&
+               y == rhs.y;
+    }
+
 
 
 };

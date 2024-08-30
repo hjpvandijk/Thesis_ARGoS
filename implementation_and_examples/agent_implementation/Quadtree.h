@@ -125,13 +125,10 @@ namespace quadtree {
             std::vector<Box> frontierBoxes = {};
             for (Box exploredBox: exploredBoxes) {
                 //Get the 8-connected Moore neighbours of the explored box
-                bool isFrontier = false;
                 if (isMooreNeighbourUnknown(exploredBox)) {
-                    isFrontier = true;
-                }
-                if (isFrontier) {
                     frontierBoxes.push_back(exploredBox);
                 }
+
             }
 
             return frontierBoxes;
@@ -144,10 +141,12 @@ namespace quadtree {
          * @return
          */
         bool isMooreNeighbourUnknown(const Box &box) const {
+//            argos::LOG << "Checking moore neighbours of box: " << box.getCenter().x << " " << box.getCenter().y << " of size " << box.getSize() << std::endl;
             //See if coordinate to the left is in the quadtree and get its occupancy
             Coordinate left = Coordinate{box.getCenter().x - box.size, box.getCenter().y};
             if (mBox.contains(left)) {
-                if (getOccupancyFromCoordinate(left) == UNKNOWN) {
+//                argos::LOG << "left: " << left.x << " " << left.y << std::endl;
+                if (isCoordinateUnknown(left)) {
                     return true;
                 }
             }
@@ -155,7 +154,8 @@ namespace quadtree {
             //See if coordinate to the right is in the quadtree and get its occupancy
             Coordinate right = Coordinate{box.getCenter().x + box.size, box.getCenter().y};
             if (mBox.contains(right)) {
-                if (getOccupancyFromCoordinate(right) == UNKNOWN) {
+//                argos::LOG << "right: " << right.x << " " << right.y << std::endl;
+                if (isCoordinateUnknown(right)) {
                     return true;
                 }
             }
@@ -163,7 +163,8 @@ namespace quadtree {
             //See if coordinate to the top is in the quadtree and get its occupancy
             Coordinate top = Coordinate{box.getCenter().x, box.getCenter().y + box.size};
             if (mBox.contains(top)) {
-                if (getOccupancyFromCoordinate(top) == UNKNOWN) {
+//                argos::LOG << "top: " << top.x << " " << top.y << std::endl;
+                if (isCoordinateUnknown(top)) {
                     return true;
                 }
             }
@@ -171,7 +172,8 @@ namespace quadtree {
             //See if coordinate to the bottom is in the quadtree and get its occupancy
             Coordinate bottom = Coordinate{box.getCenter().x, box.getCenter().y - box.size};
             if (mBox.contains(bottom)) {
-                if (getOccupancyFromCoordinate(bottom) == UNKNOWN) {
+//                argos::LOG << "bottom: " << bottom.x << " " << bottom.y << std::endl;
+                if (isCoordinateUnknown(bottom)) {
                     return true;
                 }
             }
@@ -179,7 +181,8 @@ namespace quadtree {
             //See if coordinate to the top left is in the quadtree and get its occupancy
             Coordinate topLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y + box.size};
             if (mBox.contains(topLeft)) {
-                if (getOccupancyFromCoordinate(topLeft) == UNKNOWN) {
+//                argos::LOG << "topLeft: " << topLeft.x << " " << topLeft.y << std::endl;
+                if (isCoordinateUnknown(topLeft)) {
                     return true;
                 }
             }
@@ -187,7 +190,8 @@ namespace quadtree {
             //See if coordinate to the top right is in the quadtree and get its occupancy
             Coordinate topRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y + box.size};
             if (mBox.contains(topRight)) {
-                if (getOccupancyFromCoordinate(topRight) == UNKNOWN) {
+//                argos::LOG << "topRight: " << topRight.x << " " << topRight.y << std::endl;
+                if (isCoordinateUnknown(topRight)) {
                     return true;
                 }
             }
@@ -195,7 +199,8 @@ namespace quadtree {
             //See if coordinate to the bottom left is in the quadtree and get its occupancy
             Coordinate bottomLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y - box.size};
             if (mBox.contains(bottomLeft)) {
-                if (getOccupancyFromCoordinate(bottomLeft) == UNKNOWN) {
+//                argos::LOG << "bottomLeft: " << bottomLeft.x << " " << bottomLeft.y << std::endl;
+                if (isCoordinateUnknown(bottomLeft)) {
                     return true;
                 }
             }
@@ -203,7 +208,8 @@ namespace quadtree {
             //See if coordinate to the bottom right is in the quadtree and get its occupancy
             Coordinate bottomRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y - box.size};
             if (mBox.contains(bottomRight)) {
-                if (getOccupancyFromCoordinate(bottomRight) == UNKNOWN) {
+//                argos::LOG << "bottomRight: " << bottomRight.x << " " << bottomRight.y << std::endl;
+                if (isCoordinateUnknown(bottomRight)) {
                     return true;
                 }
             }
@@ -241,9 +247,26 @@ namespace quadtree {
          * Returns the QuadNode containing the coordinate
          * @param coordinate
          */
-        Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
-            auto values = std::vector<QuadNode>();
-            return getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate).occupancy;
+        std::vector<Occupancy> getOccupanciesFromCoordinate(Coordinate coordinate) const {
+            std::vector<QuadNode> QuadNodes = getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate);
+            std::vector<Occupancy> occupancies;
+            for(auto node: QuadNodes)
+                occupancies.push_back(node.occupancy);
+            return occupancies;
+        }
+
+        /**
+         * Returns the QuadNode containing the coordinate
+         * @param coordinate
+         */
+        bool isCoordinateUnknown(Coordinate coordinate) const {
+            std::vector<QuadNode> QuadNodes = getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate);
+            for(auto node: QuadNodes) {
+//                argos::LOG << "occ: " << occ << std::endl;
+                if(node.occupancy == UNKNOWN)
+                    return true;
+            }
+            return false;
         }
 
         /**
@@ -304,19 +327,31 @@ namespace quadtree {
             traverse = [&](const Node *node, const Box &box, int depth) {
                 if (node == nullptr) return;
 
+                bool allSameOccupancy = false;
 
                 // Write the bounding box, occupancy and depth of this node to the file
                 for (const auto &value: node->values) {
                     QuadNode curQuadNode = value;
-                    std::string str = std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
-                                      std::to_string(curQuadNode.occupancy) + '@' + std::to_string(curQuadNode.visitedAtS);
+                    // If the occupancy is ANY, we don't need to store it, as the children will have new info
+                    // If the occupancy is UNKNOWN, we don't need to store it, as a child not existing will also yield in an UNKNOWN
+                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
+                        continue;
+                    // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                    if (value.occupancy == OCCUPIED || value.occupancy == FREE)
+                        allSameOccupancy = true;
+                    std::string str =
+                            std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
+                            std::to_string(curQuadNode.occupancy) + '@' + std::to_string(curQuadNode.visitedAtS);
                     strings->emplace_back(str);
                 }
 
-                // Traverse the children
-                for (int i = 0; i < 4; ++i) {
-                    if (node->children[i]) {
-                        traverse(node->children[i].get(), computeBox(box, i), depth + 1);
+                // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
+                if (!allSameOccupancy) {
+                    // Traverse the children
+                    for (int i = 0; i < 4; ++i) {
+                        if (node->children[i]) {
+                            traverse(node->children[i].get(), computeBox(box, i), depth + 1);
+                        }
                     }
                 }
             };
@@ -454,6 +489,10 @@ namespace quadtree {
         int getQuadrant(const Box &nodeBox, const Coordinate &valueCoordinate) const {
             auto center = nodeBox.getCenter();
 
+            //If the value is the same as the center, it is not contained in any quadrant
+            if(center == valueCoordinate)
+                return -1;
+
             // West
             if (valueCoordinate.x < center.x) {
                 // North West
@@ -464,7 +503,7 @@ namespace quadtree {
                     return 2;
                     // Not contained in any quadrant
                 else
-                    return -1;
+                    return -2;
             }
                 // East
             else if (valueCoordinate.x >= center.x) {
@@ -476,11 +515,11 @@ namespace quadtree {
                     return 3;
                     // Not contained in any quadrant
                 else
-                    return -1;
+                    return -2;
             }
                 // Not contained in any quadrant
             else
-                return -1;
+                return -2;
         }
 
         /**
@@ -494,10 +533,14 @@ namespace quadtree {
             assert(node != nullptr);
             assert(box.contains(value.coordinate));
 
+            assert(value.occupancy != ANY && "Added occupancy should not be ANY");
+            assert(value.occupancy != UNKNOWN && "Added occupancy should not be UNKNOWN");
+
             if (isLeaf(node)) {
                 // Insert the value in this node if possible
 
-                //If the box size is the minimum size we allow (corresponding to finest mapping level), then we only contain a single QuadNode. Update the occupancy of this node to more important information.
+                //If the box size is the minimum size we allow (corresponding to finest mapping level),
+                // then we only contain a single QuadNode. Update the occupancy of this node to the most important occupancy.
                 if (box.size <= MinSize) {
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
@@ -514,6 +557,8 @@ namespace quadtree {
                         newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
 
                     }
+                    assert(newNode.occupancy == FREE || newNode.occupancy == OCCUPIED && "new node occupancy should be FREE or OCCUPIED");
+                    // Make the only value the 'merged node'
                     node->values.clear();
                     node->values.push_back(newNode);
                 }
@@ -523,33 +568,65 @@ namespace quadtree {
                     add(node, depth, box, value);
                 }
             } else {
-                auto i = getQuadrant(box, value.coordinate);
-                // Add the value in a child if the value is entirely contained in it
-                assert(i != -1 && "A value should be contained in a quadrant");
-                add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
+                // If the node is not a leaf
+                // And if the box center is the same as the value coordinate (meaning this value information is the same for all children of this node),
+                // then we only contain a single QuadNode. Update the occupancy of this node to the most important occupancy.
+                if (box.getCenter() == value.coordinate) {
+                    QuadNode newNode = QuadNode();
+                    newNode.coordinate = value.coordinate;
+                    if (node->values.empty()) {
+                        newNode.occupancy = value.occupancy;
+                        newNode.visitedAtS = value.visitedAtS;
+                    } else {
+
+                        if (node->values.front().occupancy == FREE || value.occupancy == FREE)
+                            newNode.occupancy = FREE;
+                        if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
+                            newNode.occupancy = OCCUPIED;
+
+                        newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+
+                    }
+                    // Make the only value the 'merged node'
+                    node->values.clear();
+                    node->values.push_back(newNode);
+                    //Unitialize the children nodes if there are any
+                    for (auto &child: node->children)
+                        child.reset();
+                    assert(isLeaf(node) && "The node should be a leaf again now");
+                // Else we add the value to the appropriate child
+                } else {
+                    auto i = getQuadrant(box, value.coordinate);
+                    // Add the value in a child if the value is entirely contained in it
+                    assert(i != -1 && "A value should be contained in a quadrant");
+                    add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
 
 //                Check if all children have the same occupancy
-                Occupancy firstOccupancy = UNKNOWN;
-                bool allSameOccupancy = true;
-                if(node->children[0]->values.empty())
-                    allSameOccupancy = false;
-                else {
-                    //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
-                    firstOccupancy = node->children[0]->values.front().occupancy;
-                    for (const auto &child: node->children) {
-                        //If a child is empty, it is not the same occupancy as the others
-                        //If a child has a different occupancy than the first child, it is not the same occupancy as all others
-                        if (child->values.empty() || child->values.front().occupancy != firstOccupancy) {
-                            allSameOccupancy = false;
-                            break;
+                    Occupancy firstOccupancy = UNKNOWN;
+                    bool allSameOccupancy = true;
+                    if (node->children[0]->values.empty())
+                        allSameOccupancy = false;
+                    else {
+                        //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
+                        firstOccupancy = node->children[0]->values.front().occupancy;
+                        for (const auto &child: node->children) {
+                            //If a child is empty, it is not the same occupancy as the others
+                            //If a child has a different occupancy than the first child, it is not the same occupancy as all others
+                            //If a child has occupancy ANY, further nested nodes will have a different occupancy.
+                            if (child->values.empty() || child->values.front().occupancy == ANY ||
+                                child->values.front().occupancy != firstOccupancy) {
+                                allSameOccupancy = false;
+                                break;
+                            }
                         }
                     }
-                }
 //                assert(!node->values.empty() && "A non-leaf node should have a value");
 
 //
 //                //If all children have the same occupancy, give the parent that occupancy
-                node->values.front().occupancy = allSameOccupancy ? firstOccupancy : UNKNOWN;
+                    node->values.front().occupancy = allSameOccupancy ? firstOccupancy : ANY;
+                    assert(node->values.front().occupancy != UNKNOWN && "A non-leaf node should not have UNKNOWN occupancy");
+                }
 
             }
         }
@@ -569,16 +646,19 @@ namespace quadtree {
 
             for (auto &child: node->children)
                 child = std::make_unique<Node>();
+
+            assert(!isLeaf(node) && "A node should not be a leaf after splitting");
 //
-            // Assign values to children
-            for (const auto &value: node->values) {
-                auto i = getQuadrant(box, value.coordinate);
-                assert(i != -1 && "A value should be contained in a quadrant");
-                node->children[static_cast<std::size_t>(i)]->values.push_back(value);
-            }
+//          //Shouldn't assign anything to the children yet, the new coordinate will be added after this.
+//            // Assign values to children
+//            for (const auto &value: node->values) {
+//                auto i = getQuadrant(box, value.coordinate);
+//                assert(i != -1 && "A value should be contained in a quadrant");
+//                node->children[static_cast<std::size_t>(i)]->values.push_back(value);
+//            }
 //            node->values = std::move(newValues);
             node->values.clear();
-            node->values.push_back(QuadNode{box.getCenter(), UNKNOWN, 0});
+            node->values.push_back(QuadNode{box.getCenter(), ANY, 0});
         }
         /**
          * @brief Remove a value from the quadtree
@@ -661,7 +741,7 @@ namespace quadtree {
                     values.push_back(value);
             }
             //Only check further if the occupancy of the non-leaf node is not all the same for its children, so UNKNOWN.
-            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==UNKNOWN)) {
+            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==ANY || node->values.begin()->occupancy==UNKNOWN)) {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
                     if (queryBox.intersects_or_contains(childBox))
@@ -669,7 +749,6 @@ namespace quadtree {
                 }
             }
         }
-
         /**
          * @brief Query the quadtree for boxes that intersect with or are contained by the given box
          * @param node
@@ -685,6 +764,7 @@ namespace quadtree {
 
             for (auto &value: node->values) {
                 //Check if pheromone is expired, if so, set the occupancy to unknown
+                //TODO: Remove the node to save memory
                 if(value.occupancy==Occupancy::FREE && calculatePheromone(value.visitedAtS, currentTimeS)<0.05){
                     value.occupancy = Occupancy::UNKNOWN;
                 }
@@ -695,7 +775,7 @@ namespace quadtree {
                     boxes.push_back(box);
             }
             //Only check further if the occupancy of the non-leaf node is not all the same for its children, so UNKNOWN.
-            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==UNKNOWN)) {
+            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==ANY || node->values.begin()->occupancy==UNKNOWN)) {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
                     if (queryBox.intersects_or_contains(childBox))
@@ -717,27 +797,68 @@ namespace quadtree {
          * @param box
          * @param queryCoordinate
          * */
-        QuadNode getQuadNodeFromCoordinate(Node *node, const Box &box, const Coordinate &queryCoordinate) const {
+        std::vector<QuadNode> getQuadNodesFromCoordinate(Node *node, const Box &box, const Coordinate &queryCoordinate) const {
             assert(node != nullptr);
             assert(box.contains(queryCoordinate));
+
+            std::vector<QuadNode> QuadNodes;
 
 
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
-                if (node->values.size() == 0) {
-                    return QuadNode{queryCoordinate, UNKNOWN, 0};
+                if (node->values.empty()) {
+                    argos::LOG << "Yes it is because of this" << std::endl;
+                    QuadNodes.push_back(QuadNode{queryCoordinate, UNKNOWN, 0});
                 } else {
-                    return node->values.front();
+                    assert(node->values.front().occupancy != ANY && "leaf occupancy should never be ANY");
+                    QuadNodes.push_back(node->values.front());
                 }
                 // If it is not a leaf node, find the nested nodes, and search them.
             } else {
-                for (auto i = std::size_t(0); i < node->children.size(); ++i) {
-                    auto childBox = computeBox(box, static_cast<int>(i));
-                    if (childBox.contains(queryCoordinate))
-                        return getQuadNodeFromCoordinate(node->children[i].get(), childBox, queryCoordinate);
+//                for (auto i = std::size_t(0); i < node->children.size(); ++i) {
+//                    auto childBox = computeBox(box, static_cast<int>(i));
+//                    if (childBox.contains(queryCoordinate)) {
+//                        if(i != getQuadrant(box, queryCoordinate)) {
+//                            argos::LOG << "Box: " << box.getCenter().x << " " << box.getCenter().y << " " << box.size
+//                                          << " " << "Query Coordinate: " << queryCoordinate.x << " "
+//                                          << queryCoordinate.y << std::endl;
+//                            argos::LOG << "Quadrant not equal to getQuadrant: " << i << " and "
+//                                          << getQuadrant(box, queryCoordinate) << std::endl;
+//                        }
+////                        argos::LOG << "i: " << i << std::endl;
+//                        if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
+//                            if(node->children[i].get()->values.empty())
+//                                argos::LOGERR << "leaf value empty while parent Isn't ANY or UNKNOWN" << std::endl;
+//                        }
+//                        std::vector<QuadNode> newNodes = getQuadNodesFromCoordinate(node->children[i].get(), childBox, queryCoordinate);
+//                            QuadNodes.insert(QuadNodes.end(), newNodes.begin(), newNodes.end());
+//                    }
+//                }
+
+                //If the node occupancy is ANY or UNKNOWN, there can be nested nodes with different occupancies
+                if(node->values.empty() || node->values.front().occupancy ==ANY || node->values.front().occupancy == UNKNOWN) {
+                    auto i = getQuadrant(box, queryCoordinate);
+                    //If i=-1, so the query coordinate is the exact center, check all children
+                    if(i==-1) {
+                        for(int j=0; j<node->children.size(); j++) {
+                            auto childBox = computeBox(box, static_cast<int>(j));
+
+                            std::vector<QuadNode> newNodes = getQuadNodesFromCoordinate(node->children[j].get(), childBox, queryCoordinate);
+                            QuadNodes.insert(QuadNodes.end(), newNodes.begin(), newNodes.end());
+                        }
+                    }
+                //Else the nested nodes have the same occupancy, so parent node can be returned.
+                } else {
+                    if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
+                            if(node->children[getQuadrant(box, queryCoordinate)].get()->values.empty())
+                                argos::LOGERR << "leaf value empty while parent Isn't ANY or UNKNOWN here" << std::endl;
+                        }
+                    QuadNodes.push_back(node->values.front());
                 }
+
             }
-            assert(false && "Coordinate not found in quadtree, something is going wrong");
+            return QuadNodes;
+//            assert(false && "Coordinate not found in quadtree, something is going wrong");
         }
 
         void findAllIntersections(Node *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
