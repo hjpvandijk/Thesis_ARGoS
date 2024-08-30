@@ -248,7 +248,8 @@ namespace quadtree {
          * @param coordinate
          */
         std::vector<Occupancy> getOccupanciesFromCoordinate(Coordinate coordinate) const {
-            std::vector<QuadNode> QuadNodes = getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate);
+            auto QuadNodes = std::vector<QuadNode>();
+            getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate, QuadNodes);
             std::vector<Occupancy> occupancies;
             for(auto node: QuadNodes)
                 occupancies.push_back(node.occupancy);
@@ -260,7 +261,9 @@ namespace quadtree {
          * @param coordinate
          */
         bool isCoordinateUnknown(Coordinate coordinate) const {
-            std::vector<QuadNode> QuadNodes = getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate);
+            auto QuadNodes = std::vector<QuadNode>();
+            getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate, QuadNodes);
+//            argos::LOG << "Quadnodes size: " << QuadNodes.size() << std::endl;
             for(auto node: QuadNodes) {
 //                argos::LOG << "occ: " << occ << std::endl;
                 if(node.occupancy == UNKNOWN)
@@ -491,7 +494,7 @@ namespace quadtree {
 
             //If the value is the same as the center, it is not contained in any quadrant
             if(center == valueCoordinate)
-                return -1;
+                return 4;
 
             // West
             if (valueCoordinate.x < center.x) {
@@ -503,7 +506,7 @@ namespace quadtree {
                     return 2;
                     // Not contained in any quadrant
                 else
-                    return -2;
+                    return -1;
             }
                 // East
             else if (valueCoordinate.x >= center.x) {
@@ -515,11 +518,11 @@ namespace quadtree {
                     return 3;
                     // Not contained in any quadrant
                 else
-                    return -2;
+                    return -1;
             }
                 // Not contained in any quadrant
             else
-                return -2;
+                return -1;
         }
 
         /**
@@ -797,17 +800,15 @@ namespace quadtree {
          * @param box
          * @param queryCoordinate
          * */
-        std::vector<QuadNode> getQuadNodesFromCoordinate(Node *node, const Box &box, const Coordinate &queryCoordinate) const {
+        void getQuadNodesFromCoordinate(Node *node, const Box &box, const Coordinate &queryCoordinate, std::vector<QuadNode> & QuadNodes) const {
             assert(node != nullptr);
             assert(box.contains(queryCoordinate));
-
-            std::vector<QuadNode> QuadNodes;
 
 
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
                 if (node->values.empty()) {
-                    argos::LOG << "Yes it is because of this" << std::endl;
+//                    argos::LOG << "Yes it is because of this" << std::endl;
                     QuadNodes.push_back(QuadNode{queryCoordinate, UNKNOWN, 0});
                 } else {
                     assert(node->values.front().occupancy != ANY && "leaf occupancy should never be ANY");
@@ -838,14 +839,17 @@ namespace quadtree {
                 //If the node occupancy is ANY or UNKNOWN, there can be nested nodes with different occupancies
                 if(node->values.empty() || node->values.front().occupancy ==ANY || node->values.front().occupancy == UNKNOWN) {
                     auto i = getQuadrant(box, queryCoordinate);
-                    //If i=-1, so the query coordinate is the exact center, check all children
-                    if(i==-1) {
+                    //If i=4, so the query coordinate is the exact center, check all children
+                    if(i==4) {
                         for(int j=0; j<node->children.size(); j++) {
                             auto childBox = computeBox(box, static_cast<int>(j));
 
-                            std::vector<QuadNode> newNodes = getQuadNodesFromCoordinate(node->children[j].get(), childBox, queryCoordinate);
-                            QuadNodes.insert(QuadNodes.end(), newNodes.begin(), newNodes.end());
+                            getQuadNodesFromCoordinate(node->children[j].get(), childBox, queryCoordinate, QuadNodes);
                         }
+                    } else {
+                        auto childBox = computeBox(box, static_cast<int>(i));
+
+                        getQuadNodesFromCoordinate(node->children[i].get(), childBox, queryCoordinate, QuadNodes);
                     }
                 //Else the nested nodes have the same occupancy, so parent node can be returned.
                 } else {
@@ -857,7 +861,6 @@ namespace quadtree {
                 }
 
             }
-            return QuadNodes;
 //            assert(false && "Coordinate not found in quadtree, something is going wrong");
         }
 
