@@ -461,19 +461,21 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //Calculate the average position of the frontier region
         double sumX = 0;
         double sumY = 0;
+        double totalNumberOfCellsInRegion = 0;
         for (auto box: region) {
-            sumX += box.getCenter().x;
-            sumY += box.getCenter().y;
+            double cellsInBox = box.getSize()/quadtree->getSmallestBoxSize();
+            sumX += box.getCenter().x * cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
+            sumY += box.getCenter().y * cellsInBox;
+            totalNumberOfCellsInRegion += cellsInBox;
         }
-        double frontierRegionSize = region.size();
-        double frontierRegionX = sumX / frontierRegionSize;
-        double frontierRegionY = sumY / frontierRegionSize;
+        double frontierRegionX = sumX / totalNumberOfCellsInRegion;
+        double frontierRegionY = sumY / totalNumberOfCellsInRegion;
 
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
 
         //Calculate the score of the frontier region
-        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * frontierRegionSize;
+        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
 
         //If the score is lower than the best score, update the best score and best frontier region
         if (score < bestFrontierScore) {

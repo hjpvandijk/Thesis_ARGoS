@@ -414,10 +414,15 @@ namespace quadtree {
             return this->MinSize;
         }
 
+        double getSmallestBoxSize() {
+            return this->Smallest_Box_Size;
+        }
+
 
     private:
         static constexpr auto Threshold = std::size_t(16);
         static constexpr double MinSize = 0.2;
+        double Smallest_Box_Size = MinSize;
         static constexpr double EvaporationTime = 100.0;
 
 
@@ -566,6 +571,8 @@ namespace quadtree {
                 //If the box size is the minimum size we allow (corresponding to finest mapping level),
                 // then we only contain a single QuadNode. Update the occupancy of this node to the most important occupancy.
                 if (box.size <= MinSize) {
+                    if(box.size <= Smallest_Box_Size) Smallest_Box_Size = box.size;
+
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
                     if (node->values.empty()) {
