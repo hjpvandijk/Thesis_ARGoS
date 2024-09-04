@@ -65,6 +65,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param agent
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, Agent *agent) {
+    argos::LOG << "[" << pcFB->GetId() << "] " << "Getting boxes and occupancies" << std::endl;
     std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 
     m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
@@ -124,11 +125,11 @@ void CAgentVisionLoopFunctions::Reset() {
 void CAgentVisionLoopFunctions::PreStep() {
     start = std::chrono::system_clock::now();
 
-//    std::chrono::duration<double> elapsed_seconds = start-end;
-//
-//
-//    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
-//               << std::endl;
+    std::chrono::duration<double> elapsed_seconds = start-end;
+
+
+    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
+               << std::endl;
 
 
 }

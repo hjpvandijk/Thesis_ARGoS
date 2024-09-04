@@ -31,24 +31,27 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, double >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
          it != m_cAgVisLF.GetQuadTree().end();
          ++it) {
-        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
-            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+//        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
+//            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
+//            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
+//            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+//
+//            quadtree::QuadNode node;
+//            node.coordinate = box.getCenter();
+//            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
+//            if(node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+//                continue;
+//            node.visitedAtS = visitedTimeS;
+//            combinedTree->add(node);
+//        }
+//        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
 
-            quadtree::QuadNode node;
-            node.coordinate = box.getCenter();
-            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-            if(node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-                continue;
-            node.visitedAtS = visitedTimeS;
-            combinedTree->add(node);
-        }
-        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
-
-        combinedQuadTree = boxesAndOccupancyAndTicks;
+//        combinedQuadTree = boxesAndOccupancyAndTicks;
+        if(it->first->GetId()=="pipuck2") combinedQuadTree = it->second;
     }
 
+
+    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
 
     for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: combinedQuadTree) {
         quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
@@ -59,7 +62,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         double pheromone = 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
 //            argos::LOG << "Pheromone: " << agent_ticks << " - " << ticks << " = " << agent_ticks - ticks << " = " << pheromone << std::endl;
 
-
+//        if(pheromone*255<253) continue;
         Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
         CVector3 pos = CVector3(boxCenterArgos.x, boxCenterArgos.y, 0.02f);
 
@@ -81,19 +84,28 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             fill = true;
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
 //                DrawCircle(pos, CQuaternion(), 0.25f, CColor::MAGENTA);
+//            if (currentTimeS > 11.4) argos::LOG << "Plotting occupied" << std::endl;
+
         } else if (occupancy == quadtree::Occupancy::FREE) {
             color = CColor::GREEN;
 //                argos::LOG << "Green: " << pheromone*255 << std::endl;
-            color.SetAlpha(pheromone * 255);
+            color.SetAlpha(UInt8(pheromone * 255));
 //                color.SetAlpha(127);
             fill = true;
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
-
+//            if (currentTimeS > 11.4)
+//                argos::LOG << "Plotting " << box.getCenter().x << " " << box.getCenter().y << " of size "
+//                           << box.getSize() << " with pheromone " << pheromone << " = alpha( " << color.GetAlpha()
+//                           << " visited at time " << visitedTimeS << std::endl;
         }
+
+//        if (box.getCenter().x == 1.484375 && box.getCenter().y == 0.078125) {
+//            DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
+//            argos::LOG <<"DRaw outline" << std::endl;
+//        }
 
 
     }
-
 
     for (auto it = m_cAgVisLF.m_tAgentBestFrontierCoordinate.begin();
          it != m_cAgVisLF.m_tAgentBestFrontierCoordinate.end();
