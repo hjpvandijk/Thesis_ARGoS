@@ -183,7 +183,7 @@
         </box>
 
 
-        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">
+        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="2.0">
             <body position="0,-3,0" orientation="-45,0,0"/>
             <controller config="ppc"/>
             <devices>
@@ -191,7 +191,7 @@
             </devices>
         </pipuck>
 
-                <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
+                <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="2.0">
                     <body position="1,-3,0" orientation="85,0,0"/>
                     <controller config="ppc"/>
 
