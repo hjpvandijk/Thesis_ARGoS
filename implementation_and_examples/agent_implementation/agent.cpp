@@ -110,7 +110,6 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-//        if(elapsed_ticks/ticks_per_second > 11.3) argos::RLOG << "Adding detected node" << std::endl;
         this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
@@ -122,7 +121,6 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
  * @param objectCoordinate
  */
 void Agent::addObjectLocation(Coordinate objectCoordinate) {
-//    if(elapsed_ticks/ticks_per_second > 11.3) argos::RLOG << "Adding detected node" << std::endl;
     this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
 }
 
@@ -730,7 +728,6 @@ void Agent::parseMessages() {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
         } else if (messageContent[0] == 'M') {
-//            if(elapsed_ticks/ticks_per_second > 11.3) argos::RLOG << "Adding node from other agent" << std::endl;
             this->quadtree->add(quadNodeFromString(messageContent.substr(2)));
         } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);
