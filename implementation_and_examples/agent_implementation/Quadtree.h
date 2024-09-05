@@ -347,7 +347,7 @@ namespace quadtree {
                                 std::to_string(curQuadNode.occupancy) + '@' + std::to_string(curQuadNode.visitedAtS);
                         strings->emplace_back(str);
                         if(box.getCenter().x == 1.5625 && box.getCenter().y == 0.3125){
-                            argos::LOG << "Adding THE PARENT to string vector" << std::endl;
+                            argos::LOG << "Adding THE PARENT to string vector"<< value.visitedAtS << std::endl;
                         } else if(box.getCenter().x == 1.484375 && box.getCenter().y == 0.078125){
                             argos::LOG << "Adding THE NODE to string vector " << value.visitedAtS << std::endl;
                         }
@@ -388,7 +388,7 @@ namespace quadtree {
                         allSameOccupancy = true;
                         boxesAndOccupancyAndTicks->emplace_back(std::tuple(box, value.occupancy, value.visitedAtS));
                         if(box.getCenter().x == 1.5625 && box.getCenter().y == 0.3125){
-                            argos::LOG << "Adding THE PARENT to getAllBoxes" << std::endl;
+                            argos::LOG << "Adding THE PARENT to getAllBoxes" << value.visitedAtS << std::endl;
                         } else if(box.getCenter().x == 1.484375 && box.getCenter().y == 0.078125){
                             argos::LOG << "Adding THE NODE to getAllBoxes " << value.visitedAtS << std::endl;
                         }
@@ -579,11 +579,11 @@ namespace quadtree {
 
             assert(value.occupancy != ANY && "Added occupancy should not be ANY");
             assert(value.occupancy != UNKNOWN && "Added occupancy should not be UNKNOWN");
-            if(box.getCenter().x == 1.484375 && box.getCenter().y == 0.078125){
-                argos::LOG << "Adding THE NODE with time " << value.visitedAtS << std::endl;
-            } else if(box.getCenter().x == 1.5625 && box.getCenter().y == 0.3125){
-                argos::LOG << "Adding THE PARENT with time " << value.visitedAtS << std::endl;
-            }
+//            if(box.getCenter().x == 1.484375 && box.getCenter().y == 0.078125){
+//                argos::LOG << "Adding THE NODE with time " << value.visitedAtS << std::endl;
+//            } else if(box.getCenter().x == 1.5625 && box.getCenter().y == 0.3125){
+//                argos::LOG << "Adding THE PARENT with time " << value.visitedAtS << std::endl;
+//            }
             if (isLeaf(node)) {
 //                argos::LOG <<"Setting leaf" << std::endl;
                 // Insert the value in this node if possible
@@ -600,12 +600,33 @@ namespace quadtree {
                         newNode.visitedAtS = value.visitedAtS;
                     } else {
 
-                        if (node->values.front().occupancy == FREE || value.occupancy == FREE)
-                            newNode.occupancy = FREE;
-                        if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
+//                        if (node->values.front().occupancy == FREE || value.occupancy == FREE)
+//                            newNode.occupancy = FREE;
+//                        if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
+//                            newNode.occupancy = OCCUPIED;
+                        //OCCUPIED always takes precedence over FREE
+                        //Update with the most precedent or up-to-date information.
+                        if (node->values.front().occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
                             newNode.occupancy = OCCUPIED;
-
-                        newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+                            newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+                        } else if (node->values.front().occupancy == OCCUPIED){
+                            newNode.occupancy = OCCUPIED;
+                            newNode.visitedAtS = node->values.front().visitedAtS;
+                        } else if (value.occupancy == OCCUPIED){
+                            newNode.occupancy = OCCUPIED;
+                            newNode.visitedAtS = value.visitedAtS;
+                        } else if (node->values.front().occupancy == FREE && value.occupancy == FREE) {
+                            newNode.occupancy = FREE;
+                            newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+                        } else if (node->values.front().occupancy == FREE){
+                            newNode.occupancy = FREE;
+                            newNode.visitedAtS = node->values.front().visitedAtS;
+                        } else if (value.occupancy == FREE){
+                            newNode.occupancy = FREE;
+                            newNode.visitedAtS = value.visitedAtS;
+                        } else {
+                            assert(-1 && "Shouldn't get here, as neither current node or added node are OCCUPIED or FREE");
+                        }
 
 
                     }
@@ -613,6 +634,9 @@ namespace quadtree {
                     // Make the only value the 'merged node'
                     node->values.clear();
                     node->values.push_back(newNode);
+                    if(box.getCenter().x == 1.484375 && box.getCenter().y == 0.078125){
+                        argos::LOG << "Adding THE NODE with time " << newNode.visitedAtS << std::endl;
+                    }
 //                    if(value.visitedAtS>11) argos::LOG << "Added to box " << box.getCenter().x << " " << box.getCenter().y << " with occupancy " << newNode.occupancy << " with time " << newNode.visitedAtS << std::endl;
                 }
                     // Otherwise, we split and we try again
@@ -641,6 +665,7 @@ namespace quadtree {
                 // then we only contain a single QuadNode. Update the occupancy of this node to the most important occupancy.
                 // This should only happen when adding nodes received from other agents.
                 if (box.getCenter() == value.coordinate) {
+
 //                    argos::LOG << " CENTER OF THE BOX" << std::endl;
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
@@ -649,22 +674,109 @@ namespace quadtree {
                         newNode.visitedAtS = value.visitedAtS;
                     } else {
 
-                        if (node->values.front().occupancy == FREE || value.occupancy == FREE)
-                            newNode.occupancy = FREE;
-                        if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
-                            newNode.occupancy = OCCUPIED;
+                        //Compare the visitedTimeS to each of the children. If the time difference is too great, keep the children, and set the uninitialized children with the received time.
+                        //If all children have values and the received visited time is more than all of theirs, set it to that. Else update each individually, unless close to eachother.
 
 
-                        newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+                        //If node has occupancy FREE or OCCUPIED, it entails all its children are also of that value.
+                        //When adding a new coordinate and occupancy to that parent, we should set the three remaining children to the parent occupancy.
+//                argos::LOG << "Setting all children" << std::endl;
+                        bool allChildrenHaveValue = false;
+                        for (int i = 0; i < node->children.size(); i++) {
+                            Box childBox = computeBox(box, i);
+                            Coordinate childBoxCenter = childBox.getCenter();
+
+//                            //If the child does not have a value yet, set it with the parent information.
+//                            if(node->children[i]->values.empty()){
+//                                Coordinate boxCenter = box.getCenter();
+//                                double childSize = box.getSize() / 2.0;
+//
+//
+////
+////                                if (i == 0) //North West
+////                                    coordinate = {boxCenter.x - childSize, boxCenter.y + childSize};
+////                                if (i == 1) //North East
+////                                    coordinate = {boxCenter.x + childSize, boxCenter.y + childSize};
+////                                if (i == 2) //South West
+////                                    coordinate = {boxCenter.x - childSize, boxCenter.y - childSize};
+////                                if (i == 3) //South East
+////                                    coordinate = {boxCenter.x + childSize, boxCenter.y - childSize};
+//                                auto quadNode = QuadNode{childBoxCenter, value.occupancy,
+//                                                         value.visitedAtS};
+////                                node->children[i]->values.push_back(quadNode);
+//                                add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), quadNode);
+////                                add(node, depth + 1, box, quadNode);
+//
+//
+//
+//                                allChildrenHaveValue = false;
+//                            //Else we set the child's visited time to the MAX, and update the occupancy to the most important one.
+//                            } else{
+                                QuadNode newChildNode = QuadNode();
+                                //OCCUPIED always takes precedence over FREE.
+                                //Update with the most precedent or up-to-date information.
+//                                if (node->children[i]->values.front().occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
+//                                    newChildNode.occupancy = OCCUPIED;
+//                                    newChildNode.visitedAtS = std::max(node->children[i]->values.front().visitedAtS, value.visitedAtS);
+//                                } else if (node->children[i]->values.front().occupancy == OCCUPIED){
+//                                    newChildNode.occupancy = OCCUPIED;
+//                                    newChildNode.visitedAtS = node->children[i]->values.front().visitedAtS;
+//                                } else if (value.occupancy == OCCUPIED){
+//                                    newChildNode.occupancy = OCCUPIED;
+//                                    newChildNode.visitedAtS = value.visitedAtS;
+//                                } else if (node->children[i]->values.front().occupancy == FREE && value.occupancy == FREE) {
+//                                    newChildNode.occupancy = FREE;
+//                                    newChildNode.visitedAtS = std::max(node->children[i]->values.front().visitedAtS, value.visitedAtS);
+//                                } else if (node->children[i]->values.front().occupancy == FREE){
+//                                    newChildNode.occupancy = FREE;
+//                                    newChildNode.visitedAtS = node->children[i]->values.front().visitedAtS;
+//                                } else if (value.occupancy == FREE){
+//                                    newChildNode.occupancy = FREE;
+//                                    newChildNode.visitedAtS = value.visitedAtS;
+//                                } else {
+//                                    assert(-1 && "Shouldn't get here, as neither current node or added node are OCCUPIED or FREE");
+//                                }
+
+                                newChildNode.visitedAtS = value.visitedAtS;
+                                newChildNode.coordinate = childBoxCenter;
+                                newChildNode.occupancy = value.occupancy;
+
+//                                node->children[i]->values.push_back(newChildNode);
+                                //Add to current node, so that it will be placed in the proper child and checked for optimization later.
+                                add(node, depth, box, newChildNode);
+
+//                            }
+
+                        }
+
+//                        //If all children have a value, check if the visited time is bigger and close to all of them
+//                        if(allChildrenHaveValue)
+//
+//                        if (node->values.front().occupancy == FREE || value.occupancy == FREE)
+//                            newNode.occupancy = FREE;
+//                        if (node->values.front().occupancy == OCCUPIED || value.occupancy == OCCUPIED)
+//                            newNode.occupancy = OCCUPIED;
+//
+//
+//                        newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+//
+//                        double minVisitedTime = MAXFLOAT;
+//                        double maxVisitedTime = -1;
+//                        for (int i = 0; i < node->children.size(); i++) {
+//
+//                        }
 
                     }
-                    // Make the only value the 'merged node'
-                    node->values.clear();
-                    node->values.push_back(newNode);
-                    //Unitialize the children nodes if there are any
-                    for (auto &child: node->children)
-                        child.reset();
-                    assert(isLeaf(node) && "The node should be a leaf again now");
+                    if(box.getCenter().x == 1.5625 && box.getCenter().y == 0.3125){
+                        argos::LOG << "Adding THE PARENT with time " << newNode.visitedAtS << std::endl;
+                    }
+//                    // Make the only value the 'merged node'
+//                    node->values.clear();
+//                    node->values.push_back(newNode);
+//                    //Unitialize the children nodes if there are any
+//                    for (auto &child: node->children)
+//                        child.reset();
+//                    assert(isLeaf(node) && "The node should be a leaf again now");
                 // Else we add the value to the appropriate child
                 } else {
                     auto i = getQuadrant(box, value.coordinate);
