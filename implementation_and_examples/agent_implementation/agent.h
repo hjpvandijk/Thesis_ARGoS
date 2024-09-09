@@ -100,6 +100,7 @@ public:
     void parseMessages();
 
 
+
     std::vector<std::string> getMessages();
 
 
@@ -120,7 +121,7 @@ public:
     double AGENT_ALIGNMENT_WEIGHT = 0;//0.5;
     double UNEXPLORED_FRONTIER_WEIGHT = 0.08;
 
-    double FRONTIER_DISTANCE_WEIGHT = 1.0;//0.001;
+    double FRONTIER_DISTANCE_WEIGHT = 0.2;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;

@@ -78,6 +78,12 @@ struct Coordinate {
                y == rhs.y;
     }
 
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+        archive(x, y);
+    }
+
 
 
 };

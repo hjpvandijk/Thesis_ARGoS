@@ -582,7 +582,8 @@ void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::vector<std::string> quadTreeToStrings = {};
     argos::RLOG << "Sending quadtree" << std::endl;
-    this->quadtree->toStringVector(&quadTreeToStrings);
+//    this->quadtree->toStringVector(&quadTreeToStrings);
+    this->quadtree->toStringVectorSerialized(&quadTreeToStrings);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
     }
@@ -703,6 +704,7 @@ quadtree::QuadNode quadNodeFromString(std::string str) {
     return newQuadNode;
 }
 
+
 argos::CVector2 vector2FromString(std::string str) {
     std::string delimiter = ";";
     size_t pos = 0;
@@ -728,7 +730,18 @@ void Agent::parseMessages() {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
         } else if (messageContent[0] == 'M') {
-            this->quadtree->add(quadNodeFromString(messageContent.substr(2)));
+//            this->quadtree->add(quadNodeFromString(messageContent.substr(2)));
+            //Break the strings into chunks separated by '-'
+            std::vector<std::string> chunks;
+            std::stringstream ss(messageContent.substr(2));
+            std::string chunk;
+
+            while (std::getline(ss, chunk, '|')) {
+                chunks.push_back(chunk);
+            }
+            for(auto chunk: chunks) {
+                this->quadtree->add(this->quadtree->deserializeQuadnodeMessage(chunk));
+            }
         } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);
             std::string delimiter = ":";

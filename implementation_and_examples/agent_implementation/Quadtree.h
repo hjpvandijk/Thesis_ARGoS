@@ -8,7 +8,10 @@
 #include <vector>
 #include "Box.h"
 #include <iostream>
-#include <fstream>
+//#include <fstream>
+#include "libraries/cereal/archives/binary.hpp"
+#include <sstream>
+//#include "libraries/cereal/archives/binary.hpp"
 
 //Adapted from https://github.com/pvigier/Quadtree
 
@@ -30,6 +33,13 @@ namespace quadtree {
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
         }
+
+        template<class Archive>
+        void serialize(Archive & archive)
+        {
+            archive(coordinate, occupancy, visitedAtS);
+        }
+
     };
 
     class Quadtree {
@@ -345,8 +355,9 @@ namespace quadtree {
                         std::string str =
                                 std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
                                 std::to_string(curQuadNode.occupancy) + '@' + std::to_string(curQuadNode.visitedAtS);
-                        strings->emplace_back(str);
-                        strings->emplace_back(str);
+                        argos::LOG << "string bytes: " << str.length() << std::endl;
+                        break;
+//                        strings->emplace_back(str);
                     }
                 }
 
@@ -362,6 +373,86 @@ namespace quadtree {
             };
 
             traverse(mRoot.get(), mBox, 0);
+        }
+
+        /**
+         * @brief Create a vector of strings from the quadtree
+         */
+        void toStringVectorSerialized(std::vector<std::string> *strings) {
+            std::function<void(const Node *, const Box &, int, int &, std::string &)> traverse;
+            std::string grouped_message;
+            int counter = 0;
+
+            traverse = [&](const Node *node, const Box &box, int depth, int &counter, std::string &grouped_message) {
+                if (node == nullptr) return;
+
+                bool allSameOccupancy = false;
+
+
+                // Write the bounding box, occupancy and depth of this node to the file
+                for (const auto &value: node->values) {
+                    QuadNode curQuadNode = value;
+                    // If the occupancy is ANY, we don't need to store it, as the children will have new info
+                    // If the occupancy is UNKNOWN, we don't need to store it, as a child not existing will also yield in an UNKNOWN
+//                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
+//                        continue;
+                    // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                    if (value.occupancy == OCCUPIED || value.occupancy == FREE){
+                        allSameOccupancy = true;
+                        curQuadNode.coordinate = box.getCenter();
+                        //Serialize the QuadNode
+                        std::stringstream ss;
+                        {
+                            cereal::BinaryOutputArchive ar(ss);
+                            ar(curQuadNode);
+                        }
+
+                        //Group every 10 nodes
+                        grouped_message.append(ss.str());
+
+                        if(counter==10){
+                            strings->emplace_back(grouped_message);
+                            grouped_message.clear();
+                            counter = 0;
+                        } else {
+                            grouped_message.append("|");
+                        }
+
+                        counter++;
+
+
+                    }
+                }
+
+                // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
+                if (!allSameOccupancy) {
+                    // Traverse the children
+                    for (int i = 0; i < 4; i++) {
+                        if (node->children[i]) {
+                            traverse(node->children[i].get(), computeBox(box, i), depth + 1, counter, grouped_message);
+                        }
+                    }
+                }
+            };
+
+            traverse(mRoot.get(), mBox, 0, counter, grouped_message);
+            //If there is an incomplete group, also send it.
+            if(!grouped_message.empty()){
+                grouped_message.pop_back(); //Delete the last delimiter
+                std::string ctr = std::to_string(counter);
+                strings->emplace_back(grouped_message);
+            }
+        }
+
+        QuadNode deserializeQuadnodeMessage(std::string str) {
+            std::stringstream ss(str);
+            {
+                cereal::BinaryInputArchive iarchive(ss); // Create an input archive
+                quadtree::QuadNode quadNode;
+                iarchive(quadNode);
+                return quadNode;
+            }
+
         }
 
         /**
