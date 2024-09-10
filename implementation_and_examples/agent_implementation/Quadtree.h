@@ -360,7 +360,7 @@ namespace quadtree {
                         //Group every 10 nodes
                         grouped_message.append(str);
 
-                        if(counter==9){
+                        if(counter==49){
                             strings->emplace_back(grouped_message);
                             grouped_message.clear();
                             counter = 0;

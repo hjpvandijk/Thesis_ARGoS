@@ -47,7 +47,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
 
 //        combinedQuadTree = boxesAndOccupancyAndTicks;
-        if(it->first->GetId()=="pipuck2") combinedQuadTree = it->second;
+        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
     }
 
 

@@ -104,7 +104,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getMinSize() / 2;
+    double stepSize = this->quadtree->getSmallestBoxSize();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -149,7 +149,7 @@ void Agent::checkForObstacles() {
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
-                if (objectToAgent.Length() <= this->quadtree->getMinSize()) {
+                if (objectToAgent.Length() <= this->quadtree->getSmallestBoxSize()) {
                     close_to_other_agent = true;
                 }
             }
@@ -432,7 +432,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
                 // Check if the distance between the box and the frontier is less than or equal to
                 // the diagonal of a box with minimum size (ensuring adjacency)
                 if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(this->quadtree->getMinSize(), 2))) {
+                    sqrt(2 * pow(this->quadtree->getSmallestBoxSize(), 2))) {
                     region.push_back(frontier); // Add the frontier to the current region
                     added = true; // Mark the frontier as added
                     break; // Exit the loop since the frontier has been added to a region
