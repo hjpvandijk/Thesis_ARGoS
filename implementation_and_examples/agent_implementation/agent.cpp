@@ -474,6 +474,11 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
 
+        //If the frontier location is too close to the current position, disregard it as that area is explored already.
+        if(distance < 0.1){
+            continue;
+        }
+
         //Calculate the score of the frontier region
         double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
 

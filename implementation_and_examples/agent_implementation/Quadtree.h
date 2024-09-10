@@ -427,9 +427,6 @@ namespace quadtree {
                 if (!allSameOccupancy) {
                     for (int i = 0; i < 4; i++) {
                         if (node->children[i]) {
-                            if(box.getCenter().x == 1.5625 && box.getCenter().y == 0.3125){
-                                argos::LOG << "Traversing child " << i << std::endl;
-                            }
                             traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancyAndTicks);
                         }
                     }

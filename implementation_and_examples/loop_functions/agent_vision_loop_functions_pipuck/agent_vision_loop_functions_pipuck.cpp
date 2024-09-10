@@ -65,7 +65,6 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param agent
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, Agent *agent) {
-    argos::LOG << "[" << pcFB->GetId() << "] " << "Getting boxes and occupancies" << std::endl;
     std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 
     m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
