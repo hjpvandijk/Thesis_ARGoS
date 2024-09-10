@@ -581,11 +581,12 @@ void Agent::calculateNextPosition() {
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::vector<std::string> quadTreeToStrings = {};
-    argos::RLOG << "Sending quadtree" << std::endl;
-//    this->quadtree->toStringVector(&quadTreeToStrings);
-    this->quadtree->toStringVectorSerialized(&quadTreeToStrings);
+//    argos::RLOG << "Sending quadtree" << std::endl;
+    this->quadtree->toStringVector(&quadTreeToStrings);
+//    this->quadtree->toStringVectorSerialized(&quadTreeToStrings);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
+//        argos::RLOG << "Sending of length: " << str.length() << std::endl;
     }
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
@@ -632,7 +633,7 @@ void Agent::doStep() {
 void Agent::broadcastMessage(std::string message) {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
     argos::UInt8 *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
-    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
+    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size()+1);
     this->wifi.broadcast_message(cMessage);
 }
 
@@ -730,8 +731,6 @@ void Agent::parseMessages() {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
         } else if (messageContent[0] == 'M') {
-//            this->quadtree->add(quadNodeFromString(messageContent.substr(2)));
-            //Break the strings into chunks separated by '-'
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(2));
             std::string chunk;
@@ -740,7 +739,8 @@ void Agent::parseMessages() {
                 chunks.push_back(chunk);
             }
             for(auto chunk: chunks) {
-                this->quadtree->add(this->quadtree->deserializeQuadnodeMessage(chunk));
+                this->quadtree->add(quadNodeFromString(chunk));
+
             }
         } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);
