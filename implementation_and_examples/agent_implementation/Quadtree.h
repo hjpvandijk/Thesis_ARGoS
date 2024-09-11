@@ -111,112 +111,215 @@ namespace quadtree {
             return queryBoxes(box, UNKNOWN, currentTimeS);
         }
 
-        /**
-         * Returns all the frontier boxes surrounding the given coordinate within the given area size
-         */
-        std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
-            // Create a box centered at the given coordinate
-            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
-
-            //A cell is a frontier iff (according to dynamic frontier-led swarming):
-            //1. Occupancy = explored
-            //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
-
-            //Get all the explored but free boxes
-            std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
-//
-
-            //Get all the frontier boxes
-            std::vector<Box> frontierBoxes = {};
-            for (Box exploredBox: exploredBoxes) {
-                //Get the 8-connected Moore neighbours of the explored box
-                if (isMooreNeighbourUnknown(exploredBox)) {
-                    frontierBoxes.push_back(exploredBox);
-                }
-
-            }
-
-            return frontierBoxes;
-
+void processBox(const Box& box, std::vector<Box>& frontierBoxes, int current_quadrant) const {
+    if (box.size == getSmallestBoxSize()) {
+        if (isMooreNeighbourUnknown(box, current_quadrant)) {
+            frontierBoxes.push_back(box);
         }
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            //Only process the boxes that are at the outer edges of the queried box
+            switch (current_quadrant) {
+                // North West
+                case 0:
+                    switch(i) {
+                        // North West
+                        case 0:
+                            break;//handle this box in the next iteration
+                        // North East
+                        case 1:
+                            break;//handle this box in the next iteration
+
+                        // South West
+                        case 2:
+                            break;//handle this box in the next iteration
+
+                        // South East
+                        case 3:
+                            continue; //skip this box
+                        default:
+                            break;
+                    }
+                // North East
+                case 1:
+                    switch(i) {
+                        // North West
+                        case 0:
+                            break;//handle this box in the next iteration
+                            // North East
+                        case 1:
+                            break;//handle this box in the next iteration
+
+                            // South West
+                        case 2:
+                            continue; //skip this box
+
+                            // South East
+                        case 3:
+                            break;//handle this box in the next iteration
+                        default:
+                            break;
+                    }
+                // South West
+                case 2:
+                    switch(i) {
+                        // North West
+                        case 0:
+                            break;//handle this box in the next iteration
+                            // North East
+                        case 1:
+                            continue; //skip this box
+
+                            // South West
+                        case 2:
+                            break;//handle this box in the next iteration
+
+                            // South East
+                        case 3:
+                            break;//handle this box in the next iteration
+                        default:
+                            break;
+                    }
+                // South East
+                case 3:
+                    switch(i) {
+                        // North West
+                        case 0:
+                            continue; //skip this box
+                            // North East
+                        case 1:
+                            break;//handle this box in the next iteration
+
+                            // South West
+                        case 2:
+                            break;//handle this box in the next iteration
+
+                            // South East
+                        case 3:
+                            break;//handle this box in the next iteration
+                        default:
+                            break;
+                    }
+                default:
+                    break;
+            }
+            Box childBox = computeBox(box, i);
+            processBox(childBox, frontierBoxes, i);
+        }
+    }
+}
+/**
+* Returns all the frontier boxes surrounding the given coordinate within the given area size
+*/
+std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
+    Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+    std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
+    std::vector<Box> frontierBoxes;
+
+    for (const Box& exploredBox : exploredBoxes) {
+        processBox(exploredBox, frontierBoxes, -1);
+    }
+
+    return frontierBoxes;
+}
 
         /**
          * Find if at least one of the 8-connected moore neighboring quadnodes of a given box is unexplored.
          * @param box
          * @return
          */
-        bool isMooreNeighbourUnknown(const Box &box) const {
+        bool isMooreNeighbourUnknown(const Box &box, int current_quadrant) const {
 //            argos::LOG << "Checking moore neighbours of box: " << box.getCenter().x << " " << box.getCenter().y << " of size " << box.getSize() << std::endl;
-            //See if coordinate to the left is in the quadtree and get its occupancy
-            Coordinate left = Coordinate{box.getCenter().x - box.size, box.getCenter().y};
-            if (mBox.contains(left)) {
+            //0=NW, 1=NE, 2=SW, 3=SE
+
+            //Only check the moore neighbours that are at the outer edges of the queried box
+            //So only check if current quadrant in the WEST (left)
+            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==2) {
+                //See if coordinate to the left is in the quadtree and get its occupancy
+                Coordinate left = Coordinate{box.getCenter().x - box.size, box.getCenter().y};
+                if (mBox.contains(left)) {
 //                argos::LOG << "left: " << left.x << " " << left.y << std::endl;
-                if (isCoordinateUnknown(left)) {
-                    return true;
+                    if (isCoordinateUnknown(left)) {
+                        return true;
+                    }
                 }
             }
-
-            //See if coordinate to the right is in the quadtree and get its occupancy
-            Coordinate right = Coordinate{box.getCenter().x + box.size, box.getCenter().y};
-            if (mBox.contains(right)) {
+            //So only check if current quadrant in the EAST (right)
+            if(current_quadrant==-1 || current_quadrant==1 || current_quadrant==3) {
+                //See if coordinate to the right is in the quadtree and get its occupancy
+                Coordinate right = Coordinate{box.getCenter().x + box.size, box.getCenter().y};
+                if (mBox.contains(right)) {
 //                argos::LOG << "right: " << right.x << " " << right.y << std::endl;
-                if (isCoordinateUnknown(right)) {
-                    return true;
+                    if (isCoordinateUnknown(right)) {
+                        return true;
+                    }
                 }
             }
-
-            //See if coordinate to the top is in the quadtree and get its occupancy
-            Coordinate top = Coordinate{box.getCenter().x, box.getCenter().y + box.size};
-            if (mBox.contains(top)) {
+            //So only check if current quadrant in the NORTH (top)
+            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==1) {
+                //See if coordinate to the top is in the quadtree and get its occupancy
+                Coordinate top = Coordinate{box.getCenter().x, box.getCenter().y + box.size};
+                if (mBox.contains(top)) {
 //                argos::LOG << "top: " << top.x << " " << top.y << std::endl;
-                if (isCoordinateUnknown(top)) {
-                    return true;
+                    if (isCoordinateUnknown(top)) {
+                        return true;
+                    }
                 }
             }
-
-            //See if coordinate to the bottom is in the quadtree and get its occupancy
-            Coordinate bottom = Coordinate{box.getCenter().x, box.getCenter().y - box.size};
-            if (mBox.contains(bottom)) {
+            //So only check if current quadrant in the SOUTH (bottom)
+            if(current_quadrant==-1 || current_quadrant==2 || current_quadrant==3) {
+                //See if coordinate to the bottom is in the quadtree and get its occupancy
+                Coordinate bottom = Coordinate{box.getCenter().x, box.getCenter().y - box.size};
+                if (mBox.contains(bottom)) {
 //                argos::LOG << "bottom: " << bottom.x << " " << bottom.y << std::endl;
-                if (isCoordinateUnknown(bottom)) {
-                    return true;
+                    if (isCoordinateUnknown(bottom)) {
+                        return true;
+                    }
                 }
             }
-
-            //See if coordinate to the top left is in the quadtree and get its occupancy
-            Coordinate topLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y + box.size};
-            if (mBox.contains(topLeft)) {
+            //So don't check if current quadrant in the SOUTH EAST (bottom right)
+            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==1 || current_quadrant==2) {
+                //See if coordinate to the top left is in the quadtree and get its occupancy
+                Coordinate topLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y + box.size};
+                if (mBox.contains(topLeft)) {
 //                argos::LOG << "topLeft: " << topLeft.x << " " << topLeft.y << std::endl;
-                if (isCoordinateUnknown(topLeft)) {
-                    return true;
+                    if (isCoordinateUnknown(topLeft)) {
+                        return true;
+                    }
                 }
             }
-
-            //See if coordinate to the top right is in the quadtree and get its occupancy
-            Coordinate topRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y + box.size};
-            if (mBox.contains(topRight)) {
+            //So don't check if current quadrant in the SOUTH WEST (bottom left)
+            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==1 || current_quadrant==3) {
+                //See if coordinate to the top right is in the quadtree and get its occupancy
+                Coordinate topRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y + box.size};
+                if (mBox.contains(topRight)) {
 //                argos::LOG << "topRight: " << topRight.x << " " << topRight.y << std::endl;
-                if (isCoordinateUnknown(topRight)) {
-                    return true;
+                    if (isCoordinateUnknown(topRight)) {
+                        return true;
+                    }
                 }
             }
-
-            //See if coordinate to the bottom left is in the quadtree and get its occupancy
-            Coordinate bottomLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y - box.size};
-            if (mBox.contains(bottomLeft)) {
+            //So don't check if current quadrant in the NORTH EAST (top right)
+            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==2 || current_quadrant==3) {
+                //See if coordinate to the bottom left is in the quadtree and get its occupancy
+                Coordinate bottomLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y - box.size};
+                if (mBox.contains(bottomLeft)) {
 //                argos::LOG << "bottomLeft: " << bottomLeft.x << " " << bottomLeft.y << std::endl;
-                if (isCoordinateUnknown(bottomLeft)) {
-                    return true;
+                    if (isCoordinateUnknown(bottomLeft)) {
+                        return true;
+                    }
                 }
             }
-
-            //See if coordinate to the bottom right is in the quadtree and get its occupancy
-            Coordinate bottomRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y - box.size};
-            if (mBox.contains(bottomRight)) {
+            //So don't check if current quadrant in the NORTH WEST (top left)
+            if(current_quadrant==-1 || current_quadrant==1 || current_quadrant==2 || current_quadrant==3) {
+                //See if coordinate to the bottom right is in the quadtree and get its occupancy
+                Coordinate bottomRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y - box.size};
+                if (mBox.contains(bottomRight)) {
 //                argos::LOG << "bottomRight: " << bottomRight.x << " " << bottomRight.y << std::endl;
-                if (isCoordinateUnknown(bottomRight)) {
-                    return true;
+                    if (isCoordinateUnknown(bottomRight)) {
+                        return true;
+                    }
                 }
             }
 
@@ -269,6 +372,7 @@ namespace quadtree {
         bool isCoordinateUnknown(Coordinate coordinate) const {
             auto QuadNodes = std::vector<QuadNode>();
             getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate, QuadNodes);
+            assert(QuadNodes.size() == 1);
 //            argos::LOG << "Quadnodes size: " << QuadNodes.size() << std::endl;
             for(auto node: QuadNodes) {
 //                argos::LOG << "occ: " << occ << std::endl;
@@ -444,7 +548,7 @@ namespace quadtree {
             return this->MinSize;
         }
 
-        double getSmallestBoxSize() {
+        double getSmallestBoxSize() const {
             return this->Smallest_Box_Size;
         }
 
@@ -986,7 +1090,8 @@ namespace quadtree {
                 // If it is not a leaf node, find the nested nodes, and search them.
             } else {
                 //If the node occupancy is ANY or UNKNOWN, there can be nested nodes with different occupancies
-                if(node->values.empty() || node->values.front().occupancy ==ANY || node->values.front().occupancy == UNKNOWN) {
+                assert(!node->values.empty() && "Node should have a value");
+                if(node->values.front().occupancy ==ANY || node->values.front().occupancy == UNKNOWN) {
                     auto i = getQuadrant(box, queryCoordinate);
                     //If i=4, so the query coordinate is the exact center, check all children
                     if(i==4) {

@@ -23,6 +23,18 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //        DrawCoordinates(it->second, CColor::BLUE);
 //    }
 
+    for (std::map<CPiPuckEntity *, std::vector<quadtree::Box>>::const_iterator it = m_cAgVisLF.GetAgentFrontiers().begin();
+         it != m_cAgVisLF.GetAgentFrontiers().end();
+         ++it) {
+        for (auto frontier: it->second) {
+            Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+            CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+            DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+                    CColor::BROWN);
+
+        }
+    }
+
     auto box = quadtree::Box(-5, 5, 10);
     quadtree::Quadtree *combinedTree = new quadtree::Quadtree(box);
 
@@ -31,23 +43,23 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, double >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
          it != m_cAgVisLF.GetQuadTree().end();
          ++it) {
-//        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
-//            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-//            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-//            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
-//
-//            quadtree::QuadNode node;
-//            node.coordinate = box.getCenter();
-//            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-//            if(node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-//                continue;
-//            node.visitedAtS = visitedTimeS;
-//            combinedTree->add(node);
-//        }
-//        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
+        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
+            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
+            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
+            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
 
-//        combinedQuadTree = boxesAndOccupancyAndTicks;
-        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
+            quadtree::QuadNode node;
+            node.coordinate = box.getCenter();
+            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
+            if(node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+                continue;
+            node.visitedAtS = visitedTimeS;
+            combinedTree->add(node);
+        }
+        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
+
+        combinedQuadTree = boxesAndOccupancyAndTicks;
+//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
     }
 
 
@@ -134,6 +146,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //         ++it) {
 //        DrawCoordinates(it->second, CColor::RED);
 //    }
+
 
 
 

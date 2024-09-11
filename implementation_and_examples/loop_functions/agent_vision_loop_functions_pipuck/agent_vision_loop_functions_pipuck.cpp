@@ -159,6 +159,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tObjectCoordinates.clear();
     m_tOtherAgentCoordinates.clear();
     m_tQuadTree.clear();
+    m_tAgentFrontiers.clear();
     for (CSpace::TMapPerType::iterator it = tFBMap.begin();
          it != tFBMap.end();
          ++it) {
@@ -185,6 +186,8 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        if(agent->getId() != "pipuck1") continue;
 //
         pushQuadTree(pcFB, agent);
+
+        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
 
 
     }

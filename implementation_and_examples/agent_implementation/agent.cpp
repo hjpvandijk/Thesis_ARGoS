@@ -414,6 +414,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_DIAMETER,
                                                                               this->elapsed_ticks /
                                                                               this->ticks_per_second);
+    current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<quadtree::Box>> frontierRegions = {};
@@ -430,9 +431,9 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
                 Coordinate frontierCenter = frontier.getCenter();
 
                 // Check if the distance between the box and the frontier is less than or equal to
-                // the diagonal of a box with minimum size (ensuring adjacency)
+                // the average diagonal of the two boxes (ensuring adjacency)
                 if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(this->quadtree->getSmallestBoxSize(), 2))) {
+                    sqrt(2 * pow(frontier.getSize()*0.5 + box.getSize()*0.5, 2))) {
                     region.push_back(frontier); // Add the frontier to the current region
                     added = true; // Mark the frontier as added
                     break; // Exit the loop since the frontier has been added to a region
@@ -474,10 +475,10 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
 
-        //If the frontier location is too close to the current position, disregard it as that area is explored already.
-        if(distance < 0.1){
-            continue;
-        }
+//        //If the frontier location is too close to the current position, disregard it as that area is explored already.
+//        if(distance < 0.1){
+//            continue;
+//        }
 
         //Calculate the score of the frontier region
         double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;

@@ -118,8 +118,8 @@ public:
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
     double AGENT_COHESION_WEIGHT = 0;//0.23;
     double AGENT_AVOIDANCE_WEIGHT = 1.15;
-    double AGENT_ALIGNMENT_WEIGHT = 0;//0.5;
-    double UNEXPLORED_FRONTIER_WEIGHT = 0.08;
+    double AGENT_ALIGNMENT_WEIGHT = 0.5;//0.5;
+    double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
 
     double FRONTIER_DISTANCE_WEIGHT = 0.2;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
@@ -142,6 +142,8 @@ public:
 
     double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
+
+    std::vector<quadtree::Box> current_frontiers;
 
 private:
     void checkForObstacles();
