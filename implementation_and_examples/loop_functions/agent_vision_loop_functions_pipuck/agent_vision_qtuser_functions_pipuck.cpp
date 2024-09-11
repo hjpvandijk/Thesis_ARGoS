@@ -23,15 +23,40 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //        DrawCoordinates(it->second, CColor::BLUE);
 //    }
 
-    for (std::map<CPiPuckEntity *, std::vector<quadtree::Box>>::const_iterator it = m_cAgVisLF.GetAgentFrontiers().begin();
-         it != m_cAgVisLF.GetAgentFrontiers().end();
-         ++it) {
-        for (auto frontier: it->second) {
-            Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
-            CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
-            DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
-                    CColor::BROWN);
+//    for (std::map<CPiPuckEntity *, std::vector<quadtree::Box>>::const_iterator it = m_cAgVisLF.GetAgentFrontiers().begin();
+//         it != m_cAgVisLF.GetAgentFrontiers().end();
+//         ++it) {
+//        for (auto frontier: it->second) {
+//            Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+//            CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+//            DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+//                    CColor::BROWN);
+//
+//        }
+//    }
 
+    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
+         it != m_cAgVisLF.GetAgentFrontierRegions().end();
+         ++it) {
+        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
+                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
+        int i = 0;
+        for (auto frontierRegion: it->second) {
+
+            //Assign a differnet color to every frontierRegion
+            CColor color = colors[i];
+
+
+            for (auto frontier: frontierRegion) {
+                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+
+
+                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+                        color);
+            }
+            i++;
+            if (i > colors.size()) i = 0;
         }
     }
 
@@ -51,7 +76,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             quadtree::QuadNode node;
             node.coordinate = box.getCenter();
             node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-            if(node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
                 continue;
             node.visitedAtS = visitedTimeS;
             combinedTree->add(node);
@@ -124,8 +149,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
          ++it) {
         if (it->first->GetId() == "pipuck1")
             DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::MAGENTA);
-        else
-        if (it->first->GetId() == "pipuck2")
+        else if (it->first->GetId() == "pipuck2")
             DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
 
     }

@@ -394,6 +394,79 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
     return alignmentVector;
 }
 
+// Union-Find (Disjoint-Set) data structure
+class UnionFind {
+public:
+    void add(int x) {
+        if (parent.find(x) == parent.end()) {
+            parent[x] = x;
+            rank[x] = 0;
+        }
+    }
+
+    int find(int x) {
+        if (parent[x] != x) {
+            parent[x] = find(parent[x]);
+        }
+        return parent[x];
+    }
+
+    void unionSets(int x, int y) {
+        int rootX = find(x);
+        int rootY = find(y);
+        if (rootX != rootY) {
+            if (rank[rootX] > rank[rootY]) {
+                parent[rootY] = rootX;
+            } else if (rank[rootX] < rank[rootY]) {
+                parent[rootX] = rootY;
+            } else {
+                parent[rootY] = rootX;
+                rank[rootX]++;
+            }
+        }
+    }
+
+private:
+    std::unordered_map<int, int> parent;
+    std::unordered_map<int, int> rank;
+};
+
+void mergeAdjacentFrontiers(const std::vector<quadtree::Box>& frontiers, std::vector<std::vector<quadtree::Box>>& frontierRegions) {
+    UnionFind uf;
+    std::unordered_map<int, quadtree::Box> boxMap;
+
+    // Initialize union-find structure
+    for (int i = 0; i < frontiers.size(); ++i) {
+        uf.add(i);
+        boxMap[i] = frontiers[i];
+    }
+
+    // Check adjacency and union sets
+    for (int i = 0; i < frontiers.size(); ++i) {
+        for (int j = i + 1; j < frontiers.size(); ++j) {
+            Coordinate centerI = frontiers[i].getCenter();
+            Coordinate centerJ = frontiers[j].getCenter();
+            double distance = sqrt(pow(centerI.x - centerJ.x, 2) + pow(centerI.y - centerJ.y, 2));
+            double threshold = sqrt(2 * pow(frontiers[i].getSize() * 0.5 + frontiers[j].getSize() * 0.5, 2));
+            if (distance <= threshold) {
+                uf.unionSets(i, j);
+            }
+        }
+    }
+
+    // Group boxes by their root set representative
+    std::unordered_map<int, std::vector<quadtree::Box>> regions;
+    for (int i = 0; i < frontiers.size(); ++i) {
+        int root = uf.find(i);
+        regions[root].push_back(frontiers[i]);
+    }
+
+    // Convert to the required format
+    for (const auto& region : regions) {
+        frontierRegions.push_back(region.second);
+    }
+}
+
 argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //According to Dynamic frontier-led swarming:
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
@@ -418,6 +491,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<quadtree::Box>> frontierRegions = {};
+
+    mergeAdjacentFrontiers(frontiers, frontierRegions);
 
 // Iterate over each frontier box to merge adjacent ones into regions
     for (auto frontier: frontiers) {
@@ -447,6 +522,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         }
     }
 
+    current_frontier_regions = frontierRegions;
+
     //Now we have all frontier cells merged into frontier regions
     //Find F* by using the formula above
     //Ψ_D = FRONTIER_DISTANCE_WEIGHT
@@ -465,6 +542,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         double totalNumberOfCellsInRegion = 0;
         for (auto box: region) {
             double cellsInBox = box.getSize()/quadtree->getSmallestBoxSize();
+            assert(cellsInBox == 1);
             sumX += box.getCenter().x * cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
             sumY += box.getCenter().y * cellsInBox;
             totalNumberOfCellsInRegion += cellsInBox;

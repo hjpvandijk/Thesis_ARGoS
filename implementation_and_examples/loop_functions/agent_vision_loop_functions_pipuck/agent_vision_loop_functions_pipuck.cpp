@@ -188,6 +188,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         pushQuadTree(pcFB, agent);
 
         m_tAgentFrontiers[pcFB] = agent->current_frontiers;
+        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
 
 
     }

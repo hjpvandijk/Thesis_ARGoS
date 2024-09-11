@@ -127,7 +127,7 @@ public:
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
     double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RANGE = 0.68;
+    double AGENT_AVOIDANCE_RANGE = 2;
     double AGENT_ALIGNMENT_RANGE = 1.5;
     double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS;
 
@@ -144,6 +144,7 @@ public:
     uint32_t elapsed_ticks = 0;
 
     std::vector<quadtree::Box> current_frontiers;
+    std::vector<std::vector<quadtree::Box>> current_frontier_regions;
 
 private:
     void checkForObstacles();
