@@ -117,95 +117,13 @@ void processBox(const Box& box, std::vector<Box>& frontierBoxes, int current_qua
             frontierBoxes.push_back(box);
         }
     } else {
-        for (int i = 0; i < 4; ++i) {
-            //Only process the boxes that are at the outer edges of the queried box
-            switch (current_quadrant) {
-                // North West
-                case 0:
-                    switch(i) {
-                        // North West
-                        case 0:
-                            break;//handle this box in the next iteration
-                        // North East
-                        case 1:
-                            break;//handle this box in the next iteration
-
-                        // South West
-                        case 2:
-                            break;//handle this box in the next iteration
-
-                        // South East
-                        case 3:
-                            continue; //skip this box
-                        default:
-                            break;
-                    }
-                // North East
-                case 1:
-                    switch(i) {
-                        // North West
-                        case 0:
-                            break;//handle this box in the next iteration
-                            // North East
-                        case 1:
-                            break;//handle this box in the next iteration
-
-                            // South West
-                        case 2:
-                            continue; //skip this box
-
-                            // South East
-                        case 3:
-                            break;//handle this box in the next iteration
-                        default:
-                            break;
-                    }
-                // South West
-                case 2:
-                    switch(i) {
-                        // North West
-                        case 0:
-                            break;//handle this box in the next iteration
-                            // North East
-                        case 1:
-                            continue; //skip this box
-
-                            // South West
-                        case 2:
-                            break;//handle this box in the next iteration
-
-                            // South East
-                        case 3:
-                            break;//handle this box in the next iteration
-                        default:
-                            break;
-                    }
-                // South East
-                case 3:
-                    switch(i) {
-                        // North West
-                        case 0:
-                            continue; //skip this box
-                            // North East
-                        case 1:
-                            break;//handle this box in the next iteration
-
-                            // South West
-                        case 2:
-                            break;//handle this box in the next iteration
-
-                            // South East
-                        case 3:
-                            break;//handle this box in the next iteration
-                        default:
-                            break;
-                    }
-                default:
-                    break;
+        for (int i = 0; i < 4; i++) {
+            if(current_quadrant + i != 3){  //Only process the boxes that are at the outer edges of the queried box
+                Box childBox = computeBox(box, i);
+                processBox(childBox, frontierBoxes, i);
             }
-            Box childBox = computeBox(box, i);
-            processBox(childBox, frontierBoxes, i);
         }
+
     }
 }
 /**
