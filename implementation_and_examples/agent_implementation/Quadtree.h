@@ -64,7 +64,7 @@ namespace quadtree {
             add(mRoot.get(), 0, mBox, value);
         }
 
-        void remove(const QuadNode &value) {
+        void remove(const QuadNode &value) const{
             remove(mRoot.get(), mBox, value);
         }
 
@@ -89,27 +89,26 @@ namespace quadtree {
          * @param areaSize
          * @return
          */
-        std::vector<Box> queryOccupiedBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
+        std::vector<Box> queryOccupiedBoxes(Coordinate coordinate, double areaSize, double currentTimeS) {
             // Create a box centered at the given coordinate
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
-
 
             return queryBoxes(box, OCCUPIED, currentTimeS);
         }
 
-        /**
-         * Returns all the unexplored boxes surrounding the given coordinate within the given area size
-         * @param coordinate
-         * @param areaSize
-         * @return
-         */
-        std::vector<Box> queryUnexploredBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
-            // Create a box centered at the given coordinate
-            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
-
-
-            return queryBoxes(box, UNKNOWN, currentTimeS);
-        }
+//        /**
+//         * Returns all the unexplored boxes surrounding the given coordinate within the given area size
+//         * @param coordinate
+//         * @param areaSize
+//         * @return
+//         */
+//        std::vector<Box> queryUnexploredBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
+//            // Create a box centered at the given coordinate
+//            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+//
+//
+//            return queryBoxes(box, UNKNOWN, currentTimeS);
+//        }
 
 
 void processBox(const Box& box, std::vector<Box>& frontierBoxes, int current_quadrant) const {
@@ -212,7 +211,7 @@ void processBox(const Box& box, std::vector<Box>& frontierBoxes, int current_qua
 /**
 * Returns all the frontier boxes surrounding the given coordinate within the given area size
 */
-std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) const {
+std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) {
     Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
     std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
     std::vector<Box> frontierBoxes;
@@ -346,9 +345,14 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @param occupancy
          * @return
          */
-        std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy, double currentTimeS) const {
+        std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy, double currentTimeS) {
             auto boxes = std::vector<Box>();
-            queryBoxes(mRoot.get(), mBox, box, boxes, occupancy, currentTimeS);
+            //While querying we also check if pheromones are expired, we remember those and remove them after.
+            std::vector<QuadNode> values_to_be_removed = {};
+            queryBoxes(mRoot.get(), mBox, box, boxes, occupancy, currentTimeS, values_to_be_removed);
+            for(auto &value: values_to_be_removed) {
+                remove(value);
+            }
             return boxes;
         }
 
@@ -576,6 +580,8 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          */
         bool isLeaf(const Node *node) const {
             return !static_cast<bool>(node->children[0]);
+
+
         }
 
         /**
@@ -927,35 +933,45 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @param value
          * @return
          */
-        bool remove(Node *node, const Box &box, const QuadNode &value) {
+        void remove(Node *node, const Box &box, const QuadNode &value) const {
             assert(node != nullptr);
             assert(box.contains(value.coordinate));
             if (isLeaf(node)) {
                 // Remove the value from node
                 removeValue(node, value);
-                return true;
             } else {
                 // Remove the value in a child if the value is entirely contained in it
                 auto i = getQuadrant(box, value.coordinate);
-                if (i != -1) {
-                    if (remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value))
-                        return tryMerge(node);
-                }
-                    // Otherwise, we remove the value from the current node
-                else
+                if (i ==
+                    4) { // If the value is the same as the center of the box, we remove the value from the current node
                     removeValue(node, value);
-                return false;
+                    for (auto &child: node->children)
+                        child.reset();
+                } else {
+                    assert(i != -1);
+                    remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
+//                    node->children[static_cast<std::size_t>(i)].reset();
+                    node->values.front().occupancy = ANY;
+                    // Check if there are any children, if not, remove the value from the parent
+                    bool atLeastOneChildWithValue = false;
+                    for (auto &child: node->children)
+                        if (!child->values.empty()) atLeastOneChildWithValue = true;
+
+                    if (!atLeastOneChildWithValue) {
+                        removeValue(node, node->values.front());
+                        for (auto &child: node->children)
+                            child.reset();
+
+                        assert(isLeaf(node));
+                    }
+
+                }
             }
         }
 
-        void removeValue(Node *node, const QuadNode &value) {
-            // Find the value in node->values
-            auto it = std::find_if(std::begin(node->values), std::end(node->values),
-                                   [this, &value](const auto &rhs) { return value == rhs; });
-            assert(it != std::end(node->values) && "Trying to remove a value that is not present in the node");
-            // Swap with the last element and pop back
-            *it = std::move(node->values.back());
-            node->values.pop_back();
+        void removeValue(Node *node, const QuadNode &value) const{
+            assert(node->values.front() == value); //We can only remove a value from a node which has that value
+            node->values.clear();
         }
 
         bool tryMerge(Node *node) {
@@ -1018,23 +1034,27 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
             }
         }
         /**
-         * @brief Query the quadtree for boxes that intersect with or are contained by the given box
-         * @param node
-         * @param box
-         * @param queryBox
-         * @param boxes
-         * @param occupancy
+         * @brief Query the quadtree for boxes that intersect with or are contained by the given box that have a given occupancy
+         * @param node the current node being looked in
+         * @param box the box the current node belongs in
+         * @param queryBox the search space
+         * @param boxes the list of boxes in the search space with the correct occupancy
+         * @param occupancy the occupancy to look for
+         * @param currentTimeS the current experiment time of the agent
+         * @param values_to_be_removed the list of values that need to be removed from the quadtree as they are expired
          */
         void queryBoxes(Node *node, const Box &box, const Box &queryBox, std::vector<Box> &boxes,
-                        Occupancy occupancy, double currentTimeS) const {
+                        Occupancy occupancy, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
             assert(node != nullptr);
             assert(queryBox.intersects_or_contains(box));
             assert(node->values.empty() || node->values.size()==1);
             for (auto &value: node->values) {
-                //Check if pheromone is expired, if so, set the occupancy to unknown
-                //TODO: Remove the node to save memory
+                //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
                 if(value.occupancy==Occupancy::FREE && calculatePheromone(value.visitedAtS, currentTimeS)<0.05){
                     value.occupancy = Occupancy::UNKNOWN;
+                    //Keep a list of the to be removed values, as we cant delete them now due to concurrency issues. These will be deleted after the querying is done.
+                    values_to_be_removed.push_back(value);
+                    continue;
                 }
 
 
@@ -1042,6 +1062,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                     (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
                     boxes.push_back(box);
             }
+
             if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
                 if(!isLeaf(node)) {
                     for(const auto & i : node->children) {
@@ -1050,12 +1071,15 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                     }
                 }
             }
+
+
             //Only check further if the occupancy of the non-leaf node is not all the same for its children, so ANY.
-            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==ANY || node->values.begin()->occupancy==UNKNOWN)) {
-                for (auto i = std::size_t(0); i < node->children.size(); ++i) {
-                    auto childBox = computeBox(box, static_cast<int>(i));
-                    if (queryBox.intersects_or_contains(childBox))
-                        queryBoxes(node->children[i].get(), childBox, queryBox, boxes, occupancy, currentTimeS);
+            if (!isLeaf(node) && (node->values.empty() || node->values.front().occupancy==ANY || node->values.front().occupancy==UNKNOWN)) {
+                for (int d = 0; d < node->children.size(); d++) {
+                    auto childBox = computeBox(box, static_cast<int>(d));
+                    if (queryBox.intersects_or_contains(childBox)) {
+                        queryBoxes(node->children[d].get(), childBox, queryBox, boxes, occupancy, currentTimeS, values_to_be_removed);
+                    }
                 }
             }
         }
