@@ -21,6 +21,8 @@ public:
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;
+    std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
+    std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>> m_tAgentFrontierRegions;
 
 public:
 
@@ -30,7 +32,10 @@ public:
 
    virtual void Reset();
 
-   virtual void PostStep();
+    virtual void PreStep();
+
+
+    virtual void PostStep();
 
    inline const TCoordinateMap& GetObjectCoordinates() const {
       return m_tObjectCoordinates;
@@ -50,6 +55,14 @@ public:
 
     inline const std::map<CPiPuckEntity*, double>& GetAgentElapsedTicks() const {
         return m_tAgentElapsedTicks;
+    }
+
+    inline const std::map<CPiPuckEntity*, std::vector<quadtree::Box>>& GetAgentFrontiers() const {
+        return m_tAgentFrontiers;
+    }
+
+    inline const std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>>& GetAgentFrontierRegions() const {
+        return m_tAgentFrontierRegions;
     }
 
 //    CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
@@ -92,6 +105,7 @@ private:
     void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, Agent* agent);
     void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, Agent* agent);
     void pushQuadTree(CPiPuckEntity* pcFB, Agent* agent);
+
 };
 
 #endif

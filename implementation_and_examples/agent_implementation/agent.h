@@ -100,6 +100,7 @@ public:
     void parseMessages();
 
 
+
     std::vector<std::string> getMessages();
 
 
@@ -117,16 +118,16 @@ public:
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
     double AGENT_COHESION_WEIGHT = 0;//0.23;
     double AGENT_AVOIDANCE_WEIGHT = 1.15;
-    double AGENT_ALIGNMENT_WEIGHT = 0;//0.5;
-    double UNEXPLORED_FRONTIER_WEIGHT = 0.08;
+    double AGENT_ALIGNMENT_WEIGHT = 0.5;//0.5;
+    double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
 
-    double FRONTIER_DISTANCE_WEIGHT = 1.0;//0.001;
+    double FRONTIER_DISTANCE_WEIGHT = 0.2;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
     double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RANGE = 0.68;
+    double AGENT_AVOIDANCE_RANGE = 2;
     double AGENT_ALIGNMENT_RANGE = 1.5;
     double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS;
 
@@ -139,8 +140,11 @@ public:
 
     Coordinate currentBestFrontier = {0,0};
 
-    double ticks_per_second = 10;
+    double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
+
+    std::vector<quadtree::Box> current_frontiers;
+    std::vector<std::vector<quadtree::Box>> current_frontier_regions;
 
 private:
     void checkForObstacles();

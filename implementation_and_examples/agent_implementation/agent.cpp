@@ -104,7 +104,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getMinSize() / 2;
+    double stepSize = this->quadtree->getSmallestBoxSize();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -149,7 +149,7 @@ void Agent::checkForObstacles() {
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
-                if (objectToAgent.Length() <= this->quadtree->getMinSize()) {
+                if (objectToAgent.Length() <= this->quadtree->getSmallestBoxSize()) {
                     close_to_other_agent = true;
                 }
             }
@@ -394,6 +394,79 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
     return alignmentVector;
 }
 
+// Union-Find (Disjoint-Set) data structure
+class UnionFind {
+public:
+    void add(int x) {
+        if (parent.find(x) == parent.end()) {
+            parent[x] = x;
+            rank[x] = 0;
+        }
+    }
+
+    int find(int x) {
+        if (parent[x] != x) {
+            parent[x] = find(parent[x]);
+        }
+        return parent[x];
+    }
+
+    void unionSets(int x, int y) {
+        int rootX = find(x);
+        int rootY = find(y);
+        if (rootX != rootY) {
+            if (rank[rootX] > rank[rootY]) {
+                parent[rootY] = rootX;
+            } else if (rank[rootX] < rank[rootY]) {
+                parent[rootX] = rootY;
+            } else {
+                parent[rootY] = rootX;
+                rank[rootX]++;
+            }
+        }
+    }
+
+private:
+    std::unordered_map<int, int> parent;
+    std::unordered_map<int, int> rank;
+};
+
+void mergeAdjacentFrontiers(const std::vector<quadtree::Box>& frontiers, std::vector<std::vector<quadtree::Box>>& frontierRegions) {
+    UnionFind uf;
+    std::unordered_map<int, quadtree::Box> boxMap;
+
+    // Initialize union-find structure
+    for (int i = 0; i < frontiers.size(); ++i) {
+        uf.add(i);
+        boxMap[i] = frontiers[i];
+    }
+
+    // Check adjacency and union sets
+    for (int i = 0; i < frontiers.size(); ++i) {
+        for (int j = i + 1; j < frontiers.size(); ++j) {
+            Coordinate centerI = frontiers[i].getCenter();
+            Coordinate centerJ = frontiers[j].getCenter();
+            double distance = sqrt(pow(centerI.x - centerJ.x, 2) + pow(centerI.y - centerJ.y, 2));
+            double threshold = sqrt(2 * pow(frontiers[i].getSize() * 0.5 + frontiers[j].getSize() * 0.5, 2));
+            if (distance <= threshold) {
+                uf.unionSets(i, j);
+            }
+        }
+    }
+
+    // Group boxes by their root set representative
+    std::unordered_map<int, std::vector<quadtree::Box>> regions;
+    for (int i = 0; i < frontiers.size(); ++i) {
+        int root = uf.find(i);
+        regions[root].push_back(frontiers[i]);
+    }
+
+    // Convert to the required format
+    for (const auto& region : regions) {
+        frontierRegions.push_back(region.second);
+    }
+}
+
 argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //According to Dynamic frontier-led swarming:
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
@@ -414,9 +487,12 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_DIAMETER,
                                                                               this->elapsed_ticks /
                                                                               this->ticks_per_second);
+    current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<quadtree::Box>> frontierRegions = {};
+
+    mergeAdjacentFrontiers(frontiers, frontierRegions);
 
 // Iterate over each frontier box to merge adjacent ones into regions
     for (auto frontier: frontiers) {
@@ -430,9 +506,9 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
                 Coordinate frontierCenter = frontier.getCenter();
 
                 // Check if the distance between the box and the frontier is less than or equal to
-                // the diagonal of a box with minimum size (ensuring adjacency)
+                // the average diagonal of the two boxes (ensuring adjacency)
                 if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(this->quadtree->getMinSize(), 2))) {
+                    sqrt(2 * pow(frontier.getSize()*0.5 + box.getSize()*0.5, 2))) {
                     region.push_back(frontier); // Add the frontier to the current region
                     added = true; // Mark the frontier as added
                     break; // Exit the loop since the frontier has been added to a region
@@ -445,6 +521,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
             frontierRegions.push_back({frontier});
         }
     }
+
+    current_frontier_regions = frontierRegions;
 
     //Now we have all frontier cells merged into frontier regions
     //Find F* by using the formula above
@@ -461,19 +539,27 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //Calculate the average position of the frontier region
         double sumX = 0;
         double sumY = 0;
+        double totalNumberOfCellsInRegion = 0;
         for (auto box: region) {
-            sumX += box.getCenter().x;
-            sumY += box.getCenter().y;
+            double cellsInBox = box.getSize()/quadtree->getSmallestBoxSize();
+            assert(cellsInBox == 1);
+            sumX += box.getCenter().x * cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
+            sumY += box.getCenter().y * cellsInBox;
+            totalNumberOfCellsInRegion += cellsInBox;
         }
-        double frontierRegionSize = region.size();
-        double frontierRegionX = sumX / frontierRegionSize;
-        double frontierRegionY = sumY / frontierRegionSize;
+        double frontierRegionX = sumX / totalNumberOfCellsInRegion;
+        double frontierRegionY = sumY / totalNumberOfCellsInRegion;
 
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
 
+//        //If the frontier location is too close to the current position, disregard it as that area is explored already.
+//        if(distance < 0.1){
+//            continue;
+//        }
+
         //Calculate the score of the frontier region
-        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * frontierRegionSize;
+        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
 
         //If the score is lower than the best score, update the best score and best frontier region
         if (score < bestFrontierScore) {
@@ -579,9 +665,12 @@ void Agent::calculateNextPosition() {
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::vector<std::string> quadTreeToStrings = {};
+//    argos::RLOG << "Sending quadtree" << std::endl;
     this->quadtree->toStringVector(&quadTreeToStrings);
+//    this->quadtree->toStringVectorSerialized(&quadTreeToStrings);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
+//        argos::RLOG << "Sending of length: " << str.length() << std::endl;
     }
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
@@ -628,7 +717,7 @@ void Agent::doStep() {
 void Agent::broadcastMessage(std::string message) {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
     argos::UInt8 *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
-    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
+    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size()+1);
     this->wifi.broadcast_message(cMessage);
 }
 
@@ -700,6 +789,7 @@ quadtree::QuadNode quadNodeFromString(std::string str) {
     return newQuadNode;
 }
 
+
 argos::CVector2 vector2FromString(std::string str) {
     std::string delimiter = ";";
     size_t pos = 0;
@@ -725,7 +815,17 @@ void Agent::parseMessages() {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
         } else if (messageContent[0] == 'M') {
-            this->quadtree->add(quadNodeFromString(messageContent.substr(2)));
+            std::vector<std::string> chunks;
+            std::stringstream ss(messageContent.substr(2));
+            std::string chunk;
+
+            while (std::getline(ss, chunk, '|')) {
+                chunks.push_back(chunk);
+            }
+            for(auto chunk: chunks) {
+                this->quadtree->add(quadNodeFromString(chunk));
+
+            }
         } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);
             std::string delimiter = ":";

@@ -2,6 +2,7 @@
 #include <set>
 #include "agent_vision_loop_functions_pipuck.h"
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
+#include <chrono>
 
 /****************************************/
 /****************************************/
@@ -17,6 +18,12 @@ static const Real MIN_DISTANCE = 0.05f;
 static const Real MIN_DISTANCE_SQUARED = MIN_DISTANCE * MIN_DISTANCE;
 
 int loop_function_steps = 0;
+
+std::chrono::time_point start = std::chrono::system_clock::now();
+
+std::chrono::time_point end = std::chrono::system_clock::now();
+
+
 
 /**
  * Get the coordinates in all occupied boxes of the quadtrees a given agent
@@ -114,17 +121,45 @@ void CAgentVisionLoopFunctions::Reset() {
     m_tOtherAgentCoordinates.clear();
 }
 
+void CAgentVisionLoopFunctions::PreStep() {
+    start = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = start-end;
+
+
+    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
+               << std::endl;
+
+
+}
+
 
 /**
  * Get the coordinates of all agents and objects in the environment
  */
 void CAgentVisionLoopFunctions::PostStep() {
+    auto temp_end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
+
+    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
+               << std::endl;
+
+    end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = end-start;
+
+    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
+              << std::endl;
+
+
     /* Get the map of all pi-pucks from the space */
     CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
 /* Go through them */
     m_tObjectCoordinates.clear();
     m_tOtherAgentCoordinates.clear();
     m_tQuadTree.clear();
+    m_tAgentFrontiers.clear();
     for (CSpace::TMapPerType::iterator it = tFBMap.begin();
          it != tFBMap.end();
          ++it) {
@@ -151,6 +186,9 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        if(agent->getId() != "pipuck1") continue;
 //
         pushQuadTree(pcFB, agent);
+
+        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
+        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
 
 
     }
