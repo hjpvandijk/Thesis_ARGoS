@@ -20,12 +20,10 @@ class Agent {
 public:
     std::string id{};
     Coordinate position;
-//    argos::CQuaternion heading;
     argos::CRadians heading;
     argos::CRadians targetHeading;
     double speed{};
     Radio wifi;
-//    double lastRangeReadings = 2;
     static constexpr double num_sensors = 4;
     double lastRangeReadings[static_cast<int>(num_sensors)] = {};
 
@@ -156,8 +154,6 @@ private:
     argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
     argos::CVector2 calculateAgentAlignmentVector();
     argos::CVector2 calculateUnexploredFrontierVector();
-
-    void updatePheromones();
 
     std::vector<std::string> *messages;
 
