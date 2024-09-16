@@ -61,7 +61,7 @@ namespace quadtree {
          * @param value
          */
         void add(const QuadNode &value) {
-            add(mRoot.get(), 0, mBox, value);
+            add(mRoot.get(), mBox, value);
         }
 
         void remove(const QuadNode &value) const{
@@ -329,13 +329,13 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 return;
             }
 
-            std::function<void(const Cell *, const Box &, int)> traverse;
-            traverse = [&](const Cell *cell, const Box &box, int depth) {
+            std::function<void(const Cell *, const Box &)> traverse;
+            traverse = [&](const Cell *cell, const Box &box) {
                 if (cell == nullptr) return;
 
                 file << box.left << " " << box.top << " " << box.size << " " << "\n";
 
-                // Write the bounding box, occupancy and depth of this cell to the file
+                // Write the bounding box, it's size, and occupancy of this cell to the file
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
                 file << box.left << " " << box.top << " " << box.size << " " << cell->quadNode.occupancy << " " << "\n";
@@ -343,12 +343,12 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 // Traverse the children
                 for (int i = 0; i < 4; ++i) {
                     if (cell->children[i]) {
-                        traverse(cell->children[i].get(), computeBox(box, i), depth + 1);
+                        traverse(cell->children[i].get(), computeBox(box, i));
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0);
+            traverse(mRoot.get(), mBox);
             file.close();
         }
 
@@ -356,17 +356,17 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @brief Create a vector of strings from the quadtree
          */
         void toStringVector(std::vector<std::string> *strings) {
-            std::function<void(const Cell *, const Box &, int, int &, std::string &)> traverse;
+            std::function<void(const Cell *, const Box &, int &, std::string &)> traverse;
             std::string grouped_message = "";
             grouped_message.clear();
             int counter = 0;
 
-            traverse = [&](const Cell *cell, const Box &box, int depth, int &counter, std::string &grouped_message) {
+            traverse = [&](const Cell *cell, const Box &box, int &counter, std::string &grouped_message) {
                 if (cell == nullptr) return;
 
                 bool allSameOccupancy = false;
 
-                // Write the bounding box, occupancy and depth of this cell to the file
+                // Write the bounding box, it's size, and occupancy of this cell to the file
                     // If the occupancy is ANY, we don't need to store it, as the children will have new info
                     // If the occupancy is UNKNOWN, we don't need to store it, as a child not existing will also yield in an UNKNOWN
 //                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
@@ -399,13 +399,13 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                     // Traverse the children
                     for (int i = 0; i < 4; i++) {
                         if (cell->children[i]) {
-                            traverse(cell->children[i].get(), computeBox(box, i), depth + 1, counter, grouped_message);
+                            traverse(cell->children[i].get(), computeBox(box, i), counter, grouped_message);
                         }
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0, counter, grouped_message);
+            traverse(mRoot.get(), mBox, counter, grouped_message);
             //If there is an incomplete group, also send it.
             if(!grouped_message.empty()){
                 grouped_message.pop_back(); //Delete the last delimiter
@@ -419,8 +419,8 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          */
         std::vector<std::tuple<Box, int, double>> getAllBoxes() {
             std::vector<std::tuple<Box, int, double>> boxesAndOccupancyAndTicks = {};
-            std::function<void(const Cell *, const Box &, int, std::vector<std::tuple<Box, int, double>> *)> traverse;
-            traverse = [&](const Cell *cell, const Box &box, int depth,
+            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, int, double>> *)> traverse;
+            traverse = [&](const Cell *cell, const Box &box,
                            std::vector<std::tuple<Box, int, double>> *boxesAndOccupancyAndTicks) {
                 if (cell == nullptr) return;
                 bool allSameOccupancy = false;
@@ -445,13 +445,13 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 if (!allSameOccupancy) {
                     for (int i = 0; i < 4; i++) {
                         if (cell->children[i]) {
-                            traverse(cell->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancyAndTicks);
+                            traverse(cell->children[i].get(), computeBox(box, i), boxesAndOccupancyAndTicks);
                         }
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0, &boxesAndOccupancyAndTicks);
+            traverse(mRoot.get(), mBox, &boxesAndOccupancyAndTicks);
 
 
             return boxesAndOccupancyAndTicks;
@@ -606,11 +606,10 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
         /**
          * @brief Add a value to the quadtree
          * @param cell
-         * @param depth
          * @param box
          * @param value
          */
-        void add(Cell *cell, std::size_t depth, const Box &box, const QuadNode &value) {
+        void add(Cell *cell, const Box &box, const QuadNode &value) {
             assert(cell != nullptr);
             assert(box.contains(value.coordinate));
 
@@ -665,7 +664,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                     //If the to be added occupancy is the same as the parent, and the visited time is not too far apart, we can skip adding.
                     if (cell->quadNode.visitedAtS == -1 || !(value.occupancy == cell->quadNode.occupancy && value.visitedAtS - cell->quadNode.visitedAtS <= MaxAllowedVisitedTimeDiffS)) {
                         split(cell, box);
-                        add(cell, depth, box, value);
+                        add(cell, box, value);
                     }
                 }
             } else {
@@ -719,7 +718,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                                 newChildNode.occupancy = value.occupancy;
 
                                 //Add to current cell, so that it will be placed in the proper child and checked for optimization later.
-                                add(cell, depth, box, newChildNode);
+                                add(cell, box, newChildNode);
 
                             }
                         }
@@ -732,7 +731,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                     // Add the value in a child if the value is entirely contained in it
                     assert(i != -1 && "A value should be contained in a quadrant");
                     assert(i != 4 && "A value should not be the same as the center of the box");
-                    add(cell->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
+                    add(cell->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
 
 //                Check if all children have the same occupancy
                     Occupancy firstOccupancy = UNKNOWN;
@@ -828,7 +827,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
 
                     auto quadNode = QuadNode{childBoxCenter, cell->quadNode.occupancy,
                                              cell->quadNode.visitedAtS};
-                    add(cell->children[static_cast<std::size_t>(i)].get(), 6, childBox, quadNode);
+                    add(cell->children[static_cast<std::size_t>(i)].get(), childBox, quadNode);
                 }
             }
             cell->quadNode = QuadNode{box.getCenter(), ANY, 0};
