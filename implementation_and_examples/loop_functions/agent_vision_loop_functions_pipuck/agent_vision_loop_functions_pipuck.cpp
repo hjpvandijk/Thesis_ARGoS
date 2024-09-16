@@ -100,25 +100,15 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
  */
 
 void CAgentVisionLoopFunctions::Reset() {
-    /*
-     * Clear all the waypoint vectors
-     */
-    /* Get the map of all pi-pucks from the space */
-//    CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
-    /* Go through them */
-//    for (CSpace::TMapPerType::iterator it = tFBMap.begin();
-//         it != tFBMap.end();
-//         ++it) {
-//        /* Create a pointer to the current pi-puck */
-//        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it->second);
-//
-//        findAndPushObjectCoordinates(pcFB);
-//
-//
-//    }
-
     m_tObjectCoordinates.clear();
     m_tOtherAgentCoordinates.clear();
+    m_tAgentCoordinates.clear();
+    m_tAgentBestFrontierCoordinate.clear();
+    m_tQuadTree.clear();
+    m_tAgentElapsedTicks.clear();
+    m_tAgentFrontiers.clear();
+    m_tAgentFrontierRegions.clear();
+
 }
 
 void CAgentVisionLoopFunctions::PreStep() {
@@ -129,7 +119,6 @@ void CAgentVisionLoopFunctions::PreStep() {
 
     argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
                << std::endl;
-
 
 }
 
@@ -179,30 +168,20 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         findAndPushObjectCoordinates(pcFB, agent);
         findAndPushOtherAgentCoordinates(pcFB, agent);
-//
+
         Coordinate pos = agent->position.FromOwnToArgos();
         CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
         m_tAgentCoordinates[pcFB] = agentPos;
-//        if(agent->getId() != "pipuck1") continue;
-//
         pushQuadTree(pcFB, agent);
 
-        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
-        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
+//        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
+//        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
 
 
     }
 
 
     CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
-//    for(CSpace::TMapPerType::iterator it = theMap.begin();
-//        it != theMap.end();
-//        ++it) {
-//        argos::LOG << "box name: " << it->first << std::endl;
-//        CBoxEntity *box = any_cast<CBoxEntity*>(it->second);
-//
-//    }
-
     for(auto spawnObj: spawnableObjects) {
         int spawn_time = std::get<2>(spawnObj);
         if(loop_function_steps == spawn_time) {
@@ -213,13 +192,6 @@ void CAgentVisionLoopFunctions::PostStep() {
             GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
         }
     }
-
-//    if(loop_function_steps == 2) {
-//        CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
-//        GetSpace().AddEntity(*box);
-//        CEmbodiedEntity* embodiedEntity = &box->GetEmbodiedEntity();
-//        GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
-//    }
 
     loop_function_steps++;
 }
