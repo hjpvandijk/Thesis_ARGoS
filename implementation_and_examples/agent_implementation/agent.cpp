@@ -665,12 +665,9 @@ void Agent::calculateNextPosition() {
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::vector<std::string> quadTreeToStrings = {};
-//    argos::RLOG << "Sending quadtree" << std::endl;
     this->quadtree->toStringVector(&quadTreeToStrings);
-//    this->quadtree->toStringVectorSerialized(&quadTreeToStrings);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
-//        argos::RLOG << "Sending of length: " << str.length() << std::endl;
     }
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
