@@ -117,11 +117,63 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
 }
 
 /**
+ * Add occupied coordinates between two coordinates
+ * @param coordinate1
+ * @param coordinate2
+ */
+void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
+    argos::RLOG << "ADDING OCCUPIED AREA BETWEEN" << std::endl;
+    double x = coordinate1.x;
+    double y = coordinate1.y;
+    double dx = coordinate2.x - coordinate1.x;
+    double dy = coordinate2.y - coordinate1.y;
+    double distance = sqrt(dx * dx + dy * dy);
+    double stepSize = this->quadtree->getSmallestBoxSize();
+    int nSteps = std::ceil(distance / stepSize);
+    double stepX = dx / nSteps;
+    double stepY = dy / nSteps;
+
+    for (int s = 0; s < nSteps; s++) {
+        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+        x += stepX;
+        y += stepY;
+    }
+}
+
+bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2){
+    double x = coordinate1.x;
+    double y = coordinate1.y;
+    double dx = coordinate2.x - coordinate1.x - 0.02; // Subtract a small margin to detecting boxes the coordinates belong to
+    double dy = coordinate2.y - coordinate1.y - 0.02;
+    double distance = sqrt(dx * dx + dy * dy);
+    double stepSize = this->quadtree->getSmallestBoxSize();
+    int nSteps = std::ceil(distance / stepSize);
+    double stepX = dx / nSteps;
+    double stepY = dy / nSteps;
+
+    x+=stepX*0.1; // Add a small margin to detecting boxes the coordinates belong to
+    y+=stepY*0.1; // Add a small margin to detecting boxes the coordinates belong to
+
+
+    for (int s = 0; s < nSteps; s++) {
+        if(this->quadtree->getOccupanciesFromCoordinate(Coordinate{x, y}).front() == quadtree::Occupancy::OCCUPIED){
+            return true;
+        }
+        x += stepX;
+        y += stepY;
+    }
+    return false;
+}
+
+
+/**
  * Add occupied object location to the quadtree
  * @param objectCoordinate
  */
 void Agent::addObjectLocation(Coordinate objectCoordinate) {
-    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+    quadtree::Box objectBox = this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+    checkIfAgentFitsBetweenObstacles(objectBox);
+
 }
 
 /**
@@ -154,7 +206,9 @@ void Agent::checkForObstacles() {
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
-            if(!close_to_other_agent) addObjectLocation(object);
+            if(!close_to_other_agent){
+                addObjectLocation(object);
+            }
 
 
         } else {
@@ -164,6 +218,154 @@ void Agent::checkForObstacles() {
 
             Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
             addFreeAreaBetween(this->position, end_of_ray);
+        }
+    }
+}
+
+/**
+ * Check the area around the object to see if the agent fits between the object and other obstacles
+ * If the agent fits, do nothing
+ * If the agent does not fit, set that area as an obstacle.
+ * @param objectCoordinate
+ */
+void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) {
+    Coordinate objectCoordinate = objectBox.getCenter();
+    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
+                                                                                  4 * AGENT_SAFETY_RADIUS,
+                                                                                  this->elapsed_ticks /
+                                                                                  this->ticks_per_second);
+    //For each box, that is not the checked object, check if the agent fits between the object and the box
+    for (auto box: occupiedBoxes) {
+        if (box.contains(objectCoordinate)) {
+            continue;
+        }
+
+        Coordinate objectCorner{};
+        std::vector<Coordinate> objectEdges = {};
+        Coordinate boxCorner{};
+        std::vector<Coordinate> boxEdges = {};
+
+        //Check which corner of the object is closest to the box
+
+        //Check which direction the object is compared to the occupied box, and check the distance between the correct corners
+        auto center = box.getCenter();
+
+        argos::RLOG << "Object corners: " << objectBox.getTopLeft().x << ", " << objectBox.getTopLeft().y << " - " << objectBox.getCenter().x << ", " << objectBox.getCenter().y << " - " << objectBox.getRight() << ", " << objectBox.getBottom() << std::endl;
+        argos::RLOG << "Box corners: " << box.getTopLeft().x << ", " << box.getTopLeft().y << " - " << box.getCenter().x << ", " << box.getCenter().y << " - " << box.getRight() << ", " << box.getBottom() << std::endl;
+
+
+        // West
+        if (objectCoordinate.x < center.x) {
+            //Just West
+            if(objectCoordinate.y == center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+
+                boxCorner = Coordinate{box.getBottom(), box.left};
+                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+            }
+            // North West
+            else if (objectCoordinate.y > center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+
+                boxCorner = Coordinate{box.top, box.left};
+                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+            }
+                // South West
+            else if (objectCoordinate.y < center.y) {
+                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+
+                boxCorner = Coordinate{box.getBottom(), box.left};
+                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+            }
+                // Not in any direction
+            else {
+                continue;
+            }
+        }
+            // East
+        else if (objectCoordinate.x > center.x) {
+            //Just East
+            if(objectCoordinate.y == center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
+                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+
+                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+            }
+            // North East
+            else if (objectCoordinate.y > center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
+                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+
+                boxCorner = Coordinate{box.top, box.getRight()};
+                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+            }
+                // South East
+            else if (objectCoordinate.y < center.y) {
+                objectCorner = Coordinate{objectBox.top, objectBox.left};
+                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+
+                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+            }
+                // Not in any direction
+            else {
+                continue;
+            }
+        } else if (objectCoordinate.x == center.x) {
+            //Just North
+            if(objectCoordinate.y > center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+
+                boxCorner = Coordinate{box.top, box.getRight()};
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+            }
+            //Just South
+            else if(objectCoordinate.y < center.y) {
+                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+
+                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+            }
+            // Not in any direction
+            else {
+                continue;
+            }
+        }
+            // Not in any direction
+        else {
+            continue;
+        }
+
+        double distance = sqrt(pow(objectCorner.x - boxCorner.x, 2) + pow(objectCorner.y - boxCorner.y, 2));
+        if (distance < 0.01){ // If they are adjacent (with a small margin)
+            continue;
+        } else if (distance < AGENT_SAFETY_RADIUS) { // If the agent does not fit between the object and the box
+            argos::RLOG << "Corner: " << objectCorner.x << ", " << objectCorner.y << " - " << boxCorner.x << ", " << boxCorner.y << std::endl;
+            //Add the area between the object and the box as occupied if there is no occupied area between already
+            bool areaFree = true;
+            for(int edge_count = 0; edge_count < objectEdges.size(); edge_count++){
+                if(isObstacleBetween(objectEdges[edge_count], boxEdges[edge_count])){
+                    areaFree = false;
+                }
+            }
+            if(areaFree){
+                addOccupiedAreaBetween(objectCoordinate, box.getCenter());
+            }
+
         }
     }
 }

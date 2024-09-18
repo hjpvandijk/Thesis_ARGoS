@@ -109,14 +109,15 @@ public:
 
     double TURN_THRESHOLD_DEGREES = 2;
 
-    double OBJECT_AVOIDANCE_WEIGHT = 1;
+    double AGENT_ROBOT_DIAMETER = 0.08;
+
     double OBJECT_SAFETY_RADIUS = 0.1;
-    double AGENT_SAFETY_RADIUS = 0.1;
+    double AGENT_SAFETY_RADIUS = AGENT_ROBOT_DIAMETER + 0.1;
 
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
     double AGENT_COHESION_WEIGHT = 0;//0.23;
     double AGENT_AVOIDANCE_WEIGHT = 1.15;
-    double AGENT_ALIGNMENT_WEIGHT = 0.5;//0.5;
+    double AGENT_ALIGNMENT_WEIGHT = 1;//0.5;
     double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
 
     double FRONTIER_DISTANCE_WEIGHT = 0.2;//0.001;
@@ -125,8 +126,8 @@ public:
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
     double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RANGE = 2;
-    double AGENT_ALIGNMENT_RANGE = 1.5;
+    double AGENT_AVOIDANCE_RADIUS = 0.68;
+    double AGENT_ALIGNMENT_RADIUS = 1.5;
     double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS;
 
     Coordinate left_right_borders = {-10,10};
@@ -146,10 +147,12 @@ public:
 
 private:
     void checkForObstacles();
+    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox);
+    bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2);
 
     bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
     argos::CVector2 getVirtualWallAvoidanceVector();
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
+    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
     argos::CVector2 calculateAgentCohesionVector();
     argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
     argos::CVector2 calculateAgentAlignmentVector();
@@ -168,6 +171,7 @@ private:
 
     void addObjectLocation(Coordinate objectCoordinate);
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+    void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
 
 
 

@@ -50,17 +50,17 @@ namespace quadtree {
          * @param coordinate
          * @param occupancy
          */
-        void add(Coordinate coordinate, Occupancy occupancy, double visitedAtS) {
+        Box add(Coordinate coordinate, Occupancy occupancy, double visitedAtS) {
             auto node = QuadNode{coordinate, occupancy, visitedAtS};
-            add(node);
+            return add(node);
         }
 
         /**
          * @brief Add a QuadNode to the quadtreee
          * @param value
          */
-        void add(const QuadNode &value) {
-            add(mRoot.get(), mBox, value);
+        Box add(const QuadNode &value) {
+            return add(mRoot.get(), mBox, value);
         }
 
         void remove(const QuadNode &value) const {
@@ -598,7 +598,7 @@ namespace quadtree {
          * @param box
          * @param value
          */
-        void add(Cell *cell, const Box &box, const QuadNode &value) {
+        Box add(Cell *cell, const Box &box, const QuadNode &value) {
             assert(cell != nullptr);
             assert(box.contains(value.coordinate));
 
@@ -649,6 +649,7 @@ namespace quadtree {
                            newNode.occupancy == OCCUPIED && "new cell occupancy should be FREE or OCCUPIED");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
+                    return box;
                 }
                     // Otherwise, we split and we try again
                 else {
@@ -657,7 +658,7 @@ namespace quadtree {
                                                              value.visitedAtS - cell->quadNode.visitedAtS <=
                                                              MaxAllowedVisitedTimeDiffS)) {
                         split(cell, box);
-                        add(cell, box, value);
+                        return add(cell, box, value);
                     }
                 }
             } else {
@@ -710,7 +711,7 @@ namespace quadtree {
                                 newChildNode.occupancy = value.occupancy;
 
                                 //Add to current cell, so that it will be placed in the proper child and checked for optimization later.
-                                add(cell, box, newChildNode);
+                                return add(cell, box, newChildNode);
 
                             }
                         }
@@ -723,7 +724,7 @@ namespace quadtree {
                     // Add the value in a child if the value is entirely contained in it
                     assert(i != -1 && "A value should be contained in a quadrant");
                     assert(i != 4 && "A value should not be the same as the center of the box");
-                    add(cell->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
+                    return add(cell->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
 
 //                Check if all children have the same occupancy
                     Occupancy firstOccupancy = UNKNOWN;
@@ -779,6 +780,7 @@ namespace quadtree {
                 }
 
             }
+            return Box{};
         }
 
         /**
