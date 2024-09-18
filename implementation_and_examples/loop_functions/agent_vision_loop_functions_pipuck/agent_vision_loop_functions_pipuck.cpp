@@ -149,6 +149,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tOtherAgentCoordinates.clear();
     m_tQuadTree.clear();
     m_tAgentFrontiers.clear();
+    m_tAgentFreeAngles.clear();
     for (CSpace::TMapPerType::iterator it = tFBMap.begin();
          it != tFBMap.end();
          ++it) {
@@ -177,21 +178,25 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
 //        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
 
-
-    }
-
-
-    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
-    for(auto spawnObj: spawnableObjects) {
-        int spawn_time = std::get<2>(spawnObj);
-        if(loop_function_steps == spawn_time) {
-            CBoxEntity *box = new CBoxEntity("spawn_box" + std::to_string(spawn_time), std::get<0>(
-                    spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
-            GetSpace().AddEntity(*box);
-            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
-            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+//        m_tAgentFreeAngles[pcFB] = agent->freeAngles;
+        for(auto angle: agent->freeAngles) {
+            m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
+
     }
+
+
+//    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
+//    for(auto spawnObj: spawnableObjects) {
+//        int spawn_time = std::get<2>(spawnObj);
+//        if(loop_function_steps == spawn_time) {
+//            CBoxEntity *box = new CBoxEntity("spawn_box" + std::to_string(spawn_time), std::get<0>(
+//                    spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
+//            GetSpace().AddEntity(*box);
+//            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
+//            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+//        }
+//    }
 
     loop_function_steps++;
 }

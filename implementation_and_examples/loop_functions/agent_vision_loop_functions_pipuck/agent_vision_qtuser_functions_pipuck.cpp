@@ -1,3 +1,4 @@
+#include <set>
 #include "agent_vision_qtuser_functions_pipuck.h"
 #include "agent_vision_loop_functions_pipuck.h"
 
@@ -16,7 +17,27 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
+    for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
+         it != m_cAgVisLF.GetAgentFreeAngles().end();
+         ++it) {
+        for (argos::CDegrees angle: it->second) {
+//            CVector3 pos = it->first->GetEmbodiedEntity().GetOriginAnchor().Position;
+//            CQuaternion orientation = it->first->GetEmbodiedEntity().GetOriginAnchor().Orientation;
 
+            //Get start of the ray
+            CVector3 agent_pos = m_cAgVisLF.GetAgentCoordinates().at(it->first);
+
+            //Get the angle of the ray
+            argos::CRadians angle_rad = ToRadians(angle);
+
+            //Get the end of the ray
+            CVector3 ray_end = CVector3(agent_pos.GetX() + cos(angle_rad.GetValue()),
+                                        agent_pos.GetY() + sin(angle_rad.GetValue()), 0.02f);
+
+            CRay3 ray = CRay3(agent_pos, ray_end);
+            DrawRay(ray, CColor::BLUE);
+        }
+    }
 
     auto box = quadtree::Box(-5, 5, 10);
     quadtree::Quadtree *combinedTree = new quadtree::Quadtree(box);
@@ -102,8 +123,6 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         DrawText(it->second,
                  it->first->GetId()); // text
     }
-
-
 
 
 }

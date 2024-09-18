@@ -245,7 +245,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) {
         std::vector<Coordinate> objectEdges = {};
         Coordinate boxCorner{};
         std::vector<Coordinate> boxEdges = {};
-        
+
         //Check which direction the object is compared to the occupied box, and check the distance between the correct corners
         auto center = box.getCenter();
 
@@ -455,7 +455,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     }
 
-
+    this->freeAngles = freeAngles;
     if (freeAngles.empty()) return false;
 
 

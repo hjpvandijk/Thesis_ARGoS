@@ -12,6 +12,7 @@
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
+#include <set>
 
 
 
@@ -128,7 +129,7 @@ public:
     double AGENT_COHESION_RADIUS = 1.5;
     double AGENT_AVOIDANCE_RADIUS = 0.68;
     double AGENT_ALIGNMENT_RADIUS = 1.5;
-    double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS;
+    double OBJECT_AVOIDANCE_RADIUS = 1;
 
     Coordinate left_right_borders = {-10,10};
     Coordinate upper_lower_borders = {10,-10};
@@ -144,6 +145,7 @@ public:
 
     std::vector<quadtree::Box> current_frontiers;
     std::vector<std::vector<quadtree::Box>> current_frontier_regions;
+    std::set<argos::CDegrees> freeAngles;
 
 private:
     void checkForObstacles();
