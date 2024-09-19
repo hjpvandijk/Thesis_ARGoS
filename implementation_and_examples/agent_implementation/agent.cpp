@@ -388,6 +388,9 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
         freeAngles.insert(angle);
     }
 
+    double smallestOCLengthAt0 = MAXFLOAT;
+
+
     //For each occupied box, find the angles that are blocked relative to the agent
     for (auto box: occupiedBoxes) {
 
@@ -436,10 +439,15 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
         for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
             auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
 
+
             if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) &&
                 NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
                 if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
                     freeAngles.erase(angle);
+                    if (angle == argos::CDegrees(0)){
+                        smallestOCLengthAt0 = std::min(smallestOCLengthAt0, OC.Length());
+                    }
+
                 }
 
             } else if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) &&
@@ -447,13 +455,17 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
                 if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
                     freeAngles.erase(angle);
+                    smallestOCLengthAt0 = std::min(smallestOCLengthAt0, OC.Length());
                 }
             } else {
                 argos::LOGERR << "Error: Eta_q not within range" << std::endl;
             }
         }
 
+
     }
+
+    this->distanceToObjectInTargetDirection = smallestOCLengthAt0;
 
     this->freeAngles = freeAngles;
     if (freeAngles.empty()) return false;
@@ -472,6 +484,71 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
     return true;
+
+}
+
+void Agent::addSubTarget(argos::CRadians objectAvoidanceAngle, argos::CVector2 unexploredFrontierVectorCopy) {
+    argos::RLOG << "UnexploredFrontierVectorCopy: " << unexploredFrontierVectorCopy << std::endl;
+
+    //Start a line at the OCCUPIED cell in line between the agent and the frontier, in the direction of the perpendicularVector
+// Normalize the unexploredFrontierVector
+    unexploredFrontierVectorCopy.Normalize();
+    argos::RLOG << "UnexploredFrontierVectorCopy normalized: " << unexploredFrontierVectorCopy << std::endl;
+
+    argos::CVector2 perpendicularVector = unexploredFrontierVectorCopy;
+    perpendicularVector.Rotate(argos::CRadians::PI_OVER_TWO);
+    this->perpendicularVectorVisualization = perpendicularVector;
+    perpendicularVector.Normalize();
+    perpendicularVector *= this->quadtree->getSmallestBoxSize();
+
+// Scale the vector by OBJECT_AVOIDANCE_RANGE
+    unexploredFrontierVectorCopy *= this->distanceToObjectInTargetDirection;
+
+    argos::RLOG << "Agent position: " << this->position.x << ", " << this->position.y << std::endl;
+    argos::RLOG << "Distance to object in target direction: " << this->distanceToObjectInTargetDirection << std::endl;
+    argos::RLOG << "UnexploredFrontierVectorCopy scaled: " << unexploredFrontierVectorCopy << std::endl;
+
+// Calculate the start coordinates
+    Coordinate start1 = {this->position.x + unexploredFrontierVectorCopy.GetX(),
+                         this->position.y + unexploredFrontierVectorCopy.GetY()};
+    Coordinate start2 = {this->position.x + unexploredFrontierVectorCopy.GetX(),
+                         this->position.y + unexploredFrontierVectorCopy.GetY()};
+
+    quadtree::Occupancy occupancy1 = this->quadtree->getOccupanciesFromCoordinate(start1).front();
+    quadtree::Occupancy occupancy2 = this->quadtree->getOccupanciesFromCoordinate(start2).front();
+    lineVisualization.clear();
+    lineVisualization.push_back(start1);
+    lineVisualization.push_back(start2);
+
+    argos::RLOG << "Starting search" << std::endl;
+    while (occupancy1 == quadtree::Occupancy::OCCUPIED &&
+           occupancy2 == quadtree::Occupancy::OCCUPIED) { //While a FREE or UNKNOWN cell is not found
+        argos::RLOG << "STEP" << std::endl;
+        start1.x += perpendicularVector.GetX();
+        start1.y += perpendicularVector.GetY();
+
+        start2.x -= perpendicularVector.GetX();
+        start2.y -= perpendicularVector.GetY();
+
+        lineVisualization.push_back(start1);
+        lineVisualization.push_back(start2);
+
+        occupancy1 = this->quadtree->getOccupanciesFromCoordinate(start1).front();
+        occupancy2 = this->quadtree->getOccupanciesFromCoordinate(start2).front();
+    }
+    //If either one is not OCCUPIED, set a subtarget next to it, in the opposite direction of the unexploredFrontierVector
+    unexploredFrontierVectorCopy.Normalize();
+    unexploredFrontierVectorCopy *= this->quadtree->getSmallestBoxSize();
+    if (occupancy1 != quadtree::Occupancy::OCCUPIED) {
+        this->subTarget = {start1.x - unexploredFrontierVectorCopy.GetX(),
+                           start1.y - unexploredFrontierVectorCopy.GetY()};
+    } else if (occupancy2 != quadtree::Occupancy::OCCUPIED) {
+        this->subTarget = {start2.x - unexploredFrontierVectorCopy.GetX(),
+                           start2.y - unexploredFrontierVectorCopy.GetY()};
+    }
+
+
+
 
 }
 
@@ -822,31 +899,47 @@ void Agent::calculateNextPosition() {
     if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
     if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
-    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
-    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
-    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
-    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
 
-    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
-    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    argos::CVector2 total_vector = this->swarm_vector +
-                                   //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
-                                   virtualWallAvoidanceVector +
-                                   agentCohesionVector +
-                                   agentAvoidanceVector +
-                                   agentAlignmentVector +
-                                   unexploredFrontierVector;
-    if (total_vector.Length() != 0) total_vector.Normalize();
-
-    this->swarm_vector = total_vector;
+    argos::CVector2 total_vector = calculateTotalVector(this->swarm_vector,
+                                                        virtualWallAvoidanceVector,
+                                                        agentCohesionVector,
+                                                        agentAvoidanceVector,
+                                                        agentAlignmentVector,
+                                                        unexploredFrontierVector);
     argos::CRadians objectAvoidanceAngle;
-    bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
+    bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, total_vector.Angle());
+
     //If there is not a free angle to move to, do not move
     if (!isThereAFreeAngle) {
         this->force_vector = {0, 0};
     } else {
+        // If we are still underway to the same frontier.
+        if (this->previousBestFrontier == this->currentBestFrontier) {
+            //If we reached the subtarget, unset the previous Frontier
+            argos::CVector2 vectorToSubTarget = argos::CVector2(this->subTarget.x, this->subTarget.y) -
+                                                argos::CVector2(this->position.x, this->position.y);
+            //Check if the distance is smaller than a box
+            if (vectorToSubTarget.Length() < this->quadtree->getSmallestBoxSize()*2) {
+                this->previousBestFrontier = this->subTarget;
+                this->subTarget = {0, 0};
+                //If we haven't reached the subtarget yet, keep going
+            } else {
+                // Calculate vector to subtarget
+                total_vector = calculateTotalVector(this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
+                                                    agentAvoidanceVector, agentAlignmentVector, vectorToSubTarget);
+                calculateObjectAvoidanceAngle(&objectAvoidanceAngle, total_vector.Angle());
+            }
 
+            //If the direction of the target is pretty much completely blocked,
+        } else if (std::abs(ToDegrees(objectAvoidanceAngle).GetValue()) > 89) {
+            addSubTarget(objectAvoidanceAngle, unexploredFrontierVector);
+            argos::CVector2 vectorToSubTarget = argos::CVector2(this->subTarget.x, this->subTarget.y) -
+                                                argos::CVector2(this->position.x, this->position.y);
+            total_vector = calculateTotalVector(this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
+                                                agentAvoidanceVector, agentAlignmentVector, vectorToSubTarget);
+            calculateObjectAvoidanceAngle(&objectAvoidanceAngle, total_vector.Angle());
+            this->previousBestFrontier = this->currentBestFrontier;
+        }
 
 // According to the paper, the formula should be:
 //        this->force_vector = {(this->swarm_vector.GetX()) *
@@ -861,18 +954,43 @@ void Agent::calculateNextPosition() {
 // However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
 // This also seems to give better performance.
 // Edit: contacted the writer, he said below is correct
-        this->force_vector = {(this->swarm_vector.GetX()) *
+        this->force_vector = {(total_vector.GetX()) *
                               argos::Cos(objectAvoidanceAngle) -
-                              (this->swarm_vector.GetY()) *
+                              (total_vector.GetY()) *
                               argos::Sin(objectAvoidanceAngle),
-                              (this->swarm_vector.GetX()) *
+                              (total_vector.GetX()) *
                               argos::Sin(objectAvoidanceAngle) +
-                              (this->swarm_vector.GetY()) *
+                              (total_vector.GetY()) *
                               argos::Cos(objectAvoidanceAngle)};
 
         argos::CRadians angle = this->force_vector.Angle();
         this->targetHeading = angle;
     }
+    this->swarm_vector = total_vector;
+}
+
+argos::CVector2 Agent::calculateTotalVector(argos::CVector2 prev_total_vector, argos::CVector2 virtualWallAvoidanceVector,
+                                            argos::CVector2 agentCohesionVector,
+                                            argos::CVector2 agentAvoidanceVector,
+                                            argos::CVector2 agentAlignmentVector,
+                                            argos::CVector2 unexploredFrontierVector) {
+    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
+    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
+    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
+    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
+
+    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
+    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+    argos::CVector2 total_vector = prev_total_vector +
+                                   virtualWallAvoidanceVector +
+                                   agentCohesionVector +
+                                   agentAvoidanceVector +
+                                   agentAlignmentVector +
+                                   unexploredFrontierVector;
+    if (total_vector.Length() != 0) total_vector.Normalize();
+
+    return total_vector;
 }
 
 void Agent::doStep() {

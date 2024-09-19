@@ -129,7 +129,7 @@ public:
     double AGENT_COHESION_RADIUS = 1.5;
     double AGENT_AVOIDANCE_RADIUS = 0.68;
     double AGENT_ALIGNMENT_RADIUS = 1.5;
-    double OBJECT_AVOIDANCE_RADIUS = 1;
+    double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
     Coordinate left_right_borders = {-10,10};
     Coordinate upper_lower_borders = {10,-10};
@@ -139,6 +139,10 @@ public:
     double ANGLE_INTERVAL_STEPS = 360;
 
     Coordinate currentBestFrontier = {0,0};
+    Coordinate previousBestFrontier = {0,0};
+    Coordinate subTarget = {0,0};
+    double distanceToObjectInTargetDirection = 0;
+
 
     double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
@@ -146,13 +150,24 @@ public:
     std::vector<quadtree::Box> current_frontiers;
     std::vector<std::vector<quadtree::Box>> current_frontier_regions;
     std::set<argos::CDegrees> freeAngles;
+    argos::CVector2 perpendicularVectorVisualization;
+    std::vector<Coordinate> lineVisualization;
 
 private:
     void checkForObstacles();
     void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox);
     bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2);
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    argos::CVector2 calculateTotalVector(argos::CVector2 prev_total_vector,
+                                         argos::CVector2 virtualWallAvoidanceVector,
+                                         argos::CVector2 agentCohesionVector,
+                                         argos::CVector2 agentAvoidanceVector,
+                                         argos::CVector2 agentAlignmentVector,
+                                         argos::CVector2 unexploredFrontierVector);
+
+
+        bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    void addSubTarget(argos::CRadians objectAvoidanceAngle, argos::CVector2 unexploredFrontierVectorCopy);
     argos::CVector2 getVirtualWallAvoidanceVector();
     bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
     argos::CVector2 calculateAgentCohesionVector();
