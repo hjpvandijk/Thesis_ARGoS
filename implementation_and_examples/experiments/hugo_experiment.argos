@@ -185,7 +185,7 @@
 
 
         <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">
-            <body position="0,-3,0" orientation="-45,0,0"/>
+            <body position="1,-3,0" orientation="-45,0,0"/>
             <controller config="ppc"/>
             <devices>
 
