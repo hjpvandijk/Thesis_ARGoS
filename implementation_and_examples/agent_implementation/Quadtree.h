@@ -280,7 +280,7 @@ namespace quadtree {
          */
         Occupancy getOccupanciesFromCoordinate(Coordinate coordinate) const {
             QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
-            return node.occupancy;
+            return quadNode.occupancy;
         }
 
         /**
@@ -289,7 +289,7 @@ namespace quadtree {
          */
         bool isCoordinateUnknown(Coordinate coordinate) const {
             QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
-            return (quadNode.occupancy == UNKNOWN)
+            return (quadNode.occupancy == UNKNOWN);
         }
 
         /**

@@ -110,7 +110,7 @@ public:
     double TURN_THRESHOLD_DEGREES = 2;
 
     double OBJECT_SAFETY_RADIUS = 0.1;
-    double AGENT_SIZE = 08;
+    double AGENT_SIZE = 0.08;
     double AGENT_SAFETY_RADIUS = AGENT_SIZE + 0.1;
 
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
