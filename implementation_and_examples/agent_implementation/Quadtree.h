@@ -278,13 +278,9 @@ namespace quadtree {
          * Returns the QuadNode containing the coordinate
          * @param coordinate
          */
-        std::vector<Occupancy> getOccupanciesFromCoordinate(Coordinate coordinate) const {
-            auto QuadNodes = std::vector<QuadNode>();
-            getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate, QuadNodes);
-            std::vector<Occupancy> occupancies;
-            for (auto node: QuadNodes)
-                occupancies.push_back(node.occupancy);
-            return occupancies;
+        Occupancy getOccupanciesFromCoordinate(Coordinate coordinate) const {
+            QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
+            return quadNode.occupancy;
         }
 
         /**
@@ -292,14 +288,8 @@ namespace quadtree {
          * @param coordinate
          */
         bool isCoordinateUnknown(Coordinate coordinate) const {
-            auto QuadNodes = std::vector<QuadNode>();
-            getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate, QuadNodes);
-            assert(QuadNodes.size() == 1);
-            for (auto node: QuadNodes) {
-                if (node.occupancy == UNKNOWN)
-                    return true;
-            }
-            return false;
+            QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
+            return (quadNode.occupancy == UNKNOWN);
         }
 
         /**
@@ -942,17 +932,16 @@ namespace quadtree {
          * @param box
          * @param queryCoordinate
          * */
-        void getQuadNodesFromCoordinate(Cell *node, const Box &box, const Coordinate &queryCoordinate,
-                                        std::vector<QuadNode> &QuadNodes) const {
+        QuadNode getQuadNodeFromCoordinate(Cell *node, const Box &box, const Coordinate &queryCoordinate) const {
             assert(node != nullptr);
             assert(box.contains(queryCoordinate));
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
                 if (node->quadNode.visitedAtS == -1) {
-                    QuadNodes.push_back(QuadNode{queryCoordinate, UNKNOWN, 0});
+                    return QuadNode{queryCoordinate, UNKNOWN, 0};
                 } else {
                     assert(node->quadNode.occupancy != ANY && "leaf occupancy should never be ANY");
-                    QuadNodes.push_back(node->quadNode);
+                    return node->quadNode;
                 }
                 // If it is not a leaf node, find the nested nodes, and search them.
             } else {
@@ -965,16 +954,16 @@ namespace quadtree {
                         for (int j = 0; j < node->children.size(); j++) {
                             auto childBox = computeBox(box, static_cast<int>(j));
 
-                            getQuadNodesFromCoordinate(node->children[j].get(), childBox, queryCoordinate, QuadNodes);
+                            return getQuadNodeFromCoordinate(node->children[j].get(), childBox, queryCoordinate);
                         }
                     } else {
                         auto childBox = computeBox(box, static_cast<int>(i));
 
-                        getQuadNodesFromCoordinate(node->children[i].get(), childBox, queryCoordinate, QuadNodes);
+                        return getQuadNodeFromCoordinate(node->children[i].get(), childBox, queryCoordinate);
                     }
                     //Else the nested nodes have the same occupancy, so parent node can be returned.
                 } else {
-                    QuadNodes.push_back(node->quadNode);
+                    return node->quadNode;
                 }
 
             }
