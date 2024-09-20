@@ -963,8 +963,8 @@ namespace quadtree {
                 } else {
                     return node->quadNode;
                 }
-
             }
+            return QuadNode{queryCoordinate, UNKNOWN, 0};
         }
 
         void findAllIntersections(Cell *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
