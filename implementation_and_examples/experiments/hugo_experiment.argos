@@ -111,10 +111,11 @@
     <!-- ****************** -->
     <!--    <loop_functions library="build/loop_functions/trajectory_loop_functions_pipuck/libtrajectory_loop_functions_pipuck"-->
     <!--                    label="trajectory_loop_functions_pipuck" />-->
-<!--    <loop_functions library="build/loop_functions/coverage_loop_functions_pipuck/libcoverage_loop_functions_pipuck"-->
-<!--                    label="coverage_loop_functions_pipuck"/>-->
-    <loop_functions library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
-                    label="agent_vision_loop_functions_pipuck"/>
+    <!--    <loop_functions library="build/loop_functions/coverage_loop_functions_pipuck/libcoverage_loop_functions_pipuck"-->
+    <!--                    label="coverage_loop_functions_pipuck"/>-->
+    <loop_functions
+            library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
+            label="agent_vision_loop_functions_pipuck"/>
     <!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
     <!--                        label="radios_loop_functions" />-->
     <!--    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"-->
@@ -184,18 +185,18 @@
 
 
         <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">
-            <body position="0,-3,0" orientation="-45,0,0"/>
+            <body position="1,-3,0" orientation="-45,0,0"/>
             <controller config="ppc"/>
             <devices>
 
             </devices>
         </pipuck>
 
-                <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
-                    <body position="-1,2,0" orientation="85,0,0"/>
-                    <controller config="ppc"/>
+        <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-1,2,0" orientation="85,0,0"/>
+            <controller config="ppc"/>
 
-                </pipuck>
+        </pipuck>
 
 
     </arena>
@@ -251,12 +252,12 @@
     -->
     <visualization>
         <qt-opengl>
-                       <user_functions
+            <user_functions
                     library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
                     label="agent_vision_qtuser_functions_pipuck"/>
             <camera>
                 <placements>
-                  <placement index="0" position="0,0,10" look_at="0,0,0"
+                    <placement index="0" position="0,0,10" look_at="0,0,0"
                                up="0.721522,-3.4075e-17,0.692391" lens_focal_length="25"/>
                 </placements>
             </camera>

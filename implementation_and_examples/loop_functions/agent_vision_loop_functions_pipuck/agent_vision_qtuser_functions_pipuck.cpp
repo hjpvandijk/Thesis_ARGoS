@@ -17,48 +17,6 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
 
-//    for(CAgentVisionLoopFunctions::TCoordinateMap ::const_iterator it = m_cAgVisLF.GetOtherAgentCoordinates().begin();
-//        it != m_cAgVisLF.GetOtherAgentCoordinates().end();
-//        ++it){
-//        DrawCoordinates(it->second, CColor::BLUE);
-//    }
-
-//    for (std::map<CPiPuckEntity *, std::vector<quadtree::Box>>::const_iterator it = m_cAgVisLF.GetAgentFrontiers().begin();
-//         it != m_cAgVisLF.GetAgentFrontiers().end();
-//         ++it) {
-//        for (auto frontier: it->second) {
-//            Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
-//            CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
-//            DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
-//                    CColor::BROWN);
-//
-//        }
-//    }
-
-    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
-         it != m_cAgVisLF.GetAgentFrontierRegions().end();
-         ++it) {
-        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
-                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
-        int i = 0;
-        for (auto frontierRegion: it->second) {
-
-            //Assign a differnet color to every frontierRegion
-            CColor color = colors[i];
-
-
-            for (auto frontier: frontierRegion) {
-                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
-                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
-
-
-                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
-                        color);
-            }
-            i++;
-            if (i > colors.size()) i = 0;
-        }
-    }
 
     auto box = quadtree::Box(-5, 5, 10);
     quadtree::Quadtree *combinedTree = new quadtree::Quadtree(box);
@@ -97,9 +55,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
         double currentTimeS = m_cAgVisLF.globalElapsedTicks;
         double pheromone = 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
-//            argos::LOG << "Pheromone: " << agent_ticks << " - " << ticks << " = " << agent_ticks - ticks << " = " << pheromone << std::endl;
 
-//        if(pheromone*255<253) continue;
         Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
         CVector3 pos = CVector3(boxCenterArgos.x, boxCenterArgos.y, 0.02f);
 
@@ -115,32 +71,16 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         std::vector<CVector2> posVec = {topLeftVec, topRightVec, bottomRightVec, bottomLeftVec};
 
         CColor color = CColor::GRAY80;
-        bool fill = false;
+        bool fill = true;
         if (occupancy == quadtree::Occupancy::OCCUPIED) {
             color = CColor::RED;
-            fill = true;
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
-//                DrawCircle(pos, CQuaternion(), 0.25f, CColor::MAGENTA);
-//            if (currentTimeS > 11.4) argos::LOG << "Plotting occupied" << std::endl;
 
         } else if (occupancy == quadtree::Occupancy::FREE) {
             color = CColor::GREEN;
-//                argos::LOG << "Green: " << pheromone*255 << std::endl;
             color.SetAlpha(UInt8(pheromone * 255));
-//                color.SetAlpha(127);
-            fill = true;
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
-//            if (currentTimeS > 11.4)
-//                argos::LOG << "Plotting " << box.getCenter().x << " " << box.getCenter().y << " of size "
-//                           << box.getSize() << " with pheromone " << pheromone << " = alpha( " << color.GetAlpha()
-//                           << " visited at time " << visitedTimeS << std::endl;
         }
-
-//        if (box.getCenter().x == 1.484375 && box.getCenter().y == 0.078125) {
-//            DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
-//            argos::LOG <<"DRaw outline" << std::endl;
-//        }
-
 
     }
 
@@ -157,20 +97,11 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     for (std::map<CPiPuckEntity *, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
          it != m_cAgVisLF.GetAgentCoordinates().end();
          ++it) {
-////        DrawBox(it->second, CQuaternion(), 0.1f, CColor::GRAY50);
-////        DrawBox(it->second, CQuaternion(), CVector3(4, 4, 0), CColor::GRAY80);
-//        DrawCircle(it->second, CQuaternion(), 0.5f, CColor::GRAY80);
 
         //Draw IDs
         DrawText(it->second,
                  it->first->GetId()); // text
     }
-//    for (CAgentVisionLoopFunctions::TCoordinateMap::const_iterator it = m_cAgVisLF.GetObjectCoordinates().begin();
-//         it != m_cAgVisLF.GetObjectCoordinates().end();
-//         ++it) {
-//        DrawCoordinates(it->second, CColor::RED);
-//    }
-
 
 
 

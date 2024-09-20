@@ -307,14 +307,14 @@ argos::CVector2 Agent::getVirtualWallAvoidanceVector(){
 
 }
 
-bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation) {
+bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range) {
     int nAgentsWithinRange = 0;
     for (const auto &agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(agentLocation.second.x, agentLocation.second.y)
                 - argos::CVector2(this->position.x, this->position.y);
 
-        if (vectorToOtherAgent.Length() < AGENT_AVOIDANCE_RANGE) { //TODO: make different for cohesion and separation
+        if (vectorToOtherAgent.Length() < range) { //TODO: make different for cohesion and separation
             averageNeighborLocation->x += agentLocation.second.x;
             averageNeighborLocation->y += agentLocation.second.y;
             nAgentsWithinRange++;
@@ -334,7 +334,7 @@ bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation) {
 argos::CVector2 Agent::calculateAgentCohesionVector() {
     Coordinate averageNeighborLocation = {0, 0};
 
-    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation);
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, AGENT_COHESION_RADIUS);
     if (!neighborsWithinRange) {
         return {0, 0};
     }
@@ -356,7 +356,19 @@ argos::CVector2 Agent::calculateAgentCohesionVector() {
  */
 argos::CVector2 Agent::calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector) {
 
-    return agentCohesionVector * -1;
+    Coordinate averageNeighborLocation = {0, 0};
+
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, AGENT_AVOIDANCE_RADIUS);
+    if (!neighborsWithinRange) {
+        return {0, 0};
+    }
+
+    //Create a vector between this agent and the average position of the agents within range
+    argos::CVector2 vectorToOtherAgents =
+            argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
+            - argos::CVector2(this->position.x, this->position.y);
+
+    return vectorToOtherAgents * -1;
 }
 
 /**
@@ -378,7 +390,7 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
         double agentSpeed = agentVelocity.second.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
                                              - argos::CVector2(this->position.x, this->position.y);
-        if (vectorToOtherAgent.Length() < AGENT_ALIGNMENT_RANGE) {
+        if (vectorToOtherAgent.Length() < AGENT_ALIGNMENT_RADIUS) {
             alignmentVector += agentVector * agentSpeed;
             nAgentsWithinRange++;
         }
@@ -681,12 +693,9 @@ void Agent::calculateNextPosition() {
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::vector<std::string> quadTreeToStrings = {};
-//    argos::RLOG << "Sending quadtree" << std::endl;
     this->quadtree->toStringVector(&quadTreeToStrings);
-//    this->quadtree->toStringVectorSerialized(&quadTreeToStrings);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
-//        argos::RLOG << "Sending of length: " << str.length() << std::endl;
     }
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +

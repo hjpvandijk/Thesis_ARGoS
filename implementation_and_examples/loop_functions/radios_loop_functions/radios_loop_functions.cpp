@@ -22,7 +22,7 @@ namespace argos {
             pcNode1 = dynamic_cast<CPiPuckEntity*>(&GetSpace().GetEntity("pipuck2"));
          }
          catch(CARGoSException& ex) {
-            THROW_ARGOSEXCEPTION_NESTED("Node was not added to the simulator", ex);
+            THROW_ARGOSEXCEPTION_NESTED("Cell was not added to the simulator", ex);
          }
          if(pcNode0 == nullptr) {
             THROW_ARGOSEXCEPTION("pipuck1 was not a prototype");

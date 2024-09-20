@@ -31,8 +31,7 @@ namespace quadtree {
         }
 
         template<class Archive>
-        void serialize(Archive & archive)
-        {
+        void serialize(Archive &archive) {
             archive(coordinate, occupancy, visitedAtS);
         }
 
@@ -42,8 +41,8 @@ namespace quadtree {
 
     public:
         Quadtree(const Box &box) :
-                mBox(box), mRoot(std::make_unique<Node>()) {
-            mRoot->values.push_back(QuadNode{box.getCenter(), UNKNOWN, 0});
+                mBox(box), mRoot(std::make_unique<Cell>()) {
+            mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, 0};
         }
 
         /**
@@ -61,10 +60,10 @@ namespace quadtree {
          * @param value
          */
         void add(const QuadNode &value) {
-            add(mRoot.get(), 0, mBox, value);
+            add(mRoot.get(), mBox, value);
         }
 
-        void remove(const QuadNode &value) const{
+        void remove(const QuadNode &value) const {
             remove(mRoot.get(), mBox, value);
         }
 
@@ -111,35 +110,37 @@ namespace quadtree {
 //        }
 
 
-void processBox(const Box& box, std::vector<Box>& frontierBoxes, int current_quadrant) const {
-    if (box.size == getSmallestBoxSize()) {
-        if (isMooreNeighbourUnknown(box, current_quadrant)) {
-            frontierBoxes.push_back(box);
-        }
-    } else {
-        for (int i = 0; i < 4; i++) {
-            if(current_quadrant + i != 3){  //Only process the boxes that are at the outer edges of the queried box
-                Box childBox = computeBox(box, i);
-                processBox(childBox, frontierBoxes, i);
+        void processBox(const Box &box, std::vector<Box> &frontierBoxes, int current_quadrant) const {
+            if (box.size == getSmallestBoxSize()) {
+                if (isMooreNeighbourUnknown(box, current_quadrant)) {
+                    frontierBoxes.push_back(box);
+                }
+            } else {
+                for (int i = 0; i < 4; i++) {
+                    if (current_quadrant + i !=
+                        3) {  //Only process the boxes that are at the outer edges of the queried box
+                        Box childBox = computeBox(box, i);
+                        processBox(childBox, frontierBoxes, i);
+                    }
+                }
+
             }
         }
 
-    }
-}
 /**
 * Returns all the frontier boxes surrounding the given coordinate within the given area size
 */
-std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) {
-    Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
-    std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
-    std::vector<Box> frontierBoxes;
+        std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) {
+            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+            std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
+            std::vector<Box> frontierBoxes;
 
-    for (const Box& exploredBox : exploredBoxes) {
-        processBox(exploredBox, frontierBoxes, -1);
-    }
+            for (const Box &exploredBox: exploredBoxes) {
+                processBox(exploredBox, frontierBoxes, -1);
+            }
 
-    return frontierBoxes;
-}
+            return frontierBoxes;
+        }
 
         /**
          * Find if at least one of the 8-connected moore neighboring quadnodes of a given box is unexplored.
@@ -152,7 +153,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
 
             //Only check the moore neighbours that are at the outer edges of the queried box
             //So only check if current quadrant in the WEST (left)
-            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==2) {
+            if (current_quadrant == -1 || current_quadrant == 0 || current_quadrant == 2) {
                 //See if coordinate to the left is in the quadtree and get its occupancy
                 Coordinate left = Coordinate{box.getCenter().x - box.size, box.getCenter().y};
                 if (mBox.contains(left)) {
@@ -163,7 +164,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
             //So only check if current quadrant in the EAST (right)
-            if(current_quadrant==-1 || current_quadrant==1 || current_quadrant==3) {
+            if (current_quadrant == -1 || current_quadrant == 1 || current_quadrant == 3) {
                 //See if coordinate to the right is in the quadtree and get its occupancy
                 Coordinate right = Coordinate{box.getCenter().x + box.size, box.getCenter().y};
                 if (mBox.contains(right)) {
@@ -174,7 +175,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
             //So only check if current quadrant in the NORTH (top)
-            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==1) {
+            if (current_quadrant == -1 || current_quadrant == 0 || current_quadrant == 1) {
                 //See if coordinate to the top is in the quadtree and get its occupancy
                 Coordinate top = Coordinate{box.getCenter().x, box.getCenter().y + box.size};
                 if (mBox.contains(top)) {
@@ -185,7 +186,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
             //So only check if current quadrant in the SOUTH (bottom)
-            if(current_quadrant==-1 || current_quadrant==2 || current_quadrant==3) {
+            if (current_quadrant == -1 || current_quadrant == 2 || current_quadrant == 3) {
                 //See if coordinate to the bottom is in the quadtree and get its occupancy
                 Coordinate bottom = Coordinate{box.getCenter().x, box.getCenter().y - box.size};
                 if (mBox.contains(bottom)) {
@@ -196,7 +197,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
             //So don't check if current quadrant in the SOUTH EAST (bottom right)
-            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==1 || current_quadrant==2) {
+            if (current_quadrant == -1 || current_quadrant == 0 || current_quadrant == 1 || current_quadrant == 2) {
                 //See if coordinate to the top left is in the quadtree and get its occupancy
                 Coordinate topLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y + box.size};
                 if (mBox.contains(topLeft)) {
@@ -207,7 +208,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
             //So don't check if current quadrant in the SOUTH WEST (bottom left)
-            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==1 || current_quadrant==3) {
+            if (current_quadrant == -1 || current_quadrant == 0 || current_quadrant == 1 || current_quadrant == 3) {
                 //See if coordinate to the top right is in the quadtree and get its occupancy
                 Coordinate topRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y + box.size};
                 if (mBox.contains(topRight)) {
@@ -218,7 +219,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
             //So don't check if current quadrant in the NORTH EAST (top right)
-            if(current_quadrant==-1 || current_quadrant==0 || current_quadrant==2 || current_quadrant==3) {
+            if (current_quadrant == -1 || current_quadrant == 0 || current_quadrant == 2 || current_quadrant == 3) {
                 //See if coordinate to the bottom left is in the quadtree and get its occupancy
                 Coordinate bottomLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y - box.size};
                 if (mBox.contains(bottomLeft)) {
@@ -229,11 +230,10 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
             //So don't check if current quadrant in the NORTH WEST (top left)
-            if(current_quadrant==-1 || current_quadrant==1 || current_quadrant==2 || current_quadrant==3) {
+            if (current_quadrant == -1 || current_quadrant == 1 || current_quadrant == 2 || current_quadrant == 3) {
                 //See if coordinate to the bottom right is in the quadtree and get its occupancy
                 Coordinate bottomRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y - box.size};
                 if (mBox.contains(bottomRight)) {
-//                argos::LOG << "bottomRight: " << bottomRight.x << " " << bottomRight.y << std::endl;
                     if (isCoordinateUnknown(bottomRight)) {
                         return true;
                     }
@@ -268,7 +268,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
             //While querying we also check if pheromones are expired, we remember those and remove them after.
             std::vector<QuadNode> values_to_be_removed = {};
             queryBoxes(mRoot.get(), mBox, box, boxes, occupancy, currentTimeS, values_to_be_removed);
-            for(auto &value: values_to_be_removed) {
+            for (auto &value: values_to_be_removed) {
                 remove(value);
             }
             return boxes;
@@ -278,13 +278,9 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * Returns the QuadNode containing the coordinate
          * @param coordinate
          */
-        std::vector<Occupancy> getOccupanciesFromCoordinate(Coordinate coordinate) const {
-            auto QuadNodes = std::vector<QuadNode>();
-            getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate, QuadNodes);
-            std::vector<Occupancy> occupancies;
-            for(auto node: QuadNodes)
-                occupancies.push_back(node.occupancy);
-            return occupancies;
+        Occupancy getOccupanciesFromCoordinate(Coordinate coordinate) const {
+            QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
+            return quadNode.occupancy;
         }
 
         /**
@@ -292,16 +288,8 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @param coordinate
          */
         bool isCoordinateUnknown(Coordinate coordinate) const {
-            auto QuadNodes = std::vector<QuadNode>();
-            getQuadNodesFromCoordinate(mRoot.get(), mBox, coordinate, QuadNodes);
-            assert(QuadNodes.size() == 1);
-//            argos::LOG << "Quadnodes size: " << QuadNodes.size() << std::endl;
-            for(auto node: QuadNodes) {
-//                argos::LOG << "occ: " << occ << std::endl;
-                if(node.occupancy == UNKNOWN)
-                    return true;
-            }
-            return false;
+            QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
+            return (quadNode.occupancy == UNKNOWN);
         }
 
         /**
@@ -329,28 +317,26 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 return;
             }
 
-            std::function<void(const Node *, const Box &, int)> traverse;
-            traverse = [&](const Node *node, const Box &box, int depth) {
-                if (node == nullptr) return;
+            std::function<void(const Cell *, const Box &)> traverse;
+            traverse = [&](const Cell *cell, const Box &box) {
+                if (cell == nullptr) return;
 
                 file << box.left << " " << box.top << " " << box.size << " " << "\n";
 
-                // Write the bounding box, occupancy and depth of this node to the file
+                // Write the bounding box, it's size, and occupancy of this cell to the file
                 auto topLeft = box.getTopLeft();
                 auto size = box.getSize();
-                for (const auto &value: node->values) {
-                    file << box.left << " " << box.top << " " << box.size << " " << value.occupancy << " " << "\n";
-                }
+                file << box.left << " " << box.top << " " << box.size << " " << cell->quadNode.occupancy << " " << "\n";
 
                 // Traverse the children
                 for (int i = 0; i < 4; ++i) {
-                    if (node->children[i]) {
-                        traverse(node->children[i].get(), computeBox(box, i), depth + 1);
+                    if (cell->children[i]) {
+                        traverse(cell->children[i].get(), computeBox(box, i));
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0);
+            traverse(mRoot.get(), mBox);
             file.close();
         }
 
@@ -358,61 +344,57 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @brief Create a vector of strings from the quadtree
          */
         void toStringVector(std::vector<std::string> *strings) {
-            std::function<void(const Node *, const Box &, int, int &, std::string &)> traverse;
+            std::function<void(const Cell *, const Box &, int &, std::string &)> traverse;
             std::string grouped_message = "";
             grouped_message.clear();
             int counter = 0;
 
-            traverse = [&](const Node *node, const Box &box, int depth, int &counter, std::string &grouped_message) {
-                if (node == nullptr) return;
+            traverse = [&](const Cell *cell, const Box &box, int &counter, std::string &grouped_message) {
+                if (cell == nullptr) return;
 
                 bool allSameOccupancy = false;
 
-                // Write the bounding box, occupancy and depth of this node to the file
-                for (const auto &value: node->values) {
-                    QuadNode curQuadNode = value;
-                    // If the occupancy is ANY, we don't need to store it, as the children will have new info
-                    // If the occupancy is UNKNOWN, we don't need to store it, as a child not existing will also yield in an UNKNOWN
+                // Write the bounding box, it's size, and occupancy of this cell to the file
+                // If the occupancy is ANY, we don't need to store it, as the children will have new info
+                // If the occupancy is UNKNOWN, we don't need to store it, as a child not existing will also yield in an UNKNOWN
 //                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
 //                        continue;
-                    // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
-                    if (value.occupancy == OCCUPIED || value.occupancy == FREE){
-                        allSameOccupancy = true;
+                // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                if (cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == FREE) {
+                    allSameOccupancy = true;
 
-                        std::string str =
-                                std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
-                                std::to_string(curQuadNode.occupancy) + '@' + std::to_string(curQuadNode.visitedAtS);
+                    std::string str =
+                            std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
+                            std::to_string(cell->quadNode.occupancy) + '@' + std::to_string(cell->quadNode.visitedAtS);
 
-                        //Group every 10 nodes
-                        grouped_message.append(str);
+                    //Group every 10 nodes
+                    grouped_message.append(str);
 
-                        if(counter==49){
-                            strings->emplace_back(grouped_message);
-                            grouped_message.clear();
-                            counter = 0;
-                        }
-                        else {
-                            grouped_message.append("|");
-                            counter++;
-                        }
-
+                    if (counter == 49) {
+                        strings->emplace_back(grouped_message);
+                        grouped_message.clear();
+                        counter = 0;
+                    } else {
+                        grouped_message.append("|");
+                        counter++;
                     }
+
                 }
 
                 // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
                 if (!allSameOccupancy) {
                     // Traverse the children
                     for (int i = 0; i < 4; i++) {
-                        if (node->children[i]) {
-                            traverse(node->children[i].get(), computeBox(box, i), depth + 1, counter, grouped_message);
+                        if (cell->children[i]) {
+                            traverse(cell->children[i].get(), computeBox(box, i), counter, grouped_message);
                         }
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0, counter, grouped_message);
+            traverse(mRoot.get(), mBox, counter, grouped_message);
             //If there is an incomplete group, also send it.
-            if(!grouped_message.empty()){
+            if (!grouped_message.empty()) {
                 grouped_message.pop_back(); //Delete the last delimiter
                 strings->emplace_back(grouped_message);
             }
@@ -424,42 +406,31 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          */
         std::vector<std::tuple<Box, int, double>> getAllBoxes() {
             std::vector<std::tuple<Box, int, double>> boxesAndOccupancyAndTicks = {};
-            std::function<void(const Node *, const Box &, int, std::vector<std::tuple<Box, int, double>> *)> traverse;
-            traverse = [&](const Node *node, const Box &box, int depth,
+            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, int, double>> *)> traverse;
+            traverse = [&](const Cell *cell, const Box &box,
                            std::vector<std::tuple<Box, int, double>> *boxesAndOccupancyAndTicks) {
-                if (node == nullptr) return;
+                if (cell == nullptr) return;
                 bool allSameOccupancy = false;
-                assert(node->values.empty() || node->values.size() == 1);
-                for (const auto &value: node->values) {
 //                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
 //                        continue;
-                    // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
-                    if (value.occupancy == OCCUPIED || value.occupancy == FREE) {
-                        allSameOccupancy = true;
-                        boxesAndOccupancyAndTicks->emplace_back(std::tuple(box, value.occupancy, value.visitedAtS));
-                   }
-                }
-
-                if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
-                    if(!isLeaf(node)) {
-                        for(const auto & i : node->children) {
-                            if(i->values.empty())
-                                argos::LOGERR << "leaf value empty while parent Isn't ANY or UNKNOWN line GetAllBoxes" << std::endl;
-                        }
-                    }
+                // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                if (cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == FREE) {
+                    allSameOccupancy = true;
+                    boxesAndOccupancyAndTicks->emplace_back(
+                            std::tuple(box, cell->quadNode.occupancy, cell->quadNode.visitedAtS));
                 }
 
                 // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
                 if (!allSameOccupancy) {
                     for (int i = 0; i < 4; i++) {
-                        if (node->children[i]) {
-                            traverse(node->children[i].get(), computeBox(box, i), depth + 1, boxesAndOccupancyAndTicks);
+                        if (cell->children[i]) {
+                            traverse(cell->children[i].get(), computeBox(box, i), boxesAndOccupancyAndTicks);
                         }
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, 0, &boxesAndOccupancyAndTicks);
+            traverse(mRoot.get(), mBox, &boxesAndOccupancyAndTicks);
 
 
             return boxesAndOccupancyAndTicks;
@@ -483,20 +454,21 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
         static constexpr double MaxAllowedVisitedTimeDiffS = 10.0;
 
 
-        struct Node {
-            std::array<std::unique_ptr<Node>, 4> children;
-            std::vector<QuadNode> values;
+        struct Cell {
+            std::array<std::unique_ptr<Cell>, 4> children;
+//            std::vector<QuadNode> values;
+            QuadNode quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
         };
 
         Box mBox;
-        std::unique_ptr<Node> mRoot;
+        std::unique_ptr<Cell> mRoot;
 
         /**
          * @brief Check if the given node is a leaf i.e. had no children
          * @param node
          * @return
          */
-        bool isLeaf(const Node *node) const {
+        bool isLeaf(const Cell *node) const {
             return !static_cast<bool>(node->children[0]);
 
 
@@ -578,7 +550,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
             auto center = nodeBox.getCenter();
 
             //If the value is the same as the center, it is not contained in any quadrant
-            if(center == valueCoordinate)
+            if (center == valueCoordinate)
                 return 4;
 
             // West
@@ -612,137 +584,136 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
 
         /**
          * @brief Add a value to the quadtree
-         * @param node
-         * @param depth
+         * @param cell
          * @param box
          * @param value
          */
-        void add(Node *node, std::size_t depth, const Box &box, const QuadNode &value) {
-            assert(node != nullptr);
+        void add(Cell *cell, const Box &box, const QuadNode &value) {
+            assert(cell != nullptr);
             assert(box.contains(value.coordinate));
 
             assert(value.occupancy != ANY && "Added occupancy should not be ANY");
             assert(value.occupancy != UNKNOWN && "Added occupancy should not be UNKNOWN");
-            if (isLeaf(node)) {
-                // Insert the value in this node if possible
+            if (isLeaf(cell)) {
+                // Insert the value in this cell if possible
 
                 //If the box size is the minimum size we allow (corresponding to finest mapping level),
-                // then we only contain a single QuadNode. Update the occupancy of this node to the most important occupancy.
+                // then we only contain a single QuadNode. Update the occupancy of this cell to the most important occupancy.
                 if (box.size <= MinSize) {
-                    if(box.size <= Smallest_Box_Size) Smallest_Box_Size = box.size;
+                    if (box.size <= Smallest_Box_Size) Smallest_Box_Size = box.size;
 
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
-                    if (node->values.empty()) {
+                    if (cell->quadNode.visitedAtS == -1) { //If the cell is empty
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
                     } else {
                         //OCCUPIED always takes precedence over FREE
                         //Update with the most precedent or up-to-date information.
-                        if (node->values.front().occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
+                        if (cell->quadNode.occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
                             newNode.occupancy = OCCUPIED;
-                            newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
-                        } else if (node->values.front().occupancy == OCCUPIED){
+                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                        } else if (cell->quadNode.occupancy == OCCUPIED) {
                             newNode.occupancy = OCCUPIED;
-                            newNode.visitedAtS = node->values.front().visitedAtS;
-                        } else if (value.occupancy == OCCUPIED){
+                            newNode.visitedAtS = cell->quadNode.visitedAtS;
+                        } else if (value.occupancy == OCCUPIED) {
                             newNode.occupancy = OCCUPIED;
                             newNode.visitedAtS = value.visitedAtS;
-                        } else if (node->values.front().occupancy == FREE && value.occupancy == FREE) {
+                        } else if (cell->quadNode.occupancy == FREE && value.occupancy == FREE) {
                             newNode.occupancy = FREE;
-                            newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
-                        } else if (node->values.front().occupancy == FREE){
+                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                        } else if (cell->quadNode.occupancy == FREE) {
                             newNode.occupancy = FREE;
-                            newNode.visitedAtS = node->values.front().visitedAtS;
-                        } else if (value.occupancy == FREE){
+                            newNode.visitedAtS = cell->quadNode.visitedAtS;
+                        } else if (value.occupancy == FREE) {
                             newNode.occupancy = FREE;
                             newNode.visitedAtS = value.visitedAtS;
                         } else {
-                            assert(-1 && "Shouldn't get here, as neither current node or added node are OCCUPIED or FREE");
+                            assert(-1 &&
+                                   "Shouldn't get here, as neither current cell or added cell are OCCUPIED or FREE");
                         }
 
 
                     }
-                    assert(newNode.occupancy == FREE || newNode.occupancy == OCCUPIED && "new node occupancy should be FREE or OCCUPIED");
-                    // Make the only value the 'merged node'
-                    node->values.clear();
-                    node->values.push_back(newNode);
+                    assert(newNode.occupancy == FREE ||
+                           newNode.occupancy == OCCUPIED && "new cell occupancy should be FREE or OCCUPIED");
+                    // Make the only value the 'merged cell'
+                    cell->quadNode = newNode;
                 }
                     // Otherwise, we split and we try again
                 else {
                     //If the to be added occupancy is the same as the parent, and the visited time is not too far apart, we can skip adding.
-                    if (node->values.empty() || !(value.occupancy == node->values.front().occupancy && value.visitedAtS - node->values.front().visitedAtS <=MaxAllowedVisitedTimeDiffS)) {
-                        split(node, box);
-                        add(node, depth, box, value);
+                    if (cell->quadNode.visitedAtS == -1 || !(value.occupancy == cell->quadNode.occupancy &&
+                                                             value.visitedAtS - cell->quadNode.visitedAtS <=
+                                                             MaxAllowedVisitedTimeDiffS)) {
+                        split(cell, box);
+                        add(cell, box, value);
                     }
                 }
             } else {
-                // If the node is not a leaf
-                // And if the box center is the same as the value coordinate (meaning this value information is the same for all children of this node),
-                // then we only contain a single QuadNode. Update the occupancy of this node to the most important occupancy.
+                // If the cell is not a leaf
+                // And if the box center is the same as the value coordinate (meaning this value information is the same for all children of this cell),
+                // then we only contain a single QuadNode. Update the occupancy of this cell to the most important occupancy.
                 // This should only happen when adding nodes received from other agents.
                 if (box.getCenter() == value.coordinate) {
 
-//                    argos::LOG << " CENTER OF THE BOX" << std::endl;
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
-                    if (node->values.empty()) {
+                    if (cell->quadNode.visitedAtS == -1) {
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
                     } else {
-                        //If node has occupancy FREE or OCCUPIED, it entails all its children are also of that value, so we just update this parent.
-                        if(node->values.front().occupancy == FREE){
-                            if(value.occupancy == OCCUPIED) {
+                        //If cell has occupancy FREE or OCCUPIED, it entails all its children are also of that value, so we just update this parent.
+                        if (cell->quadNode.occupancy == FREE) {
+                            if (value.occupancy == OCCUPIED) {
                                 newNode.occupancy = OCCUPIED;
                                 newNode.visitedAtS = value.visitedAtS;
                             } else {
                                 newNode.occupancy = FREE;
-                                newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
                             }
-                            node->values.clear();
-                            node->values.push_back(newNode);
-                        } else if (node->values.front().occupancy == OCCUPIED){
-                            if(value.occupancy == FREE) {
+                            cell->quadNode = newNode;
+                        } else if (cell->quadNode.occupancy == OCCUPIED) {
+                            if (value.occupancy == FREE) {
                                 newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = node->values.front().visitedAtS;
+                                newNode.visitedAtS = cell->quadNode.visitedAtS;
                             } else {
                                 newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = std::max(node->values.front().visitedAtS, value.visitedAtS);
+                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
                             }
-                            node->values.clear();
-                            node->values.push_back(newNode);
-                        //Else if node has occupancy ANY or UNKNOWN, we add to the children
+                            cell->quadNode = newNode;
+                            //Else if cell has occupancy ANY or UNKNOWN, we add to the children
                         } else {
                             //When adding a new coordinate and occupancy to that parent, we should set the remaining (yet unset) children to the value occupancy.
                             //What will happen:
                             //Children without a value will be set with information entailed in the received value
                             //Children with a value will compare the occupancy and visited times for precedence and most recent and update accordingly.
                             //If after updating a child, all children have the same occupancy and visited times are within range, the parent will entail the details and the children will be deleted.
-                            for (int i = 0; i < node->children.size(); i++) {
+                            for (int i = 0; i < cell->children.size(); i++) {
                                 Box childBox = computeBox(box, i);
                                 Coordinate childBoxCenter = childBox.getCenter();
 
-                                // For each child, create a node with corresponding center coordinate
+                                // For each child, create a cell with corresponding center coordinate
                                 QuadNode newChildNode = QuadNode();
                                 newChildNode.visitedAtS = value.visitedAtS;
                                 newChildNode.coordinate = childBoxCenter;
                                 newChildNode.occupancy = value.occupancy;
 
-                                //Add to current node, so that it will be placed in the proper child and checked for optimization later.
-                                add(node, depth, box, newChildNode);
+                                //Add to current cell, so that it will be placed in the proper child and checked for optimization later.
+                                add(cell, box, newChildNode);
 
                             }
                         }
 
                     }
 //
-                // Else we add the value to the appropriate child
+                    // Else we add the value to the appropriate child
                 } else {
                     auto i = getQuadrant(box, value.coordinate);
                     // Add the value in a child if the value is entirely contained in it
                     assert(i != -1 && "A value should be contained in a quadrant");
                     assert(i != 4 && "A value should not be the same as the center of the box");
-                    add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
+                    add(cell->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
 
 //                Check if all children have the same occupancy
                     Occupancy firstOccupancy = UNKNOWN;
@@ -751,99 +722,86 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                     double minVisitedTime = MAXFLOAT;
                     double maxVisitedTime = -1;
 
-                    if (node->children[0]->values.empty())
+                    if (cell->children[0]->quadNode.visitedAtS == -1)
                         allSameOccupancy = false;
                     else {
                         //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
-                        firstOccupancy = node->children[0]->values.front().occupancy;
-                        for (const auto &child: node->children) {
+                        firstOccupancy = cell->children[0]->quadNode.occupancy;
+                        for (const auto &child: cell->children) {
                             //If a child is empty, it is not the same occupancy as the others
                             //If a child has a different occupancy than the first child, it is not the same occupancy as all others
                             //If a child has occupancy ANY, further nested nodes will have a different occupancy.
-                            if (child->values.empty() || child->values.front().occupancy == ANY ||
-                                child->values.front().occupancy != firstOccupancy) {
+                            if (child->quadNode.visitedAtS == -1 || child->quadNode.occupancy == ANY ||
+                                child->quadNode.occupancy != firstOccupancy) {
                                 allSameOccupancy = false;
                                 break;
                             }
-                        //If the visited time of the child is too far apart from the first child, it is not the same occupancy as the others
-                            if(child->values.front().visitedAtS < minVisitedTime)
-                                minVisitedTime = child->values.front().visitedAtS;
-                            if(child->values.front().visitedAtS > maxVisitedTime)
-                                maxVisitedTime = child->values.front().visitedAtS;
+                            //If the visited time of the child is too far apart from the first child, it is not the same occupancy as the others
+                            if (child->quadNode.visitedAtS < minVisitedTime)
+                                minVisitedTime = child->quadNode.visitedAtS;
+                            if (child->quadNode.visitedAtS > maxVisitedTime)
+                                maxVisitedTime = child->quadNode.visitedAtS;
                         }
                         //If the visited times are too far apart, the children should be kept
                         if (maxVisitedTime - minVisitedTime > MaxAllowedVisitedTimeDiffS)
                             visitedTimesTooFarApart = true;
                     }
-//                assert(!node->values.empty() && "A non-leaf node should have a value");
+//                assert(!cell->quadNode.visitedAtS == -1 && "A non-leaf cell should have a value");
 
                     // If all children have the same occupancy, and their visited times are not too far apart, we can delete the children and the parents will have all info
-                    if(allSameOccupancy && !visitedTimesTooFarApart) {
+                    if (allSameOccupancy && !visitedTimesTooFarApart) {
                         //Unitialize the children nodes as the parent now contains their information.
-                        for (auto &child: node->children)
+                        for (auto &child: cell->children)
                             child.reset();
-                        assert(isLeaf(node) && "The node should be a leaf again now");
+                        assert(isLeaf(cell) && "The cell should be a leaf again now");
 
                         //If all children have the same occupancy, give the parent that occupancy
-                        node->values.front().occupancy = firstOccupancy;
-                        assert(node->values.front().occupancy != UNKNOWN && "A non-leaf node should not have UNKNOWN occupancy");
-//                        argos::LOG << "Parent node occupancy: " << node->values.front().occupancy << std::endl;
-                        node->values.front().visitedAtS = maxVisitedTime;
+                        cell->quadNode.occupancy = firstOccupancy;
+                        assert(cell->quadNode.occupancy != UNKNOWN &&
+                               "A non-leaf cell should not have UNKNOWN occupancy");
+                        cell->quadNode.visitedAtS = maxVisitedTime;
 
                     } else {
                         //If the children have different occupancies, or the visited times are too far apart, the parent should have occupancy ANY
-                        node->values.front().occupancy = ANY;
+                        cell->quadNode.occupancy = ANY;
 
                     }
                 }
 
-            }
-            if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
-                if(!isLeaf(node)) {
-                    for(const auto & i : node->children) {
-                        if(i->values.empty())
-                            argos::LOGERR << "leaf value empty while parent is " << node->values.front().occupancy << " 651" << std::endl;
-                    }
-                }
             }
         }
 
         /**
-         * @brief Split a leaf node into four children
-         * @param node
+         * @brief Split a leaf cell into four children
+         * @param cell
          * @param box
          */
-        void split(Node *node, const Box &box) {
-            assert(node != nullptr);
-            assert(isLeaf(node) && "Only leaves can be split");
+        void split(Cell *cell, const Box &box) {
+            assert(cell != nullptr);
+            assert(isLeaf(cell) && "Only leaves can be split");
             // Create children
-//            argos::LOG << node->children.size() << std::endl;
-//            argos::LOG << node->children[0]->children.size() << std::endl;
-//            auto newValues = std::vector<QuadNode>(); // New values for this node
+            for (auto &child: cell->children)
+                child = std::make_unique<Cell>();
 
+            assert(!isLeaf(cell) && "A cell should not be a leaf after splitting");
 
-
-            for (auto &child: node->children)
-                child = std::make_unique<Node>();
-
-            assert(!isLeaf(node) && "A node should not be a leaf after splitting");
-
-            //If node has occupancy FREE or OCCUPIED, it entails all its children are also of that value.
+            //If cell has occupancy FREE or OCCUPIED, it entails all its children are also of that value.
             //When adding a new coordinate and occupancy to that parent, we should set the three remaining children to the parent occupancy.
             //So when splitting we set all children to the parent occupancy and visited time.
-            if(!node->values.empty() && (node->values.front().occupancy == FREE || node->values.front().occupancy == OCCUPIED)) {
-                for (int i = 0; i < node->children.size(); i++) {
+            if (cell->quadNode.visitedAtS != -1 &&
+                (cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED)) {
+                for (int i = 0; i < cell->children.size(); i++) {
                     Box childBox = computeBox(box, i);
                     Coordinate childBoxCenter = childBox.getCenter();
 
-                    auto quadNode = QuadNode{childBoxCenter, node->values.front().occupancy,
-                                             node->values.front().visitedAtS};
-                    add(node->children[static_cast<std::size_t>(i)].get(), 6, childBox, quadNode);
+                    auto quadNode = QuadNode{childBoxCenter, cell->quadNode.occupancy,
+                                             cell->quadNode.visitedAtS};
+                    add(cell->children[static_cast<std::size_t>(i)].get(), childBox, quadNode);
                 }
             }
-            node->values.clear();
-            node->values.push_back(QuadNode{box.getCenter(), ANY, 0});
+            cell->quadNode = QuadNode{box.getCenter(), ANY, 0};
         }
+
         /**
          * @brief Remove a value from the quadtree
          * @param node
@@ -851,7 +809,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @param value
          * @return
          */
-        void remove(Node *node, const Box &box, const QuadNode &value) const {
+        void remove(Cell *node, const Box &box, const QuadNode &value) const {
             assert(node != nullptr);
             assert(box.contains(value.coordinate));
             if (isLeaf(node)) {
@@ -869,14 +827,14 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                     assert(i != -1);
                     remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
 //                    node->children[static_cast<std::size_t>(i)].reset();
-                    node->values.front().occupancy = ANY;
+                    node->quadNode.occupancy = ANY;
                     // Check if there are any children, if not, remove the value from the parent
                     bool atLeastOneChildWithValue = false;
                     for (auto &child: node->children)
-                        if (!child->values.empty()) atLeastOneChildWithValue = true;
+                        if (child->quadNode.visitedAtS != -1) atLeastOneChildWithValue = true;
 
                     if (!atLeastOneChildWithValue) {
-                        removeValue(node, node->values.front());
+                        removeValue(node, node->quadNode);
                         for (auto &child: node->children)
                             child.reset();
 
@@ -887,33 +845,9 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
             }
         }
 
-        void removeValue(Node *node, const QuadNode &value) const{
-            assert(node->values.front() == value); //We can only remove a value from a node which has that value
-            node->values.clear();
-        }
-
-        bool tryMerge(Node *node) {
-            assert(node != nullptr);
-            assert(!isLeaf(node) && "Only interior nodes can be merged");
-            auto nbValues = node->values.size();
-            for (const auto &child: node->children) {
-                if (!isLeaf(child.get()))
-                    return false;
-                nbValues += child->values.size();
-            }
-            if (nbValues <= Threshold) {
-                node->values.reserve(nbValues);
-                // Merge the values of all the children
-                for (const auto &child: node->children) {
-                    for (const auto &value: child->values)
-                        node->values.push_back(value);
-                }
-                // Remove the children
-                for (auto &child: node->children)
-                    child.reset();
-                return true;
-            } else
-                return false;
+        void removeValue(Cell *node, const QuadNode &value) const {
+            assert(node->quadNode == value); //We can only remove a value from a node which has that value
+            node->quadNode = QuadNode{Coordinate{0, 0}, UNKNOWN, -1}; //visitedAtS -1 means it is empty
         }
 
         /**
@@ -924,26 +858,17 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @param values
          * @param occupancy
          */
-        void query(Node *node, const Box &box, const Box &queryBox, std::vector<QuadNode> &values,
+        void query(Cell *node, const Box &box, const Box &queryBox, std::vector<QuadNode> &values,
                    Occupancy occupancy) const {
             assert(node != nullptr);
             assert(queryBox.intersects_or_contains(box));
-            assert(node->values.empty() || node->values.size()==1);
-            for (const auto &value: node->values) {
-                if ((occupancy == ANY || value.occupancy == occupancy) &&
-                    (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
-                    values.push_back(value);
-            }
-            if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
-                if(!isLeaf(node)) {
-                    for(const auto & i : node->children) {
-                        if(i->values.empty())
-                            argos::LOGERR << "leaf value empty while parent Isn't ANY or UNKNOWN line 771" << std::endl;
-                    }
-                }
-            }
+            if ((occupancy == ANY || node->quadNode.occupancy == occupancy) &&
+                (queryBox.contains(node->quadNode.coordinate) || queryBox.intersects_or_contains(box)))
+                values.push_back(node->quadNode);
+
             //Only check further if the occupancy of the non-leaf node is not all the same for its children, so UNKNOWN.
-            if (!isLeaf(node) && (node->values.empty() || node->values.begin()->occupancy==ANY || node->values.begin()->occupancy==UNKNOWN)) {
+            if (!isLeaf(node) && (node->quadNode.visitedAtS == -1 || node->quadNode.occupancy == ANY ||
+                                  node->quadNode.occupancy == UNKNOWN)) {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
                     if (queryBox.intersects_or_contains(childBox))
@@ -951,62 +876,52 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
                 }
             }
         }
+
         /**
          * @brief Query the quadtree for boxes that intersect with or are contained by the given box that have a given occupancy
-         * @param node the current node being looked in
-         * @param box the box the current node belongs in
+         * @param cell the current cell being looked in
+         * @param box the box the current cell belongs in
          * @param queryBox the search space
          * @param boxes the list of boxes in the search space with the correct occupancy
          * @param occupancy the occupancy to look for
          * @param currentTimeS the current experiment time of the agent
          * @param values_to_be_removed the list of values that need to be removed from the quadtree as they are expired
          */
-        void queryBoxes(Node *node, const Box &box, const Box &queryBox, std::vector<Box> &boxes,
+        void queryBoxes(Cell *cell, const Box &box, const Box &queryBox, std::vector<Box> &boxes,
                         Occupancy occupancy, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
-            assert(node != nullptr);
+            assert(cell != nullptr);
             assert(queryBox.intersects_or_contains(box));
-            assert(node->values.empty() || node->values.size()==1);
-            for (auto &value: node->values) {
-                //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
-                if(value.occupancy==Occupancy::FREE && calculatePheromone(value.visitedAtS, currentTimeS)<0.05){
-                    value.occupancy = Occupancy::UNKNOWN;
-                    //Keep a list of the to be removed values, as we cant delete them now due to concurrency issues. These will be deleted after the querying is done.
-                    values_to_be_removed.push_back(value);
-                    continue;
-                }
-
-
-                if (value.occupancy == occupancy &&
-                    (queryBox.contains(value.coordinate) || queryBox.intersects_or_contains(box)))
-                    boxes.push_back(box);
-            }
-
-            if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
-                if(!isLeaf(node)) {
-                    for(const auto & i : node->children) {
-                        if(i->values.empty())
-                            argos::LOGERR << "leaf value empty while parent Isn't ANY or UNKNOWN line 813" << std::endl;
-                    }
-                }
+            //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
+            if (cell->quadNode.occupancy == Occupancy::FREE &&
+                calculatePheromone(cell->quadNode.visitedAtS, currentTimeS) < 0.05) {
+                cell->quadNode.occupancy = Occupancy::UNKNOWN;
+                //Keep a list of the to be removed values, as we cant delete them now due to concurrency issues. These will be deleted after the querying is done.
+                values_to_be_removed.push_back(cell->quadNode);
             }
 
 
-            //Only check further if the occupancy of the non-leaf node is not all the same for its children, so ANY.
-            if (!isLeaf(node) && (node->values.empty() || node->values.front().occupancy==ANY || node->values.front().occupancy==UNKNOWN)) {
-                for (int d = 0; d < node->children.size(); d++) {
+            if (cell->quadNode.occupancy == occupancy &&
+                (queryBox.contains(cell->quadNode.coordinate) || queryBox.intersects_or_contains(box)))
+                boxes.push_back(box);
+
+
+            //Only check further if the occupancy of the non-leaf cell is not all the same for its children, so ANY.
+            if (!isLeaf(cell) && (cell->quadNode.visitedAtS == -1 || cell->quadNode.occupancy == ANY ||
+                                  cell->quadNode.occupancy == UNKNOWN)) {
+                for (int d = 0; d < cell->children.size(); d++) {
                     auto childBox = computeBox(box, static_cast<int>(d));
                     if (queryBox.intersects_or_contains(childBox)) {
-                        queryBoxes(node->children[d].get(), childBox, queryBox, boxes, occupancy, currentTimeS, values_to_be_removed);
+                        queryBoxes(cell->children[d].get(), childBox, queryBox, boxes, occupancy, currentTimeS,
+                                   values_to_be_removed);
                     }
                 }
             }
         }
 
         double calculatePheromone(double visitedTime, double currentTime) const {
-            double pheromone = 1.0-std::min((currentTime - visitedTime)/EvaporationTime, 1.0);
+            double pheromone = 1.0 - std::min((currentTime - visitedTime) / EvaporationTime, 1.0);
             return pheromone;
         }
-
 
 
         /**
@@ -1015,56 +930,44 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
          * @param box
          * @param queryCoordinate
          * */
-        void getQuadNodesFromCoordinate(Node *node, const Box &box, const Coordinate &queryCoordinate, std::vector<QuadNode> & QuadNodes) const {
+        QuadNode getQuadNodeFromCoordinate(Cell *node, const Box &box, const Coordinate &queryCoordinate) const {
             assert(node != nullptr);
             assert(box.contains(queryCoordinate));
-
-            assert(node->values.empty() || node->values.size()==1);
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
-                if (node->values.empty()) {
-//                    argos::LOG << "Yes it is because of this" << std::endl;
-                    QuadNodes.push_back(QuadNode{queryCoordinate, UNKNOWN, 0});
+                if (node->quadNode.visitedAtS == -1) {
+                    return QuadNode{queryCoordinate, UNKNOWN, 0};
                 } else {
-                    assert(node->values.front().occupancy != ANY && "leaf occupancy should never be ANY");
-                    QuadNodes.push_back(node->values.front());
+                    assert(node->quadNode.occupancy != ANY && "leaf occupancy should never be ANY");
+                    return node->quadNode;
                 }
                 // If it is not a leaf node, find the nested nodes, and search them.
             } else {
                 //If the node occupancy is ANY or UNKNOWN, there can be nested nodes with different occupancies
-                assert(!node->values.empty() && "Node should have a value");
-                if(node->values.front().occupancy ==ANY || node->values.front().occupancy == UNKNOWN) {
+                assert(node->quadNode.visitedAtS != -1 && "Cell should have a value");
+                if (node->quadNode.occupancy == ANY || node->quadNode.occupancy == UNKNOWN) {
                     auto i = getQuadrant(box, queryCoordinate);
                     //If i=4, so the query coordinate is the exact center, check all children
-                    if(i==4) {
-                        for(int j=0; j<node->children.size(); j++) {
+                    if (i == 4) {
+                        for (int j = 0; j < node->children.size(); j++) {
                             auto childBox = computeBox(box, static_cast<int>(j));
 
-                            getQuadNodesFromCoordinate(node->children[j].get(), childBox, queryCoordinate, QuadNodes);
+                            return getQuadNodeFromCoordinate(node->children[j].get(), childBox, queryCoordinate);
                         }
                     } else {
                         auto childBox = computeBox(box, static_cast<int>(i));
 
-                        getQuadNodesFromCoordinate(node->children[i].get(), childBox, queryCoordinate, QuadNodes);
+                        return getQuadNodeFromCoordinate(node->children[i].get(), childBox, queryCoordinate);
                     }
-                //Else the nested nodes have the same occupancy, so parent node can be returned.
+                    //Else the nested nodes have the same occupancy, so parent node can be returned.
                 } else {
-                    QuadNodes.push_back(node->values.front());
+                    return node->quadNode;
                 }
 
             }
-            if(!node->values.empty() && node->values.front().occupancy != UNKNOWN && node->values.front().occupancy != ANY){
-                if(!isLeaf(node)) {
-                    for(const auto & i : node->children) {
-                        if(i->values.empty())
-                            argos::LOGERR << "leaf value empty while parent Isn't ANY or UNKNOWN line 920" << std::endl;
-                    }
-                }
-            }
-//            assert(false && "Coordinate not found in quadtree, something is going wrong");
         }
 
-        void findAllIntersections(Node *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
+        void findAllIntersections(Cell *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
             // Find intersections between values stored in this node
             // Make sure to not report the same intersection twice
 //            for (auto i = std::size_t(0); i < node->values.size(); ++i) {
@@ -1086,7 +989,7 @@ std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, doub
         }
 
         void
-        findIntersectionsInDescendants(Node *node, const QuadNode &value,
+        findIntersectionsInDescendants(Cell *node, const QuadNode &value,
                                        std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
             // Test against the values stored in this node
 //            for (const auto &other: node->values) {
