@@ -109,9 +109,9 @@ public:
 
     double TURN_THRESHOLD_DEGREES = 2;
 
-    double OBJECT_AVOIDANCE_WEIGHT = 1;
     double OBJECT_SAFETY_RADIUS = 0.1;
-    double AGENT_SAFETY_RADIUS = 0.1;
+    double AGENT_SIZE = 08;
+    double AGENT_SAFETY_RADIUS = AGENT_SIZE + 0.1;
 
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
     double AGENT_COHESION_WEIGHT = 0;//0.23;
@@ -125,9 +125,9 @@ public:
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
     double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RANGE = 2;
-    double AGENT_ALIGNMENT_RANGE = 1.5;
-    double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS;
+    double AGENT_AVOIDANCE_RADIUS = 2;
+    double AGENT_ALIGNMENT_RADIUS = 1.5;
+    double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS + 0.2;
 
     Coordinate left_right_borders = {-10,10};
     Coordinate upper_lower_borders = {10,-10};
@@ -149,7 +149,7 @@ private:
 
     bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
     argos::CVector2 getVirtualWallAvoidanceVector();
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
+    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
     argos::CVector2 calculateAgentCohesionVector();
     argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
     argos::CVector2 calculateAgentAlignmentVector();
