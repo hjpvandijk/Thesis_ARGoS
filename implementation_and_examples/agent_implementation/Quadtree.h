@@ -278,7 +278,7 @@ namespace quadtree {
          * Returns the QuadNode containing the coordinate
          * @param coordinate
          */
-        Occupancy getOccupanciesFromCoordinate(Coordinate coordinate) const {
+        Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
             QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
             return quadNode.occupancy;
         }
@@ -967,6 +967,7 @@ namespace quadtree {
                 }
 
             }
+            return QuadNode{queryCoordinate, UNKNOWN, 0};
         }
 
         void findAllIntersections(Cell *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {

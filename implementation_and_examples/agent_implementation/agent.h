@@ -110,9 +110,10 @@ public:
 
     double TURN_THRESHOLD_DEGREES = 2;
 
-    double OBJECT_AVOIDANCE_WEIGHT = 1;
+    double AGENT_ROBOT_DIAMETER = 0.08;
+
     double OBJECT_SAFETY_RADIUS = 0.1;
-    double AGENT_SAFETY_RADIUS = 0.1;
+    double AGENT_SAFETY_RADIUS = AGENT_ROBOT_DIAMETER + 0.1;
 
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
     double AGENT_COHESION_WEIGHT = 0;//0.23;
@@ -120,15 +121,16 @@ public:
     double AGENT_ALIGNMENT_WEIGHT = 0.5;//0.5;
     double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
 
-    double FRONTIER_DISTANCE_WEIGHT = 0.2;//0.001;
+    double FRONTIER_DISTANCE_WEIGHT = 0.1;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
     double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RANGE = 2;
-    double AGENT_ALIGNMENT_RANGE = 1.5;
-    double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS;
+    double AGENT_AVOIDANCE_RADIUS = 0.68;
+    double AGENT_ALIGNMENT_RADIUS = 1.5;
+    double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
+
 
     Coordinate left_right_borders = {-10,10};
     Coordinate upper_lower_borders = {10,-10};
@@ -138,19 +140,43 @@ public:
     double ANGLE_INTERVAL_STEPS = 360;
 
     Coordinate currentBestFrontier = {0,0};
+    Coordinate previousBestFrontier = {0,0};
+    Coordinate subTarget = {0,0};
+    double distanceToObjectInTargetDirection = 0;
+
+    int nTurnAroundBeforePacing = 2;
+    int wallFollowingDirection= 0;
+    Coordinate wallFollowingHitPoint = {0,0};
+    bool lastIterationInHitPoint = false;
 
     double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
 
     std::vector<quadtree::Box> current_frontiers;
     std::vector<std::vector<quadtree::Box>> current_frontier_regions;
+    std::set<argos::CDegrees> freeAnglesVisualization;
+    argos::CVector2 perpendicularVectorVisualization;
+    std::vector<Coordinate> lineVisualization;
 
 private:
-    void checkForObstacles();
+    int nTurnAround = 0;
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    void checkForObstacles();
+    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox);
+    bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2);
+
+    argos::CVector2 calculateTotalVector(argos::CVector2 prev_total_vector,
+                                         argos::CVector2 virtualWallAvoidanceVector,
+                                         argos::CVector2 agentCohesionVector,
+                                         argos::CVector2 agentAvoidanceVector,
+                                         argos::CVector2 agentAlignmentVector,
+                                         argos::CVector2 unexploredFrontierVector);
+
+
+        bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    void addSubTarget(argos::CRadians objectAvoidanceAngle, argos::CVector2 unexploredFrontierVectorCopy);
     argos::CVector2 getVirtualWallAvoidanceVector();
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation);
+    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
     argos::CVector2 calculateAgentCohesionVector();
     argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
     argos::CVector2 calculateAgentAlignmentVector();
@@ -169,6 +195,7 @@ private:
 
     void addObjectLocation(Coordinate objectCoordinate);
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+    void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
 
 
 

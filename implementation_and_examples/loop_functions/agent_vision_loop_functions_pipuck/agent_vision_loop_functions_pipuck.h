@@ -18,6 +18,12 @@ public:
     TCoordinateMap m_tOtherAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
+    std::map<CPiPuckEntity*, CVector3> m_tAgentSubTargetCoordinate;
+    std::map<CPiPuckEntity*, CVector3> m_tPerpVector;
+    std::map<CPiPuckEntity*, std::vector<CVector3>> m_tLine;
+
+
+
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;

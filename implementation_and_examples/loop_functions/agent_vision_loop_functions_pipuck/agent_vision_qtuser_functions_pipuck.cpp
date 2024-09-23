@@ -115,6 +115,25 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     }
 
+    for (auto it = m_cAgVisLF.m_tAgentSubTargetCoordinate.begin();
+         it != m_cAgVisLF.m_tAgentSubTargetCoordinate.end();
+         ++it) {
+        if (it->first->GetId() == "pipuck1")
+            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::BROWN);
+        else if (it->first->GetId() == "pipuck2")
+            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
+
+    }
+
+    for (auto it = m_cAgVisLF.m_tLine.begin();
+         it != m_cAgVisLF.m_tLine.end();
+         ++it) {
+
+        std::vector<CVector3> line = it->second;
+
+        DrawCoordinates(line, CColor::YELLOW);
+    }
+
     for (std::map<CPiPuckEntity *, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
          it != m_cAgVisLF.GetAgentCoordinates().end();
          ++it) {
@@ -134,7 +153,7 @@ void CAgentVisionQTUserFunctions::DrawCoordinates(const std::vector<CVector3> &c
     /* Start drawing segments when you have at least two points */
     CQuaternion orientation = CQuaternion();
     for (CVector3 coordinate: c_coordinates) {
-        DrawCircle(coordinate, orientation, 0.1f, color);
+        DrawCircle(coordinate, orientation, 0.025f, color);
     }
 }
 

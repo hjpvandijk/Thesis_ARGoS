@@ -150,6 +150,8 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tQuadTree.clear();
     m_tAgentFrontiers.clear();
     m_tAgentFreeAngles.clear();
+    m_tAgentSubTargetCoordinate.clear();
+//    m_tLine.clear();
     for (CSpace::TMapPerType::iterator it = tFBMap.begin();
          it != tFBMap.end();
          ++it) {
@@ -164,7 +166,17 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
         m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
+        Coordinate subTarget = agent->subTarget.FromOwnToArgos();
+        CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
+        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
 
+        if(!agent->lineVisualization.empty()) m_tLine.clear();
+
+        for(auto lineCoordinate: agent->lineVisualization){
+            Coordinate line = lineCoordinate.FromOwnToArgos();
+            CVector3 linePos = CVector3(line.x, line.y, 0.1f);
+            m_tLine[pcFB].push_back(linePos);
+        }
 
 
         findAndPushObjectCoordinates(pcFB, agent);
@@ -179,7 +191,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
 
 //        m_tAgentFreeAngles[pcFB] = agent->freeAngles;
-        for(auto angle: agent->freeAngles) {
+        for(auto angle: agent->freeAnglesVisualization) {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 

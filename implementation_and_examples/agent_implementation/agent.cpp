@@ -156,7 +156,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) {
 
 
     for (int s = 0; s < nSteps; s++) {
-        if (this->quadtree->getOccupanciesFromCoordinate(Coordinate{x, y}).front() == quadtree::Occupancy::OCCUPIED) {
+        if (this->quadtree->getOccupancyFromCoordinate(Coordinate{x, y}) == quadtree::Occupancy::OCCUPIED) {
             return true;
         }
         x += stepX;
@@ -364,6 +364,76 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) {
     }
 }
 
+
+
+// Custom comparator to order set for wall following. The set is ordered by the angle difference to the wall following direction
+struct CustomComparator {
+    int dir;  // dir is either 0, 1 or -1
+    double headingRounded;
+
+    CustomComparator(int dir, double headingRounded) : dir(dir), headingRounded(headingRounded) {}
+
+    // Custom comparator logic
+    bool operator() (const argos::CDegrees& a, const argos::CDegrees& b) const {
+
+
+        auto a_diff = a.GetValue() - this->headingRounded;
+        auto b_diff = b.GetValue() - this->headingRounded;
+
+        if (a_diff < -180) {
+            a_diff += 360;
+        } else if (a_diff > 179) {
+            a_diff -= 360;
+        }
+
+        if (b_diff < -180) {
+            b_diff += 360;
+        } else if (b_diff > 179) {
+            b_diff -= 360;
+        }
+
+        if (dir>=0) {
+            // Handle the first half: 90 to -180
+            if (a_diff <= 90 && a_diff >= -180 && b_diff <= 90 && b_diff >= -180) {
+                return a_diff > b_diff;  // Normal descending order
+            }
+
+            // Handle the second half: 180 to 91
+            if (a_diff >= 91 && a_diff <= 180 && b_diff >= 91 && b_diff <= 180) {
+                return a_diff > b_diff;  // Normal descending order
+            }
+
+            // Prioritize the first half (90 to -180) over the second half (180 to 91)
+            if ((a_diff <= 90 && a_diff >= -180) && (b_diff >= 91 && b_diff <= 180)) {
+                return true;  // 'a' should come before 'b'
+            }
+            if ((a_diff >= 91 && a_diff <= 180) && (b_diff <= 90 && b_diff >= -179)) {
+                return false;  // 'b' should come before 'a'
+            }
+        } else {
+            // Handle the first half: -90 to 180
+            if (a_diff >= -90 && a_diff <= 180 && b_diff >= -90 && b_diff <= 180) {
+                return a_diff < b_diff;  // Normal descending order
+            }
+
+            // Handle the second half: -180 to -91
+            if (a_diff <= -91 && a_diff >= -180 && b_diff <= -91 && b_diff >= -180) {
+                return a_diff < b_diff;  // Normal descending order
+            }
+
+            // Prioritize the first half (-90 to 180) over the second half (-180 to -91)
+            if ((a_diff >= -90 && a_diff <= 180) && (b_diff <= -91 && b_diff >= 180)) {
+                return true;  // 'a' should come before 'b'
+            }
+            if ((a_diff <= -91 && a_diff >= -180) && (b_diff >= -90 && b_diff <= 180)) {
+                return false;  // 'b' should come before 'a'
+            }
+        }
+
+        return a_diff > b_diff;  // Default to descending order if somehow unmatched
+    }
+};
+
 /**
  * Calculate the vector to avoid objects:
  * Find the closest relative angle that is free of objects within a certain range.
@@ -379,14 +449,18 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
 
-    std::set<argos::CDegrees> freeAngles = {};
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
+    auto headingRounded = (int) (ToDegrees(this->heading).GetValue() / angleInterval) * angleInterval;
 
-//Add free angles from -180 to 170 degrees
+    //Create set of free angles ordered to be used for wall following
+    std::set<argos::CDegrees, CustomComparator> freeAngles(CustomComparator(this->wallFollowingDirection, headingRounded ));
+
+//Add free angles from -180 to 180 degrees
     for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
         auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
         freeAngles.insert(angle);
     }
+
 
     double smallestOCLengthAt0 = MAXFLOAT;
 
@@ -465,9 +539,10 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     }
 
-    this->distanceToObjectInTargetDirection = smallestOCLengthAt0;
-
-    this->freeAngles = freeAngles;
+    this->freeAnglesVisualization.clear();
+    for(auto freeAngle: freeAngles){
+        this->freeAnglesVisualization.insert(freeAngle);
+    }
     if (freeAngles.empty()) return false;
 
 
@@ -480,77 +555,82 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
         }
     }
 
-
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+
+    if (this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
+        if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) >
+            89) { //The complete forward direction to the target is blocked
+//        this->nTurnAround++; //Increase the number of times we have turned around
+//            if(this->nTurnAround >= this->nTurnAroundBeforePacing){ //If we have turned around more than a certain number of times start wall following
+            argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
+                                                              this->wallFollowingHitPoint.y - this->position.y);
+            if (agentToHitPoint.Length() <= this->quadtree->getSmallestBoxSize()) {
+
+                if(this->wallFollowingDirection == 0){
+                    this->wallFollowingDirection = 1;
+                } else if (this->wallFollowingDirection == 1){
+                    this->wallFollowingDirection = -1;
+                } else {
+                    if(!this->lastIterationInHitPoint) {
+                        this->OBJECT_AVOIDANCE_RADIUS *= 2;
+                        this->wallFollowingDirection = 1;
+                    }
+                }
+                this->lastIterationInHitPoint = true;
+
+            } else {
+                this->wallFollowingDirection = 1; //TODO: Make random?
+            }
+            this->wallFollowingHitPoint = this->position;
+        } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
+                   10) { //Direction to the frontier is free again.
+
+            this->wallFollowingDirection = 0;
+        }
+        argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
+                                                          this->wallFollowingHitPoint.y - this->position.y);
+        argos::RLOG << "Hit point: " << this->wallFollowingHitPoint.x << ", " << this->wallFollowingHitPoint.y <<
+                    " and position: " << this->position.x << ", " << this->position.y << " = "
+                    << agentToHitPoint.Length() << std::endl;
+        if (agentToHitPoint.Length() > this->quadtree->getSmallestBoxSize()) {
+            this->lastIterationInHitPoint = false;
+        }
+    } else {
+        this->wallFollowingDirection = 0;
+        this->OBJECT_AVOIDANCE_RADIUS = this->OBJECT_SAFETY_RADIUS + this->AGENT_SAFETY_RADIUS + 0.2;
+        this->lastIterationInHitPoint = false;
+    }
+
+
+
+    //Wall following:
+    //Choose free direction closest to current heading
+    //If no wall on the wall following side of the robot, turn that way
+    //Loop until direction to frontier is free.
+
+//    argos::RLOG << std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) << " > " << 89 << std::endl;
+    //FIX CINTINUEING UNTIL ACTUALLY FREE??
+    if (wallFollowingDirection != 0) { // If we are in wall following mode
+        argos::RLOG <<"Wall following" << std::endl;
+        //Get the closest free angle to the wall following direction (90 degrees right or left)
+        //Create a subtarget in that direction
+        argos::CDegrees subtargetAngle = *freeAngles.begin();
+        argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+        subtargetVector.Rotate(ToRadians(subtargetAngle));
+        subtargetVector.Normalize();
+        subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
+        this->subTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
+
+        closestFreeAngle = subtargetAngle;
+        closestFreeAngleRadians = ToRadians(closestFreeAngle);
+        *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+    }
+
     return true;
 
 }
 
-void Agent::addSubTarget(argos::CRadians objectAvoidanceAngle, argos::CVector2 unexploredFrontierVectorCopy) {
-    argos::RLOG << "UnexploredFrontierVectorCopy: " << unexploredFrontierVectorCopy << std::endl;
-
-    //Start a line at the OCCUPIED cell in line between the agent and the frontier, in the direction of the perpendicularVector
-// Normalize the unexploredFrontierVector
-    unexploredFrontierVectorCopy.Normalize();
-    argos::RLOG << "UnexploredFrontierVectorCopy normalized: " << unexploredFrontierVectorCopy << std::endl;
-
-    argos::CVector2 perpendicularVector = unexploredFrontierVectorCopy;
-    perpendicularVector.Rotate(argos::CRadians::PI_OVER_TWO);
-    this->perpendicularVectorVisualization = perpendicularVector;
-    perpendicularVector.Normalize();
-    perpendicularVector *= this->quadtree->getSmallestBoxSize();
-
-// Scale the vector by OBJECT_AVOIDANCE_RANGE
-    unexploredFrontierVectorCopy *= this->distanceToObjectInTargetDirection;
-
-    argos::RLOG << "Agent position: " << this->position.x << ", " << this->position.y << std::endl;
-    argos::RLOG << "Distance to object in target direction: " << this->distanceToObjectInTargetDirection << std::endl;
-    argos::RLOG << "UnexploredFrontierVectorCopy scaled: " << unexploredFrontierVectorCopy << std::endl;
-
-// Calculate the start coordinates
-    Coordinate start1 = {this->position.x + unexploredFrontierVectorCopy.GetX(),
-                         this->position.y + unexploredFrontierVectorCopy.GetY()};
-    Coordinate start2 = {this->position.x + unexploredFrontierVectorCopy.GetX(),
-                         this->position.y + unexploredFrontierVectorCopy.GetY()};
-
-    quadtree::Occupancy occupancy1 = this->quadtree->getOccupanciesFromCoordinate(start1).front();
-    quadtree::Occupancy occupancy2 = this->quadtree->getOccupanciesFromCoordinate(start2).front();
-    lineVisualization.clear();
-    lineVisualization.push_back(start1);
-    lineVisualization.push_back(start2);
-
-    argos::RLOG << "Starting search" << std::endl;
-    while (occupancy1 == quadtree::Occupancy::OCCUPIED &&
-           occupancy2 == quadtree::Occupancy::OCCUPIED) { //While a FREE or UNKNOWN cell is not found
-        argos::RLOG << "STEP" << std::endl;
-        start1.x += perpendicularVector.GetX();
-        start1.y += perpendicularVector.GetY();
-
-        start2.x -= perpendicularVector.GetX();
-        start2.y -= perpendicularVector.GetY();
-
-        lineVisualization.push_back(start1);
-        lineVisualization.push_back(start2);
-
-        occupancy1 = this->quadtree->getOccupanciesFromCoordinate(start1).front();
-        occupancy2 = this->quadtree->getOccupanciesFromCoordinate(start2).front();
-    }
-    //If either one is not OCCUPIED, set a subtarget next to it, in the opposite direction of the unexploredFrontierVector
-    unexploredFrontierVectorCopy.Normalize();
-    unexploredFrontierVectorCopy *= this->quadtree->getSmallestBoxSize();
-    if (occupancy1 != quadtree::Occupancy::OCCUPIED) {
-        this->subTarget = {start1.x - unexploredFrontierVectorCopy.GetX(),
-                           start1.y - unexploredFrontierVectorCopy.GetY()};
-    } else if (occupancy2 != quadtree::Occupancy::OCCUPIED) {
-        this->subTarget = {start2.x - unexploredFrontierVectorCopy.GetX(),
-                           start2.y - unexploredFrontierVectorCopy.GetY()};
-    }
-
-
-
-
-}
 
 /** Calculate the vector to avoid the virtual walls
  * If the agent is close to the border, create a vector pointing away from the border
@@ -886,7 +966,10 @@ void Agent::calculateNextPosition() {
     argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector(agentCohesionVector);
     argos::CVector2 agentAlignmentVector = calculateAgentAlignmentVector();
 
-    argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
+    argos::CVector2 unexploredFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x, this->currentBestFrontier.y - this->position.y);
+    if(wallFollowingDirection == 0 || unexploredFrontierVector.Length() <= this->quadtree->getSmallestBoxSize()) {
+        unexploredFrontierVector = calculateUnexploredFrontierVector();
+    }
 
     //If there are agents to avoid, do not explore
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
@@ -913,33 +996,7 @@ void Agent::calculateNextPosition() {
     if (!isThereAFreeAngle) {
         this->force_vector = {0, 0};
     } else {
-        // If we are still underway to the same frontier.
-        if (this->previousBestFrontier == this->currentBestFrontier) {
-            //If we reached the subtarget, unset the previous Frontier
-            argos::CVector2 vectorToSubTarget = argos::CVector2(this->subTarget.x, this->subTarget.y) -
-                                                argos::CVector2(this->position.x, this->position.y);
-            //Check if the distance is smaller than a box
-            if (vectorToSubTarget.Length() < this->quadtree->getSmallestBoxSize()*2) {
-                this->previousBestFrontier = this->subTarget;
-                this->subTarget = {0, 0};
-                //If we haven't reached the subtarget yet, keep going
-            } else {
-                // Calculate vector to subtarget
-                total_vector = calculateTotalVector(this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
-                                                    agentAvoidanceVector, agentAlignmentVector, vectorToSubTarget);
-                calculateObjectAvoidanceAngle(&objectAvoidanceAngle, total_vector.Angle());
-            }
 
-            //If the direction of the target is pretty much completely blocked,
-        } else if (std::abs(ToDegrees(objectAvoidanceAngle).GetValue()) > 89) {
-            addSubTarget(objectAvoidanceAngle, unexploredFrontierVector);
-            argos::CVector2 vectorToSubTarget = argos::CVector2(this->subTarget.x, this->subTarget.y) -
-                                                argos::CVector2(this->position.x, this->position.y);
-            total_vector = calculateTotalVector(this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
-                                                agentAvoidanceVector, agentAlignmentVector, vectorToSubTarget);
-            calculateObjectAvoidanceAngle(&objectAvoidanceAngle, total_vector.Angle());
-            this->previousBestFrontier = this->currentBestFrontier;
-        }
 
 // According to the paper, the formula should be:
 //        this->force_vector = {(this->swarm_vector.GetX()) *
@@ -966,6 +1023,7 @@ void Agent::calculateNextPosition() {
         argos::CRadians angle = this->force_vector.Angle();
         this->targetHeading = angle;
     }
+    this->previousBestFrontier = this->currentBestFrontier;
     this->swarm_vector = total_vector;
 }
 
