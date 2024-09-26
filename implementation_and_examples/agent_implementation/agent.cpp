@@ -17,7 +17,7 @@ Agent::Agent(std::string id) {
     this->speed = 1;
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
-    this->messages = new std::vector<std::string>(0);
+    this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
 }
@@ -82,7 +82,7 @@ void Agent::updateMap() {
 }
 
 void Agent::setLastRangeReadings(int index, double new_range) {
-    this->lastRangeReadings[index] = new_range;
+    this->lastRangeReadings.at(index) = new_range;
 }
 
 void Agent::readDistanceSensor() {
@@ -737,7 +737,7 @@ void Agent::broadcastMessage(std::string message) {
 void Agent::checkMessages() {
     //Read messages from other agents
     this->wifi.receive_messages(this->messages);
-    if (!this->messages->empty()) parseMessages();
+    if (!this->messages.empty()) parseMessages();
 
 }
 
@@ -817,13 +817,13 @@ argos::CVector2 vector2FromString(std::string str) {
  * Parse messages from other agents
  */
 void Agent::parseMessages() {
-    for (std::string message: *this->messages) {
+    for (std::string message: this->messages) {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
-        if (messageContent[0] == 'C') {
+        if (messageContent.at(0) == 'C') {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
-        } else if (messageContent[0] == 'M') {
+        } else if (messageContent.at(0) == 'M') {
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(2));
             std::string chunk;
@@ -835,7 +835,7 @@ void Agent::parseMessages() {
                 this->quadtree->add(quadNodeFromString(chunk));
 
             }
-        } else if (messageContent[0] == 'V') {
+        } else if (messageContent.at(0) == 'V') {
             std::string vectorString = messageContent.substr(2);
             std::string delimiter = ":";
             size_t speedPos = 0;
@@ -861,5 +861,5 @@ void Agent::setWifi(Radio wifi) {
 }
 
 std::vector<std::string> Agent::getMessages() {
-    return *this->messages;
+    return this->messages;
 }

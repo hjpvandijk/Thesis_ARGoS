@@ -30,7 +30,7 @@ std::chrono::time_point end = std::chrono::system_clock::now();
  * @param pcFB
  * @param agent
  */
-void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, Agent *agent) {
+void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, std::shared_ptr<Agent> agent) {
     std::vector<quadtree::QuadNode> occupiedNodes = agent->quadtree->queryOccupied(agent->position,
                                                                                    agent->PROXIMITY_RANGE * 2.0);
 
@@ -47,7 +47,7 @@ void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB
  * @param pcFB
  * @param agent
  */
-void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, Agent *agent) {
+void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, std::shared_ptr<Agent> agent) {
     for (std::map<std::string, Coordinate>::const_iterator it = agent->agentLocations.begin();
          it != agent->agentLocations.end();
          ++it) {
@@ -64,7 +64,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param pcFB
  * @param agent
  */
-void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, Agent *agent) {
+void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, std::shared_ptr<Agent> agent) {
     std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 
     m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
@@ -89,7 +89,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it->second);
         PiPuckHugo &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-        Agent *agent = cController.agentObject;
+        std::shared_ptr<Agent> agent = cController.agentObject;
 
         agent->ticks_per_second = ticksPerSecond;
     }
@@ -159,7 +159,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it->second);
         PiPuckHugo &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-        Agent *agent = cController.agentObject;
+        std::shared_ptr<Agent> agent = cController.agentObject;
 
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
         globalElapsedTicks = agent->elapsed_ticks/agent->ticks_per_second;

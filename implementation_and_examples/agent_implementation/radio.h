@@ -20,7 +20,7 @@ public:
 
     void broadcast_message(argos::CByteArray &message) const;
 
-    void receive_messages(std::vector<std::string> *messages) const;
+    void receive_messages(std::vector<std::string> &messages) const;
 
 };
 

@@ -25,7 +25,7 @@ public:
     double speed{};
     Radio wifi;
     static constexpr double num_sensors = 4;
-    double lastRangeReadings[static_cast<int>(num_sensors)] = {};
+    std::array<double, static_cast<int>(num_sensors)> lastRangeReadings;
 
 
     std::map<std::string, Coordinate> agentLocations;
@@ -155,7 +155,7 @@ private:
     argos::CVector2 calculateAgentAlignmentVector();
     argos::CVector2 calculateUnexploredFrontierVector();
 
-    std::vector<std::string> *messages;
+    std::vector<std::string> messages;
 
 
 
