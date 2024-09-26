@@ -30,11 +30,6 @@ namespace quadtree {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
         }
 
-        template<class Archive>
-        void serialize(Archive &archive) {
-            archive(coordinate, occupancy, visitedAtS);
-        }
-
     };
 
     class Quadtree {

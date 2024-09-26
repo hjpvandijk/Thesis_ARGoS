@@ -103,9 +103,9 @@ public:
 
 private:
 
-    void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, std::shared_ptr<Agent> agent);
-    void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, std::shared_ptr<Agent> agent);
-    void pushQuadTree(CPiPuckEntity* pcFB, std::shared_ptr<Agent> agent);
+    void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+    void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+    void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
 
 };
 

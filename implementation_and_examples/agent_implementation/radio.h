@@ -14,7 +14,7 @@ public:
     argos::CCI_SimpleRadiosActuator *radioActuator;
     argos::CCI_SimpleRadiosSensor *radioSensor;
 
-    Radio() {}
+    Radio() = default;
 
     Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor);
 

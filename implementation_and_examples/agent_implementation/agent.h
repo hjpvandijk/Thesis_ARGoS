@@ -47,12 +47,7 @@ public:
     //Some sort of list of agents to keep track of other agents
 
 
-
-    Agent() {}
-
     explicit Agent(std::string id);
-
-    Agent(std::string id, Coordinate position);
 
     void setPosition(double new_x, double new_y);
 
@@ -60,9 +55,9 @@ public:
 
     void setHeading(argos::CRadians new_heading);
 
-    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive);
+    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive);
 
-    Coordinate getPosition();
+    Coordinate getPosition() const;
 
     std::string getId() const;
 
@@ -74,9 +69,9 @@ public:
 
     Radio getWifi() const;
 
-    void setWifi(Radio wifi);
+    void setWifi(Radio newWifi);
 
-    void print();
+    void print() const;
 
     void updateMap();
 
@@ -91,7 +86,7 @@ public:
     void doStep();
 
 
-    void broadcastMessage(std::string message);
+    void broadcastMessage(const std::string& message) const;
 
     void checkMessages();
 
@@ -148,10 +143,10 @@ private:
     void checkForObstacles();
 
     bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-    argos::CVector2 getVirtualWallAvoidanceVector();
+    argos::CVector2 getVirtualWallAvoidanceVector() const;
     bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
     argos::CVector2 calculateAgentCohesionVector();
-    argos::CVector2 calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector);
+    argos::CVector2 calculateAgentAvoidanceVector();
     argos::CVector2 calculateAgentAlignmentVector();
     argos::CVector2 calculateUnexploredFrontierVector();
 
