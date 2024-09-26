@@ -202,17 +202,17 @@ void CAgentVisionLoopFunctions::PostStep() {
 
     combinedQuadTree = boxesAndOccupancyAndTicks;
 
-//    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
-//    for(auto spawnObj: spawnableObjects) {
-//        int spawn_time = std::get<2>(spawnObj);
-//        if(loop_function_steps == spawn_time) {
-//            auto *box = new CBoxEntity("spawn_box" + std::to_string(spawn_time), std::get<0>(
-//                    spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
-//            GetSpace().AddEntity(*box);
-//            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
-//            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
-//        }
-//    }
+    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
+    for(auto spawnObj: spawnableObjects) {
+        int spawn_time = std::get<2>(spawnObj);
+        if(loop_function_steps == spawn_time) {
+            auto *box = new CBoxEntity("spawn_box" + std::to_string(spawn_time), std::get<0>(
+                    spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
+            GetSpace().AddEntity(*box);
+            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
+            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+        }
+    }
 //
     loop_function_steps++;
 }
