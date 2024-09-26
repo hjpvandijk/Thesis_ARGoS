@@ -117,8 +117,8 @@ void CAgentVisionLoopFunctions::PreStep() {
     std::chrono::duration<double> elapsed_seconds = start-end;
 
 
-    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
-               << std::endl;
+//    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
+//               << std::endl;
 
 }
 
@@ -131,24 +131,28 @@ void CAgentVisionLoopFunctions::PostStep() {
 
     std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
 
-    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
-               << std::endl;
+//    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
+//               << std::endl;
 
     end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end-start;
 
-    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
-              << std::endl;
+//    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
+//              << std::endl;
 
-
+//
     /* Get the map of all pi-pucks from the space */
     CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
 /* Go through them */
     m_tObjectCoordinates.clear();
     m_tOtherAgentCoordinates.clear();
+    m_tAgentCoordinates.clear();
+    m_tAgentBestFrontierCoordinate.clear();
     m_tQuadTree.clear();
+    m_tAgentElapsedTicks.clear();
     m_tAgentFrontiers.clear();
+    m_tAgentFrontierRegions.clear();
     for (CSpace::TMapPerType::iterator it = tFBMap.begin();
          it != tFBMap.end();
          ++it) {
@@ -180,19 +184,44 @@ void CAgentVisionLoopFunctions::PostStep() {
 
     }
 
+    auto mBox = quadtree::Box(-5, 5, 10);
+    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
 
-    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
-    for(auto spawnObj: spawnableObjects) {
-        int spawn_time = std::get<2>(spawnObj);
-        if(loop_function_steps == spawn_time) {
-            CBoxEntity *box = new CBoxEntity("spawn_box" + std::to_string(spawn_time), std::get<0>(
-                    spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
-            GetSpace().AddEntity(*box);
-            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
-            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+    for (auto it = GetQuadTree().begin();
+         it != GetQuadTree().end();
+         ++it) {
+        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
+            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
+            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
+            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+
+            quadtree::QuadNode node{};
+            node.coordinate = box.getCenter();
+            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
+            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+                continue;
+            node.visitedAtS = visitedTimeS;
+            combinedTree->add(node);
         }
-    }
 
+//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
+    }
+    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
+
+    combinedQuadTree = boxesAndOccupancyAndTicks;
+
+//    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
+//    for(auto spawnObj: spawnableObjects) {
+//        int spawn_time = std::get<2>(spawnObj);
+//        if(loop_function_steps == spawn_time) {
+//            auto *box = new CBoxEntity("spawn_box" + std::to_string(spawn_time), std::get<0>(
+//                    spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
+//            GetSpace().AddEntity(*box);
+//            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
+//            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+//        }
+//    }
+//
     loop_function_steps++;
 }
 

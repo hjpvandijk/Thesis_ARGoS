@@ -102,7 +102,7 @@ public:
     std::vector<std::string> getMessages();
 
 
-    quadtree::Quadtree *quadtree;
+    std::unique_ptr<quadtree::Quadtree> quadtree;
 
 
     double PROXIMITY_RANGE = 2.0;

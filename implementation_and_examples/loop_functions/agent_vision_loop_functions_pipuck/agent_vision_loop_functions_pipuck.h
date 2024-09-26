@@ -23,6 +23,7 @@ public:
     double globalElapsedTicks;
     std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
     std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>> m_tAgentFrontierRegions;
+    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
 
 public:
 
@@ -82,14 +83,14 @@ public:
 //    <box id="box_10" size="1.17,1.84,0.5" movable="false">
 //                                                  <body position="-3.175,-2.27,0" orientation="0,0,0"/>
 //                                                                                              </box>
-    std::tuple<argos::CVector3, argos::CVector3, int> spawnableObjects[6] = {
+    std::tuple<argos::CVector3, argos::CVector3, int> spawnableObjects[5] = {
 //            std::make_tuple(argos::CVector3(-3, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 100),
 //            std::make_tuple(argos::CVector3(2.5, 1, 0), argos::CVector3(1.0, 1.0, 0.5), 400),
 //            std::make_tuple(argos::CVector3(0, 4, 0), argos::CVector3(1.0, 1.0, 0.5), 600),
 //            std::make_tuple(argos::CVector3(-2, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 800),
 //            std::make_tuple(argos::CVector3(2, -4, 0), argos::CVector3(1.0, 1.0, 0.5), 1000),
 //            std::make_tuple(argos::CVector3(0, -1, 0), argos::CVector3(1.0, 1.0, 0.5), 1200),
-    std::make_tuple(argos::CVector3(-1.585,1.385,0), argos::CVector3(1.41,0.97,0.5), 500),
+    std::make_tuple(argos::CVector3(-1.585,1.385,0), argos::CVector3(1.41,0.97,0.5), 50),
     std::make_tuple(argos::CVector3(2.325,-3.465,0), argos::CVector3(4.07,0.37,0.5), 700),
     std::make_tuple(argos::CVector3(0.77,-4.61,0), argos::CVector3(2.76,0.32,0.5), 1000),
     std::make_tuple(argos::CVector3(-1.03,-2.915,0), argos::CVector3(0.16,1.09,0.5), 1200),

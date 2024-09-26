@@ -18,37 +18,12 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
 
 
-    auto box = quadtree::Box(-5, 5, 10);
-    quadtree::Quadtree *combinedTree = new quadtree::Quadtree(box);
-
-    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
-
-    for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, double >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
-         it != m_cAgVisLF.GetQuadTree().end();
-         ++it) {
-        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
-            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
-
-            quadtree::QuadNode node;
-            node.coordinate = box.getCenter();
-            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-                continue;
-            node.visitedAtS = visitedTimeS;
-            combinedTree->add(node);
-        }
-        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
-
-        combinedQuadTree = boxesAndOccupancyAndTicks;
-//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
-    }
 
 
-    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
 
-    for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: combinedQuadTree) {
+//    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
+
+    for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: m_cAgVisLF.combinedQuadTree) {
         quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
         int occupancy = std::get<1>(boxAndOccupancyAndTicks);
         double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
@@ -83,6 +58,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         }
 
     }
+
+
 
     for (auto it = m_cAgVisLF.m_tAgentBestFrontierCoordinate.begin();
          it != m_cAgVisLF.m_tAgentBestFrontierCoordinate.end();

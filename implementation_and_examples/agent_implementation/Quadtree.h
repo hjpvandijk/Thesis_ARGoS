@@ -40,6 +40,7 @@ namespace quadtree {
     class Quadtree {
 
     public:
+
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Cell>()) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, 0};

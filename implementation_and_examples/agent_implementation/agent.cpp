@@ -19,7 +19,7 @@ Agent::Agent(std::string id) {
     this->force_vector = argos::CVector2(0, 1);
     this->messages = new std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
-    this->quadtree = new quadtree::Quadtree(box);
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
 }
 
 int i = 0;
