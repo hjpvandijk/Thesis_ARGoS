@@ -348,7 +348,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) {
         double distance = sqrt(pow(objectCorner.x - boxCorner.x, 2) + pow(objectCorner.y - boxCorner.y, 2));
         if (distance < 0.01) { // If they are adjacent (with a small margin)
             continue;
-        } else if (distance < AGENT_SAFETY_RADIUS) { // If the agent does not fit between the object and the box
+        } else if (distance < this->OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
             //Add the area between the object and the box as occupied if there is no occupied area between already
             bool areaFree = true;
             for (int edge_count = 0; edge_count < objectEdges.size(); edge_count++) {
@@ -573,7 +573,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
                     this->wallFollowingDirection = -1;
                 } else {
                     if(!this->lastIterationInHitPoint) {
-                        this->OBJECT_AVOIDANCE_RADIUS *= 2;
                         this->wallFollowingDirection = 1;
                     }
                 }
@@ -598,7 +597,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
         }
     } else {
         this->wallFollowingDirection = 0;
-        this->OBJECT_AVOIDANCE_RADIUS = this->OBJECT_SAFETY_RADIUS + this->AGENT_SAFETY_RADIUS + 0.2;
         this->lastIterationInHitPoint = false;
     }
 
