@@ -113,8 +113,8 @@ void CAgentVisionLoopFunctions::PreStep() {
     std::chrono::duration<double> elapsed_seconds = start-end;
 
 
-//    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
-//               << std::endl;
+    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
+               << std::endl;
 
 }
 
@@ -127,15 +127,15 @@ void CAgentVisionLoopFunctions::PostStep() {
 
     std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
 
-//    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
-//               << std::endl;
+    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
+               << std::endl;
 
     end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end-start;
 
-//    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
-//              << std::endl;
+    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
+              << std::endl;
 
 //
     /* Get the map of all pi-pucks from the space */
