@@ -542,71 +542,73 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
 
-    if (this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
-        if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) >
-            89) { //The complete forward direction to the target is blocked
+    if(this->WALL_FOLLOWING_ENABLED) { //If wall following is enabled
+        if (this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
+            if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) >
+                89) { //The complete forward direction to the target is blocked
 //        this->nTurnAround++; //Increase the number of times we have turned around
 //            if(this->nTurnAround >= this->nTurnAroundBeforePacing){ //If we have turned around more than a certain number of times start wall following
+                argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
+                                                                  this->wallFollowingHitPoint.y - this->position.y);
+                if (agentToHitPoint.Length() <= this->quadtree->getSmallestBoxSize()) {
+
+                    if (this->wallFollowingDirection == 0) {
+                        this->wallFollowingDirection = 1;
+                    } else if (this->wallFollowingDirection == 1) {
+                        this->wallFollowingDirection = -1;
+                    } else {
+                        if (!this->lastIterationInHitPoint) {
+                            this->wallFollowingDirection = 1;
+                        }
+                    }
+                    this->lastIterationInHitPoint = true;
+
+                } else {
+                    this->wallFollowingDirection = 1; //TODO: Make random?
+                }
+                this->wallFollowingHitPoint = this->position;
+            } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
+                       10) { //Direction to the frontier is free again.
+
+                this->wallFollowingDirection = 0;
+            }
             argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
                                                               this->wallFollowingHitPoint.y - this->position.y);
-            if (agentToHitPoint.Length() <= this->quadtree->getSmallestBoxSize()) {
-
-                if(this->wallFollowingDirection == 0){
-                    this->wallFollowingDirection = 1;
-                } else if (this->wallFollowingDirection == 1){
-                    this->wallFollowingDirection = -1;
-                } else {
-                    if(!this->lastIterationInHitPoint) {
-                        this->wallFollowingDirection = 1;
-                    }
-                }
-                this->lastIterationInHitPoint = true;
-
-            } else {
-                this->wallFollowingDirection = 1; //TODO: Make random?
+            argos::RLOG << "Hit point: " << this->wallFollowingHitPoint.x << ", " << this->wallFollowingHitPoint.y <<
+                        " and position: " << this->position.x << ", " << this->position.y << " = "
+                        << agentToHitPoint.Length() << std::endl;
+            if (agentToHitPoint.Length() > this->quadtree->getSmallestBoxSize()) {
+                this->lastIterationInHitPoint = false;
             }
-            this->wallFollowingHitPoint = this->position;
-        } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
-                   10) { //Direction to the frontier is free again.
-
+        } else {
             this->wallFollowingDirection = 0;
-        }
-        argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
-                                                          this->wallFollowingHitPoint.y - this->position.y);
-        argos::RLOG << "Hit point: " << this->wallFollowingHitPoint.x << ", " << this->wallFollowingHitPoint.y <<
-                    " and position: " << this->position.x << ", " << this->position.y << " = "
-                    << agentToHitPoint.Length() << std::endl;
-        if (agentToHitPoint.Length() > this->quadtree->getSmallestBoxSize()) {
             this->lastIterationInHitPoint = false;
         }
-    } else {
-        this->wallFollowingDirection = 0;
-        this->lastIterationInHitPoint = false;
-    }
 
 
 
-    //Wall following:
-    //Choose free direction closest to current heading
-    //If no wall on the wall following side of the robot, turn that way
-    //Loop until direction to frontier is free.
+        //Wall following:
+        //Choose free direction closest to current heading
+        //If no wall on the wall following side of the robot, turn that way
+        //Loop until direction to frontier is free.
 
 //    argos::RLOG << std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) << " > " << 89 << std::endl;
-    //FIX CINTINUEING UNTIL ACTUALLY FREE??
-    if (wallFollowingDirection != 0) { // If we are in wall following mode
-        argos::RLOG <<"Wall following" << std::endl;
-        //Get the closest free angle to the wall following direction (90 degrees right or left)
-        //Create a subtarget in that direction
-        argos::CDegrees subtargetAngle = *freeAngles.begin();
-        argos::CVector2 subtargetVector = argos::CVector2(1, 0);
-        subtargetVector.Rotate(ToRadians(subtargetAngle));
-        subtargetVector.Normalize();
-        subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
-        this->subTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
+        //FIX CINTINUEING UNTIL ACTUALLY FREE??
+        if (wallFollowingDirection != 0) { // If we are in wall following mode
+            argos::RLOG << "Wall following" << std::endl;
+            //Get the closest free angle to the wall following direction (90 degrees right or left)
+            //Create a subtarget in that direction
+            argos::CDegrees subtargetAngle = *freeAngles.begin();
+            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+            subtargetVector.Rotate(ToRadians(subtargetAngle));
+            subtargetVector.Normalize();
+            subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
+            this->subTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
 
-        closestFreeAngle = subtargetAngle;
-        closestFreeAngleRadians = ToRadians(closestFreeAngle);
-        *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+            closestFreeAngle = subtargetAngle;
+            closestFreeAngleRadians = ToRadians(closestFreeAngle);
+            *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+        }
     }
 
     return true;

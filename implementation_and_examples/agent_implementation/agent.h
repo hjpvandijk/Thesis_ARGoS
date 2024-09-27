@@ -103,6 +103,8 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
+    bool WALL_FOLLOWING_ENABLED = true;
+
 
     double PROXIMITY_RANGE = 2.0;
 
