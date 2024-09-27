@@ -39,37 +39,12 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         }
     }
 
-    auto box = quadtree::Box(-5, 5, 10);
-    quadtree::Quadtree *combinedTree = new quadtree::Quadtree(box);
-
-    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
-
-    for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, double >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
-         it != m_cAgVisLF.GetQuadTree().end();
-         ++it) {
-        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
-            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
-
-            quadtree::QuadNode node;
-            node.coordinate = box.getCenter();
-            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-                continue;
-            node.visitedAtS = visitedTimeS;
-            combinedTree->add(node);
-        }
-        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
-
-        combinedQuadTree = boxesAndOccupancyAndTicks;
-//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
-    }
 
 
-    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
 
-    for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: combinedQuadTree) {
+//    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
+
+    for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: m_cAgVisLF.combinedQuadTree) {
         quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
         int occupancy = std::get<1>(boxAndOccupancyAndTicks);
         double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
@@ -91,7 +66,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         CVector2 bottomRightVec = CVector2(bottomRight.x - boxCenterArgos.x, bottomRight.y - boxCenterArgos.y);
         std::vector<CVector2> posVec = {topLeftVec, topRightVec, bottomRightVec, bottomLeftVec};
 
-        CColor color = CColor::GRAY80;
+        CColor color;
         bool fill = true;
         if (occupancy == quadtree::Occupancy::OCCUPIED) {
             color = CColor::RED;
@@ -105,42 +80,36 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     }
 
-    for (auto it = m_cAgVisLF.m_tAgentBestFrontierCoordinate.begin();
-         it != m_cAgVisLF.m_tAgentBestFrontierCoordinate.end();
-         ++it) {
-        if (it->first->GetId() == "pipuck1")
-            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::MAGENTA);
-        else if (it->first->GetId() == "pipuck2")
-            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
+
+
+    for (auto & it : m_cAgVisLF.m_tAgentBestFrontierCoordinate) {
+        if (it.first->GetId() == "pipuck1")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::MAGENTA);
+        else if (it.first->GetId() == "pipuck2")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
 
     }
 
-    for (auto it = m_cAgVisLF.m_tAgentSubTargetCoordinate.begin();
-         it != m_cAgVisLF.m_tAgentSubTargetCoordinate.end();
-         ++it) {
-        if (it->first->GetId() == "pipuck1")
-            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::BROWN);
-        else if (it->first->GetId() == "pipuck2")
-            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
+    for (auto & it : m_cAgVisLF.m_tAgentSubTargetCoordinate) {
+        if (it.first->GetId() == "pipuck1")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::BROWN);
+        else if (it.first->GetId() == "pipuck2")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
 
     }
 
-    for (auto it = m_cAgVisLF.m_tLine.begin();
-         it != m_cAgVisLF.m_tLine.end();
-         ++it) {
+    for (auto & it : m_cAgVisLF.m_tLine) {
 
-        std::vector<CVector3> line = it->second;
+        std::vector<CVector3> line = it.second;
 
         DrawCoordinates(line, CColor::YELLOW);
     }
 
-    for (std::map<CPiPuckEntity *, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
-         it != m_cAgVisLF.GetAgentCoordinates().end();
-         ++it) {
+    for (const auto & it : m_cAgVisLF.GetAgentCoordinates()) {
 
         //Draw IDs
-        DrawText(it->second,
-                 it->first->GetId()); // text
+        DrawText(it.second,
+                 it.first->GetId()); // text
     }
 
 

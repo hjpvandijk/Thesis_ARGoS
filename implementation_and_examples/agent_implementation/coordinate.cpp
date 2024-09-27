@@ -1,36 +1,55 @@
-////
-//// Created by hugo on 17-6-24.
-////
 //
-//#include <iostream>
-//#include "Coordinate.h"
+// Created by hugo on 27-9-24.
 //
-//Coordinate::Coordinate(double x, double y) {
-//    this->x = x;
-//    this->y = y;
-//}
-//
-//void Coordinate::setCoordinates(double new_x, double new_y) {
-//    this->x = new_x;
-//    this->y = new_y;
-//}
-//
-//void Coordinate::setX(double new_x) {
-//    this->x = new_x;
-//}
-//
-//void Coordinate::setY(double new_y) {
-//    this->y = new_y;
-//}
-//
-//double Coordinate::getX() {
-//    return this->x;
-//}
-//
-//double Coordinate::getY() {
-//    return this->y;
-//}
-//
-//std::string Coordinate::toString() {
-//    return "(" + std::to_string(this->x) + ", " + std::to_string(this->y) + ")";
-//}
+
+#include "coordinate.h"
+
+
+
+std::string Coordinate::toString() const {
+    return std::to_string(this->x) + ";" + std::to_string(this->y);
+}
+
+/**
+ * @brief Converts a heading from the own coordinate system to the argos coordinate system
+ * @param radians
+ * @return
+ */
+argos::CRadians Coordinate::OwnHeadingToArgos(argos::CRadians radians) {
+    return argos::CRadians(radians - argos::CRadians::PI_OVER_TWO);
+}
+
+/**
+ * @brief Converts a heading from the argos coordinate system to the own coordinate system
+ * @param radians
+ * @return
+ */
+argos::CRadians Coordinate::ArgosHeadingToOwn(argos::CRadians radians) {
+    return argos::CRadians(radians + argos::CRadians::PI_OVER_TWO);
+}
+
+/**
+ * @brief Converts the coordinate from the own coordinate system to the argos coordinate system
+ * @return
+ */
+Coordinate Coordinate::FromOwnToArgos() const{
+    return Coordinate{y, -x};
+}
+
+/**
+ * @brief Converts the coordinate from the argos coordinate system to the own coordinate system
+ * @return
+ */
+Coordinate Coordinate::FromArgosToOwn() const{
+    return Coordinate{-y, x};
+}
+
+/**
+ * @brief Compares two coordinates for equality
+ * @return
+ */
+bool Coordinate::operator==(const Coordinate &rhs) const  {
+    return x == rhs.x &&
+           y == rhs.y;
+}
+

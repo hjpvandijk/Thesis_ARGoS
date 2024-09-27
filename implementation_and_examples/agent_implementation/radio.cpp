@@ -14,11 +14,11 @@ void Radio::broadcast_message(argos::CByteArray &message) const {
     radioActuator->GetInterfaces()[0].Messages.emplace_back(message);
 }
 
-void Radio::receive_messages(std::vector<std::string> *messages) const {
-    messages->clear();
+void Radio::receive_messages(std::vector<std::string> &messages) const {
+    messages.clear();
     std::vector<argos::CByteArray> sensorMessages = radioSensor->GetInterfaces()[0].Messages;
     for (const auto& sensorMessage : sensorMessages) {
         std::string messageStr(sensorMessage.ToCArray(), sensorMessage.ToCArray() + sensorMessage.Size());
-        messages->push_back(messageStr);
+        messages.push_back(messageStr);
     }
 }
