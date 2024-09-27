@@ -14,13 +14,13 @@ public:
     argos::CCI_SimpleRadiosActuator *radioActuator;
     argos::CCI_SimpleRadiosSensor *radioSensor;
 
-    Radio() {}
+    Radio() = default;
 
     Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor);
 
     void broadcast_message(argos::CByteArray &message) const;
 
-    void receive_messages(std::vector<std::string> *messages) const;
+    void receive_messages(std::vector<std::string> &messages) const;
 
 };
 
