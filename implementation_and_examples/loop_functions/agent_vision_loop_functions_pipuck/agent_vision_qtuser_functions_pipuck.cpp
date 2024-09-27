@@ -1,3 +1,4 @@
+#include <set>
 #include "agent_vision_qtuser_functions_pipuck.h"
 #include "agent_vision_loop_functions_pipuck.h"
 
@@ -16,39 +17,34 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
-
-
-    auto box = quadtree::Box(-5, 5, 10);
-    quadtree::Quadtree *combinedTree = new quadtree::Quadtree(box);
-
-    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
-
-    for (std::map<CPiPuckEntity *, std::vector<std::tuple<quadtree::Box, int, double >>>::const_iterator it = m_cAgVisLF.GetQuadTree().begin();
-         it != m_cAgVisLF.GetQuadTree().end();
+    for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
+         it != m_cAgVisLF.GetAgentFreeAngles().end();
          ++it) {
-        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it->second) {
-            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+        for (argos::CDegrees angle: it->second) {
+//            CVector3 pos = it->first->GetEmbodiedEntity().GetOriginAnchor().Position;
+//            CQuaternion orientation = it->first->GetEmbodiedEntity().GetOriginAnchor().Orientation;
 
-            quadtree::QuadNode node;
-            node.coordinate = box.getCenter();
-            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-                continue;
-            node.visitedAtS = visitedTimeS;
-            combinedTree->add(node);
+            //Get start of the ray
+            CVector3 agent_pos = m_cAgVisLF.GetAgentCoordinates().at(it->first);
+
+            //Get the angle of the ray
+            argos::CRadians angle_rad = ToRadians(angle);
+
+            //Get the end of the ray
+            CVector3 ray_end = CVector3(agent_pos.GetX() + cos(angle_rad.GetValue()),
+                                        agent_pos.GetY() + sin(angle_rad.GetValue()), 0.02f);
+
+            CRay3 ray = CRay3(agent_pos, ray_end);
+            DrawRay(ray, CColor::BLUE);
         }
-        std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
-
-        combinedQuadTree = boxesAndOccupancyAndTicks;
-//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
     }
 
 
-    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
 
-    for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: combinedQuadTree) {
+
+//    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
+
+    for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: m_cAgVisLF.combinedQuadTree) {
         quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
         int occupancy = std::get<1>(boxAndOccupancyAndTicks);
         double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
@@ -70,7 +66,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         CVector2 bottomRightVec = CVector2(bottomRight.x - boxCenterArgos.x, bottomRight.y - boxCenterArgos.y);
         std::vector<CVector2> posVec = {topLeftVec, topRightVec, bottomRightVec, bottomLeftVec};
 
-        CColor color = CColor::GRAY80;
+        CColor color;
         bool fill = true;
         if (occupancy == quadtree::Occupancy::OCCUPIED) {
             color = CColor::RED;
@@ -84,26 +80,37 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     }
 
-    for (auto it = m_cAgVisLF.m_tAgentBestFrontierCoordinate.begin();
-         it != m_cAgVisLF.m_tAgentBestFrontierCoordinate.end();
-         ++it) {
-        if (it->first->GetId() == "pipuck1")
-            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::MAGENTA);
-        else if (it->first->GetId() == "pipuck2")
-            DrawBox(it->second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
+
+
+    for (auto & it : m_cAgVisLF.m_tAgentBestFrontierCoordinate) {
+        if (it.first->GetId() == "pipuck1")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::MAGENTA);
+        else if (it.first->GetId() == "pipuck2")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
 
     }
 
-    for (std::map<CPiPuckEntity *, CVector3>::const_iterator it = m_cAgVisLF.GetAgentCoordinates().begin();
-         it != m_cAgVisLF.GetAgentCoordinates().end();
-         ++it) {
+    for (auto & it : m_cAgVisLF.m_tAgentSubTargetCoordinate) {
+        if (it.first->GetId() == "pipuck1")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::BROWN);
+        else if (it.first->GetId() == "pipuck2")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
+
+    }
+
+    for (auto & it : m_cAgVisLF.m_tLine) {
+
+        std::vector<CVector3> line = it.second;
+
+        DrawCoordinates(line, CColor::YELLOW);
+    }
+
+    for (const auto & it : m_cAgVisLF.GetAgentCoordinates()) {
 
         //Draw IDs
-        DrawText(it->second,
-                 it->first->GetId()); // text
+        DrawText(it.second,
+                 it.first->GetId()); // text
     }
-
-
 
 
 }
@@ -115,7 +122,7 @@ void CAgentVisionQTUserFunctions::DrawCoordinates(const std::vector<CVector3> &c
     /* Start drawing segments when you have at least two points */
     CQuaternion orientation = CQuaternion();
     for (CVector3 coordinate: c_coordinates) {
-        DrawCircle(coordinate, orientation, 0.1f, color);
+        DrawCircle(coordinate, orientation, 0.025f, color);
     }
 }
 

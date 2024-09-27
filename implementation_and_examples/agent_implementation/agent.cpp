@@ -7,30 +7,25 @@
 #include <set>
 #include "agent.h"
 #include <random>
+#include <utility>
 
 
 Agent::Agent(std::string id) {
-    this->id = id;
+    this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
     this->targetHeading = argos::CRadians(0);
     this->speed = 1;
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
-    this->messages = new std::vector<std::string>(0);
+    this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
-    this->quadtree = new quadtree::Quadtree(box);
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
 }
 
-int i = 0;
-
-Agent::Agent(std::string id, Coordinate new_position) : id(id) {
-    this->position = new_position;
-}
 
 void Agent::setPosition(double new_x, double new_y) {
     this->position = {new_x, new_y};
-    i++;
 }
 
 
@@ -40,14 +35,14 @@ void Agent::setPosition(Coordinate new_position) {
 
 void Agent::setHeading(argos::CRadians new_heading) {
     this->heading = Coordinate::ArgosHeadingToOwn(new_heading).SignedNormalize();
-};
+}
 
-void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *diffdrive) {
-    this->diffdrive = diffdrive;
+void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive) {
+    this->diffdrive = newDiffdrive;
 }
 
 
-Coordinate Agent::getPosition() {
+Coordinate Agent::getPosition() const {
     return this->position;
 }
 
@@ -60,7 +55,7 @@ std::string Agent::GetId() const {
 }
 
 void Agent::setId(std::string new_id) {
-    this->id = new_id;
+    this->id = std::move(new_id);
 }
 
 void Agent::setSpeed(double new_speed) {
@@ -72,7 +67,7 @@ double Agent::getSpeed() const {
 }
 
 
-void Agent::print() {
+void Agent::print() const {
     std::cout << "Agent " << this->id << " is at position (" << this->position.x << ", " << this->position.y
               << ")" << std::endl;
 }
@@ -82,7 +77,7 @@ void Agent::updateMap() {
 }
 
 void Agent::setLastRangeReadings(int index, double new_range) {
-    this->lastRangeReadings[index] = new_range;
+    this->lastRangeReadings.at(index) = new_range;
 }
 
 void Agent::readDistanceSensor() {
@@ -98,7 +93,7 @@ void Agent::readInfraredSensor() {
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) const {
     double x = coordinate1.x;
     double y = coordinate1.y;
     double dx = coordinate2.x - coordinate1.x;
@@ -117,11 +112,64 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
 }
 
 /**
+ * Add occupied coordinates between two coordinates
+ * @param coordinate1
+ * @param coordinate2
+ */
+void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate2) const {
+    double x = coordinate1.x;
+    double y = coordinate1.y;
+    double dx = coordinate2.x - coordinate1.x;
+    double dy = coordinate2.y - coordinate1.y;
+    double distance = sqrt(dx * dx + dy * dy);
+    double stepSize = this->quadtree->getSmallestBoxSize();
+    int nSteps = std::ceil(distance / stepSize);
+    double stepX = dx / nSteps;
+    double stepY = dy / nSteps;
+
+    for (int s = 0; s < nSteps; s++) {
+        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+        x += stepX;
+        y += stepY;
+    }
+}
+
+bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const {
+    double x = coordinate1.x;
+    double y = coordinate1.y;
+    double dx = coordinate2.x - coordinate1.x -
+                0.02; // Subtract a small margin to detecting boxes the coordinates belong to
+    double dy = coordinate2.y - coordinate1.y - 0.02;
+    double distance = sqrt(dx * dx + dy * dy);
+    double stepSize = this->quadtree->getSmallestBoxSize();
+    int nSteps = std::ceil(distance / stepSize);
+    double stepX = dx / nSteps;
+    double stepY = dy / nSteps;
+
+    x += stepX * 0.1; // Add a small margin to detecting boxes the coordinates belong to
+    y += stepY * 0.1; // Add a small margin to detecting boxes the coordinates belong to
+
+
+    for (int s = 0; s < nSteps; s++) {
+        if (this->quadtree->getOccupancyFromCoordinate(Coordinate{x, y}) == quadtree::Occupancy::OCCUPIED) {
+            return true;
+        }
+        x += stepX;
+        y += stepY;
+    }
+    return false;
+}
+
+
+/**
  * Add occupied object location to the quadtree
  * @param objectCoordinate
  */
-void Agent::addObjectLocation(Coordinate objectCoordinate) {
-    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+void Agent::addObjectLocation(Coordinate objectCoordinate) const {
+    quadtree::Box objectBox = this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED,
+                                                  elapsed_ticks / ticks_per_second);
+    checkIfAgentFitsBetweenObstacles(objectBox);
+
 }
 
 /**
@@ -130,8 +178,8 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) {
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
  */
 void Agent::checkForObstacles() {
-    for(int sensor_index=0; sensor_index < this->num_sensors; sensor_index++) {
-        argos::CRadians sensor_rotation = this->heading - sensor_index*argos::CRadians::PI_OVER_TWO;
+    for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
+        argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->lastRangeReadings[sensor_index] < PROXIMITY_RANGE) {
 
             double opposite = argos::Sin(sensor_rotation) * this->lastRangeReadings[sensor_index];
@@ -154,7 +202,7 @@ void Agent::checkForObstacles() {
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
-            if(!close_to_other_agent) addObjectLocation(object);
+            if (!close_to_other_agent) addObjectLocation(object);
 
 
         } else {
@@ -169,27 +217,245 @@ void Agent::checkForObstacles() {
 }
 
 /**
+ * Check the area around the object to see if the agent fits between the object and other obstacles
+ * If the agent fits, do nothing
+ * If the agent does not fit, set that area as an obstacle.
+ * @param objectCoordinate
+ */
+void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
+    Coordinate objectCoordinate = objectBox.getCenter();
+    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
+                                                                                  4 * AGENT_SAFETY_RADIUS,
+                                                                                  this->elapsed_ticks /
+                                                                                  this->ticks_per_second);
+    //For each box, that is not the checked object, check if the agent fits between the object and the box
+    for (auto box: occupiedBoxes) {
+        if (box.contains(objectCoordinate)) {
+            continue;
+        }
+
+        Coordinate objectCorner{};
+        std::vector<Coordinate> objectEdges = {};
+        Coordinate boxCorner{};
+        std::vector<Coordinate> boxEdges = {};
+
+        //Check which direction the object is compared to the occupied box, and check the distance between the correct corners
+        auto center = box.getCenter();
+
+        // West
+        if (objectCoordinate.x < center.x) {
+            //Just West
+            if (objectCoordinate.y == center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+
+                boxCorner = Coordinate{box.getBottom(), box.left};
+                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+            }
+                // North West
+            else if (objectCoordinate.y > center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+
+                boxCorner = Coordinate{box.top, box.left};
+                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+            }
+                // South West
+            else if (objectCoordinate.y < center.y) {
+                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+
+                boxCorner = Coordinate{box.getBottom(), box.left};
+                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+            }
+                // Not in any direction
+            else {
+                continue;
+            }
+        }
+            // East
+        else if (objectCoordinate.x > center.x) {
+            //Just East
+            if (objectCoordinate.y == center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
+                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+
+                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+            }
+                // North East
+            else if (objectCoordinate.y > center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
+                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+
+                boxCorner = Coordinate{box.top, box.getRight()};
+                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+            }
+                // South East
+            else if (objectCoordinate.y < center.y) {
+                objectCorner = Coordinate{objectBox.top, objectBox.left};
+                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+
+                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+            }
+                // Not in any direction
+            else {
+                continue;
+            }
+        } else if (objectCoordinate.x == center.x) {
+            //Just North
+            if (objectCoordinate.y > center.y) {
+                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+
+                boxCorner = Coordinate{box.top, box.getRight()};
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+            }
+                //Just South
+            else if (objectCoordinate.y < center.y) {
+                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
+                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+
+                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+            }
+                // Not in any direction
+            else {
+                continue;
+            }
+        }
+            // Not in any direction
+        else {
+            continue;
+        }
+
+        double distance = sqrt(pow(objectCorner.x - boxCorner.x, 2) + pow(objectCorner.y - boxCorner.y, 2));
+        if (distance < 0.01) { // If they are adjacent (with a small margin)
+            continue;
+        } else if (distance <
+                   this->OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
+            //Add the area between the object and the box as occupied if there is no occupied area between already
+            bool areaFree = true;
+            for (int edge_count = 0; edge_count < objectEdges.size(); edge_count++) {
+                if (isObstacleBetween(objectEdges[edge_count], boxEdges[edge_count])) {
+                    areaFree = false;
+                }
+            }
+            if (areaFree) {
+                addOccupiedAreaBetween(objectCoordinate, box.getCenter());
+            }
+
+        }
+    }
+}
+
+
+// Custom comparator to order set for wall following. The set is ordered by the angle difference to the wall following direction
+struct CustomComparator {
+    int dir;  // dir is either 0, 1 or -1
+    double headingRounded;
+
+    CustomComparator(int dir, double headingRounded) : dir(dir), headingRounded(headingRounded) {}
+
+    // Custom comparator logic
+    bool operator()(const argos::CDegrees &a, const argos::CDegrees &b) const {
+
+
+        auto a_diff = a.GetValue() - this->headingRounded;
+        auto b_diff = b.GetValue() - this->headingRounded;
+
+        if (a_diff < -180) {
+            a_diff += 360;
+        } else if (a_diff > 179) {
+            a_diff -= 360;
+        }
+
+        if (b_diff < -180) {
+            b_diff += 360;
+        } else if (b_diff > 179) {
+            b_diff -= 360;
+        }
+
+        if (dir >= 0) {
+            // Handle the first half: 90 to -180
+            if (a_diff <= 90 && a_diff >= -180 && b_diff <= 90 && b_diff >= -180) {
+                return a_diff > b_diff;  // Normal descending order
+            }
+
+            // Handle the second half: 180 to 91
+            if (a_diff >= 91 && a_diff <= 180 && b_diff >= 91 && b_diff <= 180) {
+                return a_diff > b_diff;  // Normal descending order
+            }
+
+            // Prioritize the first half (90 to -180) over the second half (180 to 91)
+            if ((a_diff <= 90 && a_diff >= -180) && (b_diff >= 91 && b_diff <= 180)) {
+                return true;  // 'a' should come before 'b'
+            }
+            if ((a_diff >= 91 && a_diff <= 180) && (b_diff <= 90 && b_diff >= -179)) {
+                return false;  // 'b' should come before 'a'
+            }
+        } else {
+            // Handle the first half: -90 to 180
+            if (a_diff >= -90 && a_diff <= 180 && b_diff >= -90 && b_diff <= 180) {
+                return a_diff < b_diff;  // Normal descending order
+            }
+
+            // Handle the second half: -180 to -91
+            if (a_diff <= -91 && a_diff >= -180 && b_diff <= -91 && b_diff >= -180) {
+                return a_diff < b_diff;  // Normal descending order
+            }
+
+            // Prioritize the first half (-90 to 180) over the second half (-180 to -91)
+            if ((a_diff >= -90 && a_diff <= 180) && (b_diff <= -91 && b_diff >= 180)) {
+                return true;  // 'a' should come before 'b'
+            }
+            if ((a_diff <= -91 && a_diff >= -180) && (b_diff >= -90 && b_diff <= 180)) {
+                return false;  // 'b' should come before 'a'
+            }
+        }
+
+        return a_diff > b_diff;  // Default to descending order if somehow unmatched
+    }
+};
+
+/**
  * Calculate the vector to avoid objects:
  * Find the closest relative angle that is free of objects within a certain range.
  * According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * @return The vector towards the free direction
  */
-bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
+bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
 
     //Get occupied boxes within range
-    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position, OBJECT_AVOIDANCE_RADIUS*2,
+    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position,
+                                                                                  OBJECT_AVOIDANCE_RADIUS * 2,
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
 
-    std::set<argos::CDegrees> freeAngles = {};
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
+    auto headingRounded = (int) (ToDegrees(this->heading).GetValue() / angleInterval) * angleInterval;
 
-//Add free angles from -180 to 170 degrees
+    //Create set of free angles ordered to be used for wall following
+    std::set<argos::CDegrees, CustomComparator> freeAngles(
+            CustomComparator(this->wallFollowingDirection, headingRounded));
+
+//Add free angles from -180 to 180 degrees
     for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
         auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
         freeAngles.insert(angle);
     }
+
+
 
     //For each occupied box, find the angles that are blocked relative to the agent
     for (auto box: occupiedBoxes) {
@@ -200,8 +466,9 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
         argos::CRadians Bq = argos::ASin(
                 std::min(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
         argos::CRadians Eta_q = OC.Angle();
-        if(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS > OC.Length())
-        argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << AGENT_SAFETY_RADIUS << " + " << OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+        if (AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS > OC.Length())
+            argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << AGENT_SAFETY_RADIUS
+                           << " + " << OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
 
         argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
         argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());
@@ -238,12 +505,14 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
         for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
             auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
 
-            if(NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) && NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
+            if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) &&
+                NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
                 if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
                     freeAngles.erase(angle);
                 }
 
-            } else if(NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) && NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) <= argos::CRadians(0)) {
+            } else if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) &&
+                       NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) <= argos::CRadians(0)) {
 
                 if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
                     freeAngles.erase(angle);
@@ -255,12 +524,15 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
 
     }
 
-
-    if(freeAngles.empty()) return false;
+    this->freeAnglesVisualization.clear();
+    for (auto freeAngle: freeAngles) {
+        this->freeAnglesVisualization.insert(freeAngle);
+    }
+    if (freeAngles.empty()) return false;
 
 
     //Get free angle closest to heading
-    auto closestFreeAngle = * freeAngles.begin();
+    auto closestFreeAngle = *freeAngles.begin();
     for (auto freeAngle: freeAngles) {
         if (std::abs((freeAngle - ToDegrees(targetAngle)).GetValue()) <
             abs((closestFreeAngle - ToDegrees(targetAngle)).GetValue())) {
@@ -268,9 +540,69 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
         }
     }
 
-
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+
+    if (this->WALL_FOLLOWING_ENABLED) { //If wall following is enabled
+        if (this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
+            if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) >
+                89) { //The complete forward direction to the target is blocked
+                argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
+                                                                  this->wallFollowingHitPoint.y - this->position.y);
+                if (agentToHitPoint.Length() <= this->quadtree->getSmallestBoxSize()) {
+
+                    if (this->wallFollowingDirection == 0) {
+                        this->wallFollowingDirection = 1;
+                    } else if (this->wallFollowingDirection == 1) {
+                        this->wallFollowingDirection = -1;
+                    } else {
+                        if (!this->lastIterationInHitPoint) {
+                            this->wallFollowingDirection = 1;
+                        }
+                    }
+                    this->lastIterationInHitPoint = true;
+
+                } else {
+                    this->wallFollowingDirection = 1; //TODO: Make random?
+                }
+                this->wallFollowingHitPoint = this->position;
+            } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
+                       10) { //Direction to the frontier is free again.
+
+                this->wallFollowingDirection = 0;
+            }
+            argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
+                                                              this->wallFollowingHitPoint.y - this->position.y);
+            if (agentToHitPoint.Length() > this->quadtree->getSmallestBoxSize()) {
+                this->lastIterationInHitPoint = false;
+            }
+        } else {
+            this->wallFollowingDirection = 0;
+            this->lastIterationInHitPoint = false;
+        }
+
+
+
+        //Wall following:
+        //Choose free direction closest to current heading
+        //If no wall on the wall following side of the robot, turn that way
+        //Loop until direction to frontier is free.
+        if (wallFollowingDirection != 0) { // If we are in wall following mode
+            //Get the closest free angle to the wall following direction (90 degrees right or left)
+            //Create a subtarget in that direction
+            argos::CDegrees subtargetAngle = *freeAngles.begin();
+            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+            subtargetVector.Rotate(ToRadians(subtargetAngle));
+            subtargetVector.Normalize();
+            subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
+            this->subTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
+
+            closestFreeAngle = subtargetAngle;
+            closestFreeAngleRadians = ToRadians(closestFreeAngle);
+            *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+        }
+    }
+
     return true;
 
 }
@@ -281,24 +613,25 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidan
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * However, the vector directions are flipped compared to the paper, as the paper uses a different coordinate system
  * @return a vector pointing away from the border
+ *
  */
-argos::CVector2 Agent::getVirtualWallAvoidanceVector(){
+argos::CVector2 Agent::getVirtualWallAvoidanceVector() const {
     //If the agent is close to the border, create a vector pointing away from the border
     argos::CVector2 virtualWallAvoidanceVector = {0, 0};
 
-    if(this->position.x < this->left_right_borders.x){
+    if (this->position.x < this->left_right_borders.x) {
         virtualWallAvoidanceVector.SetX(1);
-    } else if (this->left_right_borders.x <= this->position.x && this->position.x <= this->left_right_borders.y){
+    } else if (this->left_right_borders.x <= this->position.x && this->position.x <= this->left_right_borders.y) {
         virtualWallAvoidanceVector.SetX(0);
-    } else if(this->position.x > this->left_right_borders.y){
+    } else if (this->position.x > this->left_right_borders.y) {
         virtualWallAvoidanceVector.SetX(-1);
     }
 
-    if(this->position.y < this->upper_lower_borders.y){
+    if (this->position.y < this->upper_lower_borders.y) {
         virtualWallAvoidanceVector.SetY(1);
-    } else if (this->upper_lower_borders.y <= this->position.y && this->position.y <= this->upper_lower_borders.x){
+    } else if (this->upper_lower_borders.y <= this->position.y && this->position.y <= this->upper_lower_borders.x) {
         virtualWallAvoidanceVector.SetY(0);
-    } else if(this->position.y > this->upper_lower_borders.x){
+    } else if (this->position.y > this->upper_lower_borders.x) {
         virtualWallAvoidanceVector.SetY(-1);
     }
 
@@ -354,7 +687,7 @@ argos::CVector2 Agent::calculateAgentCohesionVector() {
  * create a vector in the opposite direction of the average location of these agents.
  * @return a vector pointing away from the average location other agents
  */
-argos::CVector2 Agent::calculateAgentAvoidanceVector(argos::CVector2 agentCohesionVector) {
+argos::CVector2 Agent::calculateAgentAvoidanceVector() {
 
     Coordinate averageNeighborLocation = {0, 0};
 
@@ -443,7 +776,8 @@ private:
     std::unordered_map<int, int> rank;
 };
 
-void mergeAdjacentFrontiers(const std::vector<quadtree::Box>& frontiers, std::vector<std::vector<quadtree::Box>>& frontierRegions) {
+void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
+                            std::vector<std::vector<quadtree::Box>> &frontierRegions) {
     UnionFind uf;
     std::unordered_map<int, quadtree::Box> boxMap;
 
@@ -474,7 +808,7 @@ void mergeAdjacentFrontiers(const std::vector<quadtree::Box>& frontiers, std::ve
     }
 
     // Convert to the required format
-    for (const auto& region : regions) {
+    for (const auto &region: regions) {
         frontierRegions.push_back(region.second);
     }
 }
@@ -520,7 +854,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
                 // Check if the distance between the box and the frontier is less than or equal to
                 // the average diagonal of the two boxes (ensuring adjacency)
                 if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(frontier.getSize()*0.5 + box.getSize()*0.5, 2))) {
+                    sqrt(2 * pow(frontier.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
                     region.push_back(frontier); // Add the frontier to the current region
                     added = true; // Mark the frontier as added
                     break; // Exit the loop since the frontier has been added to a region
@@ -547,15 +881,16 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     double bestFrontierScore = std::numeric_limits<double>::max();
 
     //Iterate over all frontier regions to find the best one
-    for (auto region: frontierRegions) {
+    for (const auto &region: frontierRegions) {
         //Calculate the average position of the frontier region
         double sumX = 0;
         double sumY = 0;
         double totalNumberOfCellsInRegion = 0;
         for (auto box: region) {
-            double cellsInBox = box.getSize()/quadtree->getSmallestBoxSize();
+            double cellsInBox = box.getSize() / quadtree->getSmallestBoxSize();
             assert(cellsInBox == 1);
-            sumX += box.getCenter().x * cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
+            sumX += box.getCenter().x *
+                    cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
             sumY += box.getCenter().y * cellsInBox;
             totalNumberOfCellsInRegion += cellsInBox;
         }
@@ -592,7 +927,6 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //If the score is lower than the best score, update the best score and best frontier region
         if (score < bestFrontierScore) {
             bestFrontierScore = score;
-            bestFrontierRegion = region;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
         }
     }
@@ -620,10 +954,14 @@ void Agent::calculateNextPosition() {
 
     argos::CVector2 virtualWallAvoidanceVector = getVirtualWallAvoidanceVector();
     argos::CVector2 agentCohesionVector = calculateAgentCohesionVector();
-    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector(agentCohesionVector);
+    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
     argos::CVector2 agentAlignmentVector = calculateAgentAlignmentVector();
 
-    argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
+    argos::CVector2 unexploredFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
+                                                               this->currentBestFrontier.y - this->position.y);
+    if (wallFollowingDirection == 0 || unexploredFrontierVector.Length() <= this->quadtree->getSmallestBoxSize()) {
+        unexploredFrontierVector = calculateUnexploredFrontierVector();
+    }
 
     //If there are agents to avoid, do not explore
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
@@ -636,31 +974,20 @@ void Agent::calculateNextPosition() {
     if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
     if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
-    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
-    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
-    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
-    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
 
-    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
-    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    argos::CVector2 total_vector = this->swarm_vector +
-                                   //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
-                                   virtualWallAvoidanceVector +
-                                   agentCohesionVector +
-                                   agentAvoidanceVector +
-                                   agentAlignmentVector +
-                                   unexploredFrontierVector;
-    if (total_vector.Length() != 0) total_vector.Normalize();
-
-    this->swarm_vector = total_vector;
+    argos::CVector2 total_vector = calculateTotalVector(this->swarm_vector,
+                                                        virtualWallAvoidanceVector,
+                                                        agentCohesionVector,
+                                                        agentAvoidanceVector,
+                                                        agentAlignmentVector,
+                                                        unexploredFrontierVector);
     argos::CRadians objectAvoidanceAngle;
-    bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
+    bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, total_vector.Angle());
+
     //If there is not a free angle to move to, do not move
-    if(!isThereAFreeAngle){
-        this->force_vector = {0,0};
-    }
-    else {
+    if (!isThereAFreeAngle) {
+        this->force_vector = {0, 0};
+    } else {
 
 
 // According to the paper, the formula should be:
@@ -676,18 +1003,45 @@ void Agent::calculateNextPosition() {
 // However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
 // This also seems to give better performance.
 // Edit: contacted the writer, he said below is correct
-        this->force_vector = {(this->swarm_vector.GetX()) *
+        this->force_vector = {(total_vector.GetX()) *
                               argos::Cos(objectAvoidanceAngle) -
-                              (this->swarm_vector.GetY()) *
+                              (total_vector.GetY()) *
                               argos::Sin(objectAvoidanceAngle),
-                              (this->swarm_vector.GetX()) *
+                              (total_vector.GetX()) *
                               argos::Sin(objectAvoidanceAngle) +
-                              (this->swarm_vector.GetY()) *
+                              (total_vector.GetY()) *
                               argos::Cos(objectAvoidanceAngle)};
 
         argos::CRadians angle = this->force_vector.Angle();
         this->targetHeading = angle;
     }
+    this->previousBestFrontier = this->currentBestFrontier;
+    this->swarm_vector = total_vector;
+}
+
+argos::CVector2
+Agent::calculateTotalVector(argos::CVector2 prev_total_vector, argos::CVector2 virtualWallAvoidanceVector,
+                            argos::CVector2 agentCohesionVector,
+                            argos::CVector2 agentAvoidanceVector,
+                            argos::CVector2 agentAlignmentVector,
+                            argos::CVector2 unexploredFrontierVector) {
+    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
+    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
+    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
+    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
+
+    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
+    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+    argos::CVector2 total_vector = prev_total_vector +
+                                   virtualWallAvoidanceVector +
+                                   agentCohesionVector +
+                                   agentAvoidanceVector +
+                                   agentAlignmentVector +
+                                   unexploredFrontierVector;
+    if (total_vector.Length() != 0) total_vector.Normalize();
+
+    return total_vector;
 }
 
 void Agent::doStep() {
@@ -708,7 +1062,7 @@ void Agent::doStep() {
     calculateNextPosition();
 
     //If there is no force vector, do not move
-    if(this->force_vector == argos::CVector2{0,0}) this->diffdrive->SetLinearVelocity(0,0);
+    if (this->force_vector == argos::CVector2{0, 0}) this->diffdrive->SetLinearVelocity(0, 0);
     else {
 
         argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
@@ -739,10 +1093,10 @@ void Agent::doStep() {
  * Broadcast a message to all agents
  * @param message
  */
-void Agent::broadcastMessage(std::string message) {
+void Agent::broadcastMessage(const std::string &message) const {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
-    argos::UInt8 *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
-    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size()+1);
+    auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
+    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
     this->wifi.broadcast_message(cMessage);
 }
 
@@ -753,7 +1107,7 @@ void Agent::broadcastMessage(std::string message) {
 void Agent::checkMessages() {
     //Read messages from other agents
     this->wifi.receive_messages(this->messages);
-    if (!this->messages->empty()) parseMessages();
+    if (!this->messages.empty()) parseMessages();
 
 }
 
@@ -762,7 +1116,7 @@ void Agent::checkMessages() {
  * @param message
  * @return
  */
-std::string getIdFromMessage(std::string message) {
+std::string getIdFromMessage(const std::string &message) {
     return message.substr(1, message.find(']') - 1);
 
 }
@@ -778,7 +1132,7 @@ Coordinate coordinateFromString(std::string str) {
     std::string token;
     pos = str.find(delimiter);
     token = str.substr(0, pos);
-    Coordinate newCoordinate;
+    Coordinate newCoordinate{};
     newCoordinate.x = std::stod(token);
     str.erase(0, pos + delimiter.length());
     newCoordinate.y = std::stod(str);
@@ -800,7 +1154,7 @@ quadtree::QuadNode quadNodeFromString(std::string str) {
     std::string visited;
     occPos = str.find(occDelimiter);
     coordinate = str.substr(0, occPos);
-    quadtree::QuadNode newQuadNode;
+    quadtree::QuadNode newQuadNode{};
     newQuadNode.coordinate = coordinateFromString(coordinate);
     str.erase(0, occPos + occDelimiter.length());
     //Now we have the occupancy and ticks
@@ -833,23 +1187,19 @@ argos::CVector2 vector2FromString(std::string str) {
  * Parse messages from other agents
  */
 void Agent::parseMessages() {
-    for (std::string message: *this->messages) {
+    for (const std::string &message: this->messages) {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
-        if (messageContent[0] == 'C') {
+        if (messageContent.at(0) == 'C') {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
-        } else if (messageContent[0] == 'M') {
+        } else if (messageContent.at(0) == 'M') {
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(2));
             std::string chunk;
 
             while (std::getline(ss, chunk, '|')) {
-                chunks.push_back(chunk);
-            }
-            for(auto chunk: chunks) {
                 this->quadtree->add(quadNodeFromString(chunk));
-
             }
         } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);
@@ -871,11 +1221,11 @@ Radio Agent::getWifi() const {
     return this->wifi;
 }
 
-void Agent::setWifi(Radio wifi) {
-    this->wifi = wifi;
+void Agent::setWifi(Radio newWifi) {
+    this->wifi = newWifi;
 
 }
 
 std::vector<std::string> Agent::getMessages() {
-    return *this->messages;
+    return this->messages;
 }
