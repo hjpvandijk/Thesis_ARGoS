@@ -15,8 +15,6 @@
 #include <set>
 
 
-
-
 class Agent {
 public:
     std::string id{};
@@ -90,12 +88,11 @@ public:
     void doStep();
 
 
-    void broadcastMessage(const std::string& message) const;
+    void broadcastMessage(const std::string &message) const;
 
     void checkMessages();
 
     void parseMessages();
-
 
 
     std::vector<std::string> getMessages();
@@ -132,21 +129,19 @@ public:
     double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
 
-    Coordinate left_right_borders = {-10,10};
-    Coordinate upper_lower_borders = {10,-10};
+    Coordinate left_right_borders = {-10, 10};
+    Coordinate upper_lower_borders = {10, -10};
 
     double TURNING_SPEED_RATIO = 0.1;
 
     double ANGLE_INTERVAL_STEPS = 360;
 
-    Coordinate currentBestFrontier = {0,0};
-    Coordinate previousBestFrontier = {0,0};
-    Coordinate subTarget = {0,0};
-    double distanceToObjectInTargetDirection = 0;
+    Coordinate currentBestFrontier = {0, 0};
+    Coordinate previousBestFrontier = {0, 0};
+    Coordinate subTarget = {0, 0};
 
-    int nTurnAroundBeforePacing = 2;
-    int wallFollowingDirection= 0;
-    Coordinate wallFollowingHitPoint = {0,0};
+    int wallFollowingDirection = 0;
+    Coordinate wallFollowingHitPoint = {0, 0};
     bool lastIterationInHitPoint = false;
 
     double ticks_per_second = 30;
@@ -160,7 +155,9 @@ public:
 
 private:
     void checkForObstacles();
+
     void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
+
     bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const;
 
     argos::CVector2 calculateTotalVector(argos::CVector2 prev_total_vector,
@@ -171,30 +168,31 @@ private:
                                          argos::CVector2 unexploredFrontierVector);
 
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    bool calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+
     argos::CVector2 getVirtualWallAvoidanceVector() const;
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
+
+    bool getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range);
 
     argos::CVector2 calculateAgentCohesionVector();
+
     argos::CVector2 calculateAgentAvoidanceVector();
+
     argos::CVector2 calculateAgentAlignmentVector();
+
     argos::CVector2 calculateUnexploredFrontierVector();
 
     std::vector<std::string> messages;
-
-
-
-
-
 
 
     std::string GetId() const;
 
 
     void addObjectLocation(Coordinate objectCoordinate) const;
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
-    void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
+
+    void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
 
 };
