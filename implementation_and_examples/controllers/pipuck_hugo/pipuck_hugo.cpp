@@ -10,11 +10,11 @@
 /****************************************/
 
 PiPuckHugo::PiPuckHugo() :
-        m_pcWheels(NULL),
-        m_pcRangeFindersSensor(NULL),
-        m_pcRadiosActuator(NULL),
-        m_pcRadiosSensor(NULL),
-        agentObject(NULL),
+        m_pcWheels(nullptr),
+        m_pcRangeFindersSensor(nullptr),
+        m_pcRadiosActuator(nullptr),
+        m_pcRadiosSensor(nullptr),
+        agentObject(nullptr),
 //   m_pcRangeAndBearingActuator(NULL),
 //   m_pcRangeAndBearingSensor(NULL),
         m_cAlpha(10.0f),
@@ -66,7 +66,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     GetNodeAttributeOrDefault(t_node, "delta", m_fDelta, m_fDelta);
     GetNodeAttributeOrDefault(t_node, "velocity", m_fWheelVelocity, m_fWheelVelocity);
 
-    agentObject = new Agent(this->m_strId);
+    agentObject = std::make_shared<Agent>(Agent(this->m_strId));
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
     agentObject->setDiffDrive(m_pcWheels);

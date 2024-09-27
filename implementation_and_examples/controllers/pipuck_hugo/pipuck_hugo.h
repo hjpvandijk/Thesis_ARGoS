@@ -91,7 +91,7 @@ public:
    void BroadcastMessage(std::string message);
 //    static const int nAgents = 2;
 //    agent agents[nAgents];
-    Agent *agentObject;
+    std::shared_ptr<Agent> agentObject;
 
 
 private:
