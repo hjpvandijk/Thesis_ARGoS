@@ -158,8 +158,8 @@ public:
 
 private:
     void checkForObstacles();
-    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox);
-    bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2);
+    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
+    bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const;
 
     argos::CVector2 calculateTotalVector(argos::CVector2 prev_total_vector,
                                          argos::CVector2 virtualWallAvoidanceVector,
@@ -172,10 +172,7 @@ private:
     bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
     argos::CVector2 getVirtualWallAvoidanceVector() const;
     bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
-        bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-    void addSubTarget(argos::CRadians objectAvoidanceAngle, argos::CVector2 unexploredFrontierVectorCopy);
-    argos::CVector2 getVirtualWallAvoidanceVector();
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
+
     argos::CVector2 calculateAgentCohesionVector();
     argos::CVector2 calculateAgentAvoidanceVector();
     argos::CVector2 calculateAgentAlignmentVector();
@@ -194,9 +191,7 @@ private:
 
     void addObjectLocation(Coordinate objectCoordinate) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
-    void addObjectLocation(Coordinate objectCoordinate);
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
-    void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+    void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
 
 

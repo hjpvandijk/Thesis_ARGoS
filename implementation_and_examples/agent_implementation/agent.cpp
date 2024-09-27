@@ -116,7 +116,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) c
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
+void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate2) const {
     double x = coordinate1.x;
     double y = coordinate1.y;
     double dx = coordinate2.x - coordinate1.x;
@@ -134,7 +134,7 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     }
 }
 
-bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) {
+bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const {
     double x = coordinate1.x;
     double y = coordinate1.y;
     double dx = coordinate2.x - coordinate1.x -
@@ -222,7 +222,7 @@ void Agent::checkForObstacles() {
  * If the agent does not fit, set that area as an obstacle.
  * @param objectCoordinate
  */
-void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) {
+void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
     Coordinate objectCoordinate = objectBox.getCenter();
     std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
                                                                                   4 * AGENT_SAFETY_RADIUS,
@@ -626,6 +626,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * However, the vector directions are flipped compared to the paper, as the paper uses a different coordinate system
  * @return a vector pointing away from the border
+ *
  */
 argos::CVector2 Agent::getVirtualWallAvoidanceVector() const {
     //If the agent is close to the border, create a vector pointing away from the border
