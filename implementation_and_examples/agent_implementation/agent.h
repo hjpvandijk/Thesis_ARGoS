@@ -24,7 +24,7 @@ public:
     argos::CRadians targetHeading;
     double speed{};
     Radio wifi{};
-    const double num_sensors = 4;
+    static constexpr double num_sensors = 4;
     std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
 
 

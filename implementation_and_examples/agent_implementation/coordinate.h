@@ -12,87 +12,44 @@
 struct Coordinate {
     double x;
     double y;
-//
-//    Coordinate() {}
-//
-//    Coordinate(double x, double y);
-//
-//    void setCoordinates(double new_x, double new_y);
-//
-//    void setX(double new_x);
-//
-//    void setY(double new_y);
-//
-//    double getX();
-//
-//    double getY();
 
-//    std::string toString();
-
-
-
-    std::string toString() {
-        return std::to_string(this->x) + ";" + std::to_string(this->y);
-    }
+    [[nodiscard]] std::string toString() const;
 
     /**
      * @brief Converts a heading from the own coordinate system to the argos coordinate system
      * @param radians
      * @return
      */
-    static argos::CRadians OwnHeadingToArgos(argos::CRadians radians) {
-        return argos::CRadians(radians - argos::CRadians::PI_OVER_TWO);
-    }
+    static argos::CRadians OwnHeadingToArgos(argos::CRadians radians);
 
     /**
      * @brief Converts a heading from the argos coordinate system to the own coordinate system
      * @param radians
      * @return
      */
-    static argos::CRadians ArgosHeadingToOwn(argos::CRadians radians) {
-        return argos::CRadians(radians + argos::CRadians::PI_OVER_TWO);
-    }
+    static argos::CRadians ArgosHeadingToOwn(argos::CRadians radians);
 
     /**
      * @brief Converts the coordinate from the own coordinate system to the argos coordinate system
      * @return
      */
-    Coordinate FromOwnToArgos() {
-        return Coordinate{y, -x};
-    }
+    [[nodiscard]] Coordinate FromOwnToArgos() const;
 
     /**
      * @brief Converts the coordinate from the argos coordinate system to the own coordinate system
      * @return
      */
-    Coordinate FromArgosToOwn() {
-        return Coordinate{-y, x};
-    }
+    [[nodiscard]] Coordinate FromArgosToOwn() const;
 
     /**
      * @brief Compares two coordinates for equality
      * @return
      */
-    bool operator==(const Coordinate &rhs) const {
-        return x == rhs.x &&
-               y == rhs.y;
-    }
-
-    template<class Archive>
-    void serialize(Archive & archive)
-    {
-        archive(x, y);
-    }
+    bool operator==(const Coordinate &rhs) const;
 
 
 
 };
 
-
-
-struct Vector2 {
-    double x;
-    double y;
-};
 
 #endif //THESIS_ARGOS_COORDINATE_H

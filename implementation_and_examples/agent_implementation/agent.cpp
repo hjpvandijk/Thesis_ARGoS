@@ -125,7 +125,7 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) const {
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
  */
 void Agent::checkForObstacles() {
-    for (int sensor_index = 0; sensor_index < this->num_sensors; sensor_index++) {
+    for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->lastRangeReadings[sensor_index] < PROXIMITY_RANGE) {
 
