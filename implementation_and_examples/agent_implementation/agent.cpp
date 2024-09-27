@@ -455,8 +455,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     }
 
 
-    double smallestOCLengthAt0 = MAXFLOAT;
-
 
     //For each occupied box, find the angles that are blocked relative to the agent
     for (auto box: occupiedBoxes) {
@@ -510,10 +508,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
                 NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
                 if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
                     freeAngles.erase(angle);
-                    if (angle == argos::CDegrees(0)){
-                        smallestOCLengthAt0 = std::min(smallestOCLengthAt0, OC.Length());
-                    }
-
                 }
 
             } else if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) &&
@@ -521,7 +515,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
                 if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
                     freeAngles.erase(angle);
-                    smallestOCLengthAt0 = std::min(smallestOCLengthAt0, OC.Length());
                 }
             } else {
                 argos::LOGERR << "Error: Eta_q not within range" << std::endl;
