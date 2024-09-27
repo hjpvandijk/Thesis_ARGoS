@@ -100,6 +100,8 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
+    bool CLOSE_SMALL_AREAS = true;
+    bool SEPARATE_FRONTIERS = true;
     bool WALL_FOLLOWING_ENABLED = true;
 
 

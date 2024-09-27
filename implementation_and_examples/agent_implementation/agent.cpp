@@ -168,7 +168,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
 void Agent::addObjectLocation(Coordinate objectCoordinate) const {
     quadtree::Box objectBox = this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED,
                                                   elapsed_ticks / ticks_per_second);
-    checkIfAgentFitsBetweenObstacles(objectBox);
+    if(this->CLOSE_SMALL_AREAS) checkIfAgentFitsBetweenObstacles(objectBox);
 
 }
 
@@ -900,29 +900,32 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
 
-        std::vector<double> distancesFromOtherAgents = {};
-
-        for(auto agentLocationPair: this->agentLocations){
-            //Get the distance between the frontier and the last known location of other agents
-            Coordinate agentLocation = agentLocationPair.second;
-            double distanceFromOtherAgent = sqrt(pow(frontierRegionX - agentLocation.x, 2) + pow(frontierRegionY - agentLocation.y, 2));
-            distancesFromOtherAgents.push_back(distanceFromOtherAgent);
-        }
-//        //If the frontier location is too close to the current position, disregard it as that area is explored already.
-//        if(distance < 0.1){
-//            continue;
-//        }
-
         //Calculate the score of the frontier region
         double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
 
-        //If that frontier is best to visit for a different agent, skip it.
-        bool otherAgentLowerScore = false;
-        for (auto distanceFromOtherAgent : distancesFromOtherAgents){
-            double otherAgentScore = FRONTIER_DISTANCE_WEIGHT * distanceFromOtherAgent - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
-            if(otherAgentScore < score) otherAgentLowerScore = true;
+        if(this->SEPARATE_FRONTIERS) {
+            std::vector<double> distancesFromOtherAgents = {};
+
+            for (const auto& agentLocationPair: this->agentLocations) {
+                //Get the distance between the frontier and the last known location of other agents
+                Coordinate agentLocation = agentLocationPair.second;
+                double distanceFromOtherAgent = sqrt(
+                        pow(frontierRegionX - agentLocation.x, 2) + pow(frontierRegionY - agentLocation.y, 2));
+                distancesFromOtherAgents.push_back(distanceFromOtherAgent);
+            }
+
+            //If that frontier is best to visit for a different agent, skip it.
+            bool otherAgentLowerScore = false;
+            for (auto distanceFromOtherAgent: distancesFromOtherAgents) {
+                double otherAgentScore = FRONTIER_DISTANCE_WEIGHT * distanceFromOtherAgent -
+                                         FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
+                if (otherAgentScore < score){
+                    otherAgentLowerScore = true;
+                    break;
+                }
+            }
+            if (otherAgentLowerScore) continue;
         }
-        if (otherAgentLowerScore) continue;
 
         //If the score is lower than the best score, update the best score and best frontier region
         if (score < bestFrontierScore) {
