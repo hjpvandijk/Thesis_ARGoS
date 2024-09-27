@@ -19,19 +19,19 @@
 class Agent {
 public:
     std::string id{};
-    Coordinate position;
+    Coordinate position{};
     argos::CRadians heading;
     argos::CRadians targetHeading;
     double speed{};
-    Radio wifi;
+    Radio wifi{};
     static constexpr double num_sensors = 4;
-    std::array<double, static_cast<int>(num_sensors)> lastRangeReadings;
+    std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
 
 
     std::map<std::string, Coordinate> agentLocations;
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
 
-    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive;
+    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
 
 
     //Distance sensor
@@ -46,6 +46,9 @@ public:
     //Some sort of map or grid to keep track of the environment
     //Some sort of list of agents to keep track of other agents
 
+
+
+    Agent() {}
 
     explicit Agent(std::string id);
 
@@ -161,8 +164,8 @@ private:
     std::string GetId() const;
 
 
-    void addObjectLocation(Coordinate objectCoordinate);
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+    void addObjectLocation(Coordinate objectCoordinate) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
 
 

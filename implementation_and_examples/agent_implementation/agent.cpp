@@ -35,7 +35,7 @@ void Agent::setPosition(Coordinate new_position) {
 
 void Agent::setHeading(argos::CRadians new_heading) {
     this->heading = Coordinate::ArgosHeadingToOwn(new_heading).SignedNormalize();
-};
+}
 
 void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive) {
     this->diffdrive = newDiffdrive;
@@ -93,7 +93,7 @@ void Agent::readInfraredSensor() {
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) const {
     double x = coordinate1.x;
     double y = coordinate1.y;
     double dx = coordinate2.x - coordinate1.x;
@@ -115,7 +115,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
  * Add occupied object location to the quadtree
  * @param objectCoordinate
  */
-void Agent::addObjectLocation(Coordinate objectCoordinate) {
+void Agent::addObjectLocation(Coordinate objectCoordinate) const {
     this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
 }
 
@@ -125,7 +125,7 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) {
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
  */
 void Agent::checkForObstacles() {
-    for (int sensor_index = 0; sensor_index < this->num_sensors; sensor_index++) {
+    for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->lastRangeReadings[sensor_index] < PROXIMITY_RANGE) {
 
