@@ -367,14 +367,15 @@ struct CustomComparator {
     CustomComparator(int dir, double headingRounded) : dir(dir), headingRounded(headingRounded) {}
 
 
-    //SOMETHING GOES WRONG WITH ANGLE 49 AND HEADING -131.113
+    //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
+    //Good with heading 36 --> 86
     // Custom comparator logic
     bool operator()(const argos::CDegrees &a, const argos::CDegrees &b) const {
 
 
         auto a_diff = a - argos::CDegrees(this->headingRounded);
         auto b_diff = b - argos::CDegrees(this->headingRounded);
-        
+
         a_diff.SignedNormalize();
         b_diff.SignedNormalize();
 
@@ -388,15 +389,15 @@ struct CustomComparator {
             }
 
             // Handle the second half: 180 to 91
-            if (a_diff_val >= 91 && a_diff_val <= 180 && b_diff_val >= 91 && b_diff_val <= 180) {
+            if (a_diff_val > 90 && a_diff_val <= 180 && b_diff_val > 90 && b_diff_val <= 180) {
                 return a_diff_val > b_diff_val;  // Normal descending order
             }
 
             // Prioritize the first half (90 to -180) over the second half (180 to 91)
-            if ((a_diff_val <= 90 && a_diff_val >= -180) && (b_diff_val >= 91 && b_diff_val <= 180)) {
+            if ((a_diff_val <= 90 && a_diff_val >= -180) && (b_diff_val > 90 && b_diff_val <= 180)) {
                 return true;  // 'a' should come before 'b'
             }
-            if ((a_diff_val >= 91 && a_diff_val <= 180) && (b_diff_val <= 90 && b_diff_val >= -179)) {
+            if ((a_diff_val > 90 && a_diff_val <= 180) && (b_diff_val <= 90 && b_diff_val >= -180)) {
                 return false;  // 'b' should come before 'a'
             }
         } else {
@@ -406,15 +407,15 @@ struct CustomComparator {
             }
 
             // Handle the second half: -180 to -91
-            if (a_diff_val <= -91 && a_diff_val >= -180 && b_diff_val <= -91 && b_diff_val >= -180) {
+            if (a_diff_val < -90 && a_diff_val >= -180 && b_diff_val < -90 && b_diff_val >= -180) {
                 return a_diff_val < b_diff_val;  // Normal descending order
             }
 
             // Prioritize the first half (-90 to 180) over the second half (-180 to -91)
-            if ((a_diff_val >= -90 && a_diff_val <= 180) && (b_diff_val <= -91 && b_diff_val >= 180)) {
+            if ((a_diff_val >= -90 && a_diff_val <= 180) && (b_diff_val < -90 && b_diff_val >= 180)) {
                 return true;  // 'a' should come before 'b'
             }
-            if ((a_diff_val <= -91 && a_diff_val >= -180) && (b_diff_val >= -90 && b_diff_val <= 180)) {
+            if ((a_diff_val < -90 && a_diff_val >= -180) && (b_diff_val >= -90 && b_diff_val <= 180)) {
                 return false;  // 'b' should come before 'a'
             }
         }
@@ -530,17 +531,12 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     //Get free angle closest to heading
     auto closestFreeAngle = *freeAngles.begin();
     for (auto freeAngle: freeAngles) {
-//        if(elapsed_ticks>1640) argos::RLOG << "Free angle: " << freeAngle << std::endl;
         if (std::abs((freeAngle - ToDegrees(targetAngle)).GetValue()) <
             abs((closestFreeAngle - ToDegrees(targetAngle)).GetValue())) {
             closestFreeAngle = freeAngle;
         }
     }
 
-//    if(elapsed_ticks>1640){
-//        argos::RLOG << "Target angle: " << ToDegrees(targetAngle) << std::endl;
-//        argos::RLOG << "Closest free angle: " << closestFreeAngle << std::endl;
-//    }
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
@@ -1118,12 +1114,6 @@ void Agent::calculateNextPosition() {
     }
     this->previousBestFrontier = this->currentBestFrontier;
     this->swarm_vector = total_vector;
-
-    argos::RLOG << "Target heading: " << ToDegrees(this->targetHeading).GetValue() << std::endl;
-    argos::RLOG << "Current heading: " << ToDegrees(this->heading).GetValue() << std::endl;
-    argos::RLOG << "Object avoidance angle: " << ToDegrees(objectAvoidanceAngle).GetValue() << std::endl;
-    argos::RLOG << "Selected frontier: " << this->currentBestFrontier.x << ", " << this->currentBestFrontier.y
-                << std::endl;
 }
 
 argos::CVector2
