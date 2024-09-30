@@ -549,21 +549,18 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
             89) { //The complete forward direction to the target is blocked
             argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
                                                               this->wallFollowingHitPoint.y - this->position.y);
-            if (agentToHitPoint.Length() <= this->quadtree->getSmallestBoxSize()) {
-
+            if (agentToHitPoint.Length() <= this->quadtree->getSmallestBoxSize()) { // If we are at the hit point (again)
                 if (this->wallFollowingDirection == 0) {
-                    this->wallFollowingDirection = 1;
-                } else if (this->wallFollowingDirection == 1) {
-                    this->wallFollowingDirection = -1;
-                } else {
-                    if (!this->lastIterationInHitPoint) {
-                        this->wallFollowingDirection = 1;
+                    this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
+                } else { // 1 or -1
+                    if (!this->lastIterationInHitPoint) { // If we are not in the same hit point as last iteration (so we have once moved from the hit point)
+                        this->wallFollowingDirection = -this->wallFollowingDirection; // Change wall following direction
                     }
                 }
                 this->lastIterationInHitPoint = true;
 
             } else {
-                this->wallFollowingDirection = 1; //TODO: Make random?
+                this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
             }
             this->wallFollowingHitPoint = this->position;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
@@ -1002,7 +999,7 @@ void Agent::calculateNextPosition() {
 
 #ifdef BLACKLIST_FRONTIERS
     //If the agent is close to the frontier, reset all blacklisted frontiers avoiding flags
-    if (unexploredFrontierVector.Length() <= this->quadtree->getSmallestBoxSize()) {
+    if (unexploredFrontierVector.Length() <= frontierDistanceUntilReached) {
         //Reset all 'avoiding' flags
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             blacklistedFrontier.second.second = false;
@@ -1028,23 +1025,33 @@ void Agent::calculateNextPosition() {
 #endif
     if (closeToBlacklisted || //If the current best frontier is blacklisted
         unexploredFrontierVector.Length() <=
-        this->quadtree->getSmallestBoxSize()) { //Or the agent is close to the frontier
+                frontierDistanceUntilReached) { //Or the agent is close to the frontier
 #ifdef BLACKLIST_FRONTIERS
-        if (unexploredFrontierVector.Length() <= this->quadtree->getSmallestBoxSize()) {
+        if (unexploredFrontierVector.Length() <= frontierDistanceUntilReached) {
             for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
                 blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
             }
         }
 #endif
         //Find new frontier
+#ifdef WALL_FOLLOWING_ENABLED
+        if (wallFollowingDirection == 0) {
+            unexploredFrontierVector = calculateUnexploredFrontierVector();
+        }
+#else
         unexploredFrontierVector = calculateUnexploredFrontierVector();
-    }
-#elif WALL_FOLLOWING_ENABLED
+#endif
+        }
+
+#else
+
+#ifdef WALL_FOLLOWING_ENABLED
     if (wallFollowingDirection == 0) {
         unexploredFrontierVector = calculateUnexploredFrontierVector();
     }
 #else
     unexploredFrontierVector = calculateUnexploredFrontierVector();
+#endif
 #endif
 
 

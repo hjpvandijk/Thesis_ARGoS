@@ -114,6 +114,8 @@ public:
 
     double blacklistChancePerCount = 10;
 
+    double frontierDistanceUntilReached = 1.0;
+
 
     double PROXIMITY_RANGE = 2.0;
 
