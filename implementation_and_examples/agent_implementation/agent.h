@@ -105,7 +105,7 @@ public:
     bool SEPARATE_FRONTIERS = true;
     bool WALL_FOLLOWING_ENABLED = false;
     bool BLACKLIST_FRONTIERS = true; // If this is true, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED should be true
-    double blacklistChancePerCount = 30; // 0.01 chance per second. It is very low, but as it is checked every tick, it is enough
+    double blacklistChancePerCount = 10;
 
 
     double PROXIMITY_RANGE = 2.0;
@@ -141,12 +141,12 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 360;
 
-    std::map<Coordinate, std::pair<int, bool>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
+    std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
     double minDistFromFrontier = MAXFLOAT;
 
     double timeToCheckFrontierDistS = 10.0;
     double timeFrontierDistDecreased = 0.0;
-    double minAllowedDistanceBetweenFrontiers = 0.2;
+    double minAllowedDistanceBetweenFrontiers = 1.0;
 
     Coordinate currentBestFrontier = {0, 0};
     Coordinate previousBestFrontier = {0, 0};

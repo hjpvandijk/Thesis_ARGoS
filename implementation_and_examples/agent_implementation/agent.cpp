@@ -168,7 +168,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
 void Agent::addObjectLocation(Coordinate objectCoordinate) const {
     quadtree::Box objectBox = this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED,
                                                   elapsed_ticks / ticks_per_second);
-    if(this->CLOSE_SMALL_AREAS) checkIfAgentFitsBetweenObstacles(objectBox);
+    if (this->CLOSE_SMALL_AREAS) checkIfAgentFitsBetweenObstacles(objectBox);
 
 }
 
@@ -896,31 +896,22 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
 
         if (this->BLACKLIST_FRONTIERS) {
-            argos::RLOG << "Checking if frontier: " << frontierRegionX << ", " << frontierRegionY
-                        << " is blacklisted" << std::endl;
             bool blacklisted = false;
             for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
                 Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
-                argos::RLOG << "Calculating distance between :" << frontierRegionX << ", " << frontierRegionY
-                            << " and " << blackListedFrontierCoordinate.x << ", "
-                            << blackListedFrontierCoordinate.y << std::endl;
                 double distanceBetweenFrontiers = sqrt(pow(frontierRegionX - blackListedFrontierCoordinate.x, 2) +
                                                        pow(frontierRegionY - blackListedFrontierCoordinate.y, 2));
-                argos::RLOG << "Distance between frontiers: " << distanceBetweenFrontiers << std::endl;
-                argos::RLOG << "Min allowed distance between frontiers: " << this->minAllowedDistanceBetweenFrontiers
-                            << std::endl;
-                if (distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
+                if (distanceBetweenFrontiers <
+                    this->minAllowedDistanceBetweenFrontiers) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
                     int timesBlacklisted = blacklistedFrontier.second.first;
-                    double blacklistChance = 100-(timesBlacklisted * this->blacklistChancePerCount * 100);
+                    double blacklistChance = 100 - (timesBlacklisted * this->blacklistChancePerCount);
                     double randomChance = rand() % 100;
-                    argos::RLOG << "Blacklist chance: " << blacklistChance << std::endl;
-                    argos::RLOG << "avoiding? : " << blacklistedFrontier.second.second << " || " << randomChance << " > " << blacklistChance << std::endl;
-                    if (blacklistedFrontier.second.second || randomChance > blacklistChance) {//If currently already avoiding, or not current target and random chance to blacklist the frontier
-                        argos::RLOG << "Blacklisted frontier so skip" << std::endl;
-                        blacklisted = true;
-                        blacklistedFrontier.second.second = true;
+                    //If currently already avoiding, or random chance to blacklist the frontier, depending on counter.
+                    if (blacklistedFrontier.second.second == 1 || randomChance > blacklistChance) {
+                        blacklisted = true; //Skip this frontier
+                        blacklistedFrontier.second.second = 1; //1 = Currently avoiding said frontier
+                        break;
                     }
-                    break;
                 }
             }
             if (blacklisted) continue; //Skip this frontier
@@ -963,8 +954,23 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         }
     }
 
+
     this->currentBestFrontier = bestFrontierRegionCenter;
 
+    if (this->BLACKLIST_FRONTIERS) {
+        for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
+            Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
+
+            double distanceBetweenFrontiers = sqrt(
+                    pow(bestFrontierRegionCenter.x - blackListedFrontierCoordinate.x, 2) +
+                    pow(bestFrontierRegionCenter.y - blackListedFrontierCoordinate.y, 2));
+
+            if (distanceBetweenFrontiers <
+                this->minAllowedDistanceBetweenFrontiers) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
+                blacklistedFrontier.second.second = 2; //2 = Currently following said frontier
+            }
+        }
+    }
 
 
     //Calculate the vector to the best frontier region
@@ -1002,15 +1008,32 @@ void Agent::calculateNextPosition() {
         }
     }
 
-    if(this->DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED) {
-        argos::RLOG << "blacklisted? " << (this->blacklistedFrontiers.find(this->currentBestFrontier) != this->blacklistedFrontiers.end()) << std::endl;
-        argos::RLOG << "current best frontier: " << this->currentBestFrontier.x << ", " << this->currentBestFrontier.y << std::endl;
-        for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
-            argos::RLOG << "blacklisted frontier: " << blacklistedFrontier.first.x << ", " << blacklistedFrontier.first.y << std::endl;
-            argos::RLOG << (this->currentBestFrontier == blacklistedFrontier.first) << std::endl;
+    if (this->DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED) {
+        bool closeToBlacklisted = false;
+        if (this->BLACKLIST_FRONTIERS) {
+            for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
+                double distanceBetweenFrontiers = sqrt(
+                        pow(this->currentBestFrontier.x - blacklistedFrontier.first.x, 2) +
+                        pow(this->currentBestFrontier.y - blacklistedFrontier.first.y, 2));
+                //If we are currently not purposely heading towards this blacklisted frontier (2), and the distance between the frontiers is too close
+                if (blacklistedFrontier.second.second != 2 &&
+                    distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
+                    closeToBlacklisted = true;
+                    break;
+                }
+                //Because if we are purposely heading towards this frontier, we should not switch, and wait until either we reach it or we are not increasing our distance to it.
+            }
         }
-        if (this->blacklistedFrontiers.find(this->currentBestFrontier) != this->blacklistedFrontiers.end() || //If the current best frontier is blacklisted
-            unexploredFrontierVector.Length() <= this->quadtree->getSmallestBoxSize()) { //Or the agent is close to the frontier
+        if (closeToBlacklisted || //If the current best frontier is blacklisted
+            unexploredFrontierVector.Length() <=
+            this->quadtree->getSmallestBoxSize()) { //Or the agent is close to the frontier
+            if (this->BLACKLIST_FRONTIERS &&
+                unexploredFrontierVector.Length() <= this->quadtree->getSmallestBoxSize()) {
+                for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
+                    blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
+                }
+            }
+
             //Find new frontier
             unexploredFrontierVector = calculateUnexploredFrontierVector();
         }
@@ -1025,34 +1048,32 @@ void Agent::calculateNextPosition() {
                                              pow(this->currentBestFrontier.y - this->position.y, 2));
         if (this->currentBestFrontier == this->previousBestFrontier) { //If we are still on route to the same frontier
             //Check if the distance to the frontier has decreased in the last timeToCheckFrontierDistS seconds
-            argos::RLOG << "Distance to best frontier: " << distanceToBestFrontier << std::endl;
-            argos::RLOG << "Min distance to best frontier: " << this->minDistFromFrontier << std::endl;
             if (distanceToBestFrontier < this->minDistFromFrontier) { //If the distance has decreased
-                argos::RLOG << "Distance to best frontier decreased" << std::endl;
                 this->minDistFromFrontier = distanceToBestFrontier;
                 this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
             } else if (this->elapsed_ticks / this->ticks_per_second - this->timeFrontierDistDecreased >
                        timeToCheckFrontierDistS) {
                 //If the distance has not decreased in the last timeToCheckFrontierDistS seconds, blacklist the frontier
-                argos::RLOG << "Distance to best frontier did not decrease in the last " << timeToCheckFrontierDistS
-                            << " seconds" << std::endl;
                 bool sameAsOtherFrontier = false;
                 for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
                     Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
                     double distanceBetweenFrontiers = sqrt(
                             pow(this->currentBestFrontier.x - blackListedFrontierCoordinate.x, 2) +
-                            pow(blackListedFrontierCoordinate.y - this->position.y, 2));
+                            pow(this->currentBestFrontier.y - blackListedFrontierCoordinate.y, 2));
                     if (distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
                         blacklistedFrontier.second.first++;
+                        blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
                         sameAsOtherFrontier = true;
                     }
                 }
                 if (!sameAsOtherFrontier) {
-                    argos::RLOG << "Blacklisting frontier: " << this->currentBestFrontier.x << ", "
-                                << this->currentBestFrontier.y << std::endl;
-                    this->blacklistedFrontiers[this->currentBestFrontier] = std::make_pair<int, bool>(1, false);
+                    this->blacklistedFrontiers[this->currentBestFrontier] = std::make_pair<int, int>(1,
+                                                                                                     0); // 0 = Not currently avoiding said frontier
                 }
+                //Update time to start a new timed check iteration
+                this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
             }
+
 
         } else { //If we are not on route to the same frontier, set the min distance and time
             this->minDistFromFrontier = distanceToBestFrontier;
@@ -1180,7 +1201,6 @@ void Agent::doStep() {
 
         }
     }
-
 
 
     elapsed_ticks++;
