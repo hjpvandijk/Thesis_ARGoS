@@ -100,11 +100,18 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
-    bool DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED = true;
-    bool CLOSE_SMALL_AREAS = true;
-    bool SEPARATE_FRONTIERS = true;
-    bool WALL_FOLLOWING_ENABLED = false;
-    bool BLACKLIST_FRONTIERS = true; // If this is true, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED should be true
+#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+#define CLOSE_SMALL_AREAS
+#define SEPARATE_FRONTIERS
+#define WALL_FOLLOWING_ENABLED
+#define BLACKLIST_FRONTIERS // If this is defined, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED will automatically be defined
+#ifdef BLACKLIST_FRONTIERS
+    #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+        #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+    #endif
+#endif
+
+
     double blacklistChancePerCount = 10;
 
 
