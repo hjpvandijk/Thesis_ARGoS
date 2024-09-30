@@ -114,7 +114,9 @@ public:
 
     double blacklistChancePerCount = 10;
 
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     double frontierDistanceUntilReached = 1.0;
+#endif
 
 
     double PROXIMITY_RANGE = 2.0;
@@ -150,20 +152,25 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 360;
 
+#ifdef BLACKLIST_FRONTIERS
     std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
     double minDistFromFrontier = MAXFLOAT;
 
     double timeToCheckFrontierDistS = 10.0;
     double timeFrontierDistDecreased = 0.0;
     double minAllowedDistanceBetweenFrontiers = 1.0;
+#endif
 
     Coordinate currentBestFrontier = {0, 0};
     Coordinate previousBestFrontier = {0, 0};
     Coordinate subTarget = {0, 0};
 
     int wallFollowingDirection = 0;
+
+#ifdef WALL_FOLLOWING_ENABLED
     Coordinate wallFollowingHitPoint = {0, 0};
     bool lastIterationInHitPoint = false;
+#endif
 
     double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
