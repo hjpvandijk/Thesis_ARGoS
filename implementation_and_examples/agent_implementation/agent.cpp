@@ -1023,9 +1023,10 @@ void Agent::calculateNextPosition() {
         //Because if we are purposely heading towards this frontier, we should not switch, and wait until either we reach it or we are not increasing our distance to it.
     }
 #endif
-    if (closeToBlacklisted || //If the current best frontier is blacklisted
+    //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || closeToBlacklisted || //If the current best frontier is blacklisted
         unexploredFrontierVector.Length() <=
-                frontierDistanceUntilReached) { //Or the agent is close to the frontier
+        frontierDistanceUntilReached) { //Or the agent is close to the frontier
 #ifdef BLACKLIST_FRONTIERS
         if (unexploredFrontierVector.Length() <= frontierDistanceUntilReached) {
             for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
@@ -1035,18 +1036,19 @@ void Agent::calculateNextPosition() {
 #endif
         //Find new frontier
 #ifdef WALL_FOLLOWING_ENABLED
+        //If we are not currently wall following
         if (wallFollowingDirection == 0) {
             unexploredFrontierVector = calculateUnexploredFrontierVector();
         }
 #else
         unexploredFrontierVector = calculateUnexploredFrontierVector();
 #endif
-        }
+    }
 
 #else
 
 #ifdef WALL_FOLLOWING_ENABLED
-    if (wallFollowingDirection == 0) {
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || wallFollowingDirection == 0) {
         unexploredFrontierVector = calculateUnexploredFrontierVector();
     }
 #else
