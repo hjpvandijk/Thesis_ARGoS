@@ -1087,12 +1087,16 @@ void Agent::calculateNextPosition() {
 
 
 #ifdef BLACKLIST_FRONTIERS
-    double distanceToBestFrontier = sqrt(pow(this->currentBestFrontier.x - this->position.x, 2) +
-                                         pow(this->currentBestFrontier.y - this->position.y, 2));
-    if (this->currentBestFrontier == this->previousBestFrontier) { //If we are still on route to the same frontier
+    Coordinate target = this->currentBestFrontier;
+    //If we are using a subtarget, calculate the distance to the subtarget instead
+    if(!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) target = this->subTarget;
+    double distanceToTarget = sqrt(pow(this->currentBestFrontier.x - this->position.x, 2) +
+                                   pow(this->currentBestFrontier.y - this->position.y, 2));
+
+    if (this->currentBestFrontier == this->previousBestFrontier || !(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) { //If we are still on route to the same frontier, or to a subtarget
         //Check if the distance to the frontier has decreased in the last timeToCheckFrontierDistS seconds
-        if (distanceToBestFrontier < this->minDistFromFrontier) { //If the distance has decreased
-            this->minDistFromFrontier = distanceToBestFrontier;
+        if (distanceToTarget < this->minDistFromFrontier) { //If the distance has decreased
+            this->minDistFromFrontier = distanceToTarget;
             this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
         } else if (this->elapsed_ticks / this->ticks_per_second - this->timeFrontierDistDecreased >
                    timeToCheckFrontierDistS) {
@@ -1101,8 +1105,8 @@ void Agent::calculateNextPosition() {
             for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
                 Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
                 double distanceBetweenFrontiers = sqrt(
-                        pow(this->currentBestFrontier.x - blackListedFrontierCoordinate.x, 2) +
-                        pow(this->currentBestFrontier.y - blackListedFrontierCoordinate.y, 2));
+                        pow(target.x - blackListedFrontierCoordinate.x, 2) +
+                        pow(target.y - blackListedFrontierCoordinate.y, 2));
                 if (distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
                     blacklistedFrontier.second.first++;
                     blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
@@ -1110,7 +1114,7 @@ void Agent::calculateNextPosition() {
                 }
             }
             if (!sameAsOtherFrontier) {
-                this->blacklistedFrontiers[this->currentBestFrontier] = std::make_pair<int, int>(1,
+                this->blacklistedFrontiers[target] = std::make_pair<int, int>(1,
                                                                                                  0); // 0 = Not currently avoiding said frontier
             }
             //Update time to start a new timed check iteration
@@ -1119,7 +1123,7 @@ void Agent::calculateNextPosition() {
 
 
     } else { //If we are not on route to the same frontier, set the min distance and time
-        this->minDistFromFrontier = distanceToBestFrontier;
+        this->minDistFromFrontier = distanceToTarget;
         this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
     }
 #endif
