@@ -440,6 +440,10 @@ namespace quadtree {
             return this->Smallest_Box_Size;
         }
 
+        Box getRootBox() const {
+            return mBox;
+        }
+
 
     private:
         static constexpr auto Threshold = std::size_t(16);

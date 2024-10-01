@@ -110,6 +110,7 @@ public:
         #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     #endif
 #endif
+#define WALKING_STATE_WHEN_NO_FRONTIERS
 
 
     double blacklistChancePerCount = 10;
@@ -161,9 +162,9 @@ public:
     double minAllowedDistanceBetweenFrontiers = 1.0;
 #endif
 
-    Coordinate currentBestFrontier = {0, 0};
+    Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};
     Coordinate previousBestFrontier = {0, 0};
-    Coordinate subTarget = {0, 0};
+    Coordinate subTarget = {MAXFLOAT, MAXFLOAT};
 
     int wallFollowingDirection = 0;
 

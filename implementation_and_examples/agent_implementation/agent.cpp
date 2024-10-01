@@ -544,7 +544,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
 
 #ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
-    if (this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
+    if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) && this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
         if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) >
             89) { //The complete forward direction to the target is blocked
             argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
@@ -874,7 +874,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
     //Initialize variables to store the best frontier region and its score
     std::vector<quadtree::Box> bestFrontierRegion = {};
-    Coordinate bestFrontierRegionCenter = {0, 0};
+    Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
     double bestFrontierScore = std::numeric_limits<double>::max();
 
     //Iterate over all frontier regions to find the best one
@@ -1053,6 +1053,35 @@ void Agent::calculateNextPosition() {
     unexploredFrontierVector = calculateUnexploredFrontierVector();
 #endif
 #endif
+    argos::RLOG << "Current best frontier: " << this->currentBestFrontier.x << ", " << this->currentBestFrontier.y << std::endl;
+    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector.GetX() << ", " << unexploredFrontierVector.GetY() << std::endl;
+#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ){
+        argos::CVector2 agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
+                                                           this->subTarget.y - this->position.y);;
+        if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT} || agentToSubtarget.Length() <= frontierDistanceUntilReached) {
+            argos::RLOG << "Current best frontier is not set and no subtarget" << std::endl;
+            //Find a random direction to walk in, by placing a subtarget on the edge of the root box in the quadtree
+            quadtree::Box rootBox = this->quadtree->getRootBox();
+            Coordinate rootBoxCenter = rootBox.getCenter();
+            double rootBoxSize = rootBox.getSize();
+            argos::CRadians randomAngle = (rand() % 360) * argos::CRadians::PI / 180;
+            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+            subtargetVector.Rotate(randomAngle);
+            subtargetVector.Normalize();
+            subtargetVector *= rootBoxSize * 0.5;
+            this->subTarget = {rootBoxCenter.x + subtargetVector.GetX(), rootBoxCenter.y + subtargetVector.GetY()};
+            argos::RLOG << "Subtarget: " << this->subTarget.x << ", " << this->subTarget.y << std::endl;
+            agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
+                                               this->subTarget.y - this->position.y);;
+
+        }
+        unexploredFrontierVector = agentToSubtarget;
+    } else {
+            this->subTarget = {MAXFLOAT, MAXFLOAT};
+        }
+#endif
+    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector.GetX() << ", " << unexploredFrontierVector.GetY() << std::endl;
 
 
 #ifdef BLACKLIST_FRONTIERS
