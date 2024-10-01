@@ -544,12 +544,14 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
 
 #ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
-    if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) && this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
+    if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) &&
+        this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
         if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) >
             89) { //The complete forward direction to the target is blocked
             argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
                                                               this->wallFollowingHitPoint.y - this->position.y);
-            if (agentToHitPoint.Length() <= this->quadtree->getSmallestBoxSize()) { // If we are at the hit point (again)
+            if (agentToHitPoint.Length() <=
+                this->quadtree->getSmallestBoxSize()) { // If we are at the hit point (again)
                 if (this->wallFollowingDirection == 0) {
                     this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
                 } else { // 1 or -1
@@ -907,6 +909,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
                 double randomChance = rand() % 100;
                 //If currently already avoiding, or random chance to blacklist the frontier, depending on counter.
                 if (blacklistedFrontier.second.second == 1 || randomChance > blacklistChance) {
+                    argos::RLOG << "SKipping frontier:" << frontierRegionX << "," << frontierRegionY << std::endl;
                     blacklisted = true; //Skip this frontier
                     blacklistedFrontier.second.second = 1; //1 = Currently avoiding said frontier
                     break;
@@ -1024,7 +1027,8 @@ void Agent::calculateNextPosition() {
     }
 #endif
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier
-    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || closeToBlacklisted || //If the current best frontier is blacklisted
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || closeToBlacklisted ||
+        //If the current best frontier is blacklisted
         unexploredFrontierVector.Length() <=
         frontierDistanceUntilReached) { //Or the agent is close to the frontier
 #ifdef BLACKLIST_FRONTIERS
@@ -1055,45 +1059,42 @@ void Agent::calculateNextPosition() {
     unexploredFrontierVector = calculateUnexploredFrontierVector();
 #endif
 #endif
-    argos::RLOG << "Current best frontier: " << this->currentBestFrontier.x << ", " << this->currentBestFrontier.y << std::endl;
-    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector.GetX() << ", " << unexploredFrontierVector.GetY() << std::endl;
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
-    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ){
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) {
         argos::CVector2 agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
                                                            this->subTarget.y - this->position.y);;
-        if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT} || agentToSubtarget.Length() <= frontierDistanceUntilReached) {
-            argos::RLOG << "Current best frontier is not set and no subtarget" << std::endl;
+        if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT} ||
+            agentToSubtarget.Length() <= frontierDistanceUntilReached) {
             //Find a random direction to walk in, by placing a subtarget on the edge of the root box in the quadtree
             quadtree::Box rootBox = this->quadtree->getRootBox();
             Coordinate rootBoxCenter = rootBox.getCenter();
             double rootBoxSize = rootBox.getSize();
-            argos::CRadians randomAngle = (rand() % 360) * argos::CRadians::PI / 180;
+            argos::CRadians randomAngle = (rand() % 360) * argos::CRadians::PI /
+                                          180; //TODO: Maybe away from average location of other agents?
             argos::CVector2 subtargetVector = argos::CVector2(1, 0);
             subtargetVector.Rotate(randomAngle);
             subtargetVector.Normalize();
             subtargetVector *= rootBoxSize * 0.5;
             this->subTarget = {rootBoxCenter.x + subtargetVector.GetX(), rootBoxCenter.y + subtargetVector.GetY()};
-            argos::RLOG << "Subtarget: " << this->subTarget.x << ", " << this->subTarget.y << std::endl;
             agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
                                                this->subTarget.y - this->position.y);;
 
         }
         unexploredFrontierVector = agentToSubtarget;
     } else {
-            this->subTarget = {MAXFLOAT, MAXFLOAT};
-        }
+        this->subTarget = {MAXFLOAT, MAXFLOAT};
+    }
 #endif
-    argos::RLOG << "Unexplored frontier vector: " << unexploredFrontierVector.GetX() << ", " << unexploredFrontierVector.GetY() << std::endl;
-
 
 #ifdef BLACKLIST_FRONTIERS
     Coordinate target = this->currentBestFrontier;
     //If we are using a subtarget, calculate the distance to the subtarget instead
-    if(!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) target = this->subTarget;
+    if (!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) target = this->subTarget;
     double distanceToTarget = sqrt(pow(this->currentBestFrontier.x - this->position.x, 2) +
                                    pow(this->currentBestFrontier.y - this->position.y, 2));
 
-    if (this->currentBestFrontier == this->previousBestFrontier || !(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) { //If we are still on route to the same frontier, or to a subtarget
+    if (this->currentBestFrontier == this->previousBestFrontier || !(this->subTarget == Coordinate{MAXFLOAT,
+                                                                                                   MAXFLOAT})) { //If we are still on route to the same frontier, or to a subtarget
         //Check if the distance to the frontier has decreased in the last timeToCheckFrontierDistS seconds
         if (distanceToTarget < this->minDistFromFrontier) { //If the distance has decreased
             this->minDistFromFrontier = distanceToTarget;
@@ -1115,7 +1116,7 @@ void Agent::calculateNextPosition() {
             }
             if (!sameAsOtherFrontier) {
                 this->blacklistedFrontiers[target] = std::make_pair<int, int>(1,
-                                                                                                 0); // 0 = Not currently avoiding said frontier
+                                                                              0); // 0 = Not currently avoiding said frontier
             }
             //Update time to start a new timed check iteration
             this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
