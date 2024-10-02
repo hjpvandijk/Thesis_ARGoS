@@ -371,7 +371,7 @@ struct CustomComparator {
     double heading;
     double targetAngle;
 
-    CustomComparator(int dir, double headingRounded, double targetAngleRounded) : dir(dir), heading(heading), targetAngle(targetAngle) {}
+    CustomComparator(int dir, double heading, double targetAngle) : dir(dir), heading(heading), targetAngle(targetAngle) {}
 
 
     //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
