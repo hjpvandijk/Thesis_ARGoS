@@ -226,8 +226,39 @@ private:
 
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
+    // Custom comparator to order set for wall following. The set is ordered by the angle difference to the wall following direction
+    struct CustomComparator {
+        int dir;  // dir is either 0, 1 or -1
+        double heading;
+        double targetAngle;
 
-};
+        CustomComparator(int dir, double heading, double targetAngle) : dir(dir), heading(heading),
+                                                                        targetAngle(targetAngle) {}
+
+
+        //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
+        //Good with heading 36 --> 86
+        // Custom comparator logic
+        bool operator()(const argos::CDegrees &a, const argos::CDegrees &b) const;
+    };
+
+#ifdef WALL_FOLLOWING_ENABLED
+    void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+#endif
+#ifdef BLACKLIST_FRONTIERS
+    bool skipBlacklistedFrontier(double frontierRegionX, double frontierRegionY);
+    void updateBlacklistFollowing(Coordinate bestFrontierRegionCenter);
+    void resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector);
+    bool closeToBlacklistedFrontier();
+    void updateBlacklistChance();
+#endif
+#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+    void enterWalkingState(argos::CVector2 & unexploredFrontierVector);
+#endif
+
+
+
+    };
 
 
 #endif //THESIS_ARGOS_AGENT_H
