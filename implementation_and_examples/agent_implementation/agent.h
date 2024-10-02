@@ -155,6 +155,7 @@ public:
 
 #ifdef BLACKLIST_FRONTIERS
     std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
+    std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
     double minDistFromFrontier = MAXFLOAT;
 
     double timeToCheckFrontierDistS = 10.0;

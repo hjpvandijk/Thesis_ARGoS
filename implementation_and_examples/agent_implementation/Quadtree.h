@@ -436,6 +436,10 @@ namespace quadtree {
             return this->MinSize;
         }
 
+        void setMinSize(double minSize) {
+            this->MinSize = minSize;
+        }
+
         double getSmallestBoxSize() const {
             return this->Smallest_Box_Size;
         }
@@ -447,7 +451,7 @@ namespace quadtree {
 
     private:
         static constexpr auto Threshold = std::size_t(16);
-        static constexpr double MinSize = 0.2;
+        double MinSize = 0.2;
         double Smallest_Box_Size = MinSize;
         static constexpr double EvaporationTime = 100.0;
         static constexpr double MaxAllowedVisitedTimeDiffS = 10.0;
