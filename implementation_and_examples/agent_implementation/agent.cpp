@@ -368,10 +368,10 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 // Custom comparator to order set for wall following. The set is ordered by the angle difference to the wall following direction
 struct CustomComparator {
     int dir;  // dir is either 0, 1 or -1
-    double headingRounded;
-    double targetAngleRounded;
+    double heading;
+    double targetAngle;
 
-    CustomComparator(int dir, double headingRounded, double targetAngleRounded) : dir(dir), headingRounded(headingRounded), targetAngleRounded(targetAngleRounded) {}
+    CustomComparator(int dir, double headingRounded, double targetAngleRounded) : dir(dir), heading(heading), targetAngle(targetAngle) {}
 
 
     //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
@@ -380,9 +380,8 @@ struct CustomComparator {
     bool operator()(const argos::CDegrees &a, const argos::CDegrees &b) const {
 
 
-        auto a_diff = a - argos::CDegrees(this->headingRounded);
-        auto b_diff = b - argos::CDegrees(this->headingRounded);
-//        argos::LOG << "a_diff: " << a_diff.GetValue() << " b_diff: " << b_diff.GetValue() << std::endl;
+        auto a_diff = a - argos::CDegrees(this->heading);
+        auto b_diff = b - argos::CDegrees(this->heading);
 
         a_diff.SignedNormalize();
         b_diff.SignedNormalize();
@@ -390,9 +389,8 @@ struct CustomComparator {
         auto a_diff_val = a_diff.GetValue();
         auto b_diff_val = b_diff.GetValue();
         if (dir == 0) {
-            a_diff_val = std::abs(NormalizedDifference(a, argos::CDegrees(this->targetAngleRounded)).GetValue());
-            b_diff_val = std::abs(NormalizedDifference(b, argos::CDegrees(this->targetAngleRounded)).GetValue());
-//            argos::LOG << "a_diff: " << a_diff_val << " b_diff: " << b_diff_val << " : " << (a_diff_val < b_diff_val) << std::endl;
+            a_diff_val = std::abs(NormalizedDifference(a, argos::CDegrees(this->targetAngle)).GetValue());
+            b_diff_val = std::abs(NormalizedDifference(b, argos::CDegrees(this->targetAngle)).GetValue());
             if(a_diff_val == b_diff_val) {
                 return a < b;
             }
@@ -455,8 +453,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
                                                                                   this->ticks_per_second);
 
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
-    auto headingRounded = (int) (ToDegrees(this->heading).GetValue() / angleInterval) * angleInterval;
-    auto targetAngleRounded = (int) (ToDegrees(targetAngle).GetValue() / angleInterval) * angleInterval;
 
     //Create set of free angles ordered to be used for wall following
     std::set<argos::CDegrees, CustomComparator> freeAngles(
@@ -467,12 +463,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
         auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
         freeAngles.insert(angle);
     }
-
-//    argos::RLOG << "Free angles: ";
-//    for (auto angle: freeAngles) {
-//        argos::RLOG << angle.GetValue() << " relative " << NormalizedDifference(angle, argos::CDegrees(targetAngleRounded)).GetValue() << std::endl;
-//    }
-
 
 
     //For each occupied box, find the angles that are blocked relative to the agent
@@ -551,6 +541,16 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     //Get free angle closest to heading
     auto closestFreeAngle = *freeAngles.begin();
+#ifdef WALL_FOLLOWING_ENABLED
+    if (this->wallFollowingDirection != 0) { //If wall following is not 0, find the closest free angle to the target angle.
+        for (auto freeAngle: freeAngles) {
+            if (std::abs(NormalizedDifference(ToRadians(freeAngle), targetAngle).GetValue()) <
+                std::abs(NormalizedDifference(ToRadians(closestFreeAngle), targetAngle).GetValue())) {
+                closestFreeAngle = freeAngle;
+            }
+        }
+    }
+#endif
 
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
