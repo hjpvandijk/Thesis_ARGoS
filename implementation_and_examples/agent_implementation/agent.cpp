@@ -369,8 +369,9 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 struct CustomComparator {
     int dir;  // dir is either 0, 1 or -1
     double headingRounded;
+    double targetAngleRounded;
 
-    CustomComparator(int dir, double headingRounded) : dir(dir), headingRounded(headingRounded) {}
+    CustomComparator(int dir, double headingRounded, double targetAngleRounded) : dir(dir), headingRounded(headingRounded), targetAngleRounded(targetAngleRounded) {}
 
 
     //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
@@ -381,13 +382,22 @@ struct CustomComparator {
 
         auto a_diff = a - argos::CDegrees(this->headingRounded);
         auto b_diff = b - argos::CDegrees(this->headingRounded);
+//        argos::LOG << "a_diff: " << a_diff.GetValue() << " b_diff: " << b_diff.GetValue() << std::endl;
 
         a_diff.SignedNormalize();
         b_diff.SignedNormalize();
 
         auto a_diff_val = a_diff.GetValue();
         auto b_diff_val = b_diff.GetValue();
-        if (dir >= 0) {
+        if (dir == 0) {
+            a_diff_val = std::abs(NormalizedDifference(a, argos::CDegrees(this->targetAngleRounded)).GetValue());
+            b_diff_val = std::abs(NormalizedDifference(b, argos::CDegrees(this->targetAngleRounded)).GetValue());
+//            argos::LOG << "a_diff: " << a_diff_val << " b_diff: " << b_diff_val << " : " << (a_diff_val < b_diff_val) << std::endl;
+            if(a_diff_val == b_diff_val) {
+                return a < b;
+            }
+            return a_diff_val < b_diff_val; //Normal ascending order
+        } else if (dir == 1) {
             // Handle the first half: 90 to -180
             if (a_diff_val <= 90 && a_diff_val >= -180 && b_diff_val <= 90 && b_diff_val >= -180) {
                 return a_diff_val > b_diff_val;  // Normal descending order
@@ -446,16 +456,22 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
     auto headingRounded = (int) (ToDegrees(this->heading).GetValue() / angleInterval) * angleInterval;
+    auto targetAngleRounded = (int) (ToDegrees(targetAngle).GetValue() / angleInterval) * angleInterval;
 
     //Create set of free angles ordered to be used for wall following
     std::set<argos::CDegrees, CustomComparator> freeAngles(
-            CustomComparator(this->wallFollowingDirection, headingRounded));
+            CustomComparator(this->wallFollowingDirection, ToDegrees(heading).GetValue(), ToDegrees(targetAngle).GetValue()));
 
 //Add free angles from -180 to 180 degrees
     for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
         auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
         freeAngles.insert(angle);
     }
+
+//    argos::RLOG << "Free angles: ";
+//    for (auto angle: freeAngles) {
+//        argos::RLOG << angle.GetValue() << " relative " << NormalizedDifference(angle, argos::CDegrees(targetAngleRounded)).GetValue() << std::endl;
+//    }
 
 
 
@@ -535,12 +551,6 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     //Get free angle closest to heading
     auto closestFreeAngle = *freeAngles.begin();
-    for (auto freeAngle: freeAngles) {
-        if (std::abs(NormalizedDifference(ToRadians(freeAngle), targetAngle).GetValue()) <
-            std::abs(NormalizedDifference(ToRadians(closestFreeAngle), targetAngle).GetValue())) {
-            closestFreeAngle = freeAngle;
-        }
-    }
 
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
