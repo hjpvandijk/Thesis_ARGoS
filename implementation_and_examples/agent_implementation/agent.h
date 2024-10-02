@@ -113,7 +113,6 @@ public:
 #define WALKING_STATE_WHEN_NO_FRONTIERS
 
 
-    double blacklistChancePerCount = 10;
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     double frontierDistanceUntilReached = 1.0;
@@ -158,9 +157,12 @@ public:
     std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
     double minDistFromFrontier = MAXFLOAT;
 
-    double timeToCheckFrontierDistS = 10.0;
-    double timeFrontierDistDecreased = 0.0;
+    double blacklistChancePerCount = 10;
     double minAllowedDistanceBetweenFrontiers = 1.0;
+    Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
+    int closestCoordinateCounter = 0;
+    int closestCoordinateHitCountBeforeBlacklist = 2;
+    bool lastTickInBlacklistHitPoint = false;
 #endif
 
     Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};

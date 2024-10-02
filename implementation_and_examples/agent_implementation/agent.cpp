@@ -1055,46 +1055,62 @@ void Agent::updateBlacklistChance() {
     double distanceToTarget = sqrt(pow(this->currentBestFrontier.x - this->position.x, 2) +
                                    pow(this->currentBestFrontier.y - this->position.y, 2));
 
+    double distanceToClosestPoint = sqrt(pow(this->position.x - this->closestCoordinateToCurrentFrontier.x, 2) +
+                                         pow(this->position.y - this->closestCoordinateToCurrentFrontier.y, 2));
+
     if (this->currentBestFrontier == this->previousBestFrontier || !(this->subTarget == Coordinate{MAXFLOAT,
                                                                                                    MAXFLOAT})) { //If we are still on route to the same frontier, or to a subtarget
 //Check if the distance to the frontier has decreased in the last timeToCheckFrontierDistS seconds
         if (distanceToTarget < this->minDistFromFrontier) { //If the distance has decreased
             this->minDistFromFrontier = distanceToTarget;
-            this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
-        } else if (this->elapsed_ticks / this->ticks_per_second - this->timeFrontierDistDecreased >
-                   timeToCheckFrontierDistS) {
-//If the distance has not decreased in the last timeToCheckFrontierDistS seconds, blacklist the frontier
-            bool sameAsOtherFrontier = false;
-            quadtree::Occupancy occTargetBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
-                    target); //Use quadtree to speed up search
-            if (occTargetBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is not already blacklisted
-                for (auto &blacklistedFrontier: this->blacklistedFrontiers) { //Check which exact frontier it is
-                    Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
-                    double distanceBetweenFrontiers = sqrt(
-                            pow(target.x - blackListedFrontierCoordinate.x, 2) +
-                            pow(target.y - blackListedFrontierCoordinate.y, 2));
-                    if (distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
-                        blacklistedFrontier.second.first++;
-                        blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
-                        sameAsOtherFrontier = true;
+            this->closestCoordinateCounter = 0;
+            this->closestCoordinateToCurrentFrontier = this->position;
+            this->lastTickInBlacklistHitPoint = false;
+//            this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
+        } else if (distanceToClosestPoint <=
+                   this->quadtree->getSmallestBoxSize()) { //If we are again on the closest point to the frontier
+            if (!this->lastTickInBlacklistHitPoint) {
+                this->closestCoordinateCounter++; //Increase the counter
+                if (this->closestCoordinateCounter >= this->closestCoordinateHitCountBeforeBlacklist) { //If we have hit closest point  too often (we are in a loop)
+                    //Blacklist the frontier
+                    bool sameAsOtherFrontier = false;
+                    quadtree::Occupancy occTargetBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
+                            target); //Use quadtree to speed up search
+                    if (occTargetBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is not already blacklisted
+                        for (auto &blacklistedFrontier: this->blacklistedFrontiers) { //Check which exact frontier it is
+                            Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
+                            double distanceBetweenFrontiers = sqrt(
+                                    pow(target.x - blackListedFrontierCoordinate.x, 2) +
+                                    pow(target.y - blackListedFrontierCoordinate.y, 2));
+                            if (distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
+                                blacklistedFrontier.second.first++;
+                                blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
+                                sameAsOtherFrontier = true;
+                            }
+                        }
                     }
-                }
-            }
 
-            if (!sameAsOtherFrontier) {
-                quadtree::Box frontierBox = this->blacklistedTree->add(target, quadtree::Occupancy::FREE,
-                                                                       elapsed_ticks / ticks_per_second);
-                this->blacklistedFrontiers[frontierBox.getCenter()] = std::make_pair<int, int>(1,
-                                                                                               0); // 0 = Not currently avoiding said frontier
+                    if (!sameAsOtherFrontier) {
+                        quadtree::Box frontierBox = this->blacklistedTree->add(target, quadtree::Occupancy::FREE,
+                                                                               elapsed_ticks / ticks_per_second);
+                        this->blacklistedFrontiers[frontierBox.getCenter()] = std::make_pair<int, int>(1,
+                                                                                                       0); // 0 = Not currently avoiding said frontier
+                    }
+
+                }
+                this->lastTickInBlacklistHitPoint = true;
             }
-//Update time to start a new timed check iteration
-            this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
+        } else { //If we are not on the closest point to the frontier, set the flag to false
+            this->lastTickInBlacklistHitPoint = false;
         }
 
 
     } else { //If we are not on route to the same frontier, set the min distance and time
-        this->minDistFromFrontier = distanceToTarget;
-        this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
+        this->minDistFromFrontier = MAXFLOAT;
+        this->closestCoordinateCounter = 0;
+        this->closestCoordinateToCurrentFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+        this->lastTickInBlacklistHitPoint = false;
+//        this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
     }
 }
 #endif
