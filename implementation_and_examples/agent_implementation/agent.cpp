@@ -23,7 +23,7 @@ Agent::Agent(std::string id) {
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
 #ifdef BLACKLIST_FRONTIERS
     this->blacklistedTree = std::make_unique<quadtree::Quadtree>(box);
-    this->blacklistedTree->setMinSize(this->minAllowedDistanceBetweenFrontiers);
+    this->blacklistedTree->setMinSize(this->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS);
 #endif
 }
 
@@ -552,6 +552,18 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 }
 
 #ifdef WALL_FOLLOWING_ENABLED
+/**
+ * When the free direction to the target > 89 degrees:
+ * Save this location as the hit point
+ * Select a random direction (left or right) to follow the wall
+ * We follow the wall until the direction to the target is free again.
+ * If we hit the same hitpoint again, change wall following direction.
+ * @param freeAngles
+ * @param closestFreeAngle
+ * @param closestFreeAngleRadians
+ * @param relativeObjectAvoidanceAngle
+ * @param targetAngle
+ */
 void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
     if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) &&
         this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
@@ -567,7 +579,7 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
                         this->wallFollowingDirection = -this->prevWallFollowingDirection;
                     }
                 } else { // 1 or -1
-                    if (!this->lastIterationInHitPoint) { // If we are not in the same hit point as last iteration (so we have once moved from the hit point)
+                    if (!this->lastTickInWallFollowingHitPoint) { // If we are not in the same hit point as last iteration (so we have once moved from the hit point)
                         this->wallFollowingDirection = -this->wallFollowingDirection; // Change wall following direction
                     }
                 }
@@ -576,7 +588,7 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
                 this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
             }
             this->wallFollowingHitPoint = this->position;
-            this->lastIterationInHitPoint = true;
+            this->lastTickInWallFollowingHitPoint = true;
             this->prevWallFollowingDirection = this->wallFollowingDirection;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
                    this->TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
@@ -586,11 +598,11 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
         argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
                                                           this->wallFollowingHitPoint.y - this->position.y);
         if (agentToHitPoint.Length() > this->quadtree->getSmallestBoxSize()) {
-            this->lastIterationInHitPoint = false;
+            this->lastTickInWallFollowingHitPoint = false;
         }
     } else {
         this->wallFollowingDirection = 0;
-        this->lastIterationInHitPoint = false;
+        this->lastTickInWallFollowingHitPoint = false;
     }
 
 
@@ -963,17 +975,24 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 }
 
 #ifdef BLACKLIST_FRONTIERS
+/**
+ * Decide if the frontier should be skipped due to being blacklisted.
+ * This is dependent whether the frontier is too close to a blacklisted frontier, and the amount of times that frontier has been blacklisted.
+ * @param frontierRegionX
+ * @param frontierRegionY
+ * @return True if the frontier should be skipped, false otherwise
+ */
 bool Agent::skipBlacklistedFrontier(double frontierRegionX, double frontierRegionY) {
     quadtree::Occupancy occFrontierRegionBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate({frontierRegionX, frontierRegionY}); //Use quadtree to speed up search
-    if(occFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is not already blacklisted
+    if(occFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
             double distanceBetweenFrontiers = sqrt(pow(frontierRegionX - blackListedFrontierCoordinate.x, 2) +
                                                    pow(frontierRegionY - blackListedFrontierCoordinate.y, 2));
             if (distanceBetweenFrontiers <
-                this->minAllowedDistanceBetweenFrontiers) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
+                this->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
                 int timesBlacklisted = blacklistedFrontier.second.first;
-                double blacklistChance = 100 - (timesBlacklisted * this->blacklistChancePerCount);
+                double blacklistChance = 100 - (timesBlacklisted * this->BLACKLIST_CHANCE_PER_COUNT);
                 double randomChance = rand() % 100;
                 //If currently already avoiding, or random chance to blacklist the frontier, depending on counter.
                 if (blacklistedFrontier.second.second == 1 || randomChance > blacklistChance) {
@@ -986,9 +1005,13 @@ bool Agent::skipBlacklistedFrontier(double frontierRegionX, double frontierRegio
     return false;
 }
 
+/**
+ * If we are currently targetting a blacklisted frontier, we flag that we are following it in the blacklistedFrontiers map.
+ * @param bestFrontierRegionCenter
+ */
 void Agent::updateBlacklistFollowing(Coordinate bestFrontierRegionCenter) {
     quadtree::Occupancy occBestFrontierRegionBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(bestFrontierRegionCenter); //Use quadtree to speed up search
-    if(occBestFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is not already blacklisted
+    if(occBestFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
 
@@ -997,16 +1020,21 @@ void Agent::updateBlacklistFollowing(Coordinate bestFrontierRegionCenter) {
                     pow(bestFrontierRegionCenter.y - blackListedFrontierCoordinate.y, 2));
 
             if (distanceBetweenFrontiers <
-                this->minAllowedDistanceBetweenFrontiers) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
+                this->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
                 blacklistedFrontier.second.second = 2; //2 = Currently following said frontier
             }
         }
     }
 }
 
+/**
+ * Reset all blacklisted frontiers avoiding flags if the agent is close to a target frontier.
+ * This gives the agent the chance to select a blacklisted frontier again.
+ * @param unexploredFrontierVector
+ */
 void Agent::resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector) {
     //If the agent is close to the frontier, reset all blacklisted frontiers avoiding flags
-    if (unexploredFrontierVector.Length() <= frontierDistanceUntilReached) {
+    if (unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
         //Reset all 'avoiding' flags
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             blacklistedFrontier.second.second = false;
@@ -1014,16 +1042,20 @@ void Agent::resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector) {
     }
 }
 
+/**
+ * Check if the target frontier is close to a blacklisted frontier.
+ * @return
+ */
 bool Agent::closeToBlacklistedFrontier(){
     quadtree::Occupancy occBestFrontierBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(this->currentBestFrontier); //Use quadtree to speed up search
-    if(occBestFrontierBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is not already blacklisted
+    if(occBestFrontierBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             double distanceBetweenFrontiers = sqrt(
                     pow(this->currentBestFrontier.x - blacklistedFrontier.first.x, 2) +
                     pow(this->currentBestFrontier.y - blacklistedFrontier.first.y, 2));
             //If we are currently not purposely heading towards this blacklisted frontier (2), and the distance between the frontiers is too close
             if (blacklistedFrontier.second.second != 2 &&
-                distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
+                distanceBetweenFrontiers < this->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
                 return true;
             }
             //Because if we are purposely heading towards this frontier, we should not switch, and wait until either we reach it or we are not increasing our distance to it.
@@ -1032,6 +1064,13 @@ bool Agent::closeToBlacklistedFrontier(){
     return false;
 }
 
+/**
+ * Update the chance of blacklisted frontiers being skipped.
+ * If the agent is at a blacklisted frontier location, decrease the chance counter.
+ * If the agent is hitting the same hitpoint multiple times, blacklist the frontier.
+ * If the frontier, or another one close to it is already blacklisted, increase the counter.
+ * Else insert a new one.
+ */
 void Agent::updateBlacklistChance() {
 //If we are close to a blacklisted frontier, decrease the skipping chance
     quadtree::Occupancy occPositionBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
@@ -1042,7 +1081,7 @@ void Agent::updateBlacklistChance() {
             double distanceBetweenFrontiers = sqrt(
                     pow(this->position.x - blackListedFrontierCoordinate.x, 2) +
                     pow(this->position.y - blackListedFrontierCoordinate.y, 2));
-            if (distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
+            if (distanceBetweenFrontiers < this->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
                 blacklistedFrontier.second.first--;
             }
         }
@@ -1071,7 +1110,7 @@ void Agent::updateBlacklistChance() {
                    this->quadtree->getSmallestBoxSize()) { //If we are again on the closest point to the frontier
             if (!this->lastTickInBlacklistHitPoint) {
                 this->closestCoordinateCounter++; //Increase the counter
-                if (this->closestCoordinateCounter >= this->closestCoordinateHitCountBeforeBlacklist) { //If we have hit closest point  too often (we are in a loop)
+                if (this->closestCoordinateCounter >= this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST) { //If we have hit closest point  too often (we are in a loop)
                     //Blacklist the frontier
                     bool sameAsOtherFrontier = false;
                     quadtree::Occupancy occTargetBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
@@ -1082,7 +1121,7 @@ void Agent::updateBlacklistChance() {
                             double distanceBetweenFrontiers = sqrt(
                                     pow(target.x - blackListedFrontierCoordinate.x, 2) +
                                     pow(target.y - blackListedFrontierCoordinate.y, 2));
-                            if (distanceBetweenFrontiers < this->minAllowedDistanceBetweenFrontiers) {
+                            if (distanceBetweenFrontiers < this->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
                                 blacklistedFrontier.second.first++;
                                 blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
                                 sameAsOtherFrontier = true;
@@ -1096,7 +1135,7 @@ void Agent::updateBlacklistChance() {
                         this->blacklistedFrontiers[frontierBox.getCenter()] = std::make_pair<int, int>(1,
                                                                                                        0); // 0 = Not currently avoiding said frontier
                     }
-
+                    this->closestCoordinateCounter = 0; // Reset counter
                 }
                 this->lastTickInBlacklistHitPoint = true;
             }
@@ -1142,13 +1181,13 @@ void Agent::calculateNextPosition() {
 #ifdef BLACKLIST_FRONTIERS
         closeToBlacklisted = closeToBlacklistedFrontier();
 #endif
-    //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier
+    //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || closeToBlacklisted ||
         //If the current best frontier is blacklisted
         unexploredFrontierVector.Length() <=
-        frontierDistanceUntilReached) { //Or the agent is close to the frontier
+        FRONTIER_DIST_UNTIL_REACHED) { //Or the agent is close to the frontier
 #ifdef BLACKLIST_FRONTIERS
-        if (unexploredFrontierVector.Length() <= frontierDistanceUntilReached) {
+        if (unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
             for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
                 blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
             }
@@ -1243,11 +1282,15 @@ void Agent::calculateNextPosition() {
 }
 
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+/**
+ * When there is no frontier to be found within the search range, select a random location on the edge of the root box.
+ * @param unexploredFrontierVector
+ */
 void Agent::enterWalkingState(argos::CVector2 & unexploredFrontierVector) {
     argos::CVector2 agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
                                                        this->subTarget.y - this->position.y);;
     if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT} ||
-        agentToSubtarget.Length() <= frontierDistanceUntilReached) {
+        agentToSubtarget.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
         //Find a random direction to walk in, by placing a subtarget on the edge of the root box in the quadtree
         quadtree::Box rootBox = this->quadtree->getRootBox();
         Coordinate rootBoxCenter = rootBox.getCenter();

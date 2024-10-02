@@ -115,7 +115,7 @@ public:
 
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    double frontierDistanceUntilReached = 1.0;
+    double FRONTIER_DIST_UNTIL_REACHED = 1.0;
 #endif
 
 
@@ -157,11 +157,11 @@ public:
     std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
     double minDistFromFrontier = MAXFLOAT;
 
-    double blacklistChancePerCount = 10;
-    double minAllowedDistanceBetweenFrontiers = 1.0;
+    double BLACKLIST_CHANCE_PER_COUNT = 10;
+    double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
     Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
     int closestCoordinateCounter = 0;
-    int closestCoordinateHitCountBeforeBlacklist = 2;
+    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST = 2;
     bool lastTickInBlacklistHitPoint = false;
 #endif
 
@@ -174,7 +174,7 @@ public:
 #ifdef WALL_FOLLOWING_ENABLED
     int prevWallFollowingDirection = 0;
     Coordinate wallFollowingHitPoint = {MAXFLOAT, MAXFLOAT};
-    bool lastIterationInHitPoint = false;
+    bool lastTickInWallFollowingHitPoint = false;
 #endif
 
     double ticks_per_second = 30;
