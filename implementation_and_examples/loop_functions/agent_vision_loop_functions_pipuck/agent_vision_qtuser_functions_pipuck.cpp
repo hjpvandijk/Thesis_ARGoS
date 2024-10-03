@@ -17,6 +17,26 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
+    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
+         it != m_cAgVisLF.GetAgentFrontierRegions().end();
+         ++it) {
+        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
+                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
+        int i = 0;
+        for (auto frontierRegion: it->second) {
+            //Assign a differnet color to every frontierRegion
+            CColor color = colors[i];
+            for (auto frontier: frontierRegion) {
+                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+
+                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+                        color);
+            }
+            i++;
+            if (i > colors.size()) i = 0;
+        }
+    }
     for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
          it != m_cAgVisLF.GetAgentFreeAngles().end();
          ++it) {
@@ -38,6 +58,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             DrawRay(ray, CColor::BLUE);
         }
     }
+
+
 
 
 
@@ -83,6 +105,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
 
     for (auto & it : m_cAgVisLF.m_tAgentBestFrontierCoordinate) {
+        if (it.second == CVector3(MAXFLOAT, MAXFLOAT, 0.1f)) continue; //skip if not set
         if (it.first->GetId() == "pipuck1")
             DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::MAGENTA);
         else if (it.first->GetId() == "pipuck2")
@@ -91,6 +114,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     }
 
     for (auto & it : m_cAgVisLF.m_tAgentSubTargetCoordinate) {
+        if (it.second == CVector3(MAXFLOAT, MAXFLOAT, 0.1f)) continue; //skip if not set
         if (it.first->GetId() == "pipuck1")
             DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::BROWN);
         else if (it.first->GetId() == "pipuck2")
