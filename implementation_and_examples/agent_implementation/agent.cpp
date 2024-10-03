@@ -585,14 +585,15 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
                 }
 
             } else {
-                this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
+                if(this->wallFollowingDirection == 0) { //Only switch when we are not in walking mode already
+                    this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
+                }
             }
             this->wallFollowingHitPoint = this->position;
             this->lastTickInWallFollowingHitPoint = true;
             this->prevWallFollowingDirection = this->wallFollowingDirection;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
                    this->TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
-
             this->wallFollowingDirection = 0;
         }
         argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
@@ -624,6 +625,14 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
         *closestFreeAngle = subtargetAngle;
         *closestFreeAngleRadians = ToRadians(*closestFreeAngle);
         *relativeObjectAvoidanceAngle = NormalizedDifference(*closestFreeAngleRadians, targetAngle);
+    } else {
+#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+        if (this->currentBestFrontier != Coordinate{MAXFLOAT, MAXFLOAT}) { // If we have a frontier to go to, so not in the walking state
+#endif
+            this->subTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
+#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+        }
+#endif
     }
 }
 #endif
@@ -1089,8 +1098,8 @@ void Agent::updateBlacklistChance() {
 
 
     Coordinate target = this->currentBestFrontier;
-//If we are using a subtarget, calculate the distance to the subtarget instead
-    if (!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) target = this->subTarget;
+//If we have no frontier (walking state), calculate the distance to the subtarget instead
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) target = this->subTarget;
     double distanceToTarget = sqrt(pow(this->currentBestFrontier.x - this->position.x, 2) +
                                    pow(this->currentBestFrontier.y - this->position.y, 2));
 

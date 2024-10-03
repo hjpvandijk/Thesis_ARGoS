@@ -157,7 +157,7 @@ public:
     std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
     double minDistFromFrontier = MAXFLOAT;
 
-    double BLACKLIST_CHANCE_PER_COUNT = 10;
+    double BLACKLIST_CHANCE_PER_COUNT = 30;
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
     Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
     int closestCoordinateCounter = 0;
