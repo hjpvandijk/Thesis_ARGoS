@@ -166,6 +166,9 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate subTarget = agent->subTarget.FromOwnToArgos();
         CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
         m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
+        Coordinate wallFollowingSubTarget = agent->wallFollowingSubTarget.FromOwnToArgos();
+        CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
+        m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
 
         if(!agent->lineVisualization.empty()) m_tLine.clear();
 

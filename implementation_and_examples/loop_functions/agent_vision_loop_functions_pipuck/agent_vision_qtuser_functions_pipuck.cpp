@@ -122,6 +122,15 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     }
 
+    for (auto & it : m_cAgVisLF.m_tAgentWallFollowingSubTargetCoordinate) {
+        if (it.second == CVector3(MAXFLOAT, MAXFLOAT, 0.1f)) continue; //skip if not set
+        if (it.first->GetId() == "pipuck1")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::BROWN);
+        else if (it.first->GetId() == "pipuck2")
+            DrawBox(it.second, CQuaternion(), CVector3(0.2, 0.2, 0), CColor::CYAN);
+
+    }
+
     for (auto & it : m_cAgVisLF.m_tLine) {
 
         std::vector<CVector3> line = it.second;

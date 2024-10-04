@@ -172,6 +172,7 @@ public:
     int wallFollowingDirection = 0;
 
 #ifdef WALL_FOLLOWING_ENABLED
+    Coordinate wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT};
     int prevWallFollowingDirection = 0;
     Coordinate wallFollowingHitPoint = {MAXFLOAT, MAXFLOAT};
     bool lastTickInWallFollowingHitPoint = false;

@@ -565,7 +565,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
  * @param targetAngle
  */
 void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
-    if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) &&
+    if (!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ||
         this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
         if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) > 89) { //The complete forward direction to the target is blocked
             argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
@@ -620,16 +620,16 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
         subtargetVector.Rotate(ToRadians(subtargetAngle));
         subtargetVector.Normalize();
         subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
-        this->subTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
+        this->wallFollowingSubTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
 
         *closestFreeAngle = subtargetAngle;
         *closestFreeAngleRadians = ToRadians(*closestFreeAngle);
         *relativeObjectAvoidanceAngle = NormalizedDifference(*closestFreeAngleRadians, targetAngle);
     } else {
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
-        if (this->currentBestFrontier != Coordinate{MAXFLOAT, MAXFLOAT}) { // If we have a frontier to go to, so not in the walking state
+        if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) { // If we have a frontier to go to, so not in the walking state
 #endif
-            this->subTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
+            this->wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
         }
 #endif

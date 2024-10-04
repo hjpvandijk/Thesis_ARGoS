@@ -19,6 +19,7 @@ public:
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
     std::map<CPiPuckEntity*, CVector3> m_tAgentSubTargetCoordinate;
+    std::map<CPiPuckEntity*, CVector3> m_tAgentWallFollowingSubTargetCoordinate;
     std::map<CPiPuckEntity*, CVector3> m_tPerpVector;
     std::map<CPiPuckEntity*, std::vector<CVector3>> m_tLine;
 
