@@ -26,6 +26,10 @@ public:
     static constexpr double num_sensors = 4;
     std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
 
+    double DISTANCE_SENSOR_NOISE_CM = 0.0;
+    double ORIENTATION_NOISE_DEGREES = 5.0;
+    double POSITION_NOISE_CM = 5.0;
+
 
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
     double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
@@ -124,7 +128,7 @@ public:
 
     double PROXIMITY_RANGE = 2.0;
 
-    double TURN_THRESHOLD_DEGREES = 2;
+    double TURN_THRESHOLD_DEGREES = 8.0;
 
     double AGENT_ROBOT_DIAMETER = 0.08;
 
