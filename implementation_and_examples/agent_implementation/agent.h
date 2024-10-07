@@ -13,6 +13,7 @@
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
+#include "parameters.h"
 
 
 class Agent {
@@ -26,9 +27,7 @@ public:
     static constexpr double num_sensors = 4;
     std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
 
-    double DISTANCE_SENSOR_NOISE_CM = 0.0;
-    double ORIENTATION_NOISE_DEGREES = 5.0;
-    double POSITION_NOISE_CM = 5.0;
+
 
 
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
@@ -107,49 +106,6 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
-#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-#define CLOSE_SMALL_AREAS
-#define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
-#define BLACKLIST_FRONTIERS // If this is defined, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED will automatically be defined
-#ifdef BLACKLIST_FRONTIERS
-    #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-        #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    #endif
-#endif
-#define WALKING_STATE_WHEN_NO_FRONTIERS
-
-
-
-#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    double FRONTIER_DIST_UNTIL_REACHED = 1.0;
-#endif
-
-
-    double PROXIMITY_RANGE = 2.0;
-
-    double TURN_THRESHOLD_DEGREES = 8.0;
-
-    double AGENT_ROBOT_DIAMETER = 0.08;
-
-    double OBJECT_SAFETY_RADIUS = 0.1;
-    double AGENT_SAFETY_RADIUS = AGENT_ROBOT_DIAMETER + 0.1;
-
-    double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
-    double AGENT_COHESION_WEIGHT = 0;//0.23;
-    double AGENT_AVOIDANCE_WEIGHT = 1.15;
-    double AGENT_ALIGNMENT_WEIGHT = 0.5;//0.5;
-    double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
-
-    double FRONTIER_DISTANCE_WEIGHT = 0.1;//0.001;
-    double FRONTIER_SIZE_WEIGHT = 1.0;
-
-    double FRONTIER_SEARCH_DIAMETER = 8.0;
-
-    double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RADIUS = 0.68;
-    double AGENT_ALIGNMENT_RADIUS = 1.5;
-    double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
 
     Coordinate left_right_borders = {-10, 10};
@@ -159,19 +115,15 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 360;
 
-    double RECEIVED_OBSERVATION_ADAPTION_PROBABILITY = 75; //Adaption probability for the agent of adapting received new observations by other agents
-    double OWN_OBSERVATION_ADAPTION_PROBABILITY = 90; //Adaption probability for the agent of adapting received new observations by itself
 
 #ifdef BLACKLIST_FRONTIERS
     std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
     std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
     double minDistFromFrontier = MAXFLOAT;
 
-    double BLACKLIST_CHANCE_PER_COUNT = 30;
-    double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
+
     Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
     int closestCoordinateCounter = 0;
-    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST = 2;
     bool lastTickInBlacklistHitPoint = false;
 #endif
 
