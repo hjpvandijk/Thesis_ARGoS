@@ -32,7 +32,7 @@ std::chrono::time_point end = std::chrono::system_clock::now();
  */
 void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<quadtree::QuadNode> occupiedNodes = agent->quadtree->queryOccupied(agent->position,
-                                                                                   PROXIMITY_RANGE * 2.0);
+                                                                                   PiPuckParameters::PROXIMITY_RANGE * 2.0);
 
     for (auto node: occupiedNodes) {
         Coordinate nodePos = node.coordinate.FromOwnToArgos();
@@ -166,9 +166,9 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate subTarget = agent->subTarget.FromOwnToArgos();
         CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
         m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
-        Coordinate wallFollowingSubTarget = agent->wallFollowingSubTarget.FromOwnToArgos();
-        CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
-        m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
+//        Coordinate wallFollowingSubTarget = agent->wallFollowingSubTarget.FromOwnToArgos();
+//        CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
+//        m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
 
         if(!agent->lineVisualization.empty()) m_tLine.clear();
 

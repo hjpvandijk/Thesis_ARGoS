@@ -13,7 +13,6 @@
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
-#include "parameters.h"
 
 
 class Agent {

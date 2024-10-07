@@ -23,7 +23,7 @@ Agent::Agent(std::string id) {
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
 #ifdef BLACKLIST_FRONTIERS
     this->blacklistedTree = std::make_unique<quadtree::Quadtree>(box);
-    this->blacklistedTree->setMinSize(MIN_ALLOWED_DIST_BETWEEN_FRONTIERS);
+    this->blacklistedTree->setMinSize(PiPuckParameters::MIN_ALLOWED_DIST_BETWEEN_FRONTIERS);
 #endif
 }
 
@@ -131,7 +131,7 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
 
-    for (int s = 0; s < nSteps-1; s++) {
+    for (int s = 0; s < nSteps - 1; s++) {
         this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second, true);
         x += stepX;
         y += stepY;
@@ -188,7 +188,7 @@ void Agent::checkForObstacles() {
         //Probability of skipping observation due to sensor noise
 
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
-        if (this->lastRangeReadings[sensor_index] < PROXIMITY_RANGE) {
+        if (this->lastRangeReadings[sensor_index] < PiPuckParameters::PROXIMITY_RANGE) {
 
             double opposite = argos::Sin(sensor_rotation) * this->lastRangeReadings[sensor_index];
             double adjacent = argos::Cos(sensor_rotation) * this->lastRangeReadings[sensor_index];
@@ -200,7 +200,9 @@ void Agent::checkForObstacles() {
             //So check if the object coordinate is close to another agent
             bool close_to_other_agent = false;
             for (const auto &agentLocation: this->agentLocations) {
-                if((agentLocation.second.second - this->elapsed_ticks) / this->ticks_per_second > AGENT_LOCATION_RELEVANT_DURATION_S) continue;
+                if ((agentLocation.second.second - this->elapsed_ticks) / this->ticks_per_second >
+                    AGENT_LOCATION_RELEVANT_DURATION_S)
+                    continue;
                 argos::CVector2 objectToAgent =
                         argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                         - argos::CVector2(object.x, object.y);
@@ -215,8 +217,8 @@ void Agent::checkForObstacles() {
 
 
         } else {
-            double opposite = argos::Sin(sensor_rotation) * PROXIMITY_RANGE;
-            double adjacent = argos::Cos(sensor_rotation) * PROXIMITY_RANGE;
+            double opposite = argos::Sin(sensor_rotation) * PiPuckParameters::PROXIMITY_RANGE;
+            double adjacent = argos::Cos(sensor_rotation) * PiPuckParameters::PROXIMITY_RANGE;
 
 
             Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
@@ -234,7 +236,8 @@ void Agent::checkForObstacles() {
 void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
     Coordinate objectCoordinate = objectBox.getCenter();
     std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
-                                                                                  4 * AGENT_SAFETY_RADIUS,
+                                                                                  4 *
+                                                                                  PiPuckParameters::AGENT_SAFETY_RADIUS,
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
     //For each box, that is not the checked object, check if the agent fits between the object and the box
@@ -351,7 +354,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
         if (distance < 0.01) { // If they are adjacent (with a small margin)
             continue;
         } else if (distance <
-                   OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
+                   PiPuckParameters::OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
             //Add the area between the object and the box as occupied if there is no occupied area between already
             bool areaFree = true;
             for (int edge_count = 0; edge_count < objectEdges.size(); edge_count++) {
@@ -438,7 +441,8 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position,
-                                                                                  OBJECT_AVOIDANCE_RADIUS * 2,
+                                                                                  PiPuckParameters::OBJECT_AVOIDANCE_RADIUS *
+                                                                                  2,
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
 
@@ -446,7 +450,8 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     //Create set of free angles ordered to be used for wall following
     std::set<argos::CDegrees, CustomComparator> freeAngles(
-            CustomComparator(this->wallFollowingDirection, ToDegrees(heading).GetValue(), ToDegrees(targetAngle).GetValue()));
+            CustomComparator(this->wallFollowingDirection, ToDegrees(heading).GetValue(),
+                             ToDegrees(targetAngle).GetValue()));
 
 //Add free angles from -180 to 180 degrees
     for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
@@ -462,11 +467,13 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
         argos::CVector2 OC = argos::CVector2(box.getCenter().x - this->position.x,
                                              box.getCenter().y - this->position.y);
         argos::CRadians Bq = argos::ASin(
-                std::min(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
+                std::min(PiPuckParameters::AGENT_SAFETY_RADIUS + PiPuckParameters::OBJECT_SAFETY_RADIUS, OC.Length()) /
+                OC.Length());
         argos::CRadians Eta_q = OC.Angle();
-        if (AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS > OC.Length())
-            argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << AGENT_SAFETY_RADIUS
-                           << " + " << OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+        if (PiPuckParameters::AGENT_SAFETY_RADIUS + PiPuckParameters::OBJECT_SAFETY_RADIUS > OC.Length())
+            argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): "
+                           << PiPuckParameters::AGENT_SAFETY_RADIUS
+                           << " + " << PiPuckParameters::OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
 
         argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
         argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());
@@ -532,7 +539,8 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     //Get free angle closest to heading
     auto closestFreeAngle = *freeAngles.begin();
 #ifdef WALL_FOLLOWING_ENABLED
-    if (this->wallFollowingDirection != 0) { //If wall following is not 0, find the closest free angle to the target angle.
+    if (this->wallFollowingDirection !=
+        0) { //If wall following is not 0, find the closest free angle to the target angle.
         for (auto freeAngle: freeAngles) {
             if (std::abs(NormalizedDifference(ToRadians(freeAngle), targetAngle).GetValue()) <
                 std::abs(NormalizedDifference(ToRadians(closestFreeAngle), targetAngle).GetValue())) {
@@ -555,6 +563,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 }
 
 #ifdef WALL_FOLLOWING_ENABLED
+
 /**
  * When the free direction to the target > 89 degrees:
  * Save this location as the hit point
@@ -567,10 +576,14 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
  * @param relativeObjectAvoidanceAngle
  * @param targetAngle
  */
-void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
+void
+Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator> &freeAngles, argos::CDegrees *closestFreeAngle,
+                     argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle,
+                     argos::CRadians targetAngle) {
     if (!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ||
         this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
-        if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) > 89) { //The complete forward direction to the target is blocked
+        if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) >
+            89) { //The complete forward direction to the target is blocked
             argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
                                                               this->wallFollowingHitPoint.y - this->position.y);
             if (agentToHitPoint.Length() <=
@@ -588,7 +601,7 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
                 }
 
             } else {
-                if(this->wallFollowingDirection == 0) { //Only switch when we are not in walking mode already
+                if (this->wallFollowingDirection == 0) { //Only switch when we are not in walking mode already
                     this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
                 }
             }
@@ -596,7 +609,7 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
             this->lastTickInWallFollowingHitPoint = true;
             this->prevWallFollowingDirection = this->wallFollowingDirection;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
-                   TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
+                   PiPuckParameters::TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
             this->wallFollowingDirection = 0;
         }
         argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
@@ -622,15 +635,17 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
         argos::CVector2 subtargetVector = argos::CVector2(1, 0);
         subtargetVector.Rotate(ToRadians(subtargetAngle));
         subtargetVector.Normalize();
-        subtargetVector *= OBJECT_AVOIDANCE_RADIUS;
-        this->wallFollowingSubTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
+        subtargetVector *= PiPuckParameters::OBJECT_AVOIDANCE_RADIUS;
+        this->wallFollowingSubTarget = {this->position.x + subtargetVector.GetX(),
+                                        this->position.y + subtargetVector.GetY()};
 
         *closestFreeAngle = subtargetAngle;
         *closestFreeAngleRadians = ToRadians(*closestFreeAngle);
         *relativeObjectAvoidanceAngle = NormalizedDifference(*closestFreeAngleRadians, targetAngle);
     } else {
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
-        if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) { // If we have a frontier to go to, so not in the walking state
+        if (!(this->currentBestFrontier ==
+              Coordinate{MAXFLOAT, MAXFLOAT})) { // If we have a frontier to go to, so not in the walking state
 #endif
             this->wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
@@ -638,6 +653,7 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
 #endif
     }
 }
+
 #endif
 
 /** Calculate the vector to avoid the virtual walls
@@ -676,7 +692,9 @@ argos::CVector2 Agent::getVirtualWallAvoidanceVector() const {
 bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range) {
     int nAgentsWithinRange = 0;
     for (const auto &agentLocation: this->agentLocations) {
-        if((agentLocation.second.second - this->elapsed_ticks) / this->ticks_per_second > AGENT_LOCATION_RELEVANT_DURATION_S) continue;
+        if ((agentLocation.second.second - this->elapsed_ticks) / this->ticks_per_second >
+            AGENT_LOCATION_RELEVANT_DURATION_S)
+            continue;
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                 - argos::CVector2(this->position.x, this->position.y);
@@ -701,7 +719,8 @@ bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, doub
 argos::CVector2 Agent::calculateAgentCohesionVector() {
     Coordinate averageNeighborLocation = {0, 0};
 
-    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, AGENT_COHESION_RADIUS);
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation,
+                                                           PiPuckParameters::AGENT_COHESION_RADIUS);
     if (!neighborsWithinRange) {
         return {0, 0};
     }
@@ -725,7 +744,8 @@ argos::CVector2 Agent::calculateAgentAvoidanceVector() {
 
     Coordinate averageNeighborLocation = {0, 0};
 
-    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, AGENT_AVOIDANCE_RADIUS);
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation,
+                                                           PiPuckParameters::AGENT_AVOIDANCE_RADIUS);
     if (!neighborsWithinRange) {
         return {0, 0};
     }
@@ -757,7 +777,7 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
         double agentSpeed = agentVelocity.second.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
                                              - argos::CVector2(this->position.x, this->position.y);
-        if (vectorToOtherAgent.Length() < AGENT_ALIGNMENT_RADIUS) {
+        if (vectorToOtherAgent.Length() < PiPuckParameters::AGENT_ALIGNMENT_RADIUS) {
             alignmentVector += agentVector * agentSpeed;
             nAgentsWithinRange++;
         }
@@ -864,7 +884,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_DIAMETER,
+    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position,
+                                                                              PiPuckParameters::FRONTIER_SEARCH_DIAMETER,
                                                                               this->elapsed_ticks /
                                                                               this->ticks_per_second);
     current_frontiers = frontiers;
@@ -939,7 +960,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
 
         //Calculate the score of the frontier region
-        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
+        double score = PiPuckParameters::FRONTIER_DISTANCE_WEIGHT * distance -
+                       PiPuckParameters::FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
 
 #ifdef SEPARATE_FRONTIERS
         std::vector<double> distancesFromOtherAgents = {};
@@ -955,8 +977,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //If that frontier is best to visit for a different agent, skip it.
         bool otherAgentLowerScore = false;
         for (auto distanceFromOtherAgent: distancesFromOtherAgents) {
-            double otherAgentScore = FRONTIER_DISTANCE_WEIGHT * distanceFromOtherAgent -
-                                     FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
+            double otherAgentScore = PiPuckParameters::FRONTIER_DISTANCE_WEIGHT * distanceFromOtherAgent -
+                                     PiPuckParameters::FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
             if (otherAgentScore < score) {
                 otherAgentLowerScore = true;
                 break;
@@ -976,7 +998,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     this->currentBestFrontier = bestFrontierRegionCenter;
 
 #ifdef BLACKLIST_FRONTIERS
-   updateBlacklistFollowing(bestFrontierRegionCenter);
+    updateBlacklistFollowing(bestFrontierRegionCenter);
 #endif
 
 
@@ -988,6 +1010,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 }
 
 #ifdef BLACKLIST_FRONTIERS
+
 /**
  * Decide if the frontier should be skipped due to being blacklisted.
  * This is dependent whether the frontier is too close to a blacklisted frontier, and the amount of times that frontier has been blacklisted.
@@ -996,16 +1019,17 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
  * @return True if the frontier should be skipped, false otherwise
  */
 bool Agent::skipBlacklistedFrontier(double frontierRegionX, double frontierRegionY) {
-    quadtree::Occupancy occFrontierRegionBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate({frontierRegionX, frontierRegionY}); //Use quadtree to speed up search
-    if(occFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
+    quadtree::Occupancy occFrontierRegionBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
+            {frontierRegionX, frontierRegionY}); //Use quadtree to speed up search
+    if (occFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
             double distanceBetweenFrontiers = sqrt(pow(frontierRegionX - blackListedFrontierCoordinate.x, 2) +
                                                    pow(frontierRegionY - blackListedFrontierCoordinate.y, 2));
             if (distanceBetweenFrontiers <
-                MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
+                PiPuckParameters::MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
                 int timesBlacklisted = blacklistedFrontier.second.first;
-                double blacklistChance = 100 - (timesBlacklisted * BLACKLIST_CHANCE_PER_COUNT);
+                double blacklistChance = 100 - (timesBlacklisted * PiPuckParameters::BLACKLIST_CHANCE_PER_COUNT);
                 double randomChance = rand() % 100;
                 //If currently already avoiding, or random chance to blacklist the frontier, depending on counter.
                 if (blacklistedFrontier.second.second == 1 || randomChance > blacklistChance) {
@@ -1023,8 +1047,9 @@ bool Agent::skipBlacklistedFrontier(double frontierRegionX, double frontierRegio
  * @param bestFrontierRegionCenter
  */
 void Agent::updateBlacklistFollowing(Coordinate bestFrontierRegionCenter) {
-    quadtree::Occupancy occBestFrontierRegionBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(bestFrontierRegionCenter); //Use quadtree to speed up search
-    if(occBestFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
+    quadtree::Occupancy occBestFrontierRegionBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
+            bestFrontierRegionCenter); //Use quadtree to speed up search
+    if (occBestFrontierRegionBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
 
@@ -1033,7 +1058,7 @@ void Agent::updateBlacklistFollowing(Coordinate bestFrontierRegionCenter) {
                     pow(bestFrontierRegionCenter.y - blackListedFrontierCoordinate.y, 2));
 
             if (distanceBetweenFrontiers <
-                MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
+                PiPuckParameters::MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) { //If the frontier is too close to a blacklisted frontier, there is a chance we want to skip it
                 blacklistedFrontier.second.second = 2; //2 = Currently following said frontier
             }
         }
@@ -1047,7 +1072,7 @@ void Agent::updateBlacklistFollowing(Coordinate bestFrontierRegionCenter) {
  */
 void Agent::resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector) {
     //If the agent is close to the frontier, reset all blacklisted frontiers avoiding flags
-    if (unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
+    if (unexploredFrontierVector.Length() <= PiPuckParameters::FRONTIER_DIST_UNTIL_REACHED) {
         //Reset all 'avoiding' flags
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             blacklistedFrontier.second.second = false;
@@ -1059,16 +1084,17 @@ void Agent::resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector) {
  * Check if the target frontier is close to a blacklisted frontier.
  * @return
  */
-bool Agent::closeToBlacklistedFrontier(){
-    quadtree::Occupancy occBestFrontierBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(this->currentBestFrontier); //Use quadtree to speed up search
-    if(occBestFrontierBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
+bool Agent::closeToBlacklistedFrontier() {
+    quadtree::Occupancy occBestFrontierBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
+            this->currentBestFrontier); //Use quadtree to speed up search
+    if (occBestFrontierBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is already blacklisted
         for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
             double distanceBetweenFrontiers = sqrt(
                     pow(this->currentBestFrontier.x - blacklistedFrontier.first.x, 2) +
                     pow(this->currentBestFrontier.y - blacklistedFrontier.first.y, 2));
             //If we are currently not purposely heading towards this blacklisted frontier (2), and the distance between the frontiers is too close
             if (blacklistedFrontier.second.second != 2 &&
-                distanceBetweenFrontiers < MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
+                distanceBetweenFrontiers < PiPuckParameters::MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
                 return true;
             }
             //Because if we are purposely heading towards this frontier, we should not switch, and wait until either we reach it or we are not increasing our distance to it.
@@ -1094,7 +1120,7 @@ void Agent::updateBlacklistChance() {
             double distanceBetweenFrontiers = sqrt(
                     pow(this->position.x - blackListedFrontierCoordinate.x, 2) +
                     pow(this->position.y - blackListedFrontierCoordinate.y, 2));
-            if (distanceBetweenFrontiers < MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
+            if (distanceBetweenFrontiers < PiPuckParameters::MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
                 blacklistedFrontier.second.first--;
             }
         }
@@ -1123,18 +1149,20 @@ void Agent::updateBlacklistChance() {
                    this->quadtree->getSmallestBoxSize()) { //If we are again on the closest point to the frontier
             if (!this->lastTickInBlacklistHitPoint) {
                 this->closestCoordinateCounter++; //Increase the counter
-                if (this->closestCoordinateCounter >= CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST) { //If we have hit closest point  too often (we are in a loop)
+                if (this->closestCoordinateCounter >=
+                    PiPuckParameters::CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST) { //If we have hit closest point  too often (we are in a loop)
                     //Blacklist the frontier
                     bool sameAsOtherFrontier = false;
                     quadtree::Occupancy occTargetBlacklisted = this->blacklistedTree->getOccupancyFromCoordinate(
                             target); //Use quadtree to speed up search
-                    if (occTargetBlacklisted == quadtree::Occupancy::FREE) { //If the frontier is not already blacklisted
+                    if (occTargetBlacklisted ==
+                        quadtree::Occupancy::FREE) { //If the frontier is not already blacklisted
                         for (auto &blacklistedFrontier: this->blacklistedFrontiers) { //Check which exact frontier it is
                             Coordinate blackListedFrontierCoordinate = blacklistedFrontier.first;
                             double distanceBetweenFrontiers = sqrt(
                                     pow(target.x - blackListedFrontierCoordinate.x, 2) +
                                     pow(target.y - blackListedFrontierCoordinate.y, 2));
-                            if (distanceBetweenFrontiers < MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
+                            if (distanceBetweenFrontiers < PiPuckParameters::MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
                                 blacklistedFrontier.second.first++;
                                 blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
                                 sameAsOtherFrontier = true;
@@ -1165,6 +1193,7 @@ void Agent::updateBlacklistChance() {
 //        this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
     }
 }
+
 #endif
 
 void Agent::calculateNextPosition() {
@@ -1192,15 +1221,15 @@ void Agent::calculateNextPosition() {
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     bool closeToBlacklisted = false;
 #ifdef BLACKLIST_FRONTIERS
-        closeToBlacklisted = closeToBlacklistedFrontier();
+    closeToBlacklisted = closeToBlacklistedFrontier();
 #endif
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || closeToBlacklisted ||
         //If the current best frontier is blacklisted
         unexploredFrontierVector.Length() <=
-        FRONTIER_DIST_UNTIL_REACHED) { //Or the agent is close to the frontier
+        PiPuckParameters::FRONTIER_DIST_UNTIL_REACHED) { //Or the agent is close to the frontier
 #ifdef BLACKLIST_FRONTIERS
-        if (unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
+        if (unexploredFrontierVector.Length() <= PiPuckParameters::FRONTIER_DIST_UNTIL_REACHED) {
             for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
                 blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
             }
@@ -1295,15 +1324,16 @@ void Agent::calculateNextPosition() {
 }
 
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+
 /**
  * When there is no frontier to be found within the search range, select a random location on the edge of the root box.
  * @param unexploredFrontierVector
  */
-void Agent::enterWalkingState(argos::CVector2 & unexploredFrontierVector) {
+void Agent::enterWalkingState(argos::CVector2 &unexploredFrontierVector) {
     argos::CVector2 agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
                                                        this->subTarget.y - this->position.y);;
     if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT} ||
-        agentToSubtarget.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
+        agentToSubtarget.Length() <= PiPuckParameters::FRONTIER_DIST_UNTIL_REACHED) {
         //Find a random direction to walk in, by placing a subtarget on the edge of the root box in the quadtree
         quadtree::Box rootBox = this->quadtree->getRootBox();
         Coordinate rootBoxCenter = rootBox.getCenter();
@@ -1321,6 +1351,7 @@ void Agent::enterWalkingState(argos::CVector2 & unexploredFrontierVector) {
     }
     unexploredFrontierVector = agentToSubtarget;
 }
+
 #endif
 
 argos::CVector2
@@ -1329,11 +1360,11 @@ Agent::calculateTotalVector(argos::CVector2 prev_total_vector, argos::CVector2 v
                             argos::CVector2 agentAvoidanceVector,
                             argos::CVector2 agentAlignmentVector,
                             argos::CVector2 unexploredFrontierVector) {
-    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
-    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
-    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
-    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
+    virtualWallAvoidanceVector = PiPuckParameters::VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
+    agentCohesionVector = PiPuckParameters::AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
+    agentAvoidanceVector = PiPuckParameters::AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+    agentAlignmentVector = PiPuckParameters::AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
+    unexploredFrontierVector = PiPuckParameters::UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
@@ -1352,7 +1383,7 @@ void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
     this->quadtree->toStringVector(&quadTreeToStrings);
 
-    for (const auto& agentLocationPair: this->agentLocations) {
+    for (const auto &agentLocationPair: this->agentLocations) {
         double lastReceivedTick = agentLocationPair.second.second;
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
         if ((lastReceivedTick - elapsed_ticks) / ticks_per_second <
@@ -1393,7 +1424,8 @@ void Agent::doStep() {
         argos::CDegrees diffDeg = ToDegrees(diff);
 
 
-        if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
+        if (diffDeg > argos::CDegrees(-PiPuckParameters::TURN_THRESHOLD_DEGREES) &&
+            diffDeg < argos::CDegrees(PiPuckParameters::TURN_THRESHOLD_DEGREES)) {
             //Go straight
             this->diffdrive->SetLinearVelocity(this->speed, this->speed);
         } else if (diffDeg > argos::CDegrees(0)) {
@@ -1425,7 +1457,7 @@ void Agent::broadcastMessage(const std::string &message) const {
  * Sends a message to an agents
  * @param message
  */
-void Agent::sendMessage(const std::string &message, const std::string& targetId) const {
+void Agent::sendMessage(const std::string &message, const std::string &targetId) const {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
     this->wifi.send_message(messagePrependedWithId, targetId);
 }
@@ -1447,7 +1479,7 @@ void Agent::checkMessages() {
  * @return
  */
 std::string getTargetIdFromMessage(const std::string &message) {
-    return message.substr(message.find('<')+1, message.find('>') - 1 - message.find('<'));
+    return message.substr(message.find('<') + 1, message.find('>') - 1 - message.find('<'));
 
 }
 
@@ -1457,7 +1489,7 @@ std::string getTargetIdFromMessage(const std::string &message) {
  * @return
  */
 std::string getIdFromMessage(const std::string &message) {
-    return message.substr(message.find('[')+1, message.find(']') - 1 - message.find('['));
+    return message.substr(message.find('[') + 1, message.find(']') - 1 - message.find('['));
 
 }
 
@@ -1529,7 +1561,8 @@ argos::CVector2 vector2FromString(std::string str) {
 void Agent::parseMessages() {
     for (const std::string &message: this->messages) {
         std::string targetId = getTargetIdFromMessage(message);
-        if (targetId != "A" && targetId != getId()) continue; //If the message is not broadcast to all agents and not for this agent, skip it
+        if (targetId != "A" && targetId != getId())
+            continue; //If the message is not broadcast to all agents and not for this agent, skip it
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
@@ -1542,7 +1575,7 @@ void Agent::parseMessages() {
 
             while (std::getline(ss, chunk, '|')) {
                 //Add the quadnode to the quadtree, with a probability
-                if (rand() % 100 <= RECEIVED_OBSERVATION_ADAPTION_PROBABILITY) {
+                if (rand() % 100 <= PiPuckParameters::RECEIVED_OBSERVATION_ADAPTION_PROBABILITY) {
                     this->quadtree->add(quadNodeFromString(chunk), false);
                 }
             }
