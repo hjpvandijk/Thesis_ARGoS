@@ -109,7 +109,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) c
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
+        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second, true);
         x += stepX;
         y += stepY;
     }
@@ -131,8 +131,8 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
 
-    for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+    for (int s = 0; s < nSteps-1; s++) {
+        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second, true);
         x += stepX;
         y += stepY;
     }
@@ -154,7 +154,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
     y += stepY * 0.1; // Add a small margin to detecting boxes the coordinates belong to
 
 
-    for (int s = 0; s < nSteps; s++) {
+    for (int s = 1; s < nSteps; s++) {
         if (this->quadtree->getOccupancyFromCoordinate(Coordinate{x, y}) == quadtree::Occupancy::OCCUPIED) {
             return true;
         }
@@ -171,7 +171,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
  */
 void Agent::addObjectLocation(Coordinate objectCoordinate) const {
     quadtree::Box objectBox = this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED,
-                                                  elapsed_ticks / ticks_per_second);
+                                                  elapsed_ticks / ticks_per_second, true);
 #ifdef CLOSE_SMALL_AREAS
     checkIfAgentFitsBetweenObstacles(objectBox);
 #endif
@@ -185,6 +185,11 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) const {
  */
 void Agent::checkForObstacles() {
     for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
+        //Probability of skipping observation due to sensor noise
+        if (rand() % 100 > OWN_OBSERVATION_ADAPTION_PROBABILITY){
+            continue;
+        }
+
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->lastRangeReadings[sensor_index] < PROXIMITY_RANGE) {
 
@@ -198,8 +203,9 @@ void Agent::checkForObstacles() {
             //So check if the object coordinate is close to another agent
             bool close_to_other_agent = false;
             for (const auto &agentLocation: this->agentLocations) {
+                if((agentLocation.second.second - this->elapsed_ticks) / this->ticks_per_second > AGENT_LOCATION_RELEVANT_DURATION_S) continue;
                 argos::CVector2 objectToAgent =
-                        argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                        argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
@@ -673,13 +679,14 @@ argos::CVector2 Agent::getVirtualWallAvoidanceVector() const {
 bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range) {
     int nAgentsWithinRange = 0;
     for (const auto &agentLocation: this->agentLocations) {
+        if((agentLocation.second.second - this->elapsed_ticks) / this->ticks_per_second > AGENT_LOCATION_RELEVANT_DURATION_S) continue;
         argos::CVector2 vectorToOtherAgent =
-                argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                 - argos::CVector2(this->position.x, this->position.y);
 
-        if (vectorToOtherAgent.Length() < range) { //TODO: make different for cohesion and separation
-            averageNeighborLocation->x += agentLocation.second.x;
-            averageNeighborLocation->y += agentLocation.second.y;
+        if (vectorToOtherAgent.Length() < range) {
+            averageNeighborLocation->x += agentLocation.second.first.x;
+            averageNeighborLocation->y += agentLocation.second.first.y;
             nAgentsWithinRange++;
         }
     }
@@ -748,7 +755,7 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
     //Get the velocities of the agents within range
     for (const auto &agentVelocity: agentVelocities) {
         std::string agentID = agentVelocity.first;
-        Coordinate otherAgentLocation = agentLocations[agentID];
+        Coordinate otherAgentLocation = agentLocations[agentID].first;
         argos::CVector2 agentVector = agentVelocity.second.first;
         double agentSpeed = agentVelocity.second.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
@@ -942,7 +949,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
         for (const auto &agentLocationPair: this->agentLocations) {
             //Get the distance between the frontier and the last known location of other agents
-            Coordinate agentLocation = agentLocationPair.second;
+            Coordinate agentLocation = agentLocationPair.second.first;
             double distanceFromOtherAgent = sqrt(
                     pow(frontierRegionX - agentLocation.x, 2) + pow(frontierRegionY - agentLocation.y, 2));
             distancesFromOtherAgents.push_back(distanceFromOtherAgent);
@@ -1140,7 +1147,7 @@ void Agent::updateBlacklistChance() {
 
                     if (!sameAsOtherFrontier) {
                         quadtree::Box frontierBox = this->blacklistedTree->add(target, quadtree::Occupancy::FREE,
-                                                                               elapsed_ticks / ticks_per_second);
+                                                                               elapsed_ticks / ticks_per_second, true);
                         this->blacklistedFrontiers[frontierBox.getCenter()] = std::make_pair<int, int>(1,
                                                                                                        0); // 0 = Not currently avoiding said frontier
                     }
@@ -1344,13 +1351,32 @@ Agent::calculateTotalVector(argos::CVector2 prev_total_vector, argos::CVector2 v
     return total_vector;
 }
 
-void Agent::doStep() {
-    broadcastMessage("C:" + this->position.toString());
+void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
     this->quadtree->toStringVector(&quadTreeToStrings);
-    for (const std::string &str: quadTreeToStrings) {
-        broadcastMessage("M:" + str);
+
+    for (const auto& agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = agentLocationPair.second.second;
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
+        if ((lastReceivedTick - elapsed_ticks) / ticks_per_second <
+            AGENT_LOCATION_RELEVANT_DURATION_S) {
+            //If we have not sent the quadtree to this agent yet, send it
+            if (!this->agentQuadtreeSent[agentLocationPair.first]) {
+                for (const std::string &str: quadTreeToStrings) {
+                    sendMessage("M:" + str, agentLocationPair.first);
+                }
+            }
+            this->agentQuadtreeSent[agentLocationPair.first] = true; //Store that we have sent the quadtree to this agent
+        } else {
+            this->agentQuadtreeSent[agentLocationPair.first] = false; //Store that we have not sent the quadtree to this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds
+        }
     }
+
+}
+
+void Agent::doStep() {
+    broadcastMessage("C:" + this->position.toString());
+    sendQuadtreeToCloseAgents();
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
             ":" + std::to_string(this->speed));
@@ -1395,9 +1421,16 @@ void Agent::doStep() {
  */
 void Agent::broadcastMessage(const std::string &message) const {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
-    auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
-    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
-    this->wifi.broadcast_message(cMessage);
+    this->wifi.broadcast_message(messagePrependedWithId);
+}
+
+/**
+ * Sends a message to an agents
+ * @param message
+ */
+void Agent::sendMessage(const std::string &message, const std::string& targetId) const {
+    std::string messagePrependedWithId = "[" + getId() + "]" + message;
+    this->wifi.send_message(messagePrependedWithId, targetId);
 }
 
 /**
@@ -1412,12 +1445,22 @@ void Agent::checkMessages() {
 }
 
 /**
+ * Get the target id from a message
+ * @param message
+ * @return
+ */
+std::string getTargetIdFromMessage(const std::string &message) {
+    return message.substr(message.find('<')+1, message.find('>') - 1 - message.find('<'));
+
+}
+
+/**
  * Get the id from a message
  * @param message
  * @return
  */
 std::string getIdFromMessage(const std::string &message) {
-    return message.substr(1, message.find(']') - 1);
+    return message.substr(message.find('[')+1, message.find(']') - 1 - message.find('['));
 
 }
 
@@ -1488,18 +1531,23 @@ argos::CVector2 vector2FromString(std::string str) {
  */
 void Agent::parseMessages() {
     for (const std::string &message: this->messages) {
+        std::string targetId = getTargetIdFromMessage(message);
+        if (targetId != "A" && targetId != getId()) continue; //If the message is not broadcast to all agents and not for this agent, skip it
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
-            this->agentLocations[senderId] = receivedPosition;
+            this->agentLocations[senderId] = std::make_pair(receivedPosition, this->elapsed_ticks);
         } else if (messageContent.at(0) == 'M') {
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(2));
             std::string chunk;
 
             while (std::getline(ss, chunk, '|')) {
-                this->quadtree->add(quadNodeFromString(chunk));
+                //Add the quadnode to the quadtree, with a probability
+                if (rand() % 100 <= RECEIVED_OBSERVATION_ADAPTION_PROBABILITY) {
+                    this->quadtree->add(quadNodeFromString(chunk), false);
+                }
             }
         } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);

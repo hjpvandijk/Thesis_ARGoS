@@ -45,17 +45,17 @@ namespace quadtree {
          * @param coordinate
          * @param occupancy
          */
-        Box add(Coordinate coordinate, Occupancy occupancy, double visitedAtS) {
+        Box add(Coordinate coordinate, Occupancy occupancy, double visitedAtS, bool ownObservation) {
             auto node = QuadNode{coordinate, occupancy, visitedAtS};
-            return add(node);
+            return add(node, ownObservation);
         }
 
         /**
          * @brief Add a QuadNode to the quadtreee
          * @param value
          */
-        Box add(const QuadNode &value) {
-            return add(mRoot.get(), mBox, value);
+        Box add(const QuadNode &value, bool ownObservation) {
+            return add(mRoot.get(), mBox, value, ownObservation);
         }
 
         void remove(const QuadNode &value) const {
@@ -591,7 +591,7 @@ namespace quadtree {
          * @param box
          * @param value
          */
-        Box add(Cell *cell, const Box &box, const QuadNode &value) {
+        Box add(Cell *cell, const Box &box, const QuadNode &value, bool ownObservation) {
             assert(cell != nullptr);
             assert(box.contains(value.coordinate));
 
@@ -611,29 +611,35 @@ namespace quadtree {
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
                     } else {
-                        //OCCUPIED always takes precedence over FREE
-                        //Update with the most precedent or up-to-date information.
-                        if (cell->quadNode.occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
-                            newNode.occupancy = OCCUPIED;
+                        if (ownObservation) { //If it is our own observation
+                            //OCCUPIED always takes precedence over FREE
+                            //Update with the most precedent or up-to-date information.
+                            if (cell->quadNode.occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
+                                newNode.occupancy = OCCUPIED;
+                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                            } else if (cell->quadNode.occupancy == OCCUPIED) {
+                                newNode.occupancy = OCCUPIED;
+                                newNode.visitedAtS = cell->quadNode.visitedAtS;
+                            } else if (value.occupancy == OCCUPIED) {
+                                newNode.occupancy = OCCUPIED;
+                                newNode.visitedAtS = value.visitedAtS;
+                            } else if (cell->quadNode.occupancy == FREE && value.occupancy == FREE) {
+                                newNode.occupancy = FREE;
+                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                            } else if (cell->quadNode.occupancy == FREE) {
+                                newNode.occupancy = FREE;
+                                newNode.visitedAtS = cell->quadNode.visitedAtS;
+                            } else if (value.occupancy == FREE) {
+                                newNode.occupancy = FREE;
+                                newNode.visitedAtS = value.visitedAtS;
+                            } else {
+                                assert(-1 &&
+                                       "Shouldn't get here, as neither current cell or added cell are OCCUPIED or FREE");
+                            }
+                        } else { //If it is another agent's observation (so recieved through message), there is no precedence.
                             newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                        } else if (cell->quadNode.occupancy == OCCUPIED) {
-                            newNode.occupancy = OCCUPIED;
-                            newNode.visitedAtS = cell->quadNode.visitedAtS;
-                        } else if (value.occupancy == OCCUPIED) {
-                            newNode.occupancy = OCCUPIED;
-                            newNode.visitedAtS = value.visitedAtS;
-                        } else if (cell->quadNode.occupancy == FREE && value.occupancy == FREE) {
-                            newNode.occupancy = FREE;
-                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                        } else if (cell->quadNode.occupancy == FREE) {
-                            newNode.occupancy = FREE;
-                            newNode.visitedAtS = cell->quadNode.visitedAtS;
-                        } else if (value.occupancy == FREE) {
-                            newNode.occupancy = FREE;
-                            newNode.visitedAtS = value.visitedAtS;
-                        } else {
-                            assert(-1 &&
-                                   "Shouldn't get here, as neither current cell or added cell are OCCUPIED or FREE");
+                            newNode.occupancy = newNode.visitedAtS == cell->quadNode.visitedAtS ? cell->quadNode.occupancy
+                                                                                              : value.occupancy;
                         }
 
 
@@ -650,8 +656,8 @@ namespace quadtree {
                     if (cell->quadNode.visitedAtS == -1 || !(value.occupancy == cell->quadNode.occupancy &&
                                                              value.visitedAtS - cell->quadNode.visitedAtS <=
                                                              MaxAllowedVisitedTimeDiffS)) {
-                        split(cell, box);
-                        return add(cell, box, value);
+                        split(cell, box, ownObservation);
+                        return add(cell, box, value, ownObservation);
                     }
                 }
             } else {
@@ -668,24 +674,33 @@ namespace quadtree {
                         newNode.visitedAtS = value.visitedAtS;
                     } else {
                         //If cell has occupancy FREE or OCCUPIED, it entails all its children are also of that value, so we just update this parent.
-                        if (cell->quadNode.occupancy == FREE) {
-                            if (value.occupancy == OCCUPIED) {
-                                newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = value.visitedAtS;
-                            } else {
-                                newNode.occupancy = FREE;
+                        if(cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED){
+                            if (ownObservation) { // If agent's own observation, there is precedence (prefer OCCUPIED over FREE)
+                                if (cell->quadNode.occupancy == FREE) {
+                                    if (value.occupancy == OCCUPIED) {
+                                        newNode.occupancy = OCCUPIED;
+                                        newNode.visitedAtS = value.visitedAtS;
+                                    } else {
+                                        newNode.occupancy = FREE;
+                                        newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                                    }
+                                    cell->quadNode = newNode;
+                                } else if (cell->quadNode.occupancy == OCCUPIED) {
+                                    if (value.occupancy == FREE) {
+                                        newNode.occupancy = OCCUPIED;
+                                        newNode.visitedAtS = cell->quadNode.visitedAtS;
+                                    } else {
+                                        newNode.occupancy = OCCUPIED;
+                                        newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                                    }
+                                    cell->quadNode = newNode;
+                                }
+                            } else { //If it is another agent's observation, there is no precedence.
                                 newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                                newNode.occupancy = newNode.visitedAtS == cell->quadNode.visitedAtS ? cell->quadNode.occupancy
+                                                                                                  : value.occupancy;
+                                cell->quadNode = newNode;
                             }
-                            cell->quadNode = newNode;
-                        } else if (cell->quadNode.occupancy == OCCUPIED) {
-                            if (value.occupancy == FREE) {
-                                newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = cell->quadNode.visitedAtS;
-                            } else {
-                                newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                            }
-                            cell->quadNode = newNode;
                             //Else if cell has occupancy ANY or UNKNOWN, we add to the children
                         } else {
                             //When adding a new coordinate and occupancy to that parent, we should set the remaining (yet unset) children to the value occupancy.
@@ -704,7 +719,7 @@ namespace quadtree {
                                 newChildNode.occupancy = value.occupancy;
 
                                 //Add to current cell, so that it will be placed in the proper child and checked for optimization later.
-                                return add(cell, box, newChildNode);
+                                return add(cell, box, newChildNode, ownObservation);
 
                             }
                         }
@@ -717,7 +732,7 @@ namespace quadtree {
                     // Add the value in a child if the value is entirely contained in it
                     assert(i != -1 && "A value should be contained in a quadrant");
                     assert(i != 4 && "A value should not be the same as the center of the box");
-                    return add(cell->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value);
+                    return add(cell->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value, ownObservation);
 
 //                Check if all children have the same occupancy
                     Occupancy firstOccupancy = UNKNOWN;
@@ -781,7 +796,7 @@ namespace quadtree {
          * @param cell
          * @param box
          */
-        void split(Cell *cell, const Box &box) {
+        void split(Cell *cell, const Box &box, bool ownObservation) {
             assert(cell != nullptr);
             assert(isLeaf(cell) && "Only leaves can be split");
             // Create children
@@ -801,7 +816,7 @@ namespace quadtree {
 
                     auto quadNode = QuadNode{childBoxCenter, cell->quadNode.occupancy,
                                              cell->quadNode.visitedAtS};
-                    add(cell->children.at(static_cast<std::size_t>(i)).get(), childBox, quadNode);
+                    add(cell->children.at(static_cast<std::size_t>(i)).get(), childBox, quadNode, ownObservation);
                 }
             }
             cell->quadNode = QuadNode{box.getCenter(), ANY, 0};

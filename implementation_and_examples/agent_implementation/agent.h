@@ -27,8 +27,10 @@ public:
     std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
 
 
-    std::map<std::string, Coordinate> agentLocations;
-    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
+    std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
+    double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
+    std::map<std::string, bool> agentQuadtreeSent; //id: sent
+    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
     argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
 
@@ -87,8 +89,9 @@ public:
 
     void doStep();
 
-
+    void sendQuadtreeToCloseAgents();
     void broadcastMessage(const std::string &message) const;
+    void sendMessage(const std::string &message, const std::string& targetId) const;
 
     void checkMessages();
 
@@ -151,6 +154,9 @@ public:
     double TURNING_SPEED_RATIO = 0.1;
 
     double ANGLE_INTERVAL_STEPS = 360;
+
+    double RECEIVED_OBSERVATION_ADAPTION_PROBABILITY = 75; //Adaption probability for the agent of adapting received new observations by other agents
+    double OWN_OBSERVATION_ADAPTION_PROBABILITY = 90; //Adaption probability for the agent of adapting received new observations by itself
 
 #ifdef BLACKLIST_FRONTIERS
     std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)

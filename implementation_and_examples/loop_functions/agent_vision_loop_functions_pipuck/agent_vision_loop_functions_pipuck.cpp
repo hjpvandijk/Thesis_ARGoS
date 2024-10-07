@@ -49,7 +49,7 @@ void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB
  */
 void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     for (auto & it : agent->agentLocations) {
-        Coordinate agentLocation = (it.second);
+        Coordinate agentLocation = (it.second.first);
         Coordinate agentLocationToArgos = agentLocation.FromOwnToArgos();
         CVector3 pos = CVector3(agentLocationToArgos.x, agentLocationToArgos.y, 0.02f);
         m_tOtherAgentCoordinates[pcFB].push_back(pos);
@@ -212,7 +212,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
                 continue;
             node.visitedAtS = visitedTimeS;
-            combinedTree->add(node);
+            combinedTree->add(node, false);
         }
 
 //        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;

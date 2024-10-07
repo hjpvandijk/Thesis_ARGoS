@@ -85,7 +85,11 @@ void PiPuckHugo::ControlStep() {
             };
     m_pcRangeFindersSensor->Visit(visitFn);
     for(int i = 0; i < num_sensors; i++){
-        agentObject->setLastRangeReadings(i, proxReadings[i]);
+        auto sensorReading = proxReadings[i];
+        double sensorNoiseM = 0.0;
+        // Add noise to the sensor reading, if it is not the maximum range (nothing hit)
+        if(sensorReading != agentObject->PROXIMITY_RANGE) sensorNoiseM = (100-(rand()%200)) *0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
+        agentObject->setLastRangeReadings(i, sensorReading + sensorNoiseM);
     }
 
 
