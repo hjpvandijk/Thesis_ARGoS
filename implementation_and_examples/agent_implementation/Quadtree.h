@@ -597,6 +597,7 @@ namespace quadtree {
 
             assert(value.occupancy != ANY && "Added occupancy should not be ANY");
             assert(value.occupancy != UNKNOWN && "Added occupancy should not be UNKNOWN");
+            Box returnBox = Box{MAXFLOAT, MAXFLOAT, 0};
             if (isLeaf(cell)) {
                 // Insert the value in this cell if possible
 
@@ -642,7 +643,7 @@ namespace quadtree {
                            newNode.occupancy == OCCUPIED && "new cell occupancy should be FREE or OCCUPIED");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
-                    return box;
+                    returnBox = box;
                 }
                     // Otherwise, we split and we try again
                 else {
@@ -651,7 +652,7 @@ namespace quadtree {
                                                              value.visitedAtS - cell->quadNode.visitedAtS <=
                                                              MaxAllowedVisitedTimeDiffS)) {
                         split(cell, box);
-                        return add(cell, box, value);
+                        returnBox = add(cell, box, value);
                     }
                 }
             } else {
@@ -677,6 +678,7 @@ namespace quadtree {
                                 newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
                             }
                             cell->quadNode = newNode;
+                            returnBox = box;
                         } else if (cell->quadNode.occupancy == OCCUPIED) {
                             if (value.occupancy == FREE) {
                                 newNode.occupancy = OCCUPIED;
@@ -686,6 +688,7 @@ namespace quadtree {
                                 newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
                             }
                             cell->quadNode = newNode;
+                            returnBox = box;
                             //Else if cell has occupancy ANY or UNKNOWN, we add to the children
                         } else {
                             //When adding a new coordinate and occupancy to that parent, we should set the remaining (yet unset) children to the value occupancy.
@@ -704,7 +707,7 @@ namespace quadtree {
                                 newChildNode.occupancy = value.occupancy;
 
                                 //Add to current cell, so that it will be placed in the proper child and checked for optimization later.
-                                return add(cell, box, newChildNode);
+                                returnBox = add(cell, box, newChildNode);
 
                             }
                         }
@@ -717,8 +720,7 @@ namespace quadtree {
                     // Add the value in a child if the value is entirely contained in it
                     assert(i != -1 && "A value should be contained in a quadrant");
                     assert(i != 4 && "A value should not be the same as the center of the box");
-                    return add(cell->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value);
-
+                    returnBox = add(cell->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value);
 //                Check if all children have the same occupancy
                     Occupancy firstOccupancy = UNKNOWN;
                     bool allSameOccupancy = true;
@@ -732,6 +734,7 @@ namespace quadtree {
                         //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
                         firstOccupancy = cell->children.at(0)->quadNode.occupancy;
                         for (const auto &child: cell->children) {
+
                             //If a child is empty, it is not the same occupancy as the others
                             //If a child has a different occupancy than the first child, it is not the same occupancy as all others
                             //If a child has occupancy ANY, further nested nodes will have a different occupancy.
@@ -755,8 +758,9 @@ namespace quadtree {
                     // If all children have the same occupancy, and their visited times are not too far apart, we can delete the children and the parents will have all info
                     if (allSameOccupancy && !visitedTimesTooFarApart) {
                         //Unitialize the children nodes as the parent now contains their information.
-                        for (auto &child: cell->children)
+                        for (auto &child: cell->children) {
                             child.reset();
+                        }
                         assert(isLeaf(cell) && "The cell should be a leaf again now");
 
                         //If all children have the same occupancy, give the parent that occupancy
@@ -773,7 +777,7 @@ namespace quadtree {
                 }
 
             }
-            return Box{};
+            return returnBox;
         }
 
         /**

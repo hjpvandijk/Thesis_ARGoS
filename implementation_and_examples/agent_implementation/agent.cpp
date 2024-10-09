@@ -173,6 +173,7 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) const {
     quadtree::Box objectBox = this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED,
                                                   elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
+    if (objectBox.getSize() != 0) // If the box is not the zero (not added)
     checkIfAgentFitsBetweenObstacles(objectBox);
 #endif
 
