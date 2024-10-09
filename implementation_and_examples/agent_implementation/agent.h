@@ -49,6 +49,8 @@ public:
     //Some sort of map or grid to keep track of the environment
     //Some sort of list of agents to keep track of other agents
 
+    bool human_presence = false;
+
 
 
     Agent() {}

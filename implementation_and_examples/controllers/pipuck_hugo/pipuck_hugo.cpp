@@ -53,6 +53,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     m_pcRadiosActuator = GetActuator<CCI_SimpleRadiosActuator>("simple_radios");
     m_pcRadiosSensor = GetSensor<CCI_SimpleRadiosSensor>("simple_radios");
     m_pcRangeFindersSensor = GetSensor<CCI_PiPuckRangefindersSensor>("pipuck_rangefinders");
+    m_pcTemperatureSensor = GetSensor<CCI_PiPuckIRTemperatureSensor>("pipuck_ir_temperature");
     m_pcPositioningSensor = GetSensor<CCI_PositioningSensor>("positioning");
     /*
      * Parse the configuration file
@@ -92,6 +93,23 @@ void PiPuckHugo::ControlStep() {
         if(sensorReading != PiPuckParameters::PROXIMITY_RANGE) sensorNoiseM = (sensorNoiseRange-(rand()%2*sensorNoiseRange)) *0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
         agentObject->setLastRangeReadings(i, sensorReading + sensorNoiseM);
     }
+
+    static constexpr size_t num_ir_rays = 21; // Define num_sensors as a static constexpr
+    Real proxReadingsIR[num_ir_rays] = {};
+    std::function<void(const CCI_PiPuckIRTemperatureSensor::SInterface &)> visitFnIR =
+            [&proxReadingsIR](const CCI_PiPuckIRTemperatureSensor::SInterface &sensor) {
+                proxReadingsIR[sensor.Label] = sensor.Temperature;
+//                argos::LOG << "IR sensor reading: " << sensor.Temperature << std::endl;
+            };
+    m_pcTemperatureSensor->Visit(visitFnIR);
+    bool human_presence = false;
+    for(int i = 0; i < num_ir_rays; i++){
+        auto sensorReading = proxReadingsIR[i];
+        if(sensorReading == 37.0){
+            human_presence = true;
+        }
+    }
+    agentObject->human_presence = human_presence;
 
 
 //    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;

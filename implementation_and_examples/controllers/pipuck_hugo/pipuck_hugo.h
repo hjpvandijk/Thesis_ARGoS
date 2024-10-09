@@ -30,6 +30,7 @@
 /* Definition of the pi-puck distance sensor */
 //#include <argos3/plugins/robots/pi-puck/control_interface/ci_footbot_proximity_sensor.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_rangefinders_sensor.h>
+#include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_ir_temperature_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_simple_radios_sensor.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_actuator.h>
@@ -104,6 +105,7 @@ private:
 //   CCI_FootBotProximitySensor* m_pcProximity;
    CCI_SimpleRadiosSensor *m_pcRadiosSensor;
    CCI_PiPuckRangefindersSensor* m_pcRangeFindersSensor;
+   CCI_PiPuckIRTemperatureSensor* m_pcTemperatureSensor;
    CCI_PiPuckDifferentialDriveSensor* m_pcDiffDriveSensor;
    CCI_PositioningSensor* m_pcPositioningSensor;
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;

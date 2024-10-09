@@ -1439,7 +1439,6 @@ void Agent::doStep() {
         }
     }
 
-
     elapsed_ticks++;
 }
 
