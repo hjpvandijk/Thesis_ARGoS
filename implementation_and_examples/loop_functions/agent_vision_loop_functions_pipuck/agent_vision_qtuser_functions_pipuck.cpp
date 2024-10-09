@@ -21,7 +21,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
          it != m_cAgVisLF.GetAgentFrontierRegions().end();
          ++it) {
         std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
-                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
+                                      CColor::GRAY80, CColor::WHITE, CColor::BLUE};
         int i = 0;
         for (auto frontierRegion: it->second) {
             //Assign a differnet color to every frontierRegion
@@ -97,6 +97,9 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         } else if (occupancy == quadtree::Occupancy::FREE) {
             color = CColor::GREEN;
             color.SetAlpha(UInt8(pheromone * 255));
+            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+        }else if (occupancy == quadtree::Occupancy::VICTIM) {
+            color = CColor::BLACK;
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
         }
 

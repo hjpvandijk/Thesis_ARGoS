@@ -88,7 +88,7 @@
             <sensors>
                 <!--                <footbot_proximity implementation="default" show_rays="true" />-->
                 <!--                <footbot_distance_scanner implementation="rot_z_only" show_rays="false" />-->
-                <pipuck_rangefinders implementation="default" show_rays="false"/>
+                <pipuck_rangefinders implementation="default" show_rays="true"/>
                 <pipuck_ir_temperature implementation="default" show_rays="true"/>
                 <simple_radios implementation="default" show_rays="false"/>
                 <!--                <range_and_bearing implementation="default" medium="rab"/>-->

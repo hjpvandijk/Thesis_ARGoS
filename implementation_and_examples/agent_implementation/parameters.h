@@ -21,8 +21,8 @@
 namespace PiPuckParameters {
 
     constexpr double DISTANCE_SENSOR_NOISE_CM = 0.0;
-    constexpr double ORIENTATION_NOISE_DEGREES = 5.0;
-    constexpr double POSITION_NOISE_CM = 5.0;
+    constexpr double ORIENTATION_NOISE_DEGREES = 0.0;
+    constexpr double POSITION_NOISE_CM = 0.0;
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 constexpr double FRONTIER_DIST_UNTIL_REACHED = 1.0;

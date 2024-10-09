@@ -187,6 +187,7 @@ private:
 
 
     void addObjectLocation(Coordinate objectCoordinate) const;
+    void addVictimLocation(Coordinate victimCoordinate) const;
 
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 

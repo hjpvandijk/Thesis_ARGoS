@@ -179,6 +179,15 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) const {
 }
 
 /**
+ * Add victim object location to the quadtree
+ * @param objectCoordinate
+ */
+void Agent::addVictimLocation(Coordinate victimCoordinate) const {
+    this->quadtree->add(victimCoordinate, quadtree::Occupancy::VICTIM,
+                                                  elapsed_ticks / ticks_per_second, true);
+}
+
+/**
  * Check for obstacles in front of the agent
  * If there is an obstacle within a certain range, add the free area between the agent and the obstacle to the quadtree
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
@@ -213,8 +222,15 @@ void Agent::checkForObstacles() {
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
-            if (!close_to_other_agent) addObjectLocation(object);
+            if (!close_to_other_agent) {
+                //Since our human presence sensor is facing forward, we only add the object as a victim if the sensor is facing forward and human is present
+                if(sensor_index == 0 && this->human_presence){ //If we are checking the frontward sensor, and human is present, add the object as a victim
+                    addVictimLocation(object);
+                } else { //If not the frontward sensor, or no human is present, add the object as an obstacle
+                    addObjectLocation(object);
+                }
 
+            }
 
         } else {
             double opposite = argos::Sin(sensor_rotation) * PiPuckParameters::PROXIMITY_RANGE;
