@@ -77,7 +77,7 @@ namespace quadtree {
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
 
-            return query(box, OCCUPIED);
+            return query(box, {OCCUPIED, VICTIM}); //Also query for victims, as it is technically an object.
         }
 
 
@@ -91,7 +91,7 @@ namespace quadtree {
             // Create a box centered at the given coordinate
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
-            return queryBoxes(box, OCCUPIED, currentTimeS);
+            return queryBoxes(box, {OCCUPIED, VICTIM}, currentTimeS);
         }
 
 //        /**
@@ -131,7 +131,7 @@ namespace quadtree {
 */
         std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) {
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
-            std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
+            std::vector<Box> exploredBoxes = queryBoxes(box, {FREE}, currentTimeS);
             std::vector<Box> frontierBoxes;
 
             for (const Box &exploredBox: exploredBoxes) {
@@ -250,9 +250,9 @@ namespace quadtree {
          * @return
          */
 
-        std::vector<QuadNode> query(const Box &box, Occupancy occupancy) const {
+        std::vector<QuadNode> query(const Box &box, std::vector<Occupancy> occupancies) const {
             auto queried_values = std::vector<QuadNode>();
-            query(mRoot.get(), mBox, box, queried_values, occupancy);
+            query(mRoot.get(), mBox, box, queried_values, occupancies);
             return queried_values;
         }
 
@@ -262,11 +262,11 @@ namespace quadtree {
          * @param occupancy
          * @return
          */
-        std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy, double currentTimeS) {
+        std::vector<Box> queryBoxes(const Box &box, std::vector<Occupancy> occupancies, double currentTimeS) {
             auto boxes = std::vector<Box>();
             //While querying we also check if pheromones are expired, we remember those and remove them after.
             std::vector<QuadNode> values_to_be_removed = {};
-            queryBoxes(mRoot.get(), mBox, box, boxes, occupancy, currentTimeS, values_to_be_removed);
+            queryBoxes(mRoot.get(), mBox, box, boxes, occupancies, currentTimeS, values_to_be_removed);
             for (auto &value: values_to_be_removed) {
                 remove(value);
             }
@@ -928,12 +928,14 @@ namespace quadtree {
          * @param occupancy
          */
         void query(Cell *node, const Box &box, const Box &queryBox, std::vector<QuadNode> &values,
-                   Occupancy occupancy) const {
+                   std::vector<Occupancy> occupancies) const {
             assert(node != nullptr);
             assert(queryBox.intersects_or_contains(box));
-            if ((occupancy == ANY || node->quadNode.occupancy == occupancy) &&
-                (queryBox.contains(node->quadNode.coordinate) || queryBox.intersects_or_contains(box)))
-                values.push_back(node->quadNode);
+            for (const auto &occupancy: occupancies) { //For each occupancy type, check if the node has that occupancy
+                if ((occupancy == ANY || node->quadNode.occupancy == occupancy) &&
+                    (queryBox.contains(node->quadNode.coordinate) || queryBox.intersects_or_contains(box)))
+                    values.push_back(node->quadNode);
+            }
 
             //Only check further if the occupancy of the non-leaf node is not all the same for its children, so UNKNOWN.
             if (!isLeaf(node) && (node->quadNode.visitedAtS == -1 || node->quadNode.occupancy == ANY ||
@@ -941,7 +943,7 @@ namespace quadtree {
                 for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                     auto childBox = computeBox(box, static_cast<int>(i));
                     if (queryBox.intersects_or_contains(childBox))
-                        query(node->children.at(i).get(), childBox, queryBox, values, occupancy);
+                        query(node->children.at(i).get(), childBox, queryBox, values, occupancies);
                 }
             }
         }
@@ -957,7 +959,7 @@ namespace quadtree {
          * @param values_to_be_removed the list of values that need to be removed from the quadtree as they are expired
          */
         void queryBoxes(Cell *cell, const Box &box, const Box &queryBox, std::vector<Box> &boxes,
-                        Occupancy occupancy, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
+                        std::vector<Occupancy> occupancies, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
             assert(cell != nullptr);
             assert(queryBox.intersects_or_contains(box));
             //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
@@ -968,10 +970,11 @@ namespace quadtree {
                 values_to_be_removed.push_back(cell->quadNode);
             }
 
-
-            if (cell->quadNode.occupancy == occupancy &&
-                (queryBox.contains(cell->quadNode.coordinate) || queryBox.intersects_or_contains(box)))
-                boxes.push_back(box);
+            for(const auto &occupancy: occupancies) {
+                if (cell->quadNode.occupancy == occupancy &&
+                    (queryBox.contains(cell->quadNode.coordinate) || queryBox.intersects_or_contains(box)))
+                    boxes.push_back(box);
+            }
 
 
             //Only check further if the occupancy of the non-leaf cell is not all the same for its children, so ANY.
@@ -980,7 +983,7 @@ namespace quadtree {
                 for (int d = 0; d < cell->children.size(); d++) {
                     auto childBox = computeBox(box, static_cast<int>(d));
                     if (queryBox.intersects_or_contains(childBox)) {
-                        queryBoxes(cell->children.at(d).get(), childBox, queryBox, boxes, occupancy, currentTimeS,
+                        queryBoxes(cell->children.at(d).get(), childBox, queryBox, boxes, occupancies, currentTimeS,
                                    values_to_be_removed);
                     }
                 }
