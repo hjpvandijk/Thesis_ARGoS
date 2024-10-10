@@ -1133,7 +1133,7 @@ void Agent::updateBlacklistChance() {
                                     pow(target.y - blackListedFrontierCoordinate.y, 2));
                             if (distanceBetweenFrontiers < this->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS) {
                                 blacklistedFrontier.second.first++;
-                                blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
+                                blacklistedFrontier.second.second = 1; // 1 = Currently avoiding said frontier
                                 sameAsOtherFrontier = true;
                             }
                         }
@@ -1143,7 +1143,7 @@ void Agent::updateBlacklistChance() {
                         quadtree::Box frontierBox = this->blacklistedTree->add(target, quadtree::Occupancy::FREE,
                                                                                elapsed_ticks / ticks_per_second);
                         this->blacklistedFrontiers[frontierBox.getCenter()] = std::make_pair<int, int>(1,
-                                                                                                       0); // 0 = Not currently avoiding said frontier
+                                                                                                       1); // 1 = Currently avoiding said frontier
                     }
                     this->closestCoordinateCounter = 0; // Reset counter
                 }
