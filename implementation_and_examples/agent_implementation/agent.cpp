@@ -1500,7 +1500,13 @@ void Agent::parseMessages() {
             std::string chunk;
 
             while (std::getline(ss, chunk, '|')) {
-                this->quadtree->add(quadNodeFromString(chunk));
+                quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
+                quadtree::Box addedBox = this->quadtree->add(newQuadNode);
+#ifdef CLOSE_SMALL_AREAS
+                if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)
+                    checkIfAgentFitsBetweenObstacles(addedBox);
+#endif
+
             }
         } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);
