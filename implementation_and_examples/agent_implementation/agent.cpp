@@ -568,37 +568,49 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
     if (!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ||
         this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
-        if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) > 89) { //The complete forward direction to the target is blocked
-            argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
-                                                              this->wallFollowingHitPoint.y - this->position.y);
+        Coordinate target = !(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ? this->subTarget : this->currentBestFrontier;
+        double agentToTarget = sqrt(pow(target.x - this->position.x, 2) +
+                                    pow(target.y - this->position.y, 2));
+        argos::CVector2 agentToHitPoint = argos::CVector2(this->position.x - this->wallFollowingHitPoint.x,
+                                                          this->position.y - this->wallFollowingHitPoint.y);
+        argos::CVector2 hitPointToTarget = argos::CVector2(this->wallFollowingHitPoint.x - target.x,
+                                                           this->wallFollowingHitPoint.y - target.y);
+        if (this->wallFollowingDirection == 0 && std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) > 89) { //The complete forward direction to the target is blocked
+
             if (agentToHitPoint.Length() <=
-                this->quadtree->getSmallestBoxSize()) { // If we are at the hit point (again)
+                this->quadtree->getSmallestBoxSize()) { // If we are at the hit point (again).
                 if (this->wallFollowingDirection == 0) {
                     if (this->prevWallFollowingDirection == 0) {
                         this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
                     } else {
                         this->wallFollowingDirection = -this->prevWallFollowingDirection;
                     }
-                } else { // 1 or -1
-                    if (!this->lastTickInWallFollowingHitPoint) { // If we are not in the same hit point as last iteration (so we have once moved from the hit point)
-                        this->wallFollowingDirection = -this->wallFollowingDirection; // Change wall following direction
-                    }
                 }
+//                else { // 1 or -1
+//                    if (!this->lastTickInWallFollowingHitPoint) { // If we are not in the same hit point as last iteration (so we have once moved from the hit point)
+//                        this->wallFollowingDirection = -this->wallFollowingDirection; // Change wall following direction
+//                    }
+//                }
 
             } else {
-                if(this->wallFollowingDirection == 0) { //Only switch when we are not in walking mode already
+                if(this->wallFollowingDirection == 0) { //Only switch when we are not in wall following mode already
                     this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
                 }
             }
             this->wallFollowingHitPoint = this->position;
             this->lastTickInWallFollowingHitPoint = true;
             this->prevWallFollowingDirection = this->wallFollowingDirection;
+            //If agent is close to the target, or, we are passing 'behind' the hit point, stop wall following
+        } else if (agentToTarget <= quadtree->getSmallestBoxSize()*2 && relativeObjectAvoidanceAngle  || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= this->quadtree->getSmallestBoxSize() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= this->TURN_THRESHOLD_DEGREES)) {
+            this->wallFollowingDirection = 0;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
                    this->TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
-            this->wallFollowingDirection = 0;
+            double hitPointToFrontier = sqrt(pow(this->wallFollowingHitPoint.x - target.x, 2) +
+                                             pow(this->wallFollowingHitPoint.y - target.y, 2));
+            if (agentToTarget < hitPointToFrontier) { //If we are closer to the frontier than the hit point
+                this->wallFollowingDirection = 0;
+            }
         }
-        argos::CVector2 agentToHitPoint = argos::CVector2(this->wallFollowingHitPoint.x - this->position.x,
-                                                          this->wallFollowingHitPoint.y - this->position.y);
         if (agentToHitPoint.Length() > this->quadtree->getSmallestBoxSize()) {
             this->lastTickInWallFollowingHitPoint = false;
         }
