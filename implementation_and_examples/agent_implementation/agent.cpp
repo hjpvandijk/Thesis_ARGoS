@@ -1311,8 +1311,11 @@ void Agent::calculateNextPosition() {
 void Agent::enterWalkingState(argos::CVector2 & unexploredFrontierVector) {
     argos::CVector2 agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
                                                        this->subTarget.y - this->position.y);;
-    if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT} ||
-        agentToSubtarget.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
+    if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+    || agentToSubtarget.Length() <= FRONTIER_DIST_UNTIL_REACHED
+#endif
+    ) {
         //Find a random direction to walk in, by placing a subtarget on the edge of the root box in the quadtree
         quadtree::Box rootBox = this->quadtree->getRootBox();
         Coordinate rootBoxCenter = rootBox.getCenter();
