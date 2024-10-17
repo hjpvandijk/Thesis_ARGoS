@@ -13,6 +13,7 @@
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
+#include "distance_sensor/hc_sr04.h"
 
 
 class Agent {
@@ -24,7 +25,7 @@ public:
     double speed{};
     Radio wifi{};
     static constexpr double num_sensors = 4;
-    std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
+    std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
 
     std::map<std::string, Coordinate> agentLocations;
@@ -103,9 +104,9 @@ public:
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
-#define BLACKLIST_FRONTIERS // If this is defined, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED will automatically be defined
-#ifdef BLACKLIST_FRONTIERS
+//#define WALL_FOLLOWING_ENABLED
+#define FRONTIER_CONFIDENCE // If this is defined, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED will automatically be defined
+#ifdef FRONTIER_CONFIDENCE
     #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     #endif
@@ -152,17 +153,22 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 360;
 
-#ifdef BLACKLIST_FRONTIERS
-    std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
-    std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
+#ifdef FRONTIER_CONFIDENCE
+    std::vector<Coordinate> avoidingFrontiers;
     double minDistFromFrontier = MAXFLOAT;
 
-    double BLACKLIST_CHANCE_PER_COUNT = 30;
+    double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
+    double P_POSITION = 0.9; // 90% probability for position to be correct
+    double P_FREE = 0.6; // 70% probability for free to be correct
+    double P_OCCUPIED = 0.3; // 30% probability for occupied to be correct
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
     Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
     int closestCoordinateCounter = 0;
-    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST = 2;
-    bool lastTickInBlacklistHitPoint = false;
+    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
+    bool lastTickInFrontierHitPoint = false;
+
+    float P_FREE_THRESHOLD = 0.6; //P > 0.6 means it is definitely free
+    float P_OCCUPIED_THRESHOLD = 0.3; //P < 0.3 means it is definitely occupied
 #endif
 
     Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};
@@ -223,9 +229,10 @@ private:
     std::string GetId() const;
 
 
-    void addObjectLocation(Coordinate objectCoordinate) const;
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
 
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
 
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
@@ -248,12 +255,11 @@ private:
 #ifdef WALL_FOLLOWING_ENABLED
     void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
 #endif
-#ifdef BLACKLIST_FRONTIERS
-    bool skipBlacklistedFrontier(double frontierRegionX, double frontierRegionY);
-    void updateBlacklistFollowing(Coordinate bestFrontierRegionCenter);
-    void resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector);
-    bool closeToBlacklistedFrontier();
-    void updateBlacklistChance();
+#ifdef FRONTIER_CONFIDENCE
+    bool skipFrontier(double frontierRegionX, double frontierRegionY);
+    void resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector);
+    bool frontierHasLowConfidence();
+    void updateConfidence();
 #endif
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
     void enterWalkingState(argos::CVector2 & unexploredFrontierVector);
