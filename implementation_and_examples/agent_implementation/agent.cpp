@@ -974,7 +974,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
 
-#ifdef FRONTIER_CONFIDENCE
+#ifdef AVOID_UNREACHABLE_FRONTIERS
         if (skipFrontier(frontierRegionX, frontierRegionY)) continue; //Skip this frontier
 #endif
 
@@ -1018,8 +1018,6 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
     this->currentBestFrontier = bestFrontierRegionCenter;
 
-#ifdef FRONTIER_CONFIDENCE
-#endif
 
 
     //Calculate the vector to the best frontier region
@@ -1029,7 +1027,8 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     return vectorToBestFrontier;
 }
 
-#ifdef FRONTIER_CONFIDENCE
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+
 /**
  * Decide if the frontier should be skipped due to being low confidence.
  * This is dependent the confidence of the frontier and a random chance, or if we were already avoiding it.
@@ -1086,9 +1085,9 @@ bool Agent::frontierHasLowConfidence(){
  * Update the confidence of cells if they are around a currently unreachable frontier.
  * If the agent is hitting the same hitpoint multiple times, decrease the frontier confidence.
  */
-void Agent::updateConfidence() {
+void Agent::updateConfidenceIfFrontierUnreachable() {
     //Increase the reachability confidence of all cells closeby
-//    quadtree->updateConfidence(this->position, MIN_ALLOWED_DIST_BETWEEN_FRONTIERS,
+//    quadtree->updateConfidenceIfFrontierUnreachable(this->position, MIN_ALLOWED_DIST_BETWEEN_FRONTIERS,
 //                               P_POSITION, this->elapsed_ticks / this->ticks_per_second);
 
 
@@ -1136,6 +1135,7 @@ void Agent::updateConfidence() {
 //        this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
     }
 }
+
 #endif
 
 void Agent::calculateNextPosition() {
@@ -1156,24 +1156,19 @@ void Agent::calculateNextPosition() {
     argos::CVector2 unexploredFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                                this->currentBestFrontier.y - this->position.y);
 
-#ifdef FRONTIER_CONFIDENCE
+#ifdef AVOID_UNREACHABLE_FRONTIERS
     resetFrontierAvoidance(unexploredFrontierVector);
 #endif
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     //If the current best frontier is not set
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
-#ifdef FRONTIER_CONFIDENCE
+#ifdef AVOID_UNREACHABLE_FRONTIERS
     //Or if the frontier has low confidence
     frontierHasLowConfidence() ||
 #endif
     //Or the agent is close to the frontier
     unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
-#ifdef FRONTIER_CONFIDENCE
-        if (unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
-            this->avoidingFrontiers.clear();
-        }
-#endif
 #ifdef WALL_FOLLOWING_ENABLED
         //If we are not currently wall following
         if (wallFollowingDirection == 0) {
@@ -1206,8 +1201,8 @@ void Agent::calculateNextPosition() {
     }
 #endif
 
-#ifdef FRONTIER_CONFIDENCE
-    updateConfidence();
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+    updateConfidenceIfFrontierUnreachable();
 #endif
 
     //If there are agents to avoid, do not explore

@@ -28,7 +28,6 @@ namespace quadtree {
         Occupancy occupancy;
         double visitedAtS;
         float LConfidence = 0.0; //The L(n) confidence of the reachability of this node by the agent. Positive is FREE, negative is OCCUPIED.
-
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
         }

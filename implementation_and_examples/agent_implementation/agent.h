@@ -7,7 +7,11 @@
 
 #include "coordinate.h"
 #include "radio.h"
+#ifdef OCCUPANCY_CONFIDENCE
+#include "ConfidenceQuadtree.h"
+#else
 #include "Quadtree.h"
+#endif
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
@@ -101,12 +105,12 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
-#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+//#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
 //#define WALL_FOLLOWING_ENABLED
-#define FRONTIER_CONFIDENCE // If this is defined, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED will automatically be defined
-#ifdef FRONTIER_CONFIDENCE
+//#define AVOID_UNREACHABLE_FRONTIERS
+#ifdef AVOID_UNREACHABLE_FRONTIERS
     #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     #endif
@@ -115,9 +119,9 @@ public:
 
 
 
-#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+//#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     double FRONTIER_DIST_UNTIL_REACHED = 1.0;
-#endif
+//#endif
 
 
     double PROXIMITY_RANGE = 2.0;
@@ -153,23 +157,24 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 360;
 
-#ifdef FRONTIER_CONFIDENCE
+#ifdef AVOID_UNREACHABLE_FRONTIERS
     std::vector<Coordinate> avoidingFrontiers;
     double minDistFromFrontier = MAXFLOAT;
+    Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
+    int closestCoordinateCounter = 0;
+    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
+    bool lastTickInFrontierHitPoint = false;
+#endif
 
     double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
     double P_POSITION = 0.9; // 90% probability for position to be correct
     double P_FREE = 0.6; // 70% probability for free to be correct
     double P_OCCUPIED = 0.3; // 30% probability for occupied to be correct
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
-    Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
-    int closestCoordinateCounter = 0;
-    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
-    bool lastTickInFrontierHitPoint = false;
 
     float P_FREE_THRESHOLD = 0.6; //P > 0.6 means it is definitely free
     float P_OCCUPIED_THRESHOLD = 0.3; //P < 0.3 means it is definitely occupied
-#endif
+
 
     Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};
     Coordinate previousBestFrontier = {0, 0};
@@ -255,12 +260,14 @@ private:
 #ifdef WALL_FOLLOWING_ENABLED
     void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
 #endif
-#ifdef FRONTIER_CONFIDENCE
+
+#ifdef AVOID_UNREACHABLE_FRONTIERS
     bool skipFrontier(double frontierRegionX, double frontierRegionY);
     void resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector);
     bool frontierHasLowConfidence();
-    void updateConfidence();
+    void updateConfidenceIfFrontierUnreachable();
 #endif
+
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
     void enterWalkingState(argos::CVector2 & unexploredFrontierVector);
 #endif
