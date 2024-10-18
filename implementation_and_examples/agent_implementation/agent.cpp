@@ -629,6 +629,13 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
         //Get the closest free angle to the wall following direction (90 degrees right or left)
         //Create a subtarget in that direction
         argos::CDegrees subtargetAngle = *freeAngles.begin();
+
+        //If the difference between the first free angle and the last is less than 90 degrees, agent will spin indefinitely. So go straight
+        double differenceBeginEnd = NormalizedDifference(subtargetAngle, *freeAngles.rbegin()).GetValue();
+        if (differenceBeginEnd >=0 && differenceBeginEnd <= 90) {
+            subtargetAngle = ToDegrees(heading);
+        }
+
         argos::CVector2 subtargetVector = argos::CVector2(1, 0);
         subtargetVector.Rotate(ToRadians(subtargetAngle));
         subtargetVector.Normalize();
@@ -1199,12 +1206,12 @@ void Agent::calculateNextPosition() {
 #endif
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    bool closeToBlacklisted = false;
-#ifdef BLACKLIST_FRONTIERS
-        closeToBlacklisted = closeToBlacklistedFrontier();
-#endif
+
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
-    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || closeToBlacklisted ||
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
+#ifdef BLACKLIST_FRONTIERS
+    closeToBlacklistedFrontier() ||
+#endif
         //If the current best frontier is blacklisted
         unexploredFrontierVector.Length() <=
         FRONTIER_DIST_UNTIL_REACHED) { //Or the agent is close to the frontier
