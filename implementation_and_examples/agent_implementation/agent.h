@@ -267,7 +267,7 @@ private:
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     bool skipFrontier(double frontierRegionX, double frontierRegionY);
     void resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector);
-    bool frontierHasLowConfidence();
+    bool frontierHasLowConfidenceOrAvoiding();
     void updateConfidenceIfFrontierUnreachable();
 #endif
 

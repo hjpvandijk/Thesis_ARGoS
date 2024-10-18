@@ -1037,15 +1037,18 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
  * @return True if the frontier should be skipped, false otherwise
  */
 bool Agent::skipFrontier(double frontierRegionX, double frontierRegionY) {
+    bool alreadyAvoiding = (std::find(this->avoidingFrontiers.begin(), this->avoidingFrontiers.end(),
+                                      Coordinate{frontierRegionX, frontierRegionY}) != this->avoidingFrontiers.end());
+    if (alreadyAvoiding) return true;
+
     float Lconfidence = quadtree->getConfidenceFromCoordinate({frontierRegionX, frontierRegionY});
     float Pconfidence = std::exp(Lconfidence) / (1 + std::exp(Lconfidence)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
     int randomChance = rand() % 100;
     //P < 0.5 = occupied, P > 0.5 = free
     if (Pconfidence < this->P_FREE_THRESHOLD) { //If the frontier might be occupied
         float Pfree = (Pconfidence - this->P_OCCUPIED_THRESHOLD)  / (1-this->P_OCCUPIED_THRESHOLD); // Rescale to 0-1
-        bool alreadyAvoiding = (std::find(this->avoidingFrontiers.begin(), this->avoidingFrontiers.end(),
-                                           Coordinate{frontierRegionX, frontierRegionY}) != this->avoidingFrontiers.end());
-        if (alreadyAvoiding ||  randomChance > Pfree * 100.0) { //The higher the confidence, the lower the chance to skip
+
+        if (randomChance > Pfree * 100.0) { //The higher the confidence, the lower the chance to skip
             this->avoidingFrontiers.push_back({frontierRegionX, frontierRegionY}); //Currently avoiding said frontier
             return true;
         }
@@ -1070,8 +1073,9 @@ void Agent::resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector) {
  * Check if the target frontier has low confidence.
  * @return
  */
-bool Agent::frontierHasLowConfidence(){
+bool Agent::frontierHasLowConfidenceOrAvoiding(){
     if(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) return false;
+    if(std::find(this->avoidingFrontiers.begin(), this->avoidingFrontiers.end(), this->currentBestFrontier) != this->avoidingFrontiers.end()) return true;
     float LConfidence = quadtree->getConfidenceFromCoordinate(this->currentBestFrontier);
     float PConfidence = std::exp(LConfidence) / (1 + std::exp(LConfidence)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
     if (PConfidence >= this->P_FREE_THRESHOLD) {
@@ -1121,14 +1125,15 @@ void Agent::updateConfidenceIfFrontierUnreachable() {
             this->ticksInHitpoint++;
             if (!this->lastTickInFrontierHitPoint || this->ticksInHitpoint >= this->MAX_TICKS_IN_HITPOINT) {
                 this->closestCoordinateCounter++; //Increase the counter
-                if (this->closestCoordinateCounter >= this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE) { //If we have hit closest point  too often (we are in a loop)
+                if (this->closestCoordinateCounter >= this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE || this->ticksInHitpoint >= this->MAX_TICKS_IN_HITPOINT) { //If we have hit closest point  too often (we are in a loop)
                     //Decrease the confidence of all cells closeby
-                    quadtree->updateConfidence(this->currentBestFrontier, MIN_ALLOWED_DIST_BETWEEN_FRONTIERS,
+                    quadtree->updateConfidence(target, MIN_ALLOWED_DIST_BETWEEN_FRONTIERS,
                                                P_AVOIDANCE, this->elapsed_ticks / this->ticks_per_second);
                     this->avoidingFrontiers.push_back(target);
                     this->closestCoordinateCounter = 0; // Reset counter
                 }
                 this->lastTickInFrontierHitPoint = true;
+                this->ticksInHitpoint = 0;
             }
         } else { //If we are not on the closest point to the frontier, set the flag to false
             this->lastTickInFrontierHitPoint = false;
@@ -1177,7 +1182,7 @@ void Agent::calculateNextPosition() {
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     //Or if the frontier has low confidence
-    frontierHasLowConfidence() ||
+    frontierHasLowConfidenceOrAvoiding() ||
 #endif
     //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
     frontierPheromoneEvaporated() ||
