@@ -1103,15 +1103,16 @@ void Agent::updateConfidenceIfFrontierUnreachable() {
     if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) && this->currentBestFrontier == this->previousBestFrontier || !(this->subTarget == Coordinate{MAXFLOAT,
                                                                                                    MAXFLOAT})) { //If we are still on route to the same frontier, or to a subtarget
 //Check if the distance to the frontier has decreased in the last timeToCheckFrontierDistS seconds
-        if (distanceToTarget < this->minDistFromFrontier) { //If the distance has decreased
+        if (distanceToTarget + 0.05 < this->minDistFromFrontier) { //If the distance has decreased by at least 5cm.
             this->minDistFromFrontier = distanceToTarget;
             this->closestCoordinateCounter = 0;
             this->closestCoordinateToCurrentFrontier = this->position;
             this->lastTickInFrontierHitPoint = false;
-//            this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
+            this->ticksInHitpoint = 0;
         } else if (distanceToClosestPoint <=
-                   this->quadtree->getSmallestBoxSize()) { //If we are again on the closest point to the frontier
-            if (!this->lastTickInFrontierHitPoint) {
+                   0.5*this->OBJECT_AVOIDANCE_RADIUS) { //If we are again on the closest point to the frontier
+            this->ticksInHitpoint++;
+            if (!this->lastTickInFrontierHitPoint || this->ticksInHitpoint >= this->MAX_TICKS_IN_HITPOINT) {
                 this->closestCoordinateCounter++; //Increase the counter
                 if (this->closestCoordinateCounter >= this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE) { //If we have hit closest point  too often (we are in a loop)
                     //Decrease the confidence of all cells closeby
@@ -1124,6 +1125,7 @@ void Agent::updateConfidenceIfFrontierUnreachable() {
             }
         } else { //If we are not on the closest point to the frontier, set the flag to false
             this->lastTickInFrontierHitPoint = false;
+            this->ticksInHitpoint = 0;
         }
 
 
@@ -1132,6 +1134,9 @@ void Agent::updateConfidenceIfFrontierUnreachable() {
         this->closestCoordinateCounter = 0;
         this->closestCoordinateToCurrentFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
         this->lastTickInFrontierHitPoint = false;
+        this->ticksInHitpoint = 0;
+
+
 //        this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
     }
 }

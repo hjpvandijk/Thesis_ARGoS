@@ -117,11 +117,9 @@ public:
 #endif
 #define WALKING_STATE_WHEN_NO_FRONTIERS
 
+    double ticks_per_second = 30;
 
 
-//#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    double FRONTIER_DIST_UNTIL_REACHED = 1.0;
-//#endif
 
 
     double PROXIMITY_RANGE = 2.0;
@@ -149,6 +147,10 @@ public:
     double AGENT_ALIGNMENT_RADIUS = 1.5;
     double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
+    //#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+    double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
+//#endif
+
 
     Coordinate left_right_borders = {-10, 10};
     Coordinate upper_lower_borders = {10, -10};
@@ -162,7 +164,9 @@ public:
     double minDistFromFrontier = MAXFLOAT;
     Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
     int closestCoordinateCounter = 0;
+    int ticksInHitpoint = 0;
     int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
+    int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //2 seconds
     bool lastTickInFrontierHitPoint = false;
 #endif
 
@@ -189,7 +193,6 @@ public:
     bool lastTickInWallFollowingHitPoint = false;
 #endif
 
-    double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
 
     std::vector<quadtree::Box> current_frontiers;
