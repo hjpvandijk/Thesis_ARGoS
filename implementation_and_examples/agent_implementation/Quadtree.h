@@ -297,7 +297,7 @@ namespace quadtree {
         }
 
         /**
-         * Returns the QuadNode containing the coordinate
+         * Returns if the QuadNode containing the coordinate has occupancy UNKNOWN
          * @param coordinate
          */
         bool isCoordinateUnknown(Coordinate coordinate) const {

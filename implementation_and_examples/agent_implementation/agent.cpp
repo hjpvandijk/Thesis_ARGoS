@@ -266,7 +266,7 @@ void Agent::checkForObstacles() {
 void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
     Coordinate objectCoordinate = objectBox.getCenter();
     std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
-                                                                                  4 * AGENT_SAFETY_RADIUS,
+                                                                                  3.0*OBJECT_AVOIDANCE_RADIUS,
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
     //For each box, that is not the checked object, check if the agent fits between the object and the box
@@ -470,7 +470,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position,
-                                                                                  OBJECT_AVOIDANCE_RADIUS * 2,
+                                                                                  OBJECT_AVOIDANCE_RADIUS * 2.0,
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
 
@@ -1081,6 +1081,11 @@ bool Agent::frontierHasLowConfidence(){
     return true;
 }
 
+bool Agent::frontierPheromoneEvaporated() {
+    if (quadtree->isCoordinateUnknown(this->currentBestFrontier)) return true;
+    return false;
+}
+
 /**
  * Update the confidence of cells if they are around a currently unreachable frontier.
  * If the agent is hitting the same hitpoint multiple times, decrease the frontier confidence.
@@ -1172,6 +1177,8 @@ void Agent::calculateNextPosition() {
     //Or if the frontier has low confidence
     frontierHasLowConfidence() ||
 #endif
+    //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
+    frontierPheromoneEvaporated() ||
     //Or the agent is close to the frontier
     unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
 #ifdef WALL_FOLLOWING_ENABLED

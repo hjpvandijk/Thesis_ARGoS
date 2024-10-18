@@ -271,6 +271,8 @@ private:
     void updateConfidenceIfFrontierUnreachable();
 #endif
 
+    bool frontierPheromoneEvaporated();
+
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
     void enterWalkingState(argos::CVector2 & unexploredFrontierVector);
 #endif
