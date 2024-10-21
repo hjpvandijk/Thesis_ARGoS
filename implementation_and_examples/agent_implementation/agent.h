@@ -106,7 +106,7 @@ public:
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-#define CLOSE_SMALL_AREAS
+//#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
 //#define WALL_FOLLOWING_ENABLED
 #define AVOID_UNREACHABLE_FRONTIERS
