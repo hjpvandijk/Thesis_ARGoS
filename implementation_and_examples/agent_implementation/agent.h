@@ -27,7 +27,7 @@ public:
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
-    double DISTANCE_SENSOR_NOISE_CM = 0.0;
+    double DISTANCE_SENSOR_NOISE_CM = 5.0;
     double ORIENTATION_NOISE_DEGREES = 5.0;
     double POSITION_NOISE_CM = 5.0;
 
@@ -112,7 +112,7 @@ public:
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-//#define WALL_FOLLOWING_ENABLED
+#define WALL_FOLLOWING_ENABLED
 #define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -182,7 +182,7 @@ public:
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
 
     float P_FREE_THRESHOLD = 0.6; //P > 0.6 means it is definitely free
-    float P_OCCUPIED_THRESHOLD = 0.3; //P < 0.3 means it is definitely occupied
+    float P_OCCUPIED_THRESHOLD = 0.4; //P < 0.3 means it is definitely occupied
 
 
     Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};

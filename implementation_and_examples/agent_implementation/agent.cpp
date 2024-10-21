@@ -94,6 +94,7 @@ void Agent::readInfraredSensor() {
  * @param coordinate2
  */
 void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const {
+    if(sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) < this->quadtree->getSmallestBoxSize()) return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
     double x = coordinate1.x;
     double y = coordinate1.y;
     double dx = coordinate2.x - coordinate1.x;
@@ -211,6 +212,7 @@ quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psenso
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
  */
 void Agent::checkForObstacles() {
+    bool addedObjectAtAgentLocation = false;
     for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->distance_sensors[sensor_index].getDistance() < PROXIMITY_RANGE) {
@@ -238,10 +240,13 @@ void Agent::checkForObstacles() {
             }
             //Only add the object as an obstacle if it is not close to another agent
             if (!close_to_other_agent) {
+                if (sqrt(pow(this->position.x - object.x, 2) + pow(this->position.y - object.y, 2)) < this->quadtree->getSmallestBoxSize()) {
+                    addedObjectAtAgentLocation = true;
+                }
                 quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
-                addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
+                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
             } else {
-                addFreeAreaBetween(this->position, object, sensor_probability);
+                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
             }
 
 
@@ -253,7 +258,7 @@ void Agent::checkForObstacles() {
 
 
             Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
-            addFreeAreaBetween(this->position, end_of_ray, 1.0);
+            if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, end_of_ray, 1.0);
         }
     }
 }
@@ -636,13 +641,13 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
             this->lastTickInWallFollowingHitPoint = true;
             this->prevWallFollowingDirection = this->wallFollowingDirection;
             //If agent is close to the target, or, we are passing 'behind' the hit point, stop wall following
-        } else if (agentToTarget <= quadtree->getSmallestBoxSize()*2 && relativeObjectAvoidanceAngle  || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= this->quadtree->getSmallestBoxSize() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= this->TURN_THRESHOLD_DEGREES)) {
+        } else if (agentToTarget <= quadtree->getSmallestBoxSize()*2 || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= this->quadtree->getSmallestBoxSize() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= this->TURN_THRESHOLD_DEGREES)) {
             this->wallFollowingDirection = 0;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
                    this->TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
             double hitPointToFrontier = sqrt(pow(this->wallFollowingHitPoint.x - target.x, 2) +
                                              pow(this->wallFollowingHitPoint.y - target.y, 2));
-            if (agentToTarget < hitPointToFrontier) { //If we are closer to the frontier than the hit point
+            if (agentToTarget < hitPointToFrontier) { //If we are closer to the frontier than the hit point, or the angle to the target is way different than from the hitpoint to the target.
                 this->wallFollowingDirection = 0;
             }
         }
@@ -664,22 +669,28 @@ void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& fre
         //Get the closest free angle to the wall following direction (90 degrees right or left)
         //Create a subtarget in that direction
         argos::CDegrees subtargetAngle = *freeAngles.begin();
+        if (subtargetAngle != *closestFreeAngle) { //If this is the same, the order of the free angles set isn't according to wall following yet
+            //If the difference between the first free angle and the last is less than 90 degrees, agent will spin indefinitely. So go straight
+            argos::CDegrees fst = NormalizedDifference(subtargetAngle, ToDegrees(this->heading));
+            argos::CDegrees snd = NormalizedDifference(*freeAngles.rbegin(), ToDegrees(this->heading));
+            double differenceBeginEnd = NormalizedDifference(fst, snd).GetValue() * this->wallFollowingDirection;
+            if (differenceBeginEnd < -1 && differenceBeginEnd >= -90) {
+                subtargetAngle = ToDegrees(heading);
+            }
 
-        //If the difference between the first free angle and the last is less than 90 degrees, agent will spin indefinitely. So go straight
-        double differenceBeginEnd = NormalizedDifference(subtargetAngle, *freeAngles.rbegin()).GetValue();
-        if (differenceBeginEnd >=0 && differenceBeginEnd <= 90) {
-            subtargetAngle = ToDegrees(heading);
+            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+            subtargetVector.Rotate(ToRadians(subtargetAngle));
+            subtargetVector.Normalize();
+            subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
+            this->wallFollowingSubTarget = {this->position.x + subtargetVector.GetX(),
+                                            this->position.y + subtargetVector.GetY()};
+
+            *closestFreeAngle = subtargetAngle;
+            *closestFreeAngleRadians = ToRadians(*closestFreeAngle);
+            *relativeObjectAvoidanceAngle = NormalizedDifference(*closestFreeAngleRadians, targetAngle);
+        } else {
+            this->wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
         }
-
-        argos::CVector2 subtargetVector = argos::CVector2(1, 0);
-        subtargetVector.Rotate(ToRadians(subtargetAngle));
-        subtargetVector.Normalize();
-        subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
-        this->wallFollowingSubTarget = {this->position.x + subtargetVector.GetX(), this->position.y + subtargetVector.GetY()};
-
-        *closestFreeAngle = subtargetAngle;
-        *closestFreeAngleRadians = ToRadians(*closestFreeAngle);
-        *relativeObjectAvoidanceAngle = NormalizedDifference(*closestFreeAngleRadians, targetAngle);
     } else {
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
         if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) { // If we have a frontier to go to, so not in the walking state
