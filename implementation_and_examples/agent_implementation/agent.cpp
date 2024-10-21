@@ -1206,6 +1206,12 @@ void Agent::calculateNextPosition() {
 #endif
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+    //If the agent is close to the frontier and is heading towards it, or if it is really close to the frontier.
+    //So we don't 'reach' frontiers through walls.
+    bool frontierReached = unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED &&
+                           NormalizedDifference(this->targetHeading, unexploredFrontierVector.Angle()).GetValue() <
+                           this->TURN_THRESHOLD_DEGREES * 2 ||
+                           unexploredFrontierVector.Length() <= this->OBJECT_AVOIDANCE_RADIUS;
 
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
@@ -1213,8 +1219,7 @@ void Agent::calculateNextPosition() {
     closeToBlacklistedFrontier() ||
 #endif
         //If the current best frontier is blacklisted
-        unexploredFrontierVector.Length() <=
-        FRONTIER_DIST_UNTIL_REACHED) { //Or the agent is close to the frontier
+        frontierReached) { //Or the agent is close to the frontier
 #ifdef BLACKLIST_FRONTIERS
         if (unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
             for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
