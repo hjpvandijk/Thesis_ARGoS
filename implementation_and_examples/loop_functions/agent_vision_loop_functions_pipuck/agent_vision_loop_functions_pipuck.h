@@ -25,13 +25,13 @@ public:
 
 
 
-    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
+    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, float, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;
     std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
     std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>> m_tAgentFrontierRegions;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
-    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
+    std::vector<std::tuple<quadtree::Box, float, double >> combinedQuadTree;
 
 public:
 
@@ -58,7 +58,7 @@ public:
         return m_tAgentCoordinates;
     }
 
-    inline const std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>>& GetQuadTree() const {
+    inline const std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, float, double >>>& GetQuadTree() const {
         return m_tQuadTree;
     }
 

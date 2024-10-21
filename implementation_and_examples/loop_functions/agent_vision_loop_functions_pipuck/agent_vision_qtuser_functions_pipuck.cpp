@@ -17,26 +17,26 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
-    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
-         it != m_cAgVisLF.GetAgentFrontierRegions().end();
-         ++it) {
-        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
-                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
-        int i = 0;
-        for (auto frontierRegion: it->second) {
-            //Assign a differnet color to every frontierRegion
-            CColor color = colors[i];
-            for (auto frontier: frontierRegion) {
-                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
-                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
-
-                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
-                        color);
-            }
-            i++;
-            if (i > colors.size()) i = 0;
-        }
-    }
+//    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
+//         it != m_cAgVisLF.GetAgentFrontierRegions().end();
+//         ++it) {
+//        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
+//                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
+//        int i = 0;
+//        for (auto frontierRegion: it->second) {
+//            //Assign a differnet color to every frontierRegion
+//            CColor color = colors[i];
+//            for (auto frontier: frontierRegion) {
+//                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+//                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+//
+//                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+//                        color);
+//            }
+//            i++;
+//            if (i > colors.size()) i = 0;
+//        }
+//    }
     for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
          it != m_cAgVisLF.GetAgentFreeAngles().end();
          ++it) {
@@ -64,12 +64,13 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
 
 
-//    argos::LOG << "combined tree size: " << combinedQuadTree.size() << std::endl;
+    argos::LOG << "combined tree size: " << m_cAgVisLF.combinedQuadTree.size() << std::endl;
 
-    for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: m_cAgVisLF.combinedQuadTree) {
-        quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-        int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-        double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+    for (std::tuple<quadtree::Box, float, double> boxesAndConfidenceAndTicks: m_cAgVisLF.combinedQuadTree) {
+        quadtree::Box box = std::get<0>(boxesAndConfidenceAndTicks);
+        float LConfidence = std::get<1>(boxesAndConfidenceAndTicks);
+        float PConfidence = std::exp(LConfidence) / (1 + std::exp(LConfidence));
+        double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
 
         double currentTimeS = m_cAgVisLF.globalElapsedTicks;
         double pheromone = 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
@@ -90,15 +91,28 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
         CColor color;
         bool fill = true;
-        if (occupancy == quadtree::Occupancy::OCCUPIED) {
-            color = CColor::RED;
-            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+//        quadtree::Occupancy occ = quadtree::AMBIGUOUS;
+//        if (LConfidence >= 0.4){
+//            occ = quadtree::FREE;
+//        } else if (LConfidence <= -0.85){
+//            occ = quadtree::OCCUPIED;
+//        }
+//        if (occ == quadtree::Occupancy::OCCUPIED) {
+//            color = CColor::RED;
+//            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+//
+//        } else if (occ == quadtree::Occupancy::FREE) {
+//            color = CColor::GREEN;
+//            color.SetAlpha(UInt8(pheromone * 255));
+//            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+//        }
 
-        } else if (occupancy == quadtree::Occupancy::FREE) {
-            color = CColor::GREEN;
-            color.SetAlpha(UInt8(pheromone * 255));
-            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
-        }
+
+        color = CColor::GREEN;
+        color.SetAlpha(UInt8(PConfidence * 255));
+        color = color.Blend(CColor::RED);
+        if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
+        DrawPolygon(pos, CQuaternion(), posVec, color, fill);
 
     }
 

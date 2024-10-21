@@ -7,12 +7,17 @@
 
 #include "coordinate.h"
 #include "radio.h"
+#ifdef OCCUPANCY_CONFIDENCE
+#include "ConfidenceQuadtree.h"
+#else
 #include "Quadtree.h"
+#endif
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
+#include "distance_sensor/hc_sr04.h"
 
 
 class Agent {
@@ -24,7 +29,7 @@ public:
     double speed{};
     Radio wifi{};
     static constexpr double num_sensors = 4;
-    std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
+    std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
 
     std::map<std::string, Coordinate> agentLocations;
@@ -100,23 +105,21 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
-#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+//#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
-#define BLACKLIST_FRONTIERS // If this is defined, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED will automatically be defined
-#ifdef BLACKLIST_FRONTIERS
+//#define WALL_FOLLOWING_ENABLED
+#define AVOID_UNREACHABLE_FRONTIERS
+#ifdef AVOID_UNREACHABLE_FRONTIERS
     #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     #endif
 #endif
 #define WALKING_STATE_WHEN_NO_FRONTIERS
 
+    double ticks_per_second = 30;
 
 
-#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    double FRONTIER_DIST_UNTIL_REACHED = 1.0;
-#endif
 
 
     double PROXIMITY_RANGE = 2.0;
@@ -144,6 +147,10 @@ public:
     double AGENT_ALIGNMENT_RADIUS = 1.5;
     double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
+    //#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+    double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
+//#endif
+
 
     Coordinate left_right_borders = {-10, 10};
     Coordinate upper_lower_borders = {10, -10};
@@ -152,18 +159,26 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 360;
 
-#ifdef BLACKLIST_FRONTIERS
-    std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
-    std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+    std::vector<Coordinate> avoidingFrontiers;
     double minDistFromFrontier = MAXFLOAT;
-
-    double BLACKLIST_CHANCE_PER_COUNT = 30;
-    double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
     Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
     int closestCoordinateCounter = 0;
-    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST = 2;
-    bool lastTickInBlacklistHitPoint = false;
+    int ticksInHitpoint = 0;
+    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
+    int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //2 seconds
+    bool lastTickInFrontierHitPoint = false;
 #endif
+
+    double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
+    double P_POSITION = 0.9; // 90% probability for position to be correct
+    double P_FREE = 0.6; // 70% probability for free to be correct
+    double P_OCCUPIED = 0.3; // 30% probability for occupied to be correct
+    double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
+
+    float P_FREE_THRESHOLD = 0.6; //P > 0.6 means it is definitely free
+    float P_OCCUPIED_THRESHOLD = 0.3; //P < 0.3 means it is definitely occupied
+
 
     Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};
     Coordinate previousBestFrontier = {0, 0};
@@ -178,7 +193,6 @@ public:
     bool lastTickInWallFollowingHitPoint = false;
 #endif
 
-    double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
 
     std::vector<quadtree::Box> current_frontiers;
@@ -223,9 +237,10 @@ private:
     std::string GetId() const;
 
 
-    void addObjectLocation(Coordinate objectCoordinate) const;
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
 
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
 
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
@@ -248,13 +263,16 @@ private:
 #ifdef WALL_FOLLOWING_ENABLED
     void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
 #endif
-#ifdef BLACKLIST_FRONTIERS
-    bool skipBlacklistedFrontier(double frontierRegionX, double frontierRegionY);
-    void updateBlacklistFollowing(Coordinate bestFrontierRegionCenter);
-    void resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector);
-    bool closeToBlacklistedFrontier();
-    void updateBlacklistChance();
+
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+    bool skipFrontier(double frontierRegionX, double frontierRegionY);
+    void resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector);
+    bool frontierHasLowConfidenceOrAvoiding();
+    void updateConfidenceIfFrontierUnreachable();
 #endif
+
+    bool frontierPheromoneEvaporated();
+
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
     void enterWalkingState(argos::CVector2 & unexploredFrontierVector);
 #endif

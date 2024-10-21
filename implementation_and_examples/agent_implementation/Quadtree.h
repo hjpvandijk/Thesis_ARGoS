@@ -3,6 +3,7 @@
 #include <cassert>
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <memory>
 #include <type_traits>
 #include <vector>
@@ -17,7 +18,8 @@ namespace quadtree {
         UNKNOWN,
         FREE,
         OCCUPIED,
-        ANY
+        ANY,
+        AMBIGUOUS
     };
 
 
@@ -25,7 +27,7 @@ namespace quadtree {
         Coordinate coordinate;
         Occupancy occupancy;
         double visitedAtS;
-
+        float LConfidence = 0.0; //The L(n) confidence of the reachability of this node by the agent. Positive is FREE, negative is OCCUPIED.
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
         }
@@ -45,8 +47,15 @@ namespace quadtree {
          * @param coordinate
          * @param occupancy
          */
-        Box add(Coordinate coordinate, Occupancy occupancy, double visitedAtS) {
-            auto node = QuadNode{coordinate, occupancy, visitedAtS};
+        Box add(Coordinate coordinate, float Pn_zt, double visitedAtS) {
+            auto LConfidence = L(Pn_zt);
+            Occupancy occ = AMBIGUOUS;
+            if (LConfidence >= l_free){
+                occ = FREE;
+            } else if (LConfidence <= l_occupied){
+                occ = OCCUPIED;
+            }
+            auto node = QuadNode{coordinate, occ, visitedAtS, LConfidence};
             return add(node);
         }
 
@@ -87,7 +96,7 @@ namespace quadtree {
             // Create a box centered at the given coordinate
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
 
-            return queryBoxes(box, OCCUPIED, currentTimeS);
+            return queryBoxes(box, {OCCUPIED}, currentTimeS);
         }
 
 //        /**
@@ -127,7 +136,7 @@ namespace quadtree {
 */
         std::vector<Box> queryFrontierBoxes(Coordinate coordinate, double areaSize, double currentTimeS) {
             Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
-            std::vector<Box> exploredBoxes = queryBoxes(box, FREE, currentTimeS);
+            std::vector<Box> exploredBoxes = queryBoxes(box, {FREE, AMBIGUOUS}, currentTimeS); //Get FREE and AMBIGUOUS boxes, as the latter might be FREE
             std::vector<Box> frontierBoxes;
 
             for (const Box &exploredBox: exploredBoxes) {
@@ -258,11 +267,11 @@ namespace quadtree {
          * @param occupancy
          * @return
          */
-        std::vector<Box> queryBoxes(const Box &box, Occupancy occupancy, double currentTimeS) {
+        std::vector<Box> queryBoxes(const Box &box, std::vector<Occupancy> occupancies, double currentTimeS) {
             auto boxes = std::vector<Box>();
             //While querying we also check if pheromones are expired, we remember those and remove them after.
             std::vector<QuadNode> values_to_be_removed = {};
-            queryBoxes(mRoot.get(), mBox, box, boxes, occupancy, currentTimeS, values_to_be_removed);
+            queryBoxes(mRoot.get(), mBox, box, boxes, occupancies, currentTimeS, values_to_be_removed);
             for (auto &value: values_to_be_removed) {
                 remove(value);
             }
@@ -270,7 +279,7 @@ namespace quadtree {
         }
 
         /**
-         * Returns the QuadNode containing the coordinate
+         * Returns the Occupancy of the QuadNode containing the coordinate
          * @param coordinate
          */
         Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
@@ -279,7 +288,16 @@ namespace quadtree {
         }
 
         /**
-         * Returns the QuadNode containing the coordinate
+         * Returns the LConfidence of the QuadNode containing the coordinate
+         * @param coordinate
+         */
+        float getConfidenceFromCoordinate(Coordinate coordinate) const {
+            QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
+            return quadNode.LConfidence;
+        }
+
+        /**
+         * Returns if the QuadNode containing the coordinate has occupancy UNKNOWN
          * @param coordinate
          */
         bool isCoordinateUnknown(Coordinate coordinate) const {
@@ -300,6 +318,12 @@ namespace quadtree {
         Box getBox() const {
             return mBox;
         }
+
+        void updateConfidence(Coordinate coordinate, double areaSize, double Preading, double currentTimeS) {
+            Box functionSpace = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+            updateConfidence(mRoot.get(), mBox, functionSpace, Preading, currentTimeS);
+        }
+
 
         /**
          * @brief Export the quadtree to a file
@@ -354,8 +378,8 @@ namespace quadtree {
                 // If the occupancy is UNKNOWN, we don't need to store it, as a child not existing will also yield in an UNKNOWN
 //                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
 //                        continue;
-                // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
-                if (cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == FREE) {
+                // If the occupancy is OCCUPIED or FREE or AMBIGUOUS, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) {
                     allSameOccupancy = true;
 
                     std::string str =
@@ -399,36 +423,36 @@ namespace quadtree {
          * Get all the boxes in the quadtree
          * @return
          */
-        std::vector<std::tuple<Box, int, double>> getAllBoxes() {
-            std::vector<std::tuple<Box, int, double>> boxesAndOccupancyAndTicks = {};
-            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, int, double>> *)> traverse;
+        std::vector<std::tuple<Box, float, double>> getAllBoxes() {
+            std::vector<std::tuple<Box, float, double>> boxesAndConfidenceAndTicks = {};
+            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, float, double>> *)> traverse;
             traverse = [&](const Cell *cell, const Box &box,
-                           std::vector<std::tuple<Box, int, double>> *boxesAndOccupancyAndTicks) {
+                           std::vector<std::tuple<Box, float, double>> *boxesAndConfidenceAndTicks) {
                 if (cell == nullptr) return;
                 bool allSameOccupancy = false;
 //                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
 //                        continue;
-                // If the occupancy is OCCUPIED or FREE, we want to exchange that information. And we don't have to send any children as they will be all the same.
-                if (cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == FREE) {
+                // If the occupancy is OCCUPIED or FREE or AMBIGUOUS, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) {
                     allSameOccupancy = true;
-                    boxesAndOccupancyAndTicks->emplace_back(
-                            std::tuple(box, cell->quadNode.occupancy, cell->quadNode.visitedAtS));
+                    boxesAndConfidenceAndTicks->emplace_back(
+                            box, cell->quadNode.LConfidence, cell->quadNode.visitedAtS);
                 }
 
                 // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
                 if (!allSameOccupancy) {
                     for (int i = 0; i < 4; i++) {
                         if (cell->children.at(i)) {
-                            traverse(cell->children.at(i).get(), computeBox(box, i), boxesAndOccupancyAndTicks);
+                            traverse(cell->children.at(i).get(), computeBox(box, i), boxesAndConfidenceAndTicks);
                         }
                     }
                 }
             };
 
-            traverse(mRoot.get(), mBox, &boxesAndOccupancyAndTicks);
+            traverse(mRoot.get(), mBox, &boxesAndConfidenceAndTicks);
 
 
-            return boxesAndOccupancyAndTicks;
+            return boxesAndConfidenceAndTicks;
 
         }
 
@@ -455,6 +479,10 @@ namespace quadtree {
         double Smallest_Box_Size = MinSize;
         static constexpr double EvaporationTime = 100.0;
         static constexpr double MaxAllowedVisitedTimeDiffS = 10.0;
+        float l_min = -3.5;
+        float l_max = 2;
+        float l_free = 0.4;
+        float l_occupied = -0.85;
 
 
         struct Cell {
@@ -611,36 +639,46 @@ namespace quadtree {
                     if (cell->quadNode.visitedAtS == -1) { //If the cell is empty
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
+                        newNode.LConfidence = value.LConfidence;
                     } else {
                         //OCCUPIED always takes precedence over FREE
                         //Update with the most precedent or up-to-date information.
-                        if (cell->quadNode.occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
-                            newNode.occupancy = OCCUPIED;
-                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                        } else if (cell->quadNode.occupancy == OCCUPIED) {
-                            newNode.occupancy = OCCUPIED;
-                            newNode.visitedAtS = cell->quadNode.visitedAtS;
-                        } else if (value.occupancy == OCCUPIED) {
-                            newNode.occupancy = OCCUPIED;
-                            newNode.visitedAtS = value.visitedAtS;
-                        } else if (cell->quadNode.occupancy == FREE && value.occupancy == FREE) {
-                            newNode.occupancy = FREE;
-                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                        } else if (cell->quadNode.occupancy == FREE) {
-                            newNode.occupancy = FREE;
-                            newNode.visitedAtS = cell->quadNode.visitedAtS;
-                        } else if (value.occupancy == FREE) {
-                            newNode.occupancy = FREE;
-                            newNode.visitedAtS = value.visitedAtS;
-                        } else {
-                            assert(-1 &&
-                                   "Shouldn't get here, as neither current cell or added cell are OCCUPIED or FREE");
+//                        if (cell->quadNode.occupancy == OCCUPIED && value.occupancy == OCCUPIED) {
+//                            newNode.occupancy = OCCUPIED;
+//                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+//                        } else if (cell->quadNode.occupancy == OCCUPIED) {
+//                            newNode.occupancy = OCCUPIED;
+//                            newNode.visitedAtS = cell->quadNode.visitedAtS;
+//                        } else if (value.occupancy == OCCUPIED) {
+//                            newNode.occupancy = OCCUPIED;
+//                            newNode.visitedAtS = value.visitedAtS;
+//                        } else if (cell->quadNode.occupancy == FREE && value.occupancy == FREE) {
+//                            newNode.occupancy = FREE;
+//                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+//                        } else if (cell->quadNode.occupancy == FREE) {
+//                            newNode.occupancy = FREE;
+//                            newNode.visitedAtS = cell->quadNode.visitedAtS;
+//                        } else if (value.occupancy == FREE) {
+//                            newNode.occupancy = FREE;
+//                            newNode.visitedAtS = value.visitedAtS;
+//                        } else {
+//                            assert(-1 &&
+//                                   "Shouldn't get here, as neither current cell or added cell are OCCUPIED or FREE");
+//                        }
+                        newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence, value.LConfidence);
+                        newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                        Occupancy occ = AMBIGUOUS;
+                        if (newNode.LConfidence >= l_free){
+                            occ = FREE;
+                        } else if (newNode.LConfidence <= l_occupied){
+                            occ = OCCUPIED;
                         }
-
+                        newNode.occupancy = occ;
 
                     }
                     assert(newNode.occupancy == FREE ||
-                           newNode.occupancy == OCCUPIED && "new cell occupancy should be FREE or OCCUPIED");
+                           newNode.occupancy == OCCUPIED ||
+                           newNode.occupancy == AMBIGUOUS && "new cell occupancy should be FREE or OCCUPIED or AMBIGUOUS");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
                     returnBox = box;
@@ -667,28 +705,39 @@ namespace quadtree {
                     if (cell->quadNode.visitedAtS == -1) {
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
+                        newNode.LConfidence = value.LConfidence;
                     } else {
                         //If cell has occupancy FREE or OCCUPIED, it entails all its children are also of that value, so we just update this parent.
-                        if (cell->quadNode.occupancy == FREE) {
-                            if (value.occupancy == OCCUPIED) {
-                                newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = value.visitedAtS;
-                            } else {
-                                newNode.occupancy = FREE;
-                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+//                        if (cell->quadNode.occupancy == FREE) {
+//                            if (value.occupancy == OCCUPIED) {
+//                                newNode.occupancy = OCCUPIED;
+//                                newNode.visitedAtS = value.visitedAtS;
+//                            } else {
+//                                newNode.occupancy = FREE;
+//                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+//                            }
+//                            cell->quadNode = newNode;
+//                            returnBox = box;
+//                        } else if (cell->quadNode.occupancy == OCCUPIED) {
+//                            if (value.occupancy == FREE) {
+//                                newNode.occupancy = OCCUPIED;
+//                                newNode.visitedAtS = cell->quadNode.visitedAtS;
+//                            } else {
+//                                newNode.occupancy = OCCUPIED;
+//                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+//                            }
+//                            cell->quadNode = newNode;
+//                            returnBox = box;
+                        if (cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == AMBIGUOUS) {
+                            newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence, value.LConfidence);
+                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                            Occupancy occ = AMBIGUOUS;
+                            if (newNode.LConfidence >= l_free){
+                                occ = FREE;
+                            } else if (newNode.LConfidence <= l_occupied){
+                                occ = OCCUPIED;
                             }
-                            cell->quadNode = newNode;
-                            returnBox = box;
-                        } else if (cell->quadNode.occupancy == OCCUPIED) {
-                            if (value.occupancy == FREE) {
-                                newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = cell->quadNode.visitedAtS;
-                            } else {
-                                newNode.occupancy = OCCUPIED;
-                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                            }
-                            cell->quadNode = newNode;
-                            returnBox = box;
+                            newNode.occupancy = occ;
                             //Else if cell has occupancy ANY or UNKNOWN, we add to the children
                         } else {
                             //When adding a new coordinate and occupancy to that parent, we should set the remaining (yet unset) children to the value occupancy.
@@ -705,6 +754,7 @@ namespace quadtree {
                                 newChildNode.visitedAtS = value.visitedAtS;
                                 newChildNode.coordinate = childBoxCenter;
                                 newChildNode.occupancy = value.occupancy;
+                                newChildNode.LConfidence = value.LConfidence;
 
                                 //Add to current cell, so that it will be placed in the proper child and checked for optimization later.
                                 returnBox = add(cell, box, newChildNode);
@@ -758,20 +808,30 @@ namespace quadtree {
                     // If all children have the same occupancy, and their visited times are not too far apart, we can delete the children and the parents will have all info
                     if (allSameOccupancy && !visitedTimesTooFarApart) {
                         //Unitialize the children nodes as the parent now contains their information.
+                        float PConfidenceSum = 0.0;
                         for (auto &child: cell->children) {
+                            PConfidenceSum += P(child->quadNode.LConfidence);
                             child.reset();
                         }
                         assert(isLeaf(cell) && "The cell should be a leaf again now");
+                        cell->quadNode.LConfidence = L(PConfidenceSum / 4.0);
 
                         //If all children have the same occupancy, give the parent that occupancy
-                        cell->quadNode.occupancy = firstOccupancy;
-                        assert(cell->quadNode.occupancy != UNKNOWN &&
-                               "A non-leaf cell should not have UNKNOWN occupancy");
+                        Occupancy occ = AMBIGUOUS;
+                        if (cell->quadNode.LConfidence >= l_free){
+                            occ = FREE;
+                        } else if (cell->quadNode.LConfidence <= l_occupied){
+                            occ = OCCUPIED;
+                        }
+                        cell->quadNode.occupancy = occ;
+                        assert(cell->quadNode.occupancy != UNKNOWN && cell->quadNode.occupancy != ANY &&
+                               "A non-leaf cell should not have UNKNOWN or ANY occupancy at this point");
                         cell->quadNode.visitedAtS = maxVisitedTime;
 
                     } else {
                         //If the children have different occupancies, or the visited times are too far apart, the parent should have occupancy ANY
                         cell->quadNode.occupancy = ANY;
+                        cell->quadNode.LConfidence = 0.0; //Ambiguous
 
                     }
                 }
@@ -794,21 +854,21 @@ namespace quadtree {
 
             assert(!isLeaf(cell) && "A cell should not be a leaf after splitting");
 
-            //If cell has occupancy FREE or OCCUPIED, it entails all its children are also of that value.
+            //If cell has occupancy FREE or OCCUPIED or AMBIGUOUS, it entails all its children are also of that value.
             //When adding a new coordinate and occupancy to that parent, we should set the three remaining children to the parent occupancy.
             //So when splitting we set all children to the parent occupancy and visited time.
             if (cell->quadNode.visitedAtS != -1 &&
-                (cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED)) {
+                (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN)) {
                 for (int i = 0; i < cell->children.size(); i++) {
                     Box childBox = computeBox(box, i);
                     Coordinate childBoxCenter = childBox.getCenter();
 
                     auto quadNode = QuadNode{childBoxCenter, cell->quadNode.occupancy,
-                                             cell->quadNode.visitedAtS};
+                                             cell->quadNode.visitedAtS, cell->quadNode.LConfidence};
                     add(cell->children.at(static_cast<std::size_t>(i)).get(), childBox, quadNode);
                 }
             }
-            cell->quadNode = QuadNode{box.getCenter(), ANY, 0};
+            cell->quadNode = QuadNode{box.getCenter(), ANY, 0, 0.0};
         }
 
         /**
@@ -897,11 +957,11 @@ namespace quadtree {
          * @param values_to_be_removed the list of values that need to be removed from the quadtree as they are expired
          */
         void queryBoxes(Cell *cell, const Box &box, const Box &queryBox, std::vector<Box> &boxes,
-                        Occupancy occupancy, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
+                        std::vector<Occupancy> occupancies, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
             assert(cell != nullptr);
             assert(queryBox.intersects_or_contains(box));
             //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
-            if (cell->quadNode.occupancy == Occupancy::FREE &&
+            if ((cell->quadNode.occupancy == Occupancy::FREE || cell->quadNode.occupancy == AMBIGUOUS) &&
                 calculatePheromone(cell->quadNode.visitedAtS, currentTimeS) < 0.05) {
                 cell->quadNode.occupancy = Occupancy::UNKNOWN;
                 //Keep a list of the to be removed values, as we cant delete them now due to concurrency issues. These will be deleted after the querying is done.
@@ -909,7 +969,7 @@ namespace quadtree {
             }
 
 
-            if (cell->quadNode.occupancy == occupancy &&
+            if (std::find(occupancies.begin(), occupancies.end(), cell->quadNode.occupancy) != occupancies.end() &&
                 (queryBox.contains(cell->quadNode.coordinate) || queryBox.intersects_or_contains(box)))
                 boxes.push_back(box);
 
@@ -920,7 +980,7 @@ namespace quadtree {
                 for (int d = 0; d < cell->children.size(); d++) {
                     auto childBox = computeBox(box, static_cast<int>(d));
                     if (queryBox.intersects_or_contains(childBox)) {
-                        queryBoxes(cell->children.at(d).get(), childBox, queryBox, boxes, occupancy, currentTimeS,
+                        queryBoxes(cell->children.at(d).get(), childBox, queryBox, boxes, occupancies, currentTimeS,
                                    values_to_be_removed);
                     }
                 }
@@ -930,6 +990,67 @@ namespace quadtree {
         double calculatePheromone(double visitedTime, double currentTime) const {
             double pheromone = 1.0 - std::min((currentTime - visitedTime) / EvaporationTime, 1.0);
             return pheromone;
+        }
+
+        /**
+         * @brief Update the reachability confidence of the quadtree for QuadNodes that intersect with or are contained by the given box
+         * @param cell the current cell being looked in
+         * @param box the box the current cell belongs in
+         * @param queryBox the search space
+         * @param confidenceIncrease the increase in confidence
+         * @param currentTimeS the current experiment time of the agent
+         */
+        void updateConfidence(Cell *cell, const Box &box, const Box &functionSpace, float Pn_zt, double currentTimeS) {
+            assert(cell != nullptr);
+            assert(functionSpace.intersects_or_contains(box));
+
+            //Only update the confidence if we haven't seen this FREE cell in a while
+            if (
+//                    cell->quadNode.occupancy == FREE &&
+                (functionSpace.contains(cell->quadNode.coordinate) || functionSpace.intersects_or_contains(box))
+//                &&
+//                currentTimeS - cell->quadNode.visitedAtS > MaxAllowedVisitedTimeDiffS
+                )
+//                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
+                cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
+
+            //Only check further if the occupancy of the non-leaf cell is not all the same for its children, so ANY.
+            if (!isLeaf(cell) && (cell->quadNode.visitedAtS == -1 || cell->quadNode.occupancy == ANY ||
+                                  cell->quadNode.occupancy == UNKNOWN)) {
+                for (int d = 0; d < cell->children.size(); d++) {
+                    auto childBox = computeBox(box, static_cast<int>(d));
+                    if (functionSpace.intersects_or_contains(childBox)) {
+                        updateConfidence(cell->children.at(d).get(), childBox, functionSpace,
+                                         Pn_zt, currentTimeS);
+                    }
+                }
+            }
+        }
+        //According to http://www.arminhornung.de/Research/pub/hornung13auro.pdf
+        //Dynamic probability
+        float calculateOccupancyProbability(float Ln_z1tMinus1, float Pn_zt) {
+//            float Ln_z1tMinus1 = L(Pn_z1tMinus1); // L(P(n|z1:t-1))
+            float Ln_zt = L(Pn_zt); // L(P(n|zt))
+            float Ln_z1t = std::max(std::min(Ln_z1tMinus1 + Ln_zt, l_max), l_min); // L(P(n|z1:t)) = max(min(L(P(n|z1:t-1)) + L(P(n|zt)), l_max), l_min)
+//            float Pn_z1t = std::exp(Ln_z1t) / (1 + std::exp(Ln_z1t)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
+            return Ln_z1t;
+        }
+
+        //According to http://www.arminhornung.de/Research/pub/hornung13auro.pdf
+        //Dynamic probability
+        float calculateOccupancyProbabilityFromTwoL(float Ln_z1tMinus1, float Ln_zt) {
+            float Ln_z1t = std::max(std::min(Ln_z1tMinus1 + Ln_zt, l_max), l_min); // L(P(n|z1:t)) = max(min(L(P(n|z1:t-1)) + L(P(n|zt)), l_max), l_min)
+//            float Pn_z1t = std::exp(Ln_z1t) / (1 + std::exp(Ln_z1t)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
+            return Ln_z1t;
+        }
+
+        float L(float p) {
+            assert(p >= 0 && p < 1);
+            return std::log(p / (1-p));
+        }
+
+        float P(float l) {
+            return std::exp(l) / (1 + std::exp(l));
         }
 
 
