@@ -1362,7 +1362,8 @@ void Agent::sendQuadtreeToCloseAgents() {
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             AGENT_LOCATION_RELEVANT_DURATION_S) {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
-            if (this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] > QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+            if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
+                this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] > QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
                 for (const std::string &str: quadTreeToStrings) {
                     sendMessage("M:" + str, agentLocationPair.first);
                 }
