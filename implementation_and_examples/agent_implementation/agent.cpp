@@ -157,7 +157,7 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
 
-    for (int s = 0; s < nSteps; s++) {
+    for (int s = 0; s < nSteps-1; s++) {
         this->quadtree->add(Coordinate{x, y}, this->P_OCCUPIED, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
@@ -180,7 +180,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
     y += stepY * 0.1; // Add a small margin to detecting boxes the coordinates belong to
 
 
-    for (int s = 0; s < nSteps; s++) {
+    for (int s = 1; s < nSteps; s++) {
         if (this->quadtree->getOccupancyFromCoordinate(Coordinate{x, y}) == quadtree::Occupancy::OCCUPIED) {
             return true;
         }
@@ -1198,19 +1198,10 @@ void Agent::calculateNextPosition() {
     //Or if the frontier has low confidence
     frontierHasLowConfidenceOrAvoiding() ||
 #endif
-        //If the current best frontier is blacklisted
-        frontierReached) { //Or the agent is close to the frontier
-#ifdef BLACKLIST_FRONTIERS
-        if (unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
-            for (auto &blacklistedFrontier: this->blacklistedFrontiers) {
-                blacklistedFrontier.second.second = 0; // 0 = Not currently avoiding said frontier
-            }
-        }
-#endif
+    //If the current best frontier is blacklisted
+    frontierReached || //Or the agent is close to the frontier
     //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
-    frontierPheromoneEvaporated() ||
-    //Or the agent is close to the frontier
-    unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED) {
+    frontierPheromoneEvaporated()) {
 #ifdef WALL_FOLLOWING_ENABLED
         //If we are not currently wall following
         if (wallFollowingDirection == 0) {
