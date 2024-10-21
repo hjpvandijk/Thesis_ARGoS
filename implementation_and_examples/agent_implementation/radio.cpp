@@ -10,8 +10,18 @@ Radio::Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRa
     this->radioSensor = radioSensor;
 }
 
-void Radio::broadcast_message(argos::CByteArray &message) const {
-    radioActuator->GetInterfaces()[0].Messages.emplace_back(message);
+void Radio::broadcast_message(std::string &messagePrependedWithId) const {
+    messagePrependedWithId.insert(0, "<A>"); //Prepend with ALL
+    auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
+    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
+    radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
+}
+
+void Radio::send_message(std::string &messagePrependedWithId, const std::string& id) const {
+    messagePrependedWithId.insert(0, "<" + id + ">"); //Prepend with target id
+    auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
+    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
+    radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
 }
 
 void Radio::receive_messages(std::vector<std::string> &messages) const {

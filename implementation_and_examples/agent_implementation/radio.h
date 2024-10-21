@@ -18,7 +18,8 @@ public:
 
     Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor);
 
-    void broadcast_message(argos::CByteArray &message) const;
+    void broadcast_message(std::string &messagePrependedWithId) const;
+    void send_message(std::string &messagePrependedWithId, const std::string& id) const;
 
     void receive_messages(std::vector<std::string> &messages) const;
 

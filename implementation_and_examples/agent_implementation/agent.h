@@ -31,9 +31,15 @@ public:
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
+    double DISTANCE_SENSOR_NOISE_CM = 0.0;
+    double ORIENTATION_NOISE_DEGREES = 5.0;
+    double POSITION_NOISE_CM = 5.0;
 
-    std::map<std::string, Coordinate> agentLocations;
-    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
+
+    std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
+    double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
+    std::map<std::string, bool> agentQuadtreeSent; //id: sent
+    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
     argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
 
@@ -92,8 +98,9 @@ public:
 
     void doStep();
 
-
+    void sendQuadtreeToCloseAgents();
     void broadcastMessage(const std::string &message) const;
+    void sendMessage(const std::string &message, const std::string& targetId) const;
 
     void checkMessages();
 
@@ -124,7 +131,7 @@ public:
 
     double PROXIMITY_RANGE = 2.0;
 
-    double TURN_THRESHOLD_DEGREES = 2;
+    double TURN_THRESHOLD_DEGREES = 2.0;
 
     double AGENT_ROBOT_DIAMETER = 0.08;
 
