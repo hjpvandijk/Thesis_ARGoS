@@ -163,6 +163,7 @@ public:
 
     double ANGLE_INTERVAL_STEPS = 360;
 
+
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     std::vector<Coordinate> avoidingFrontiers;
     double minDistFromFrontier = MAXFLOAT;

@@ -497,7 +497,8 @@ namespace quadtree {
         double MinSize = 0.2;
         double Smallest_Box_Size = MinSize;
         static constexpr double EvaporationTime = 100.0;
-        static constexpr double MaxAllowedVisitedTimeDiffS = 10.0;
+        static constexpr double MAX_ALLOWED_VISITED_TIME_DIFF = 10.0;
+        static constexpr double MAX_ALLOWED_P_CONFIDENCE_DIFF = 0.1;
         float l_min = -3.5;
         float l_max = 2;
         float l_free = 0.4;
@@ -708,9 +709,11 @@ namespace quadtree {
                     // Otherwise, we split and we try again
                 else {
                     //If the to be added occupancy is the same as the parent, and the visited time is not too far apart, we can skip adding.
-                    if (cell->quadNode.visitedAtS == -1 || !(value.occupancy == cell->quadNode.occupancy &&
+                    float pv = P(value.LConfidence);
+                    float pc = P(cell->quadNode.LConfidence);
+                    if (cell->quadNode.visitedAtS == -1 || !(std::abs(pv - pc) <= MAX_ALLOWED_P_CONFIDENCE_DIFF &&
                                                              value.visitedAtS - cell->quadNode.visitedAtS <=
-                                                             MaxAllowedVisitedTimeDiffS)) {
+                                                             MAX_ALLOWED_VISITED_TIME_DIFF)) {
                         split(cell, box);
                         returnBox = add(cell, box, value);
                     }
@@ -794,41 +797,52 @@ namespace quadtree {
                     assert(i != 4 && "A value should not be the same as the center of the box");
                     returnBox = add(cell->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value);
 //                Check if all children have the same occupancy
-                    Occupancy firstOccupancy = UNKNOWN;
-                    bool allSameOccupancy = true;
+//                    Occupancy firstOccupancy = UNKNOWN;
+                    bool confidencesTooFarApart = false;
+                    double minConfidence = MAXFLOAT;
+                    double maxConfidence = -1;
                     bool visitedTimesTooFarApart = false;
                     double minVisitedTime = MAXFLOAT;
                     double maxVisitedTime = -1;
 
                     if (cell->children.at(0)->quadNode.visitedAtS == -1)
-                        allSameOccupancy = false;
+                        confidencesTooFarApart = true;
                     else {
                         //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
-                        firstOccupancy = cell->children.at(0)->quadNode.occupancy;
+//                        firstOccupancy = cell->children.at(0)->quadNode.occupancy;
                         for (const auto &child: cell->children) {
 
                             //If a child is empty, it is not the same occupancy as the others
                             //If a child has a different occupancy than the first child, it is not the same occupancy as all others
                             //If a child has occupancy ANY, further nested nodes will have a different occupancy.
-                            if (child->quadNode.visitedAtS == -1 || child->quadNode.occupancy == ANY ||
-                                child->quadNode.occupancy != firstOccupancy) {
-                                allSameOccupancy = false;
+                            if (child->quadNode.visitedAtS == -1 || child->quadNode.occupancy == ANY) {
+                                confidencesTooFarApart = true;
                                 break;
                             }
+
+                            //If the confidence of the child is too far apart from the first child, it is not the same occupancy as the others
+                            if (child->quadNode.LConfidence < minConfidence)
+                                minConfidence = child->quadNode.LConfidence;
+                            if (child->quadNode.LConfidence > maxConfidence)
+                                maxConfidence = child->quadNode.LConfidence;
+
                             //If the visited time of the child is too far apart from the first child, it is not the same occupancy as the others
                             if (child->quadNode.visitedAtS < minVisitedTime)
                                 minVisitedTime = child->quadNode.visitedAtS;
                             if (child->quadNode.visitedAtS > maxVisitedTime)
                                 maxVisitedTime = child->quadNode.visitedAtS;
                         }
+                        //If the occupancies are too far apart, the children should be kep
+                        if (P(maxConfidence) - P(minConfidence) > MAX_ALLOWED_P_CONFIDENCE_DIFF)
+                            confidencesTooFarApart = true;
                         //If the visited times are too far apart, the children should be kept
-                        if (maxVisitedTime - minVisitedTime > MaxAllowedVisitedTimeDiffS)
+                        if (maxVisitedTime - minVisitedTime > MAX_ALLOWED_VISITED_TIME_DIFF)
                             visitedTimesTooFarApart = true;
                     }
 //                assert(!cell->quadNode.visitedAtS == -1 && "A non-leaf cell should have a value");
 
                     // If all children have the same occupancy, and their visited times are not too far apart, we can delete the children and the parents will have all info
-                    if (allSameOccupancy && !visitedTimesTooFarApart) {
+                    if (!confidencesTooFarApart && !visitedTimesTooFarApart) {
                         //Unitialize the children nodes as the parent now contains their information.
                         float PConfidenceSum = 0.0;
                         for (auto &child: cell->children) {
@@ -1031,7 +1045,7 @@ namespace quadtree {
 //                    cell->quadNode.occupancy == FREE &&
                 (functionSpace.contains(cell->quadNode.coordinate) || functionSpace.intersects_or_contains(box))
 //                &&
-//                currentTimeS - cell->quadNode.visitedAtS > MaxAllowedVisitedTimeDiffS
+//                currentTimeS - cell->quadNode.visitedAtS > MAX_ALLOWED_VISITED_TIME_DIFF
                 )
 //                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
                 cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
