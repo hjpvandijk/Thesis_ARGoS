@@ -12,8 +12,7 @@
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
-
-
+#include <set>
 
 
 class Agent {
@@ -89,12 +88,11 @@ public:
     void doStep();
 
 
-    void broadcastMessage(const std::string& message) const;
+    void broadcastMessage(const std::string &message) const;
 
     void checkMessages();
 
     void parseMessages();
-
 
 
     std::vector<std::string> getMessages();
@@ -102,14 +100,33 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
+#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+//#define CLOSE_SMALL_AREAS
+#define SEPARATE_FRONTIERS
+#define WALL_FOLLOWING_ENABLED
+#define BLACKLIST_FRONTIERS // If this is defined, DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED will automatically be defined
+#ifdef BLACKLIST_FRONTIERS
+    #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+        #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+    #endif
+#endif
+#define WALKING_STATE_WHEN_NO_FRONTIERS
+
+
+
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+    double FRONTIER_DIST_UNTIL_REACHED = 1.0;
+#endif
+
 
     double PROXIMITY_RANGE = 2.0;
 
     double TURN_THRESHOLD_DEGREES = 2;
 
+    double AGENT_ROBOT_DIAMETER = 0.08;
+
     double OBJECT_SAFETY_RADIUS = 0.1;
-    double AGENT_SIZE = 0.08;
-    double AGENT_SAFETY_RADIUS = AGENT_SIZE + 0.1;
+    double AGENT_SAFETY_RADIUS = AGENT_ROBOT_DIAMETER + 0.1;
 
     double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
     double AGENT_COHESION_WEIGHT = 0;//0.23;
@@ -117,59 +134,134 @@ public:
     double AGENT_ALIGNMENT_WEIGHT = 0.5;//0.5;
     double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
 
-    double FRONTIER_DISTANCE_WEIGHT = 0.2;//0.001;
+    double FRONTIER_DISTANCE_WEIGHT = 0.1;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
     double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RADIUS = 2;
+    double AGENT_AVOIDANCE_RADIUS = 0.68;
     double AGENT_ALIGNMENT_RADIUS = 1.5;
-    double OBJECT_AVOIDANCE_RADIUS = OBJECT_SAFETY_RADIUS + AGENT_SAFETY_RADIUS + 0.2;
+    double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
-    Coordinate left_right_borders = {-10,10};
-    Coordinate upper_lower_borders = {10,-10};
+
+    Coordinate left_right_borders = {-10, 10};
+    Coordinate upper_lower_borders = {10, -10};
 
     double TURNING_SPEED_RATIO = 0.1;
 
     double ANGLE_INTERVAL_STEPS = 360;
 
-    Coordinate currentBestFrontier = {0,0};
+#ifdef BLACKLIST_FRONTIERS
+    std::map<Coordinate, std::pair<int, int>> blacklistedFrontiers; //coordinate: (count, currently avoiding)
+    std::unique_ptr<quadtree::Quadtree> blacklistedTree; //Use quadtree for quick blacklisted frontier lookup
+    double minDistFromFrontier = MAXFLOAT;
+
+    double BLACKLIST_CHANCE_PER_COUNT = 30;
+    double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
+    Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
+    int closestCoordinateCounter = 0;
+    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_BLACKLIST = 2;
+    bool lastTickInBlacklistHitPoint = false;
+#endif
+
+    Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};
+    Coordinate previousBestFrontier = {0, 0};
+    Coordinate subTarget = {MAXFLOAT, MAXFLOAT};
+
+    int wallFollowingDirection = 0;
+
+#ifdef WALL_FOLLOWING_ENABLED
+    Coordinate wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT};
+    int prevWallFollowingDirection = 0;
+    Coordinate wallFollowingHitPoint = {MAXFLOAT, MAXFLOAT};
+    bool lastTickInWallFollowingHitPoint = false;
+#endif
 
     double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
 
     std::vector<quadtree::Box> current_frontiers;
     std::vector<std::vector<quadtree::Box>> current_frontier_regions;
+    std::set<argos::CDegrees> freeAnglesVisualization;
+    argos::CVector2 perpendicularVectorVisualization;
+    std::vector<Coordinate> lineVisualization;
+
 
 private:
     void checkForObstacles();
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
+
+    bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const;
+
+    argos::CVector2 calculateTotalVector(argos::CVector2 prev_total_vector,
+                                         argos::CVector2 virtualWallAvoidanceVector,
+                                         argos::CVector2 agentCohesionVector,
+                                         argos::CVector2 agentAvoidanceVector,
+                                         argos::CVector2 agentAlignmentVector,
+                                         argos::CVector2 unexploredFrontierVector);
+
+
+    bool calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+
     argos::CVector2 getVirtualWallAvoidanceVector() const;
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
+
+    bool getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range);
+
     argos::CVector2 calculateAgentCohesionVector();
+
     argos::CVector2 calculateAgentAvoidanceVector();
+
     argos::CVector2 calculateAgentAlignmentVector();
+
     argos::CVector2 calculateUnexploredFrontierVector();
 
     std::vector<std::string> messages;
-
-
-
-
-
 
 
     std::string GetId() const;
 
 
     void addObjectLocation(Coordinate objectCoordinate) const;
+
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
+    void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
+
+    // Custom comparator to order set for wall following. The set is ordered by the angle difference to the wall following direction
+    struct CustomComparator {
+        int dir;  // dir is either 0, 1 or -1
+        double heading;
+        double targetAngle;
+
+        CustomComparator(int dir, double heading, double targetAngle) : dir(dir), heading(heading),
+                                                                        targetAngle(targetAngle) {}
 
 
-};
+        //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
+        //Good with heading 36 --> 86
+        // Custom comparator logic
+        bool operator()(const argos::CDegrees &a, const argos::CDegrees &b) const;
+    };
+
+#ifdef WALL_FOLLOWING_ENABLED
+    void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+#endif
+#ifdef BLACKLIST_FRONTIERS
+    bool skipBlacklistedFrontier(double frontierRegionX, double frontierRegionY);
+    void updateBlacklistFollowing(Coordinate bestFrontierRegionCenter);
+    void resetBlacklistAvoidance(argos::CVector2 unexploredFrontierVector);
+    bool closeToBlacklistedFrontier();
+    void updateBlacklistChance();
+#endif
+#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+    void enterWalkingState(argos::CVector2 & unexploredFrontierVector);
+#endif
+
+
+
+    };
 
 
 #endif //THESIS_ARGOS_AGENT_H

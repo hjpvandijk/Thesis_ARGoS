@@ -137,7 +137,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
               << std::endl;
 
-//
+
     /* Get the map of all pi-pucks from the space */
     CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
 /* Go through them */
@@ -149,6 +149,8 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tAgentElapsedTicks.clear();
     m_tAgentFrontiers.clear();
     m_tAgentFrontierRegions.clear();
+    m_tAgentFreeAngles.clear();
+    m_tAgentSubTargetCoordinate.clear();
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
@@ -161,7 +163,20 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
         m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
+        Coordinate subTarget = agent->subTarget.FromOwnToArgos();
+        CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
+        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
+        Coordinate wallFollowingSubTarget = agent->wallFollowingSubTarget.FromOwnToArgos();
+        CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
+        m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
 
+        if(!agent->lineVisualization.empty()) m_tLine.clear();
+
+        for(auto lineCoordinate: agent->lineVisualization){
+            Coordinate line = lineCoordinate.FromOwnToArgos();
+            CVector3 linePos = CVector3(line.x, line.y, 0.1f);
+            m_tLine[pcFB].push_back(linePos);
+        }
 
 
         findAndPushObjectCoordinates(pcFB, agent);
@@ -173,8 +188,12 @@ void CAgentVisionLoopFunctions::PostStep() {
         pushQuadTree(pcFB, agent);
 
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
-//        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
+        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
 
+//        m_tAgentFreeAngles[pcFB] = agent->freeAngles;
+        for(auto angle: agent->freeAnglesVisualization) {
+            m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
+        }
 
     }
 
@@ -202,17 +221,17 @@ void CAgentVisionLoopFunctions::PostStep() {
 
     combinedQuadTree = boxesAndOccupancyAndTicks;
 
-    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
-    for(auto spawnObj: spawnableObjects) {
-        int spawn_time = std::get<2>(spawnObj);
-        if(loop_function_steps == spawn_time) {
-            std::unique_ptr<CBoxEntity> box = std::make_unique<CBoxEntity>("spawn_box" + std::to_string(spawn_time), std::get<0>(spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
-            GetSpace().AddEntity(*box);
-            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
-            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
-            box.release(); // Release ownership after adding to the space
-        }
-    }
+//    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
+//    for(auto spawnObj: spawnableObjects) {
+//        int spawn_time = std::get<2>(spawnObj);
+//        if(loop_function_steps == spawn_time) {
+//            std::unique_ptr<CBoxEntity> box = std::make_unique<CBoxEntity>("spawn_box" + std::to_string(spawn_time), std::get<0>(spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
+//            GetSpace().AddEntity(*box);
+//            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
+//            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
+//            box.release(); // Release ownership after adding to the space
+//        }
+//    }
 //
     loop_function_steps++;
 }

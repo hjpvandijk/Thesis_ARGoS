@@ -18,11 +18,19 @@ public:
     TCoordinateMap m_tOtherAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
+    std::map<CPiPuckEntity*, CVector3> m_tAgentSubTargetCoordinate;
+    std::map<CPiPuckEntity*, CVector3> m_tAgentWallFollowingSubTargetCoordinate;
+    std::map<CPiPuckEntity*, CVector3> m_tPerpVector;
+    std::map<CPiPuckEntity*, std::vector<CVector3>> m_tLine;
+
+
+
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;
     std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
     std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>> m_tAgentFrontierRegions;
+    std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
     std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
 
 public:
@@ -64,6 +72,10 @@ public:
 
     inline const std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>>& GetAgentFrontierRegions() const {
         return m_tAgentFrontierRegions;
+    }
+
+    inline const std::map<CPiPuckEntity*, std::set<argos::CDegrees>> & GetAgentFreeAngles() const {
+        return m_tAgentFreeAngles;
     }
 
 //    CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
