@@ -200,35 +200,35 @@ void CAgentVisionLoopFunctions::PostStep() {
     }
 
     auto mBox = quadtree::Box(-5, 5, 10);
-    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
+//    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
 
     for (const auto & it : GetQuadTree()) {
-        for (std::tuple<quadtree::Box, float, double> boxesAndConfidenceAndTicks: it.second) {
-            quadtree::Box box = std::get<0>(boxesAndConfidenceAndTicks);
-            float LConfidence = std::get<1>(boxesAndConfidenceAndTicks);
-            double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
+//        for (std::tuple<quadtree::Box, float, double> boxesAndConfidenceAndTicks: it.second) {
+//            quadtree::Box box = std::get<0>(boxesAndConfidenceAndTicks);
+//            float LConfidence = std::get<1>(boxesAndConfidenceAndTicks);
+//            double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
+//
+//            quadtree::QuadNode node{};
+//            node.coordinate = box.getCenter();
+//            node.LConfidence = LConfidence;
+//            quadtree::Occupancy occ = quadtree::AMBIGUOUS;
+//            if (node.LConfidence >= 0.4){
+//                occ = quadtree::FREE;
+//            } else if (node.LConfidence <= -0.85){
+//                occ = quadtree::OCCUPIED;
+//            }
+//            node.occupancy = occ;
+////            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+////                continue;
+//            node.visitedAtS = visitedTimeS;
+//            combinedTree->add(node);
+//        }
 
-            quadtree::QuadNode node{};
-            node.coordinate = box.getCenter();
-            node.LConfidence = LConfidence;
-            quadtree::Occupancy occ = quadtree::AMBIGUOUS;
-            if (node.LConfidence >= 0.4){
-                occ = quadtree::FREE;
-            } else if (node.LConfidence <= -0.85){
-                occ = quadtree::OCCUPIED;
-            }
-            node.occupancy = occ;
-//            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-//                continue;
-            node.visitedAtS = visitedTimeS;
-            combinedTree->add(node, false);
-        }
-
-//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
+        if(it.first->GetId()=="pipuck2") combinedQuadTree = it.second;
     }
-    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
+//    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 
-    combinedQuadTree = boxesAndConfidenceAndTicks;
+//    combinedQuadTree = boxesAndConfidenceAndTicks;
 
 //    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
 //    for(auto spawnObj: spawnableObjects) {

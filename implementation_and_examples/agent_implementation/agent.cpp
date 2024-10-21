@@ -1359,17 +1359,15 @@ void Agent::sendQuadtreeToCloseAgents() {
     for (const auto& agentLocationPair: this->agentLocations) {
         double lastReceivedTick = agentLocationPair.second.second;
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
-        if ((lastReceivedTick - elapsed_ticks) / ticks_per_second <
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             AGENT_LOCATION_RELEVANT_DURATION_S) {
-            //If we have not sent the quadtree to this agent yet, send it
-            if (!this->agentQuadtreeSent[agentLocationPair.first]) {
+            //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
+            if (this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] > QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
                 for (const std::string &str: quadTreeToStrings) {
                     sendMessage("M:" + str, agentLocationPair.first);
                 }
+                this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
             }
-            this->agentQuadtreeSent[agentLocationPair.first] = true; //Store that we have sent the quadtree to this agent
-        } else {
-            this->agentQuadtreeSent[agentLocationPair.first] = false; //Store that we have not sent the quadtree to this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds
         }
     }
 
@@ -1494,7 +1492,7 @@ quadtree::QuadNode quadNodeFromString(std::string str) {
     size_t visitedPos = 0;
     size_t occPos = 0;
     std::string coordinate;
-    std::string occ;
+    std::string confidence;
     std::string visited;
     occPos = str.find(occDelimiter);
     coordinate = str.substr(0, occPos);
@@ -1504,8 +1502,8 @@ quadtree::QuadNode quadNodeFromString(std::string str) {
     //Now we have the occupancy and ticks
 
     visitedPos = str.find(visitedDelimiter);
-    occ = str.substr(0, visitedPos);
-    newQuadNode.occupancy = static_cast<quadtree::Occupancy>(std::stoi(occ));
+    confidence = str.substr(0, visitedPos);
+    newQuadNode.LConfidence = static_cast<float>(std::stod(confidence));
     str.erase(0, visitedPos + visitedDelimiter.length());
     visited = str;
     newQuadNode.visitedAtS = std::stod(visited);
@@ -1546,7 +1544,7 @@ void Agent::parseMessages() {
 
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
-                quadtree::Box addedBox = this->quadtree->add(newQuadNode);
+                quadtree::Box addedBox = this->quadtree->add(newQuadNode, ALPHA_RECEIVE);
 #ifdef CLOSE_SMALL_AREAS
                 if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)
                     checkIfAgentFitsBetweenObstacles(addedBox);

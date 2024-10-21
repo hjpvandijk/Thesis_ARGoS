@@ -67,6 +67,25 @@ namespace quadtree {
             return add(mRoot.get(), mBox, value);
         }
 
+        /**
+         * @brief Add a QuadNode to the quadtree with a given a factor. Which decides how much the value is pulled towards 0.5P = ambiguous..
+         * @param value
+         */
+        Box add(QuadNode &value, float a) {
+            float PConfidence = P(value.LConfidence);
+            float PNew = (1.0-a) * PConfidence + a * 0.5; //Make more ambiguous as we have some uncertainty
+            value.LConfidence = L(PNew);
+            Occupancy occ = AMBIGUOUS;
+            if (value.LConfidence >= l_free){
+                occ = FREE;
+            } else if (value.LConfidence <= l_occupied){
+                occ = OCCUPIED;
+            }
+            value.occupancy = occ;
+            return add(mRoot.get(), mBox, value);
+        }
+
+
         void remove(const QuadNode &value) const {
             remove(mRoot.get(), mBox, value);
         }
@@ -384,7 +403,7 @@ namespace quadtree {
 
                     std::string str =
                             std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
-                            std::to_string(cell->quadNode.occupancy) + '@' + std::to_string(cell->quadNode.visitedAtS);
+                            std::to_string(cell->quadNode.LConfidence) + '@' + std::to_string(cell->quadNode.visitedAtS);
 
                     //Group every 10 nodes
                     grouped_message.append(str);
@@ -621,6 +640,9 @@ namespace quadtree {
          */
         Box add(Cell *cell, const Box &box, const QuadNode &value) {
             assert(cell != nullptr);
+            if (!box.contains(value.coordinate)) { //Temporary fix. TODO: If value added outside box, expand box.
+                return Box();
+            }
             assert(box.contains(value.coordinate));
 
             assert(value.occupancy != ANY && "Added occupancy should not be ANY");

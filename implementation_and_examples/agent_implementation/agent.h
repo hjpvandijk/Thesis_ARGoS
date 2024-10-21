@@ -7,11 +7,7 @@
 
 #include "coordinate.h"
 #include "radio.h"
-#ifdef OCCUPANCY_CONFIDENCE
-#include "ConfidenceQuadtree.h"
-#else
 #include "Quadtree.h"
-#endif
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
@@ -38,7 +34,8 @@ public:
 
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
     double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
-    std::map<std::string, bool> agentQuadtreeSent; //id: sent
+    double QUADTREE_EXCHANGE_INTERVAL_S = 5.0;
+    std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
     argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
@@ -131,7 +128,7 @@ public:
 
     double PROXIMITY_RANGE = 2.0;
 
-    double TURN_THRESHOLD_DEGREES = 2.0;
+    double TURN_THRESHOLD_DEGREES = 8.0;
 
     double AGENT_ROBOT_DIAMETER = 0.08;
 
@@ -181,6 +178,7 @@ public:
     double P_POSITION = 0.9; // 90% probability for position to be correct
     double P_FREE = 0.6; // 70% probability for free to be correct
     double P_OCCUPIED = 0.3; // 30% probability for occupied to be correct
+    float ALPHA_RECEIVE = 0.1; // Factor with which a received value's probability is pulled towards 0.5
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
 
     float P_FREE_THRESHOLD = 0.6; //P > 0.6 means it is definitely free
