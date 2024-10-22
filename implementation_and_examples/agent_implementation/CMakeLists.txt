@@ -16,6 +16,9 @@ add_library(agent_implementation SHARED
         agent_control/sensing/simulation/distance_sensor/hc_sr04.cpp
         agent_control/motion/simulation/DifferentialDrive.h
         agent_control/motion/simulation/DifferentialDrive.cpp
+        agent_control/path_planning/WallFollower.h
+        agent_control/path_planning/WallFollower.cpp
+        utils/CustomComparator.h
 )
 
 # Link directories (if you have specific libraries to link against)

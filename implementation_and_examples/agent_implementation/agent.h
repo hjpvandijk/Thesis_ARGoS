@@ -15,6 +15,7 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
 #include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
+#include "agent_implementation/agent_control/path_planning/WallFollower.h"
 
 
 class Agent {
@@ -24,9 +25,19 @@ public:
     argos::CRadians heading;
     argos::CRadians targetHeading;
     float speed{};
-    Radio wifi{};
+
+    //Differential drive
+    DifferentialDrive differential_drive;
+
+    //Radio
+    Radio wifi;
+
+    //Distance sensors
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
+
+    //Path planning engines
+    WallFollower wallFollower;
 
     double DISTANCE_SENSOR_NOISE_CM = 5.0;
     double ORIENTATION_NOISE_DEGREES = 5.0;
@@ -39,21 +50,11 @@ public:
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
-    DifferentialDrive differential_drive;
-
-
-    //Distance sensor
-    //Infrared sensor
-    //DIfferential drive
 
     //Vector affected by swarm
     argos::CVector2 swarm_vector;
     //Force vector deciding the next position
     argos::CVector2 force_vector;
-
-    //Some sort of map or grid to keep track of the environment
-    //Some sort of list of agents to keep track of other agents
-
 
 
     Agent() {}
@@ -189,14 +190,6 @@ public:
     Coordinate previousBestFrontier = {0, 0};
     Coordinate subTarget = {MAXFLOAT, MAXFLOAT};
 
-    int wallFollowingDirection = 0;
-
-#ifdef WALL_FOLLOWING_ENABLED
-    Coordinate wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT};
-    int prevWallFollowingDirection = 0;
-    Coordinate wallFollowingHitPoint = {MAXFLOAT, MAXFLOAT};
-    bool lastTickInWallFollowingHitPoint = false;
-#endif
 
     uint32_t elapsed_ticks = 0;
 
@@ -205,6 +198,7 @@ public:
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
+
 
 
 private:
@@ -249,24 +243,8 @@ private:
 
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
-    // Custom comparator to order set for wall following. The set is ordered by the angle difference to the wall following direction
-    struct CustomComparator {
-        int dir;  // dir is either 0, 1 or -1
-        double heading;
-        double targetAngle;
-
-        CustomComparator(int dir, double heading, double targetAngle) : dir(dir), heading(heading),
-                                                                        targetAngle(targetAngle) {}
-
-
-        //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
-        //Good with heading 36 --> 86
-        // Custom comparator logic
-        bool operator()(const argos::CDegrees &a, const argos::CDegrees &b) const;
-    };
-
 #ifdef WALL_FOLLOWING_ENABLED
-    void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+//    void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
 #endif
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS

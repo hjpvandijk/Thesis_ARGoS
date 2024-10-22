@@ -6,8 +6,10 @@
 #include <argos3/core/utility/logging/argos_log.h>
 #include <set>
 #include "agent.h"
+#include "agent_control/path_planning/WallFollower.h"
 #include <random>
 #include <utility>
+#include "utils/CustomComparator.h"
 
 
 Agent::Agent(std::string id) {
@@ -22,6 +24,7 @@ Agent::Agent(std::string id) {
     auto box = quadtree::Box(-5, 5, 10);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
+    this->wallFollower = WallFollower();
 }
 
 
@@ -403,64 +406,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 }
 
 
-// Custom comparator logic
-bool Agent::CustomComparator::operator()(const argos::CDegrees &a, const argos::CDegrees &b) const {
 
-    auto a_diff = a - argos::CDegrees(this->heading);
-    auto b_diff = b - argos::CDegrees(this->heading);
-
-    a_diff.SignedNormalize();
-    b_diff.SignedNormalize();
-
-    auto a_diff_val = a_diff.GetValue();
-    auto b_diff_val = b_diff.GetValue();
-    if (dir == 0) {
-        a_diff_val = std::abs(NormalizedDifference(a, argos::CDegrees(this->targetAngle)).GetValue());
-        b_diff_val = std::abs(NormalizedDifference(b, argos::CDegrees(this->targetAngle)).GetValue());
-        if (a_diff_val == b_diff_val) {
-            return a < b;
-        }
-        return a_diff_val < b_diff_val; //Normal ascending order
-    } else if (dir == 1) {
-        // Handle the first half: 90 to -180
-        if (a_diff_val <= 90 && a_diff_val >= -180 && b_diff_val <= 90 && b_diff_val >= -180) {
-            return a_diff_val > b_diff_val;  // Normal descending order
-        }
-
-        // Handle the second half: 180 to 91
-        if (a_diff_val > 90 && a_diff_val <= 180 && b_diff_val > 90 && b_diff_val <= 180) {
-            return a_diff_val > b_diff_val;  // Normal descending order
-        }
-
-        // Prioritize the first half (90 to -180) over the second half (180 to 91)
-        if ((a_diff_val <= 90 && a_diff_val >= -180) && (b_diff_val > 90 && b_diff_val <= 180)) {
-            return true;  // 'a' should come before 'b'
-        }
-        if ((a_diff_val > 90 && a_diff_val <= 180) && (b_diff_val <= 90 && b_diff_val >= -180)) {
-            return false;  // 'b' should come before 'a'
-        }
-    } else {
-        // Handle the first half: -90 to 180
-        if (a_diff_val >= -90 && a_diff_val <= 180 && b_diff_val >= -90 && b_diff_val <= 180) {
-            return a_diff_val < b_diff_val;  // Normal descending order
-        }
-
-        // Handle the second half: -180 to -91
-        if (a_diff_val < -90 && a_diff_val >= -180 && b_diff_val < -90 && b_diff_val >= -180) {
-            return a_diff_val < b_diff_val;  // Normal descending order
-        }
-
-        // Prioritize the first half (-90 to 180) over the second half (-180 to -91)
-        if ((a_diff_val >= -90 && a_diff_val <= 180) && (b_diff_val < -90 && b_diff_val >= 180)) {
-            return true;  // 'a' should come before 'b'
-        }
-        if ((a_diff_val < -90 && a_diff_val >= -180) && (b_diff_val >= -90 && b_diff_val <= 180)) {
-            return false;  // 'b' should come before 'a'
-        }
-    }
-
-    return a_diff_val > b_diff_val;  // Default to descending order if somehow unmatched
-}
 
 /**
  * Calculate the vector to avoid objects:
@@ -481,7 +427,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     //Create set of free angles ordered to be used for wall following
     std::set<argos::CDegrees, CustomComparator> freeAngles(
-            CustomComparator(this->wallFollowingDirection, ToDegrees(heading).GetValue(), ToDegrees(targetAngle).GetValue()));
+            CustomComparator(wallFollower.wallFollowingDirection, ToDegrees(heading).GetValue(), ToDegrees(targetAngle).GetValue()));
 
 //Add free angles from -180 to 180 degrees
     for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
@@ -567,7 +513,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     //Get free angle closest to heading
     auto closestFreeAngle = *freeAngles.begin();
 #ifdef WALL_FOLLOWING_ENABLED
-    if (this->wallFollowingDirection != 0) { //If wall following is not 0, find the closest free angle to the target angle.
+    if (wallFollower.wallFollowingDirection != 0) { //If wall following is not 0, find the closest free angle to the target angle.
         for (auto freeAngle: freeAngles) {
             if (std::abs(NormalizedDifference(ToRadians(freeAngle), targetAngle).GetValue()) <
                 std::abs(NormalizedDifference(ToRadians(closestFreeAngle), targetAngle).GetValue())) {
@@ -582,7 +528,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
 
 #ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
-    wallFollowing(freeAngles, &closestFreeAngle, &closestFreeAngleRadians, relativeObjectAvoidanceAngle, targetAngle);
+    wallFollower.wallFollowing(this, freeAngles, &closestFreeAngle, &closestFreeAngleRadians, relativeObjectAvoidanceAngle, targetAngle);
 #endif
 
     return true;
@@ -590,114 +536,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 }
 
 #ifdef WALL_FOLLOWING_ENABLED
-/**
- * When the free direction to the target > 89 degrees:
- * Save this location as the hit point
- * Select a random direction (left or right) to follow the wall
- * We follow the wall until the direction to the target is free again.
- * If we hit the same hitpoint again, change wall following direction.
- * @param freeAngles
- * @param closestFreeAngle
- * @param closestFreeAngleRadians
- * @param relativeObjectAvoidanceAngle
- * @param targetAngle
- */
-void Agent::wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
-    if (!(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ||
-        this->previousBestFrontier == this->currentBestFrontier) { // If we are still on route to the same frontier
-        Coordinate target = !(this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ? this->subTarget : this->currentBestFrontier;
-        double agentToTarget = sqrt(pow(target.x - this->position.x, 2) +
-                                    pow(target.y - this->position.y, 2));
-        argos::CVector2 agentToHitPoint = argos::CVector2(this->position.x - this->wallFollowingHitPoint.x,
-                                                          this->position.y - this->wallFollowingHitPoint.y);
-        argos::CVector2 hitPointToTarget = argos::CVector2(this->wallFollowingHitPoint.x - target.x,
-                                                           this->wallFollowingHitPoint.y - target.y);
-        if (this->wallFollowingDirection == 0 && std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) > 89) { //The complete forward direction to the target is blocked
 
-            if (agentToHitPoint.Length() <=
-                this->quadtree->getSmallestBoxSize()) { // If we are at the hit point (again).
-                if (this->wallFollowingDirection == 0) {
-                    if (this->prevWallFollowingDirection == 0) {
-                        this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
-                    } else {
-                        this->wallFollowingDirection = -this->prevWallFollowingDirection;
-                    }
-                }
-//                else { // 1 or -1
-//                    if (!this->lastTickInWallFollowingHitPoint) { // If we are not in the same hit point as last iteration (so we have once moved from the hit point)
-//                        this->wallFollowingDirection = -this->wallFollowingDirection; // Change wall following direction
-//                    }
-//                }
-
-            } else {
-                if(this->wallFollowingDirection == 0) { //Only switch when we are not in wall following mode already
-                    this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
-                }
-            }
-            this->wallFollowingHitPoint = this->position;
-            this->lastTickInWallFollowingHitPoint = true;
-            this->prevWallFollowingDirection = this->wallFollowingDirection;
-            //If agent is close to the target, or, we are passing 'behind' the hit point, stop wall following
-        } else if (agentToTarget <= quadtree->getSmallestBoxSize()*2 || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= this->quadtree->getSmallestBoxSize() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= this->TURN_THRESHOLD_DEGREES)) {
-            this->wallFollowingDirection = 0;
-        } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
-                   this->TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
-            double hitPointToFrontier = sqrt(pow(this->wallFollowingHitPoint.x - target.x, 2) +
-                                             pow(this->wallFollowingHitPoint.y - target.y, 2));
-            if (agentToTarget < hitPointToFrontier) { //If we are closer to the frontier than the hit point, or the angle to the target is way different than from the hitpoint to the target.
-                this->wallFollowingDirection = 0;
-            }
-        }
-        if (agentToHitPoint.Length() > this->quadtree->getSmallestBoxSize()) {
-            this->lastTickInWallFollowingHitPoint = false;
-        }
-    } else {
-        this->wallFollowingDirection = 0;
-        this->lastTickInWallFollowingHitPoint = false;
-    }
-
-
-
-    //Wall following:
-    //Choose free direction closest to current heading
-    //If no wall on the wall following side of the robot, turn that way
-    //Loop until direction to frontier is free.
-    if (wallFollowingDirection != 0) { // If we are in wall following mode
-        //Get the closest free angle to the wall following direction (90 degrees right or left)
-        //Create a subtarget in that direction
-        argos::CDegrees subtargetAngle = *freeAngles.begin();
-        if (subtargetAngle != *closestFreeAngle) { //If this is the same, the order of the free angles set isn't according to wall following yet
-            //If the difference between the first free angle and the last is less than 90 degrees, agent will spin indefinitely. So go straight
-            argos::CDegrees fst = NormalizedDifference(subtargetAngle, ToDegrees(this->heading));
-            argos::CDegrees snd = NormalizedDifference(*freeAngles.rbegin(), ToDegrees(this->heading));
-            double differenceBeginEnd = NormalizedDifference(fst, snd).GetValue() * this->wallFollowingDirection;
-            if (differenceBeginEnd < -1 && differenceBeginEnd >= -90) {
-                subtargetAngle = ToDegrees(heading);
-            }
-
-            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
-            subtargetVector.Rotate(ToRadians(subtargetAngle));
-            subtargetVector.Normalize();
-            subtargetVector *= this->OBJECT_AVOIDANCE_RADIUS;
-            this->wallFollowingSubTarget = {this->position.x + subtargetVector.GetX(),
-                                            this->position.y + subtargetVector.GetY()};
-
-            *closestFreeAngle = subtargetAngle;
-            *closestFreeAngleRadians = ToRadians(*closestFreeAngle);
-            *relativeObjectAvoidanceAngle = NormalizedDifference(*closestFreeAngleRadians, targetAngle);
-        } else {
-            this->wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
-        }
-    } else {
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
-        if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) { // If we have a frontier to go to, so not in the walking state
-#endif
-            this->wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
-        }
-#endif
-    }
-}
 #endif
 
 /** Calculate the vector to avoid the virtual walls
@@ -1214,7 +1053,7 @@ void Agent::calculateNextPosition() {
     frontierPheromoneEvaporated()) {
 #ifdef WALL_FOLLOWING_ENABLED
         //If we are not currently wall following
-        if (wallFollowingDirection == 0) {
+        if (wallFollower.wallFollowingDirection == 0) {
             //Find new frontier
             unexploredFrontierVector = calculateUnexploredFrontierVector();
         }

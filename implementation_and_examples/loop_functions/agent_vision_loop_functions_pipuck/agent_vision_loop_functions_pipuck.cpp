@@ -165,9 +165,9 @@ void CAgentVisionLoopFunctions::PostStep() {
         m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
         Coordinate subTarget = agent->subTarget.FromOwnToArgos();
         CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
-        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
+//        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
 #ifdef WALL_FOLLOWING_ENABLED
-        Coordinate wallFollowingSubTarget = agent->wallFollowingSubTarget.FromOwnToArgos();
+        Coordinate wallFollowingSubTarget = agent->wallFollower.wallFollowingSubTarget.FromOwnToArgos();
         CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
         m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
 #endif
@@ -224,7 +224,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            combinedTree->add(node);
 //        }
 
-        if(it.first->GetId()=="pipuck2") combinedQuadTree = it.second;
+        if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 
