@@ -21,6 +21,8 @@ add_library(agent_implementation SHARED
         utils/CustomComparator.h
         agent_control/path_planning/FrontierEvaluator.h
         agent_control/path_planning/FrontierEvaluator.cpp
+        agent_control/path_planning/ForceVectorCalculator.h
+        agent_control/path_planning/ForceVectorCalculator.cpp
 )
 
 # Link directories (if you have specific libraries to link against)

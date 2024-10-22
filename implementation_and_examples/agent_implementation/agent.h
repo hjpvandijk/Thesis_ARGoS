@@ -17,6 +17,7 @@
 #include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
 #include "agent_implementation/agent_control/path_planning/WallFollower.h"
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
+#include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
@@ -215,31 +216,14 @@ private:
                                          argos::CVector2 unexploredFrontierVector);
 
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-
-    argos::CVector2 getVirtualWallAvoidanceVector() const;
-
-    bool getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range);
-
-    argos::CVector2 calculateAgentCohesionVector();
-
-    argos::CVector2 calculateAgentAvoidanceVector();
-
-    argos::CVector2 calculateAgentAlignmentVector();
-
-    argos::CVector2 calculateUnexploredFrontierVector();
-
     std::vector<std::string> messages;
-
 
     std::string GetId() const;
 
 
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
-
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
-
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();
