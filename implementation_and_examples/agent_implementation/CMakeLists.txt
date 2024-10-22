@@ -6,14 +6,16 @@ include_directories(${CMAKE_SOURCE_DIR}/libraries)  # Parent directory of cereal
 add_library(agent_implementation SHARED
         agent.h
         agent.cpp
-        coordinate.h
-        coordinate.cpp
-        radio.h
-        radio.cpp
-        Quadtree.h
-        Box.h
-        distance_sensor/hc_sr04.h
-        distance_sensor/hc_sr04.cpp
+        utils/coordinate.h
+        utils/coordinate.cpp
+        agent_control/communication/simulation/radio.h
+        agent_control/communication/simulation/radio.cpp
+        utils/Quadtree.h
+        utils/Box.h
+        agent_control/sensing/simulation/distance_sensor/hc_sr04.h
+        agent_control/sensing/simulation/distance_sensor/hc_sr04.cpp
+        agent_control/motion/simulation/DifferentialDrive.h
+        agent_control/motion/simulation/DifferentialDrive.cpp
 )
 
 # Link directories (if you have specific libraries to link against)

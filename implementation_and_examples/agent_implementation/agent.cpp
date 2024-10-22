@@ -21,6 +21,7 @@ Agent::Agent(std::string id) {
     this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
+    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
 }
 
 
@@ -35,10 +36,6 @@ void Agent::setPosition(Coordinate new_position) {
 
 void Agent::setHeading(argos::CRadians new_heading) {
     this->heading = Coordinate::ArgosHeadingToOwn(new_heading).SignedNormalize();
-}
-
-void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive) {
-    this->diffdrive = newDiffdrive;
 }
 
 
@@ -1399,7 +1396,7 @@ void Agent::doStep() {
     calculateNextPosition();
 
     //If there is no force vector, do not move
-    if (this->force_vector == argos::CVector2{0, 0}) this->diffdrive->SetLinearVelocity(0, 0);
+    if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
     else {
 
         argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
@@ -1409,15 +1406,13 @@ void Agent::doStep() {
 
         if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
             //Go straight
-            this->diffdrive->SetLinearVelocity(this->speed, this->speed);
+            this->differential_drive.forward();
         } else if (diffDeg > argos::CDegrees(0)) {
             //turn right
-            this->diffdrive->SetLinearVelocity(this->speed * TURNING_SPEED_RATIO, 0);
-
+            this->differential_drive.turnRight();
         } else {
             //turn left
-            this->diffdrive->SetLinearVelocity(0, this->speed * TURNING_SPEED_RATIO);
-
+            this->differential_drive.turnLeft();
         }
     }
 

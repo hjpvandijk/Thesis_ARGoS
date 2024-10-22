@@ -5,15 +5,16 @@
 #ifndef THESIS_ARGOS_AGENT_H
 #define THESIS_ARGOS_AGENT_H
 
-#include "coordinate.h"
-#include "radio.h"
-#include "Quadtree.h"
+#include "utils/coordinate.h"
+#include "agent_control/communication/simulation/radio.h"
+#include "agent_control/motion/simulation/DifferentialDrive.h"
+#include "utils/Quadtree.h"
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
-#include "distance_sensor/hc_sr04.h"
+#include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
 
 
 class Agent {
@@ -22,7 +23,7 @@ public:
     Coordinate position{};
     argos::CRadians heading;
     argos::CRadians targetHeading;
-    double speed{};
+    float speed{};
     Radio wifi{};
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
@@ -38,7 +39,7 @@ public:
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
-    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
+    DifferentialDrive differential_drive;
 
 
     //Distance sensor
@@ -64,8 +65,6 @@ public:
     void setPosition(Coordinate position);
 
     void setHeading(argos::CRadians new_heading);
-
-    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive);
 
     Coordinate getPosition() const;
 
@@ -159,7 +158,7 @@ public:
     Coordinate left_right_borders = {-10, 10};
     Coordinate upper_lower_borders = {10, -10};
 
-    double TURNING_SPEED_RATIO = 0.1;
+    float TURNING_SPEED_RATIO = 0.1;
 
     double ANGLE_INTERVAL_STEPS = 360;
 
