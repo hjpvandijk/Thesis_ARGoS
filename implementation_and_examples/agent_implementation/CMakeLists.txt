@@ -19,6 +19,8 @@ add_library(agent_implementation SHARED
         agent_control/path_planning/WallFollower.h
         agent_control/path_planning/WallFollower.cpp
         utils/CustomComparator.h
+        agent_control/path_planning/FrontierEvaluator.h
+        agent_control/path_planning/FrontierEvaluator.cpp
 )
 
 # Link directories (if you have specific libraries to link against)

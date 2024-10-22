@@ -1,7 +1,3 @@
-//
-// Created by hugo on 22-10-24.
-//
-
 #include "DifferentialDrive.h"
 
 DifferentialDrive::DifferentialDrive() {

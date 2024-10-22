@@ -16,7 +16,19 @@
 #include <set>
 #include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
 #include "agent_implementation/agent_control/path_planning/WallFollower.h"
+#include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
 
+//#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+//#define CLOSE_SMALL_AREAS
+#define SEPARATE_FRONTIERS
+#define WALL_FOLLOWING_ENABLED
+#define AVOID_UNREACHABLE_FRONTIERS
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+#ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+#endif
+#endif
+#define WALKING_STATE_WHEN_NO_FRONTIERS
 
 class Agent {
 public:
@@ -38,6 +50,9 @@ public:
 
     //Path planning engines
     WallFollower wallFollower;
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+    FrontierEvaluator frontierEvaluator;
+#endif
 
     double DISTANCE_SENSOR_NOISE_CM = 5.0;
     double ORIENTATION_NOISE_DEGREES = 5.0;
@@ -109,17 +124,7 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
-//#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-//#define CLOSE_SMALL_AREAS
-#define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
-#define AVOID_UNREACHABLE_FRONTIERS
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-        #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    #endif
-#endif
-#define WALKING_STATE_WHEN_NO_FRONTIERS
+
 
     double ticks_per_second = 30;
 
@@ -165,14 +170,8 @@ public:
 
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
-    std::vector<Coordinate> avoidingFrontiers;
-    double minDistFromFrontier = MAXFLOAT;
-    Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
-    int closestCoordinateCounter = 0;
-    int ticksInHitpoint = 0;
     int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
     int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //2 seconds
-    bool lastTickInFrontierHitPoint = false;
 #endif
 
     double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
@@ -242,13 +241,6 @@ private:
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
 
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
-
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    bool skipFrontier(double frontierRegionX, double frontierRegionY);
-    void resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector);
-    bool frontierHasLowConfidenceOrAvoiding();
-    void updateConfidenceIfFrontierUnreachable();
-#endif
 
     bool frontierPheromoneEvaporated();
 

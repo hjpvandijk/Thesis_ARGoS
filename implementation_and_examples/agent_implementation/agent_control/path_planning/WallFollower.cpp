@@ -1,7 +1,3 @@
-//
-// Created by hugo on 22-10-24.
-//
-
 #include <argos3/core/utility/math/vector2.h>
 #include <set>
 #include "WallFollower.h"
