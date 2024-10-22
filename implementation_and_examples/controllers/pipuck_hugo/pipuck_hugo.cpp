@@ -69,7 +69,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     agentObject = std::make_shared<Agent>(Agent(this->m_strId));
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
-    agentObject->setDiffDrive(m_pcWheels);
+    agentObject->differential_drive.setActuator(m_pcWheels);
 
 
 }

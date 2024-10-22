@@ -6,7 +6,7 @@
 #include <argos3/plugins/simulator/entities/box_entity.h>
 
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
-#include "agent_implementation/Quadtree.h"
+#include "agent_implementation/utils/Quadtree.h"
 using namespace argos;
 
 class CAgentVisionLoopFunctions : public CLoopFunctions {

@@ -5,16 +5,31 @@
 #ifndef THESIS_ARGOS_AGENT_H
 #define THESIS_ARGOS_AGENT_H
 
-#include "coordinate.h"
-#include "radio.h"
-#include "Quadtree.h"
+#include "utils/coordinate.h"
+#include "agent_control/communication/simulation/radio.h"
+#include "agent_control/motion/simulation/DifferentialDrive.h"
+#include "utils/Quadtree.h"
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
-#include "distance_sensor/hc_sr04.h"
+#include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
+#include "agent_implementation/agent_control/path_planning/WallFollower.h"
+#include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
+#include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
 
+//#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+//#define CLOSE_SMALL_AREAS
+#define SEPARATE_FRONTIERS
+#define WALL_FOLLOWING_ENABLED
+//#define AVOID_UNREACHABLE_FRONTIERS
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+#ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+#endif
+#endif
+#define WALKING_STATE_WHEN_NO_FRONTIERS
 
 class Agent {
 public:
@@ -22,10 +37,23 @@ public:
     Coordinate position{};
     argos::CRadians heading;
     argos::CRadians targetHeading;
-    double speed{};
-    Radio wifi{};
+    float speed{};
+
+    //Differential drive
+    DifferentialDrive differential_drive;
+
+    //Radio
+    Radio wifi;
+
+    //Distance sensors
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
+
+    //Path planning engines
+    WallFollower wallFollower;
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+    FrontierEvaluator frontierEvaluator;
+#endif
 
     double DISTANCE_SENSOR_NOISE_CM = 5.0;
     double ORIENTATION_NOISE_DEGREES = 5.0;
@@ -38,21 +66,11 @@ public:
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
-    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
-
-
-    //Distance sensor
-    //Infrared sensor
-    //DIfferential drive
 
     //Vector affected by swarm
     argos::CVector2 swarm_vector;
     //Force vector deciding the next position
     argos::CVector2 force_vector;
-
-    //Some sort of map or grid to keep track of the environment
-    //Some sort of list of agents to keep track of other agents
-
 
 
     Agent() {}
@@ -64,8 +82,6 @@ public:
     void setPosition(Coordinate position);
 
     void setHeading(argos::CRadians new_heading);
-
-    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive);
 
     Coordinate getPosition() const;
 
@@ -109,17 +125,7 @@ public:
 
     std::unique_ptr<quadtree::Quadtree> quadtree;
 
-//#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-//#define CLOSE_SMALL_AREAS
-#define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
-#define AVOID_UNREACHABLE_FRONTIERS
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-        #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    #endif
-#endif
-#define WALKING_STATE_WHEN_NO_FRONTIERS
+
 
     double ticks_per_second = 30;
 
@@ -151,28 +157,22 @@ public:
     double AGENT_ALIGNMENT_RADIUS = 1.5;
     double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
-    //#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
-//#endif
+#endif
 
 
     Coordinate left_right_borders = {-10, 10};
     Coordinate upper_lower_borders = {10, -10};
 
-    double TURNING_SPEED_RATIO = 0.1;
+    float TURNING_SPEED_RATIO = 0.1;
 
     double ANGLE_INTERVAL_STEPS = 360;
 
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
-    std::vector<Coordinate> avoidingFrontiers;
-    double minDistFromFrontier = MAXFLOAT;
-    Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
-    int closestCoordinateCounter = 0;
-    int ticksInHitpoint = 0;
     int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
     int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //2 seconds
-    bool lastTickInFrontierHitPoint = false;
 #endif
 
     double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
@@ -190,14 +190,6 @@ public:
     Coordinate previousBestFrontier = {0, 0};
     Coordinate subTarget = {MAXFLOAT, MAXFLOAT};
 
-    int wallFollowingDirection = 0;
-
-#ifdef WALL_FOLLOWING_ENABLED
-    Coordinate wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT};
-    int prevWallFollowingDirection = 0;
-    Coordinate wallFollowingHitPoint = {MAXFLOAT, MAXFLOAT};
-    bool lastTickInWallFollowingHitPoint = false;
-#endif
 
     uint32_t elapsed_ticks = 0;
 
@@ -206,6 +198,7 @@ public:
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
+
 
 
 private:
@@ -223,59 +216,15 @@ private:
                                          argos::CVector2 unexploredFrontierVector);
 
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-
-    argos::CVector2 getVirtualWallAvoidanceVector() const;
-
-    bool getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range);
-
-    argos::CVector2 calculateAgentCohesionVector();
-
-    argos::CVector2 calculateAgentAvoidanceVector();
-
-    argos::CVector2 calculateAgentAlignmentVector();
-
-    argos::CVector2 calculateUnexploredFrontierVector();
-
     std::vector<std::string> messages;
-
 
     std::string GetId() const;
 
 
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
-
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
-
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
-
-    // Custom comparator to order set for wall following. The set is ordered by the angle difference to the wall following direction
-    struct CustomComparator {
-        int dir;  // dir is either 0, 1 or -1
-        double heading;
-        double targetAngle;
-
-        CustomComparator(int dir, double heading, double targetAngle) : dir(dir), heading(heading),
-                                                                        targetAngle(targetAngle) {}
-
-
-        //SOMETHING GOES WRONG WITH ANGLE 122 AND HEADING 32 --> diff = 90 exactly
-        //Good with heading 36 --> 86
-        // Custom comparator logic
-        bool operator()(const argos::CDegrees &a, const argos::CDegrees &b) const;
-    };
-
-#ifdef WALL_FOLLOWING_ENABLED
-    void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-#endif
-
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    bool skipFrontier(double frontierRegionX, double frontierRegionY);
-    void resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector);
-    bool frontierHasLowConfidenceOrAvoiding();
-    void updateConfidenceIfFrontierUnreachable();
-#endif
 
     bool frontierPheromoneEvaporated();
 
