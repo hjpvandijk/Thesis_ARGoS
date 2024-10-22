@@ -610,7 +610,6 @@ Agent::calculateTotalVector(argos::CVector2 prev_total_vector, argos::CVector2 v
 
 void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
-    this->quadtree->toStringVector(&quadTreeToStrings);
 
     for (const auto& agentLocationPair: this->agentLocations) {
         double lastReceivedTick = agentLocationPair.second.second;
@@ -620,6 +619,9 @@ void Agent::sendQuadtreeToCloseAgents() {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
             if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] > QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                if (quadTreeToStrings.empty()) { //Only calculate the quadtree if we have not done so yet
+                    this->quadtree->toStringVector(&quadTreeToStrings);
+                }
                 for (const std::string &str: quadTreeToStrings) {
                     sendMessage("M:" + str, agentLocationPair.first);
                 }
