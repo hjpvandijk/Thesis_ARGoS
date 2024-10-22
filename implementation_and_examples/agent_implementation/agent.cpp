@@ -468,7 +468,7 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
         }
 #else
         //Find new frontier
-        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector();
+        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 #endif
     }
 
@@ -477,11 +477,11 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
 #ifdef WALL_FOLLOWING_ENABLED
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || wallFollower.wallFollowingDirection == 0) {
         //Find new frontier
-        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector();
+        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
     }
 #else
     //Find new frontier
-        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector();
+        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 #endif
 #endif
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS

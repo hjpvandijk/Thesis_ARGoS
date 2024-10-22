@@ -43,9 +43,11 @@ bool FrontierEvaluator::skipFrontier(Agent* agent, double frontierRegionX, doubl
  */
 void FrontierEvaluator::resetFrontierAvoidance(Agent* agent, argos::CVector2 unexploredFrontierVector) {
     //If the agent is close to the frontier, reset all frontiers avoiding flags (we're giving them another chance)
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     if (unexploredFrontierVector.Length() <= agent->FRONTIER_DIST_UNTIL_REACHED) {
         this->avoidingFrontiers.clear();
     }
+#endif
 }
 
 /**
