@@ -1066,7 +1066,7 @@ void Agent::calculateNextPosition() {
 #else
 
 #ifdef WALL_FOLLOWING_ENABLED
-    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || wallFollowingDirection == 0) {
+    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || wallFollower.wallFollowingDirection == 0) {
         //Find new frontier
         unexploredFrontierVector = calculateUnexploredFrontierVector();
     }

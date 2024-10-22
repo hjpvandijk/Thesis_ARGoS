@@ -243,10 +243,6 @@ private:
 
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
-#ifdef WALL_FOLLOWING_ENABLED
-//    void wallFollowing(const std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-#endif
-
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     bool skipFrontier(double frontierRegionX, double frontierRegionY);
     void resetFrontierAvoidance(argos::CVector2 unexploredFrontierVector);
