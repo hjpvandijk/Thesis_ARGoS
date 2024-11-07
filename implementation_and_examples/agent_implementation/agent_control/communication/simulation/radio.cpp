@@ -19,8 +19,10 @@ void Radio::broadcast_message(std::string &messagePrependedWithId) const {
 
 void Radio::send_message(std::string &messagePrependedWithId, const std::string& id) const {
     messagePrependedWithId.insert(0, "<" + id + ">"); //Prepend with target id
+    argos::LOG << "Prepend target id size: " << messagePrependedWithId.size() << std::endl;
     auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
     argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
+    argos::LOG << "Cmessage size: " << cMessage.Size() << std::endl;
     radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
 }
 

@@ -37,6 +37,9 @@ namespace quadtree {
     class Quadtree {
 
     public:
+        int numberOfNodes = 0; //Number of leaf nodes not UNKNOWN or ANY
+        int numberOfNodesPerMessage = 50; //Number of nodes to send per message
+
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Cell>()) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, 0};
@@ -405,11 +408,14 @@ namespace quadtree {
                             std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
                             std::to_string(cell->quadNode.LConfidence) + '@' + std::to_string(cell->quadNode.visitedAtS);
 
-                    //Group every 10 nodes
+                    //Group every numberOfNodesPerMessage nodes
                     grouped_message.append(str);
+                    argos::LOG << "String: " << str << std::endl;
+                    argos::LOG << "String size: " << str.size() << std::endl;
 
-                    if (counter == 49) {
+                    if (counter == this->numberOfNodesPerMessage - 1) {
                         strings->emplace_back(grouped_message);
+                        argos::LOG << "Grouped message size: " << grouped_message.size() << std::endl;
                         grouped_message.clear();
                         counter = 0;
                     } else {
@@ -704,6 +710,7 @@ namespace quadtree {
                            newNode.occupancy == AMBIGUOUS && "new cell occupancy should be FREE or OCCUPIED or AMBIGUOUS");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
+                    numberOfNodes++;
                     returnBox = box;
                 }
                     // Otherwise, we split and we try again
@@ -763,6 +770,7 @@ namespace quadtree {
                                 occ = OCCUPIED;
                             }
                             newNode.occupancy = occ;
+                            cell->quadNode = newNode;
                             //Else if cell has occupancy ANY or UNKNOWN, we add to the children
                         } else {
                             //When adding a new coordinate and occupancy to that parent, we should set the remaining (yet unset) children to the value occupancy.
@@ -849,6 +857,7 @@ namespace quadtree {
                             PConfidenceSum += P(child->quadNode.LConfidence);
                             child.reset();
                         }
+                        numberOfNodes -= 3; //We remove 4 children and the parent is now a leaf node.
                         assert(isLeaf(cell) && "The cell should be a leaf again now");
                         cell->quadNode.LConfidence = L(PConfidenceSum / 4.0);
 

@@ -685,7 +685,9 @@ void Agent::broadcastMessage(const std::string &message) const {
  * @param message
  */
 void Agent::sendMessage(const std::string &message, const std::string& targetId) const {
+    argos::LOG << "Sending message of size: " << message.size() << std::endl;
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
+    argos::LOG << "Message size after prepend: " << messagePrependedWithId.size() << std::endl;
     this->wifi.send_message(messagePrependedWithId, targetId);
 }
 
@@ -786,6 +788,7 @@ argos::CVector2 vector2FromString(std::string str) {
  * Parse messages from other agents
  */
 void Agent::parseMessages() {
+    std::map<std::string, int> agentQuadtreeBytesReceivedCounter;
     for (const std::string &message: this->messages) {
         std::string targetId = getTargetIdFromMessage(message);
         if (targetId != "A" && targetId != getId()) continue; //If the message is not broadcast to all agents and not for this agent, skip it
@@ -798,7 +801,12 @@ void Agent::parseMessages() {
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(2));
             std::string chunk;
-
+            //Keep track of the total amount of bytes received from the sender
+            if (agentQuadtreeBytesReceivedCounter.count(senderId) == 0){ //If the sender has not sent any bytes this tick yet
+                agentQuadtreeBytesReceivedCounter[senderId] = messageContent.size();
+            } else {
+                agentQuadtreeBytesReceivedCounter[senderId] += messageContent.size();
+            }
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
                 quadtree::Box addedBox = this->quadtree->add(newQuadNode, ALPHA_RECEIVE);
@@ -820,6 +828,10 @@ void Agent::parseMessages() {
             double newSpeed = std::stod(vectorString);
             agentVelocities[senderId] = {newVector, newSpeed};
         }
+    }
+    //Update the total amount of bytes received from each sender
+    for (auto & it : agentQuadtreeBytesReceivedCounter){
+        this->agentQuadtreeBytesReceived[it.first] = it.second;
     }
 
 }

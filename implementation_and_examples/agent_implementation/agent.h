@@ -64,6 +64,7 @@ public:
     double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
     double QUADTREE_EXCHANGE_INTERVAL_S = 5.0;
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
+    std::map<std::string, int> agentQuadtreeBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
 

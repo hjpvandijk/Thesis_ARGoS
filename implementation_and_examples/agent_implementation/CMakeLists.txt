@@ -25,6 +25,10 @@ add_library(agent_implementation SHARED
         agent_control/path_planning/ForceVectorCalculator.cpp
         agent_control/battery/BatteryManager.h
         agent_control/battery/BatteryManager.cpp
+        agent_control/battery/MicroControllerBatteryManager.h
+        agent_control/battery/MicroControllerBatterManager.cpp
+        agent_control/battery/MotionSystemBatteryManager.h
+        agent_control/battery/MotionSystemBatteryManager.cpp
 )
 
 # Link directories (if you have specific libraries to link against)

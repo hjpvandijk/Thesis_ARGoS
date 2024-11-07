@@ -47,11 +47,6 @@ class BatteryManager {
  */
 float EstimateBoardPowerUsage(float seconds);
 
-/**
- * Estimate how much power will be used by the motors over the given distance, with the given number of turns
- * @return
- */
-float EstimateMotorPowerUsage(double distance, double turns);
 
 /***
  * Estimate how much power will be used in total over the given distance, with the given number of turns
