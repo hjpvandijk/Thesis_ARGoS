@@ -200,6 +200,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         //Get position sensor
         auto positionReading = cController.m_pcPositioningSensor->GetReading();
         m_tAgentRealPositionAndOrientation[pcFB] = std::make_pair(CVector2(positionReading.Position.GetX(), positionReading.Position.GetY()), positionReading.Orientation);
+
+        m_tAgentBatteryPercentage[pcFB] = agent->batteryManager.getStateOfCharge();
     }
 
     auto mBox = quadtree::Box(-5, 5, 10);

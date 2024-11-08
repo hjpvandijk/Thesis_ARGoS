@@ -24,6 +24,7 @@ public:
     std::map<CPiPuckEntity*, std::vector<CVector3>> m_tLine;
 
     std::map<CPiPuckEntity*, std::pair<argos::CVector2, argos::CQuaternion>> m_tAgentRealPositionAndOrientation;
+    std::map<CPiPuckEntity*, double> m_tAgentBatteryPercentage;
 
 
 

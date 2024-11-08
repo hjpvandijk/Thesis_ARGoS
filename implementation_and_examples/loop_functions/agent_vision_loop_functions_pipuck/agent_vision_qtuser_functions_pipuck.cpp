@@ -17,14 +17,7 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
 
-    for (const auto & it : m_cAgVisLF.m_tAgentRealPositionAndOrientation) {
-        CVector2 pos = it.second.first;
-        argos::LOG << "pos: " << pos << std::endl;
-        CQuaternion orientation = it.second.second;
-        CQuaternion orientationRotated90Degrees = orientation * CQuaternion(CRadians(-1.5708), CVector3(0, 0, 1));
-        argos::LOG << "orientation: " << orientation << std::endl;
-        DrawTriangle(CVector3(pos.GetX(), pos.GetY(), 0.05f), orientationRotated90Degrees, 0.2f, 0.2f, CColor::RED);
-    }
+
     /* Go through all the robot waypoints and draw them */
 //    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
 //         it != m_cAgVisLF.GetAgentFrontierRegions().end();
@@ -66,6 +59,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             CRay3 ray = CRay3(agent_pos, ray_end);
             DrawRay(ray, CColor::BLUE);
         }
+
     }
 
 
@@ -161,17 +155,21 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         DrawCoordinates(line, CColor::YELLOW);
     }
 
-    for (const auto & it : m_cAgVisLF.GetAgentCoordinates()) {
-
-
-
+    for (const auto & it : m_cAgVisLF.m_tAgentRealPositionAndOrientation) {
+        CVector2 pos = it.second.first;
+        CQuaternion orientation = it.second.second;
+        CQuaternion orientationRotated90Degrees = orientation * CQuaternion(CRadians(-1.5708), CVector3(0, 0, 1));
+        DrawTriangle(CVector3(pos.GetX(), pos.GetY(), 0.05f), orientationRotated90Degrees, 0.2f, 0.2f, CColor::RED);
 
         //Draw IDs
-        DrawText(it.second,
+        DrawText(CVector3(pos.GetX(), pos.GetY(), 0.06f),
                  it.first->GetId()); // text
+
+        //Draw battery percentage
+        std::string batteryPercentage = std::to_string((int) std::round(m_cAgVisLF.m_tAgentBatteryPercentage.at(it.first)*100)) + "%";
+        DrawText(CVector3(pos.GetX()-0.2, pos.GetY(), 0.06f),
+                 batteryPercentage); // text
     }
-
-
 
 
 }
