@@ -16,6 +16,15 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
  */
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
+
+    for (const auto & it : m_cAgVisLF.m_tAgentRealPositionAndOrientation) {
+        CVector2 pos = it.second.first;
+        argos::LOG << "pos: " << pos << std::endl;
+        CQuaternion orientation = it.second.second;
+        CQuaternion orientationRotated90Degrees = orientation * CQuaternion(CRadians(-1.5708), CVector3(0, 0, 1));
+        argos::LOG << "orientation: " << orientation << std::endl;
+        DrawTriangle(CVector3(pos.GetX(), pos.GetY(), 0.05f), orientationRotated90Degrees, 0.2f, 0.2f, CColor::RED);
+    }
     /* Go through all the robot waypoints and draw them */
 //    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
 //         it != m_cAgVisLF.GetAgentFrontierRegions().end();
@@ -154,10 +163,15 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     for (const auto & it : m_cAgVisLF.GetAgentCoordinates()) {
 
+
+
+
         //Draw IDs
         DrawText(it.second,
                  it.first->GetId()); // text
     }
+
+
 
 
 }

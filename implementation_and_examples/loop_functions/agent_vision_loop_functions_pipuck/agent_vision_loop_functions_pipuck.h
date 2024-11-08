@@ -23,6 +23,8 @@ public:
     std::map<CPiPuckEntity*, CVector3> m_tPerpVector;
     std::map<CPiPuckEntity*, std::vector<CVector3>> m_tLine;
 
+    std::map<CPiPuckEntity*, std::pair<argos::CVector2, argos::CQuaternion>> m_tAgentRealPositionAndOrientation;
+
 
 
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, float, double >>> m_tQuadTree;

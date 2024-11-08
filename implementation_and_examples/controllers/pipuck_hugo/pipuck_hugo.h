@@ -92,7 +92,7 @@ public:
 //    static const int nAgents = 2;
 //    agent agents[nAgents];
     std::shared_ptr<Agent> agentObject;
-
+    CCI_PositioningSensor* m_pcPositioningSensor;
 
 private:
 
@@ -105,7 +105,6 @@ private:
    CCI_SimpleRadiosSensor *m_pcRadiosSensor;
    CCI_PiPuckRangefindersSensor* m_pcRangeFindersSensor;
    CCI_PiPuckDifferentialDriveSensor* m_pcDiffDriveSensor;
-   CCI_PositioningSensor* m_pcPositioningSensor;
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
 
     CCI_BatterySensor *m_pcBatterySensor;

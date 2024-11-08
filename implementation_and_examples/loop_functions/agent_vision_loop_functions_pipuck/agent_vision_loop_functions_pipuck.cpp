@@ -151,6 +151,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tAgentFrontierRegions.clear();
     m_tAgentFreeAngles.clear();
     m_tAgentSubTargetCoordinate.clear();
+    m_tAgentRealPositionAndOrientation.clear();
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
@@ -196,7 +197,9 @@ void CAgentVisionLoopFunctions::PostStep() {
         for(auto angle: agent->freeAnglesVisualization) {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
-
+        //Get position sensor
+        auto positionReading = cController.m_pcPositioningSensor->GetReading();
+        m_tAgentRealPositionAndOrientation[pcFB] = std::make_pair(CVector2(positionReading.Position.GetX(), positionReading.Position.GetY()), positionReading.Orientation);
     }
 
     auto mBox = quadtree::Box(-5, 5, 10);
