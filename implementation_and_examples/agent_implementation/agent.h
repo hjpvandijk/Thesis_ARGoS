@@ -153,7 +153,7 @@ public:
 
     double FRONTIER_DISTANCE_WEIGHT = 0.1;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
-    double FRONTIER_POWER_WEIGHT = 0.1;
+    double FRONTIER_POWER_WEIGHT = 100;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 

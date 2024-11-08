@@ -18,7 +18,7 @@ public:
 
 private:
     argos::CCI_BatterySensor *batterySensor;
-    double accelDecelSpeedcheckIntervalS = 0.1;
+    double accelDecelSpeedcheckIntervalS = 0.05;
 
 // h, m, x1, x2, y1, y2
     double M1[16][6] =

@@ -25,17 +25,18 @@ double BatteryManager::estimatePowerUsage(Agent* agent, std::vector<argos::CVect
         auto timeSpentAtSpeeds =  calculateTimeAtSpeeds(agent, relativePath); // For each achieved speed (with intervals), the time the robot spends at that speed
         double powerUsage = 0.0; //In % from full
         auto fBat = getStateOfCharge();
-        argos::LOG << "Battery level: " << fBat << std::endl;
 
         //For each speed, calculate the power usage
         for (auto &timeAtSpeed: timeSpentAtSpeeds) {
             auto speed = std::get<0>(timeAtSpeed); // cm/s
+            auto fSpeed = std::round(std::max(0.0, std::min(0.150, speed)) * 10000.0) / 100.0; // cm/s
+            auto ratio = fSpeed ==0 ?  0 : (speed*100/fSpeed);
             auto time = std::get<1>(timeAtSpeed); // s
 
 
 
-            int spdL = std::max(0.0, floor(speed));
-            int spdH = std::min(15.0, ceil(speed));
+            int spdL = std::max(0.0, floor(fSpeed));
+            int spdH = std::min(15.0, ceil(fSpeed));
 
 
             // First interpolation point: LOW
@@ -58,7 +59,7 @@ double BatteryManager::estimatePowerUsage(Agent* agent, std::vector<argos::CVect
             double y1 = m1 * (x1 + time) + h1;
 
             if (spdL == spdH) {
-                powerUsage += (fBat - std::max(0.0, y1));
+                powerUsage += (fBat - std::max(0.0, y1)) * ratio;
             } else {
                 // Second interpolation point: RIGHT
                 double m2, h2;
@@ -79,11 +80,11 @@ double BatteryManager::estimatePowerUsage(Agent* agent, std::vector<argos::CVect
                 double x2 = (fBat - h2) / m2;
                 double y2 = m2 * (x2 + time) + h2;
 
-                double d = (speed - spdL) / (spdH - spdL);
+                double d = (fSpeed - spdL) / (spdH - spdL);
                 if (y1 < y2) {
-                    powerUsage += (fBat - std::max(0.0, y1 + (y2 - y1) * d));
+                    powerUsage += (fBat - std::max(0.0, y1 + (y2 - y1) * d)) * ratio;
                 } else {
-                    powerUsage += (fBat - std::max(0.0, y2 + (y1 - y2) * d));
+                    powerUsage += (fBat - std::max(0.0, y2 + (y1 - y2) * d)) * ratio;
                 }
             }
             fBat = getStateOfCharge() - powerUsage; //Battery level after performing operation

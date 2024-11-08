@@ -17,7 +17,7 @@ Agent::Agent(std::string id) {
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
     this->targetHeading = argos::CRadians(0);
-    this->speed = 1;
+    this->speed = 1.0;
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);

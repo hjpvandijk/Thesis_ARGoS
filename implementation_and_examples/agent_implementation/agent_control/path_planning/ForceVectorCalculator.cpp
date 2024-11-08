@@ -297,31 +297,23 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier
 #endif
 
-        //Estimate the path to the frontier
-        //Euclidean
-        //argos::CVector2 path = argos::CVector2(frontierRegionX, frontierRegionY) - argos::CVector2(agent->position.x, agent->position.y);
-        //Make relative:
-        //path = path.Rotate(-agent->heading);
-        //double distance = path.Length();
-
+        //Estimate the path to the frontier (straight line for now)
         std::vector<argos::CVector2> relativePath = {};
         argos::CVector2 straightLine = argos::CVector2(frontierRegionX, frontierRegionY) - argos::CVector2(agent->position.x, agent->position.y);
-        //Make relative:
+        //Make relative to agent heading:
         straightLine = straightLine.Rotate(-agent->heading);
         relativePath.push_back(straightLine);
 
         double powerUsage = agent->batteryManager.estimatePowerUsage(agent, relativePath);
-        argos::LOG << "Power usage: " << powerUsage << std::endl;
         double distance = 0.0;
         for (auto &line: relativePath) {
             distance += line.Length();
         }
 
-        //Calculate the distance between the agent and the frontier region
-//        double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
-
+//        Calculate the distance between the agent and the frontier region
+//        double distance2 = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
         //Calculate the score of the frontier region
-        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;// - agent->FRONTIER_POWER_WEIGHT * powerUsage;
+        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion - agent->FRONTIER_POWER_WEIGHT * powerUsage;
 
 #ifdef SEPARATE_FRONTIERS
         std::vector<double> distancesFromOtherAgents = {};
