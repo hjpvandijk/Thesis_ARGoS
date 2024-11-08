@@ -36,7 +36,7 @@
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_positioning_sensor.h>
 #include "agent_implementation/agent.h"
-
+#include <argos3/plugins/robots/generic/control_interface/ci_battery_sensor.h>
 
 /*
  * All the ARGoS stuff in the 'argos' namespace.
@@ -108,6 +108,7 @@ private:
    CCI_PositioningSensor* m_pcPositioningSensor;
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
 
+    CCI_BatterySensor *m_pcBatterySensor;
 
    /*
     * The following variables are used as parameters for the

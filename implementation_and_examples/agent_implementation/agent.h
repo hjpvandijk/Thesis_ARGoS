@@ -18,6 +18,7 @@
 #include "agent_implementation/agent_control/path_planning/WallFollower.h"
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
 #include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
+#include "agent_control/battery/BatteryManager.h"
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
@@ -41,6 +42,9 @@ public:
 
     //Differential drive
     DifferentialDrive differential_drive;
+
+    //Battery manager
+    BatteryManager batteryManager;
 
     //Radio
     Radio wifi;
@@ -149,6 +153,7 @@ public:
 
     double FRONTIER_DISTANCE_WEIGHT = 0.1;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
+    double FRONTIER_POWER_WEIGHT = 0.1;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 

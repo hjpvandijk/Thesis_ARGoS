@@ -11,6 +11,7 @@
 
 PiPuckHugo::PiPuckHugo() :
         m_pcWheels(nullptr),
+        m_pcBatterySensor(nullptr),
         m_pcRangeFindersSensor(nullptr),
         m_pcRadiosActuator(nullptr),
         m_pcRadiosSensor(nullptr),
@@ -54,6 +55,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     m_pcRadiosSensor = GetSensor<CCI_SimpleRadiosSensor>("simple_radios");
     m_pcRangeFindersSensor = GetSensor<CCI_PiPuckRangefindersSensor>("pipuck_rangefinders");
     m_pcPositioningSensor = GetSensor<CCI_PositioningSensor>("positioning");
+    m_pcBatterySensor = GetSensor<CCI_BatterySensor>("pipuck_battery");
     /*
      * Parse the configuration file
      *
@@ -70,6 +72,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
     agentObject->differential_drive.setActuator(m_pcWheels);
+    agentObject->batteryManager.setBatterySensor(m_pcBatterySensor);
 
 
 }

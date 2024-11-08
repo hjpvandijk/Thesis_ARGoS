@@ -24,6 +24,7 @@ Agent::Agent(std::string id) {
     auto box = quadtree::Box(-5, 5, 10);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
+    this->batteryManager = BatteryManager();
     this->wallFollower = WallFollower();
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     this->frontierEvaluator = FrontierEvaluator(this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE, MAX_TICKS_IN_HITPOINT);
