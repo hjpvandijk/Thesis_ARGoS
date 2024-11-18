@@ -29,7 +29,7 @@ ac = ( 19.516129032258064 , 14.521684587813622 )
 # cls = [( 3.5 , 7.5 ),( 3.5 , 9.5 ),( 3.5 , 8.5 ),( 3.5 , 10.5 ),( 3.5 , 11.5 ),( 3.5 , 12.5 ),( 3.5 , 13.5 ),( 4.5 , 13.5 ),( 5.5 , 13.5 ),( 6.5 , 13.5 ),( 7.5 , 13.5 ),( 8.5 , 13.5 ),( 9.5 , 13.5 ),( 9.5 , 12.5 ),( 9.5 , 11.5 ),( 9.5 , 10.5 ),( 9.5 , 9.5 ),( 9.5 , 7.5 ),( 9.5 , 8.5 ),( 10.5 , 13.5 ),( 11.5 , 13.5 ),( 12.5 , 13.5 ),( 13.5 , 13.5 ),( 14.5 , 13.5 ),( 15.5 , 13.5 ),( 15.5 , 12.5 ),( 15.5 , 11.5 ),( 15.5 , 10.5 ),( 15.5 , 9.5 ),( 15.5 , 8.5 ),( 15.5 , 7.5 )]
 # cls = [( 3.5 , 7.5 ),( 3.5 , 9.5 ),( 3.5 , 8.5 ),( 3.5 , 10.5 ),( 3.5 , 11.5 ),( 3.5 , 12.5 ),( 3.5 , 13.5 ),( 4.5 , 13.5 ),( 5.5 , 13.5 ),( 6.5 , 13.5 ),( 7.5 , 13.5 ),( 8.5 , 13.5 ),( 9.5 , 13.5 ),( 9.5 , 12.5 ),( 9.5 , 11.5 ),( 9.5 , 10.5 ),( 9.5 , 9.5 ),( 9.5 , 7.5 ),( 9.5 , 8.5 ),( 10.5 , 13.5 ),( 11.5 , 13.5 ),( 12.5 , 13.5 ),( 13.5 , 13.5 ),( 14.5 , 13.5 ),( 15.5 , 13.5 ),( 15.5 , 12.5 ),( 15.5 , 11.5 ),( 15.5 , 10.5 ),( 15.5 , 9.5 ),( 15.5 , 8.5 ),( 15.5 , 7.5 ),( 3.5 , 6.5 ),( 2.5 , 6.5 ),( 1.5 , 6.5 ),( 1.5 , 7.5 ),( 1.5 , 9.5 ),( 1.5 , 8.5 ),( 1.5 , 10.5 ),( 1.5 , 11.5 ),( 1.5 , 12.5 ),( 1.5 , 13.5 ),( 1.5 , 14.5 ),( 1.5 , 15.5 ),( 2.5 , 15.5 ),( 3.5 , 15.5 ),( 4.5 , 15.5 ),( 5.5 , 15.5 ),( 6.5 , 15.5 ),( 7.5 , 15.5 ),( 8.5 , 15.5 ),( 9.5 , 15.5 ),( 11.5 , 15.5 ),( 10.5 , 15.5 ),( 12.5 , 15.5 ),( 13.5 , 15.5 ),( 14.5 , 15.5 ),( 15.5 , 15.5 ),( 16.5 , 15.5 ),( 17.5 , 15.5 ),( 17.5 , 14.5 ),( 17.5 , 13.5 ),( 17.5 , 12.5 ),( 17.5 , 11.5 ),( 17.5 , 10.5 ),( 17.5 , 9.5 ),( 17.5 , 8.5 ),( 17.5 , 7.5 ),( 17.5 , 6.5 ),( 16.5 , 6.5 ),( 15.5 , 6.5 ),( 11.5 , 12.5 ),( 11.5 , 11.5 ),( 11.5 , 10.5 ),( 11.5 , 9.5 ),( 11.5 , 8.5 ),( 11.5 , 7.5 ),( 11.5 , 6.5 ),( 10.5 , 6.5 ),( 9.5 , 6.5 )]
 # ncls = [( 2.5 , 7.5 ),( 2.5 , 8.5 ),( 2.5 , 9.5 ),( 2.5 , 10.5 ),( 2.5 , 11.5 ),( 2.5 , 12.5 ),( 2.5 , 13.5 ),( 2.5 , 14.5 ),( 3.5 , 14.5 ),( 4.5 , 14.5 ),( 5.5 , 14.5 ),( 6.5 , 14.5 ),( 8.5 , 14.5 ),( 7.5 , 14.5 ),( 9.5 , 14.5 ),( 11.5 , 14.5 ),( 10.5 , 14.5 ),( 12.5 , 14.5 ),( 13.5 , 14.5 ),( 14.5 , 14.5 ),( 15.5 , 14.5 ),( 16.5 , 14.5 ),( 16.5 , 13.5 ),( 16.5 , 12.5 ),( 16.5 , 11.5 ),( 16.5 , 10.5 ),( 16.5 , 9.5 ),( 16.5 , 8.5 ),( 16.5 , 7.5 ),( 10.5 , 7.5 ),( 10.5 , 8.5 ),( 10.5 , 9.5 ),( 10.5 , 10.5 ),( 10.5 , 11.5 ),( 10.5 , 12.5 )]
-# ncls = []
+ncls = []
 
 # ac = ( 4.247311827956989 , 4.880107526881721 )
 # tc = ( 13.207885304659495 , 16.49301075268817 )
@@ -50,6 +50,9 @@ ac = ( 19.516129032258064 , 14.521684587813622 )
 
 #very crowded
 # cls = [( 2.5 , 8.5 ),( 2.5 , 9.5 ),( 2.5 , 10.5 ),( 2.5 , 11.5 ),( 2.5 , 12.5 ),( 3.5 , 12.5 ),( 4.5 , 13.5 ),( 3.5 , 13.5 ),( 2.5 , 13.5 ),( 4.5 , 12.5 ),( 4.5 , 11.5 ),( 5.5 , 11.5 ),( 4.5 , 10.5 ),( 5.5 , 10.5 ),( 5.5 , 9.5 ),( 6.5 , 10.5 ),( 6.5 , 9.5 ),( 6.5 , 8.5 ),( 8.5 , 8.5 ),( 8.5 , 10.5 ),( 8.5 , 12.5 ),( 9.5 , 13.5 ),( 9.5 , 12.5 ),( 9.5 , 11.5 ),( 8.5 , 9.5 ),( 8.5 , 11.5 ),( 8.5 , 13.5 ),( 10.5 , 13.5 ),( 11.5 , 13.5 ),( 11.5 , 12.5 ),( 11.5 , 11.5 ),( 11.5 , 10.5 ),( 11.5 , 8.5 ),( 10.5 , 8.5 ),( 10.5 , 9.5 ),( 11.5 , 9.5 ),( 17.5 , 14.5 ),( 17.5 , 15.5 ),( 15.5 , 15.5 ),( 15.5 , 12.5 ),( 15.5 , 9.5 ),( 14.5 , 8.5 ),( 15.5 , 8.5 ),( 16.5 , 8.5 ),( 11.5 , 15.5 ),( 13.5 , 15.5 ),( 14.5 , 15.5 ),( 12.5 , 15.5 ),( 16.5 , 15.5 ),( 16.5 , 14.5 ),( 16.5 , 13.5 ),( 15.5 , 13.5 ),( 14.5 , 11.5 ),( 14.5 , 10.5 ),( 14.5 , 12.5 ),( 14.5 , 9.5 ),( 15.5 , 2.5 ),( 10.5 , 2.5 ),( 9.5 , 4.5 ),( 4.5 , 5.5 ),( 4.5 , 4.5 ),( 3.5 , 4.5 ),( 2.5 , 3.5 ),( 3.5 , 3.5 ),( 3.5 , 2.5 ),( 5.5 , 5.5 ),( 6.5 , 5.5 ),( 6.5 , 4.5 ),( 6.5 , 3.5 ),( 6.5 , 2.5 ),( 5.5 , 1.5 ),( 4.5 , 1.5 ),( 3.5 , 1.5 ),( 6.5 , 1.5 ),( 9.5 , 2.5 ),( 9.5 , 3.5 ),( 9.5 , 5.5 ),( 10.5 , 5.5 ),( 11.5 , 4.5 ),( 10.5 , 4.5 ),( 10.5 , 3.5 ),( 11.5 , 2.5 ),( 15.5 , 4.5 ),( 15.5 , 5.5 ),( 13.5 , 2.5 ),( 14.5 , 5.5 ),( 16.5 , 4.5 ),( 17.5 , 2.5 ),( 16.5 , 9.5 ),( 17.5 , 9.5 ),( 17.5 , 10.5 )]
+
+current_route = []
+current_route_lines = []
 
 class Node:
     def __init__(self, coordinate):
@@ -122,6 +125,18 @@ def connected_edge(node, node2):
 def draw_line(node, other_node):
     """Draw a line between two red cells c1 and c2."""
     line, = ax.plot([node.coordinate[0], other_node.coordinate[0]], [node.coordinate[1], other_node.coordinate[1]], 'b-')
+    #if line doesn't exist yet, add it to each node
+    if (other_node not in node.vectorNodes):
+        c_edge = connected_edge(node, other_node) #O(1)
+        other_edge = c_edge + 2 if c_edge < 2 else c_edge - 2
+        node.vectorNodes[c_edge] = other_node
+        other_node.vectorNodes[other_edge] = node
+        lines.append((node, other_node, line))
+
+#time complexity: O(1)
+def draw_line_route(node, other_node):
+    """Draw a line between two red cells c1 and c2."""
+    line, = ax.plot([node.coordinate[0], other_node.coordinate[0]], [node.coordinate[1], other_node.coordinate[1]], 'c-')
     #if line doesn't exist yet, add it to each node
     if (other_node not in node.vectorNodes):
         c_edge = connected_edge(node, other_node) #O(1)
@@ -301,6 +316,7 @@ def draw_line_and_intersection(node, node2, route):
         route.append((start_edge, end_edge))
         #draw initial line
         line, = ax.plot([start_edge[0], end_edge[0]], [start_edge[1], end_edge[1]], 'c-')
+        current_route_lines.append((start_edge, end_edge, line))
         plt.draw()
         outline_route(node, node2, intersection, edge, route)
     else:
@@ -405,7 +421,7 @@ def find_outline_segment(start_node, target_node, node, edge, route):
     ax.plot(bestpt[0], bestpt[1], "co", markersize=10)
     route.append(bestEdgecoord)
     line, = ax.plot([bestEdgecoord[0][0], bestEdgecoord[1][0]], [bestEdgecoord[0][1], bestEdgecoord[1][1]], 'c-')
-
+    current_route_lines.append((bestEdgecoord[0], bestEdgecoord[1], line))
     find_outline_segment(start_node, target_node, bestNode, bestEdge, route)
 
 def add_free_cell(coordinate):
@@ -585,7 +601,81 @@ def preset_agent_target(self):
     set_agent_coordinate(Node(ac))
     set_target_coordinate(Node(tc))
     # draw_target_agent_line(agent, target)
-    draw_line_and_intersection(agent ,target, [])
+    draw_line_and_intersection(agent ,target, current_route)
+
+def check_successive_vertices(a, b, c):
+    # if ((a,c) or (c,a)) in linecells:
+    #     return False
+
+    Aarray = np.asarray(a)
+    Barray = np.asarray(b)
+    Carray = np.asarray(c)
+
+    p1 = Carray - Aarray
+    p2 = Aarray - Barray
+    p3 = Carray - Aarray
+
+    npc = np.cross(Carray - Aarray, Aarray - Barray)
+    npn = np.linalg.norm(Carray - Aarray)
+    n = np.linalg.norm(np.cross(Carray - Aarray, Aarray - Barray))/np.linalg.norm(Carray - Aarray)
+
+
+    d = np.linalg.norm(np.cross(Carray - Aarray, Aarray - Barray))/np.linalg.norm(Carray - Aarray)
+    if d > 0 and d <= shortcut_dist:
+        for (es,ee,l) in current_route_lines:
+            if (a,b) == (es,ee) or (a,b) == (ee,es):
+                to_be_deleted.append((a,b,l))
+            if (b,c) == (es,ee) or (b,c) == (ee,es):
+                to_be_deleted.append((b,c,l))
+        # if a not in c.vectorNodes:
+        to_be_added.append((a,c))
+        return True
+
+    return False
+
+def iterate_all():
+    for i, (start_edge, end_edge) in enumerate(current_route):
+        if i < len(current_route)-1:   
+            (start_edge2, end_edge2) = current_route[(i+1)]
+                    # for vn2 in vn.vectorNodes:
+                    #     if node!=vn2: #vn = v2
+                    #         if check_successive_vertices(node,vn,vn2):
+                    #             return
+            if end_edge == start_edge2:
+                if check_successive_vertices(start_edge, end_edge, end_edge2):
+                    # find_other_route(vn,vn3)
+                    return
+                        
+def find_other_route(a,c):
+    for an in a.vectorNodes:
+        for ann in an.vectorNodes:
+            if ann == c:
+                for (n1,n2,l) in lines:
+                    if (a,an) == (n1,n2) or (a,an) == (n2,n1):
+                        to_be_deleted.append((a,an,l))
+                    if (an,ann) == (n1,n2) or (an,ann) == (n2,n1):
+                        to_be_deleted.append((an,ann,l))
+
+
+def delete_line(line_data):
+    """Delete a line."""
+    c1, c2, line = line_data
+
+    current_route.remove((c1, c2))
+    line.remove()
+
+def check_shortcuts_btn(self):
+    """Check and remove shortcut lines."""
+    iterate_all()
+    for (ad,bd,ld) in to_be_deleted:
+        delete_line((ad,bd,ld))
+    # for cell in to_be_deleted:
+    #     remove_cell(cell)
+    to_be_deleted.clear()
+    for (aa,ca) in to_be_added:
+        draw_line_route(Node(aa),Node(ca))
+    to_be_added.clear()
+    plt.draw()
 
 
 # Connect the click event to the handler
@@ -594,7 +684,7 @@ ax.set_aspect('equal', adjustable='box')
 
 axrmfree = fig.add_axes([0, 0.8, 0.1, 0.075])
 axpreset = fig.add_axes([0, 0.65, 0.1, 0.075])
-axconnect = fig.add_axes([0, 0.50, 0.1, 0.075])
+axshortcut = fig.add_axes([0, 0.50, 0.1, 0.075])
 axtarget = fig.add_axes([0, 0.35, 0.1, 0.075])
 axagent = fig.add_axes([0, 0.2, 0.1, 0.075])
 axpreset_ta = fig.add_axes([0, 0.05, 0.1, 0.075])
@@ -606,8 +696,8 @@ bpreset = Button(axpreset, 'Preset cells')
 bpreset.on_clicked(preset_cells)
 
 
-bconnect = Button(axconnect, 'Connect loose')
-bconnect.on_clicked(connect_close_ends)
+bshortcut = Button(axshortcut, 'Connect loose')
+bshortcut.on_clicked(check_shortcuts_btn)
 
 bagent = Button(axagent, 'Set Agent')
 bagent.on_clicked(set_agent)
