@@ -82,7 +82,7 @@ def check_successive_vertices(a, b, c, l, l2):
         # to_be_deleted.append(b)
         if (a,c) not in linecells:
             to_be_added.append((a,c))
-
+    
             return True
 
     return False
@@ -95,7 +95,7 @@ def connect_close_ends(self):
                 cell_counts[i] += 1
     for i, cell in enumerate(red_cells):
         for j, cell2 in enumerate(red_cells):
-            if cell != cell2 and (cell_counts[i] == 1 and cell_counts[j] > 0 or cell_counts[j] == 1 and cell_counts[i] >0) and distance.euclidean(cell, cell2) < e:
+            if cell != cell2 and (cell_counts[i] == 1 and cell_counts[j] > 0 or cell_counts[j] == 1 and cell_counts[i] >0) and distance.euclidean(cell, cell2) <= 1.5*e:
                 draw_line(cell, cell2)
     plt.draw()
 
