@@ -66,6 +66,12 @@ public:
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
+    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
+
+
+    //Distance sensor
+    //Infrared sensor
+    //DIfferential drive
 
     //Vector affected by swarm
     argos::CVector2 swarm_vector;
@@ -82,6 +88,8 @@ public:
     void setPosition(Coordinate position);
 
     void setHeading(argos::CRadians new_heading);
+
+    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive);
 
     Coordinate getPosition() const;
 
@@ -178,7 +186,7 @@ public:
     double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
     double P_POSITION = 0.9; // 90% probability for position to be correct
     double P_FREE = 0.6; // 70% probability for free to be correct
-    double P_OCCUPIED = 0.3; // 30% probability for occupied to be correct
+    double P_OCCUPIED = 0.4; // 30% probability for occupied to be correct
     float ALPHA_RECEIVE = 0.1; // Factor with which a received value's probability is pulled towards 0.5
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
 
@@ -224,6 +232,7 @@ private:
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
+    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();

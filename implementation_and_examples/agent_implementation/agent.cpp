@@ -92,6 +92,51 @@ void Agent::readInfraredSensor() {
 }
 
 /**
+ * Add free (unoccupied) coordinates between two coordinates and slightly occupied coordinates after the object
+ * @param coordinate1
+ * @param coordinate2
+ */
+void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const {
+    if(sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) < this->quadtree->getSmallestBoxSize()) return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
+//    if (objectBox.size > 0) return;
+
+    double x = coordinate1.x;
+    double y = coordinate1.y;
+    double dx = coordinate2.x - coordinate1.x;
+    double dy = coordinate2.y - coordinate1.y;
+    double distance = sqrt(dx * dx + dy * dy);
+    double stepSize = this->quadtree->getSmallestBoxSize();
+    int nSteps = std::ceil(distance / stepSize);
+    double stepX = dx / nSteps;
+    double stepY = dy / nSteps;
+
+    for (int s = 0; s < nSteps; s++) {
+        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
+            double p = (this->P_FREE*Psensor - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
+            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second);
+        } else {
+            break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
+        }
+        x += stepX;
+        y += stepY;
+    }
+
+    x += stepX;
+    y += stepY;
+
+    double occ_probability = this->P_OCCUPIED / Psensor;
+    for(int s = 1; s <= 2; s++){ //Add slight occupied confidence to the two steps after the object
+        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as more occupied
+            double p = (0.5-occ_probability) * (double(s)/double(10)) + occ_probability; //Increasingly more uncertain the further away from the agent
+            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second);
+        }
+        x += stepX;
+        y += stepY;
+
+    }
+}
+
+/**
  * Add free (unoccupied) coordinates between two coordinates
  * @param coordinate1
  * @param coordinate2
@@ -111,7 +156,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
     for (int s = 0; s < nSteps; s++) {
         if (objectBox.size > 0) {
             if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
-                double p = (this->P_FREE - 0.5) * (1 - double(s) / double(nSteps)) + 0.5;
+                double p = (this->P_FREE - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
                 this->quadtree->add(Coordinate{x, y}, p * Psensor, elapsed_ticks / ticks_per_second);
             } else {
                 break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
@@ -247,7 +292,11 @@ void Agent::checkForObstacles() {
                     addedObjectAtAgentLocation = true;
                 }
                 quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
-                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
+                if (objectBox.size != 0 ){
+                    if (!addedObjectAtAgentLocation) addFreeAreaBetweenAndOccupiedAfter(this->position, object, objectBox, sensor_probability);
+                } else {
+                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
+                }
             } else {
                 if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
             }

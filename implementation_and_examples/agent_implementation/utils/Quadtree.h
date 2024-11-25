@@ -39,7 +39,7 @@ namespace quadtree {
     public:
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Cell>()) {
-            mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, 0};
+            mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
         }
 
         /**
@@ -498,7 +498,7 @@ namespace quadtree {
         double Smallest_Box_Size = MinSize;
         static constexpr double EvaporationTime = 100.0;
         static constexpr double MAX_ALLOWED_VISITED_TIME_DIFF = 10.0;
-        static constexpr double MAX_ALLOWED_P_CONFIDENCE_DIFF = 0.1;
+        static constexpr double MAX_ALLOWED_P_CONFIDENCE_DIFF = 0.05;
         float l_min = -3.5;
         float l_max = 2;
         float l_free = 0.4;
