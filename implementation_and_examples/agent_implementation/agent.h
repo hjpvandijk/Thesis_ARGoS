@@ -55,9 +55,9 @@ public:
     FrontierEvaluator frontierEvaluator;
 #endif
 
-    double DISTANCE_SENSOR_NOISE_CM = 5.0;
-    double ORIENTATION_NOISE_DEGREES = 5.0;
-    double POSITION_NOISE_CM = 5.0;
+    double DISTANCE_SENSOR_NOISE_CM = 10.0;
+    double ORIENTATION_NOISE_DEGREES = 10.0;
+    double POSITION_NOISE_CM = 10.0;
 
 
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
@@ -178,7 +178,7 @@ public:
     double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
     double P_POSITION = 0.9; // 90% probability for position to be correct
     double P_FREE = 0.6; // 70% probability for free to be correct
-    double P_OCCUPIED = 0.3; // 30% probability for occupied to be correct
+    double P_OCCUPIED = 0.4; // 30% probability for occupied to be correct
     float ALPHA_RECEIVE = 0.1; // Factor with which a received value's probability is pulled towards 0.5
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
 
@@ -224,6 +224,7 @@ private:
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
+    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();
