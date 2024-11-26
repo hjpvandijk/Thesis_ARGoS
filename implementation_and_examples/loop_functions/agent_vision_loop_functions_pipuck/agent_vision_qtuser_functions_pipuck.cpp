@@ -16,6 +16,25 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
  */
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
+
+    for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
+        for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
+            Coordinate neighbor1 = std::get<0>(neighborPair);
+            Coordinate neighbor2 = std::get<1>(neighborPair);
+
+            Coordinate neighbor1argos = neighbor1.FromOwnToArgos();
+            Coordinate neighbor2argos = neighbor2.FromOwnToArgos();
+
+            CVector3 pos1 = CVector3(neighbor1argos.x, neighbor1argos.y, 0.02f);
+            CVector3 pos2 = CVector3(neighbor2argos.x, neighbor2argos.y, 0.02f);
+            auto ray = CRay3(pos1, pos2);
+            DrawRay(ray, CColor::BLUE, 20.0f);
+//            DrawBox(pos1, CQuaternion(), CVector3(0.1, 0.1, 0.1), CColor::BLUE);
+//            DrawBox(pos2, CQuaternion(), CVector3(0.1, 0.1, 0.1), CColor::BLUE);
+//            argos::LOG << "drew ray from " << neighbor1.toString() << " to " << neighbor2.toString() << std::endl;
+//            argos::LOG << "[argos] drew ray from " << neighbor1argos.toString() << " to " << neighbor2argos.toString() << std::endl;
+        }
+    }
     /* Go through all the robot waypoints and draw them */
 //    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
 //         it != m_cAgVisLF.GetAgentFrontierRegions().end();

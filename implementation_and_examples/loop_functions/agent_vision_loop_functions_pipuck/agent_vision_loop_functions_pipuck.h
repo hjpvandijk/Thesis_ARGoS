@@ -26,6 +26,7 @@ public:
 
 
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, float, double >>> m_tQuadTree;
+    std::map<CPiPuckEntity*, std::vector<std::tuple<Coordinate, Coordinate>>> m_tNeighborPairs;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;
     std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;

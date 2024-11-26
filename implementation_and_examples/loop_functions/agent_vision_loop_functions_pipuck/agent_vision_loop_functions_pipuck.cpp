@@ -64,6 +64,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = agent->quadtree->getAllBoxes();
+    m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
     m_tQuadTree[pcFB] = boxesAndConfidenceAndTicks;
 }
