@@ -113,6 +113,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         color = color.Blend(CColor::RED);
         if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
         DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+        DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
+
 
     }
 

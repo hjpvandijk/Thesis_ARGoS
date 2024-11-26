@@ -28,9 +28,11 @@ namespace quadtree {
         Occupancy occupancy;
         double visitedAtS;
         float LConfidence = 0.0; //The L(n) confidence of the reachability of this node by the agent. Positive is FREE, negative is OCCUPIED.
+
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
         }
+
 
     };
 
@@ -506,8 +508,10 @@ namespace quadtree {
 
 
         struct Cell {
+            Cell * parent;
             std::array<std::unique_ptr<Cell>, 4> children;
-//            std::vector<QuadNode> values;
+            std::array<Cell *, 4> neighbors; //Neighbors with the same occupancy
+            //            std::vector<QuadNode> values;
             QuadNode quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
         };
 
@@ -705,6 +709,8 @@ namespace quadtree {
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
                     returnBox = box;
+
+
                 }
                     // Otherwise, we split and we try again
                 else {
@@ -806,7 +812,7 @@ namespace quadtree {
                     double maxVisitedTime = -1;
 
                     if (cell->children.at(0)->quadNode.visitedAtS == -1)
-                        confidencesTooFarApart = true;
+                        confidencesTooFarApart = true; //If the first child is empty, it is not the same occupancy as the others
                     else {
                         //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
 //                        firstOccupancy = cell->children.at(0)->quadNode.occupancy;
@@ -832,8 +838,9 @@ namespace quadtree {
                             if (child->quadNode.visitedAtS > maxVisitedTime)
                                 maxVisitedTime = child->quadNode.visitedAtS;
                         }
-                        //If the occupancies are too far apart, the children should be kep
-                        if (P(maxConfidence) - P(minConfidence) > MAX_ALLOWED_P_CONFIDENCE_DIFF)
+                        //If one of the children is occupied, all children should be kept
+                        //If the occupancies are too far apart, the children should be kept
+                        if (minConfidence < l_free || P(maxConfidence) - P(minConfidence) > MAX_ALLOWED_P_CONFIDENCE_DIFF)
                             confidencesTooFarApart = true;
                         //If the visited times are too far apart, the children should be kept
                         if (maxVisitedTime - minVisitedTime > MAX_ALLOWED_VISITED_TIME_DIFF)
@@ -885,8 +892,10 @@ namespace quadtree {
             assert(cell != nullptr);
             assert(isLeaf(cell) && "Only leaves can be split");
             // Create children
-            for (auto &child: cell->children)
+            for (auto &child: cell->children){
                 child = std::make_unique<Cell>();
+                child->parent = cell;
+            }
 
             assert(!isLeaf(cell) && "A cell should not be a leaf after splitting");
 
