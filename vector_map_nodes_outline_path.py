@@ -352,6 +352,14 @@ def elegible_edges(node, edge):
                         edges.append((node.vectorNodes[i].vectorNodes[edge], opposite_i))
                     else:
                         edges.append((node.vectorNodes[i], edge))
+
+    #handle this case (diagonal):
+
+    # 0 1
+    # 1 0
+    # get node diagonally,
+    # check if occupied
+    # delete and add corresponding edges
     
     return edges
 
