@@ -104,7 +104,7 @@ namespace quadtree {
                             currentBox = Box{currentBoxTopLeft, currentBox.size / 2};
                         }
                         if (atEnd) continue; //The corresponding cell is not visited yet
-                        if (current_cell->quadNode.occupancy == OCCUPIED) {
+                        if (current_cell->quadNode.LConfidence <=0) {
                             this->neighbors.at(neighbor_index) = current_cell;
                             auto opposite_neighbor_index = neighbor_index < 2 ? neighbor_index + 2 : neighbor_index - 2;
                             current_cell->neighbors.at(opposite_neighbor_index) = this;
