@@ -44,7 +44,7 @@ namespace quadtree {
             std::array<std::unique_ptr<Cell>, 4> children;
             std::array<Cell *, 4> neighbors; //Neighbors with the same occupancy: [left, top, right, bottom]
             //            std::vector<QuadNode> values;
-            QuadNode quadNode;// = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
+            QuadNode quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
 
 //            Cell(){
 //                quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
@@ -392,10 +392,15 @@ namespace quadtree {
             return boxes;
         }
 
-        /**
-         * Returns the Occupancy of the QuadNode containing the coordinate
-         * @param coordinate
-         */
+
+        [[nodiscard]] std::pair<Cell *, Box> getCellandBoxFromCoordinate(Coordinate coordinate) const {
+            return getCellandBoxFromCoordinate(mRoot.get(), mBox, coordinate);
+        }
+
+            /**
+             * Returns the Occupancy of the QuadNode containing the coordinate
+             * @param coordinate
+             */
         Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
             QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
             return quadNode.occupancy;
@@ -1241,6 +1246,49 @@ namespace quadtree {
                 }
             }
             return QuadNode{queryCoordinate, UNKNOWN, 0};
+        }
+
+        /**
+         * @brief Get the QuadNode that contains the given coordinate
+         * @param node
+         * @param box
+         * @param queryCoordinate
+         * */
+        std::pair<Cell*, Box> getCellandBoxFromCoordinate(Cell *node, const Box &box, const Coordinate &queryCoordinate) const {
+            assert(node != nullptr);
+            assert(box.contains(queryCoordinate));
+            //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
+            if (isLeaf(node)) {
+                if (node->quadNode.visitedAtS == -1) {
+                    return std::make_pair(nullptr, Box());
+                } else {
+                    assert(node->quadNode.occupancy != ANY && "leaf occupancy should never be ANY");
+                    return std::make_pair(node, box);
+                }
+                // If it is not a leaf node, find the nested nodes, and search them.
+            } else {
+                //If the node occupancy is ANY or UNKNOWN, there can be nested nodes with different occupancies
+                assert(node->quadNode.visitedAtS != -1 && "Cell should have a value");
+                if (node->quadNode.occupancy == ANY || node->quadNode.occupancy == UNKNOWN) {
+                    auto i = box.getQuadrant(queryCoordinate);
+                    //If i=4, so the query coordinate is the exact center, check all children
+                    if (i == 4) {
+                        for (int j = 0; j < node->children.size(); j++) {
+                            auto childBox = computeBox(box, static_cast<int>(j));
+
+                            return getCellandBoxFromCoordinate(node->children.at(j).get(), childBox, queryCoordinate);
+                        }
+                    } else {
+                        auto childBox = computeBox(box, static_cast<int>(i));
+
+                        return getCellandBoxFromCoordinate(node->children.at(i).get(), childBox, queryCoordinate);
+                    }
+                    //Else the nested nodes have the same occupancy, so parent node can be returned.
+                } else {
+                    return std::make_pair(node, box);
+                }
+            }
+            return std::make_pair(nullptr, Box());;
         }
 
         void findAllIntersections(Cell *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {

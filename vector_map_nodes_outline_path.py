@@ -184,8 +184,8 @@ def liang_barsky(x_left, y_bottom, x_right, y_top, x1, y1, x2, y2):
 
     x1_clip = x1 + t_enter * dx if t_enter != 0 else None
     y1_clip = y1 + t_enter * dy if t_enter != 0 else None
-    x2_clip = x1 + t_exit * dx if t_exit != 0 else None
-    y2_clip = y1 + t_exit * dy if t_exit != 0  else None
+    x2_clip = x1 + t_exit * dx if t_exit != 1.0 else None
+    y2_clip = y1 + t_exit * dy if t_exit != 1.0  else None
 
     return x1_clip, y1_clip, x2_clip, y2_clip
 
