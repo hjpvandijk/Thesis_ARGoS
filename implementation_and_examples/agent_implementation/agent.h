@@ -18,11 +18,13 @@
 #include "agent_implementation/agent_control/path_planning/WallFollower.h"
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
 #include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
+#include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
 #define WALL_FOLLOWING_ENABLED
+#define PATH_PLANNING_ENABLED
 //#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -54,6 +56,7 @@ public:
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     FrontierEvaluator frontierEvaluator;
 #endif
+    SimplePathPlanner pathPlanner;
 
     double DISTANCE_SENSOR_NOISE_CM = 5.0;
     double ORIENTATION_NOISE_DEGREES = 5.0;
@@ -206,6 +209,7 @@ public:
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
+    std::vector<std::pair<Coordinate, Coordinate>> route;
 
 
 

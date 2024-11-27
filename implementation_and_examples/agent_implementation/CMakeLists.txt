@@ -18,6 +18,8 @@ add_library(agent_implementation SHARED
         agent_control/motion/simulation/DifferentialDrive.cpp
         agent_control/path_planning/WallFollower.h
         agent_control/path_planning/WallFollower.cpp
+        agent_control/path_planning/SimplePathPlanner.h
+        agent_control/path_planning/SimplePathPlanner.cpp
         utils/CustomComparator.h
         agent_control/path_planning/FrontierEvaluator.h
         agent_control/path_planning/FrontierEvaluator.cpp

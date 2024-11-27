@@ -25,6 +25,7 @@ Agent::Agent(std::string id) {
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
     this->wallFollower = WallFollower();
+    this->pathPlanner = SimplePathPlanner();
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     this->frontierEvaluator = FrontierEvaluator(this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE, MAX_TICKS_IN_HITPOINT);
 #endif
@@ -598,6 +599,11 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     }
     this->previousBestFrontier = this->currentBestFrontier;
     this->swarm_vector = total_vector;
+    auto newroute = pathPlanner.getRoute(this, this->position, this->currentBestFrontier);
+    if (newroute.size() > 0) {
+        this->route = newroute;
+        argos::LOG << "New route length: " << this->route.size() << std::endl;
+    }
 }
 
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS

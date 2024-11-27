@@ -198,6 +198,8 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 
+        m_tAgentRoute[pcFB] = agent->route;
+
     }
 
     auto mBox = quadtree::Box(-5, 5, 10);
@@ -243,6 +245,8 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        }
 //    }
 //
+
+
     loop_function_steps++;
 }
 

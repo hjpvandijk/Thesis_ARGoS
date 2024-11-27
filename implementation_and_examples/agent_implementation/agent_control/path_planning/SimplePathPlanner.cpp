@@ -35,18 +35,20 @@
 //    return relativeSections;
 //}
 
-std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, const quadtree::Quadtree& quadtree, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle) const {
-    return getRouteSections(agent, start, target, quadtree, closestFreeAngleRadians, relativeObjectAvoidanceAngle);
+std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target) const {
+    return getRouteSections(agent, start, target);
 }
 
-std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSections(Agent* agent, Coordinate start, Coordinate target, const quadtree::Quadtree& quadtree, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle) const {
-    auto [cell, box, edge_index] = rayTraceQuadtreeIntersection(start, target, quadtree);
-    if (cell == nullptr) return {};
+std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSections(Agent* agent, Coordinate start, Coordinate target) const {
+    auto [cell, box, edge_index, _] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
+    if (cell == nullptr) return {{start, target}};
     std::vector<std::pair<Coordinate, Coordinate>> route;
     auto [start_edge, end_edge] = getEdgeCoordinates(box, edge_index);
-    route.push_back({start_edge, end_edge});
+    auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
+    route.push_back({agent->position, edge_middle});
+    route.push_back({edge_middle, end_edge});
 
-    getWallFollowingRoute(agent, cell, box.size, edge_index, target, quadtree, route, closestFreeAngleRadians, relativeObjectAvoidanceAngle);
+    getWallFollowingRoute(agent, cell, box.size, edge_index, target, route);
 
     //Append last point to target
     route.push_back({route.rbegin()->second, target});
@@ -54,8 +56,13 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
     return route;
 }
 
-void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, const quadtree::Quadtree &quadtree, std::vector<std::pair<Coordinate, Coordinate>> & route, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle) const {
-    if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) < agent->TURN_THRESHOLD_DEGREES) { //Direction to target free
+void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
+    //If the direction to the target is free from the cell, return
+    if (directionToTargetFree(agent, cell, box_size, edge_index, target, route)) {
+        auto [begin_last_edge, end_last_edge] = *route.rbegin();
+        auto edge_middle = Coordinate{(begin_last_edge.x + end_last_edge.x) / 2, (begin_last_edge.y + end_last_edge.y) / 2};
+        route.erase(route.end() - 1);
+        route.push_back({begin_last_edge, edge_middle});
         return;
     }
     auto edges = elegible_edges(cell, edge_index);
@@ -73,7 +80,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
         auto [start_edge, end_edge] = getEdgeCoordinates(cBox, e);
         auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
 
-        auto cell_to_edge_distance = sqrt(pow(edge_middle.x - target.x, 2) + pow(edge_middle.y - target.y, 2));
+        auto cell_to_edge_distance = sqrt(pow(edge_middle.x - agent->position.x, 2) + pow(edge_middle.y - agent->position.y, 2));
         if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) == route.end() && cell_to_edge_distance > max_distance) {
             bestCell = c;
             bestEdgeIndex = e;
@@ -85,10 +92,38 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
 
     if (bestCell != nullptr) {
         route.push_back({bestEdgeStart, bestEdgeEnd});
-        getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, quadtree, route, closestFreeAngleRadians, relativeObjectAvoidanceAngle);
+        getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, route);
     }
 
 }
+
+bool SimplePathPlanner::directionToTargetFree(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const{
+    Coordinate start = cell->quadNode.coordinate;
+
+    //Get the middle of the edge
+    if (edge_index == 0) start.x = start.x - box_size / 2;
+    else if (edge_index == 1) start.y = start.y + box_size / 2;
+    else if (edge_index == 2) start.x = start.x + box_size / 2;
+    else if (edge_index == 3) start.y = start.y - box_size / 2;
+
+    //Find the intersection with the quadtree
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
+
+    if (intersection_cell != nullptr) {
+        if (intersection_cell == cell)
+            return false; //If we intersect the same cell, the line is going through the cell, so the direction is not free
+
+        auto [start_edge, end_edge] = getEdgeCoordinates(intersection_box, intersection_edge);
+        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) ==
+            route.end()) { //Can't go back to the same edge
+            return false;
+        }
+        if (distance_to_intersection > box_size / 2) return true;
+    }
+    return true; //No intersection, so the direction is free
+
+}
+
 
 std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegible_edges(quadtree::Quadtree::Cell * cell, int edge_index) const{
     std::vector<std::pair<quadtree::Quadtree::Cell*, int>> edges;
@@ -115,9 +150,10 @@ std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegib
             }
         }
     }
+    return edges;
 }
 
-std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int> SimplePathPlanner::rayTraceQuadtreeIntersection(Coordinate start, Coordinate target, const quadtree::Quadtree& quadtree) const {
+std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlanner::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
     auto x = start.x;
     auto y = start.y;
     auto dx = target.x - start.x;
@@ -129,11 +165,11 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int> SimplePathPlanner::ray
     auto stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        auto cell_and_box = quadtree.getCellandBoxFromCoordinate(Coordinate{x, y});
+        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
         auto cell = cell_and_box.first;
         auto box = cell_and_box.second;
         if (cell != nullptr) {
-            if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
+            if (cell->quadNode.LConfidence <=0) {
                 Coordinate intersection = liang_barsky(start, target, box);
                 //Get the edge that the intersection is on (with small margin)
                 //left = 0, top = 1, right = 2, bottom = 3
@@ -143,13 +179,15 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int> SimplePathPlanner::ray
                 else if (std::abs(intersection.x - box.getRight())<0.01) edge_index = 2;
                 else if (std::abs(intersection.y - box.getBottom())<0.01) edge_index = 3;
 
-                return {cell, box, edge_index};
+                auto dist_to_intersection = sqrt(pow(intersection.x - start.x, 2) + pow(intersection.y - start.y, 2));
+
+                return {cell, box, edge_index, dist_to_intersection};
             }
         }
         x += stepX;
         y += stepY;
     }
-    return {nullptr, quadtree::Box(), -1};
+    return {nullptr, quadtree::Box(), -1, 0};
 
 }
 

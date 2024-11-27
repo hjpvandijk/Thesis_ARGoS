@@ -35,6 +35,24 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //            argos::LOG << "[argos] drew ray from " << neighbor1argos.toString() << " to " << neighbor2argos.toString() << std::endl;
         }
     }
+
+    for (auto & m_tRoute : m_cAgVisLF.m_tAgentRoute){
+        for (std::tuple<Coordinate, Coordinate> route: m_tRoute.second) {
+            Coordinate start = std::get<0>(route);
+            Coordinate end = std::get<1>(route);
+
+            argos::LOG << "drawing route from " << start.toString() << " to " << end.toString() << std::endl;
+
+            Coordinate startArgos = start.FromOwnToArgos();
+            Coordinate endArgos = end.FromOwnToArgos();
+
+            CVector3 pos1 = CVector3(startArgos.x, startArgos.y, 0.02f);
+            CVector3 pos2 = CVector3(endArgos.x, endArgos.y, 0.02f);
+            auto ray = CRay3(pos1, pos2);
+            DrawRay(ray, CColor::YELLOW, 10.0f);
+        }
+    }
+
     /* Go through all the robot waypoints and draw them */
 //    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
 //         it != m_cAgVisLF.GetAgentFrontierRegions().end();
