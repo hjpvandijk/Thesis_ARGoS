@@ -299,15 +299,16 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #endif
 
         //Calculate the distance between the agent and the frontier region
-//        double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
-
-        auto route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
+#ifdef PATH_PLANNING_ENABLED
         //Calculate distance of route
         double distance = 0;
+        auto route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
         for (auto edge: route_to_frontier) {
             distance += sqrt(pow(edge.first.x - edge.second.x, 2) + pow(edge.first.y - edge.second.y, 2));
         }
-
+#else
+        double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
+#endif
         //Calculate the score of the frontier region
         double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
 
