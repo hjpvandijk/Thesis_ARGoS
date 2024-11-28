@@ -43,15 +43,26 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
     auto [cell, box, edge_index, _] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
     if (cell == nullptr) return {{start, target}};
     std::vector<std::pair<Coordinate, Coordinate>> route;
+    route.emplace_back(start, target);
     auto [start_edge, end_edge] = getEdgeCoordinates(box, edge_index);
     auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
-    route.push_back({agent->position, edge_middle});
-    route.push_back({edge_middle, end_edge});
+
+    //Line from agent to middle of the intersection edge
+    route.emplace_back(agent->position, edge_middle);
+
+    //Line from middle of the intersection edge to the correct side of the line, depending on the distance of that end to the agent
+    auto distance_to_start = sqrt(pow(start_edge.x - agent->position.x, 2) + pow(start_edge.y - agent->position.y, 2));
+    auto distance_to_end = sqrt(pow(end_edge.x - agent->position.x, 2) + pow(end_edge.y - agent->position.y, 2));
+    if (distance_to_start >= distance_to_end) {
+        route.emplace_back(edge_middle, start_edge);
+    } else {
+        route.emplace_back(edge_middle, end_edge);
+    }
 
     getWallFollowingRoute(agent, cell, box.size, edge_index, target, route);
 
     //Append last point to target
-    route.push_back({route.rbegin()->second, target});
+    route.emplace_back(route.rbegin()->second, target);
 
     return route;
 }
@@ -59,10 +70,12 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
 void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
     //If the direction to the target is free from the cell, return
     if (directionToTargetFree(agent, cell, box_size, edge_index, target, route)) {
+        //Delete the last full edge, and with a line to the middle of the last edge
         auto [begin_last_edge, end_last_edge] = *route.rbegin();
         auto edge_middle = Coordinate{(begin_last_edge.x + end_last_edge.x) / 2, (begin_last_edge.y + end_last_edge.y) / 2};
         route.erase(route.end() - 1);
-        route.push_back({begin_last_edge, edge_middle});
+
+        route.emplace_back(begin_last_edge, edge_middle);
         return;
     }
     auto edges = elegible_edges(cell, edge_index);
@@ -81,7 +94,17 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
         auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
 
         auto cell_to_edge_distance = sqrt(pow(edge_middle.x - agent->position.x, 2) + pow(edge_middle.y - agent->position.y, 2));
-        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) == route.end() && cell_to_edge_distance > max_distance) {
+        auto [begin_last_edge, end_last_edge] = *route.rbegin();
+        //If the end of the last edge is not the same as the start of the current edge, flip the edge, to keep the order correct
+        if(end_last_edge == end_edge){
+            //Flip start and end
+            std::swap(start_edge, end_edge);
+        }
+
+        //If the edge (either way) is not already in the route, and the distance to the edge is the largest, save the cell and edge
+        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) == route.end() &&
+            std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) == route.end() &&
+            cell_to_edge_distance > max_distance) {
             bestCell = c;
             bestEdgeIndex = e;
             bestEdgeStart = start_edge;
@@ -91,7 +114,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
     }
 
     if (bestCell != nullptr) {
-        route.push_back({bestEdgeStart, bestEdgeEnd});
+        route.emplace_back(bestEdgeStart, bestEdgeEnd);
         getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, route);
     }
 
@@ -139,13 +162,11 @@ std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegib
                 edges.erase(index);
             }
             if (i != edge_index && i != opposite_edge_index) {
-                if (cell->neighbors.at(i) != nullptr) {
-                    if (cell->neighbors.at(i)->neighbors.at(edge_index) != nullptr) {
-                        auto opposite_i = i < 2 ? i + 2 : i - 2;
-                        edges.push_back({cell->neighbors.at(i)->neighbors.at(edge_index), opposite_i});
-                    } else {
-                        edges.push_back({cell->neighbors.at(i), edge_index});
-                    }
+                if (cell->neighbors.at(i)->neighbors.at(edge_index) != nullptr) {
+                    auto opposite_i = i < 2 ? i + 2 : i - 2;
+                    edges.push_back({cell->neighbors.at(i)->neighbors.at(edge_index), opposite_i});
+                } else {
+                    edges.push_back({cell->neighbors.at(i), edge_index});
                 }
             }
         }
@@ -159,25 +180,28 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlan
     auto dx = target.x - start.x;
     auto dy = target.y - start.y;
     auto distance = sqrt(dx * dx + dy * dy);
-    auto stepSize = 0.05;
+    auto stepSize = 0.01;
     auto nSteps = std::ceil(distance / stepSize);
     auto stepX = dx / nSteps;
     auto stepY = dy / nSteps;
 
-    for (int s = 0; s < nSteps; s++) {
+    //Already do one step to avoid the start cell
+    x += stepX;
+    y += stepY;
+    for (int s = 1; s < nSteps; s++) {
         auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
         auto cell = cell_and_box.first;
         auto box = cell_and_box.second;
         if (cell != nullptr) {
-            if (cell->quadNode.LConfidence <=0) {
+            if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
                 Coordinate intersection = liang_barsky(start, target, box);
                 //Get the edge that the intersection is on (with small margin)
                 //left = 0, top = 1, right = 2, bottom = 3
                 auto edge_index = -1;
-                if (std::abs(intersection.x - box.left)<0.01) edge_index = 0;
-                else if (std::abs(intersection.y - box.top)<0.01) edge_index = 1;
-                else if (std::abs(intersection.x - box.getRight())<0.01) edge_index = 2;
-                else if (std::abs(intersection.y - box.getBottom())<0.01) edge_index = 3;
+                if (std::abs(intersection.x - box.left)<0.00001) edge_index = 0;
+                else if (std::abs(intersection.y - box.top)<0.00001) edge_index = 1;
+                else if (std::abs(intersection.x - box.getRight())<0.00001) edge_index = 2;
+                else if (std::abs(intersection.y - box.getBottom())<0.00001) edge_index = 3;
 
                 auto dist_to_intersection = sqrt(pow(intersection.x - start.x, 2) + pow(intersection.y - start.y, 2));
 
@@ -191,6 +215,13 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlan
 
 }
 
+/**
+ * From the python implementation of Liang-Barsky: https://www.geeksforgeeks.org/liang-barsky-algorithm/
+ * @param p1
+ * @param p2
+ * @param box
+ * @return
+ */
 Coordinate SimplePathPlanner::liang_barsky(Coordinate p1, Coordinate p2, quadtree::Box box) const{
     double t0 = 0.0;
     double t1 = 1.0;
