@@ -198,7 +198,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 
-        m_tAgentRoute[pcFB] = agent->route;
+        m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
 
     }
 

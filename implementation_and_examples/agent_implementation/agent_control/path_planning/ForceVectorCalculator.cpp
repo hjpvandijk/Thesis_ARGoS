@@ -275,6 +275,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     std::vector<quadtree::Box> bestFrontierRegion = {};
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
     double bestFrontierScore = std::numeric_limits<double>::max();
+    std::vector<std::pair<Coordinate, Coordinate>> bestRoute = {};
 
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
@@ -298,7 +299,14 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #endif
 
         //Calculate the distance between the agent and the frontier region
-        double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
+//        double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
+
+        auto route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
+        //Calculate distance of route
+        double distance = 0;
+        for (auto edge: route_to_frontier) {
+            distance += sqrt(pow(edge.first.x - edge.second.x, 2) + pow(edge.first.y - edge.second.y, 2));
+        }
 
         //Calculate the score of the frontier region
         double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
@@ -331,11 +339,13 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         if (score < bestFrontierScore) {
             bestFrontierScore = score;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
+            bestRoute = route_to_frontier;
         }
     }
 
 
     agent->currentBestFrontier = bestFrontierRegionCenter;
+    agent->route_to_best_frontier = bestRoute;
 
 
 

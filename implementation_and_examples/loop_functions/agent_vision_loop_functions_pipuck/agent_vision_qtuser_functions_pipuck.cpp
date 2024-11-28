@@ -29,10 +29,6 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             CVector3 pos2 = CVector3(neighbor2argos.x, neighbor2argos.y, 0.02f);
             auto ray = CRay3(pos1, pos2);
             DrawRay(ray, CColor::BLUE, 20.0f);
-//            DrawBox(pos1, CQuaternion(), CVector3(0.1, 0.1, 0.1), CColor::BLUE);
-//            DrawBox(pos2, CQuaternion(), CVector3(0.1, 0.1, 0.1), CColor::BLUE);
-//            argos::LOG << "drew ray from " << neighbor1.toString() << " to " << neighbor2.toString() << std::endl;
-//            argos::LOG << "[argos] drew ray from " << neighbor1argos.toString() << " to " << neighbor2argos.toString() << std::endl;
         }
     }
 
@@ -41,7 +37,6 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             Coordinate start = std::get<0>(route);
             Coordinate end = std::get<1>(route);
 
-            argos::LOG << "drawing route from " << start.toString() << " to " << end.toString() << std::endl;
 
             Coordinate startArgos = start.FromOwnToArgos();
             Coordinate endArgos = end.FromOwnToArgos();

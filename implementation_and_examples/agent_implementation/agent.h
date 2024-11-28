@@ -209,7 +209,7 @@ public:
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
-    std::vector<std::pair<Coordinate, Coordinate>> route;
+    std::vector<std::pair<Coordinate, Coordinate>> route_to_best_frontier;
 
 
 

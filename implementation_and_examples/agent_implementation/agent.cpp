@@ -599,11 +599,6 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     }
     this->previousBestFrontier = this->currentBestFrontier;
     this->swarm_vector = total_vector;
-    auto newroute = pathPlanner.getRoute(this, this->position, this->currentBestFrontier);
-    if (newroute.size() > 0) {
-        this->route = newroute;
-        argos::LOG << "New route length: " << this->route.size() << std::endl;
-    }
 }
 
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS

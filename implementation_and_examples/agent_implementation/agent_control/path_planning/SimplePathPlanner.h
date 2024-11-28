@@ -18,7 +18,6 @@ public:
 //     * @param quadtree
 //     * @return
 //     */
-//    std::vector<argos::CVector2> getRoute(Agent* agent, Coordinate start, Coordinate end, const quadtree::Quadtree &quadtree, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle) const;
     std::vector<std::pair<Coordinate, Coordinate>> getRoute(Agent* agent, Coordinate start, Coordinate end) const;
 
 private:

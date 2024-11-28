@@ -3,37 +3,6 @@
 #include "agent_implementation/utils/Box.h"
 #include "agent_implementation/agent.h"
 
-///**
-// * Get the route from start to end
-// * Each section is relative to the former
-// * @param agent
-// * @param start
-// * @param target
-// * @param quadtree
-// * @param closestFreeAngleRadians
-// * @param relativeObjectAvoidanceAngle
-// * @return
-// */
-//std::vector<argos::CVector2> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, const quadtree::Quadtree& quadtree, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle) const {
-//    std::vector<argos::CVector2> relativeSections;
-//    std::vector<std::pair<Coordinate, Coordinate>> route = getRouteSections(agent, start, target, quadtree, closestFreeAngleRadians, relativeObjectAvoidanceAngle);
-//
-//    //Compare first section with agent heading
-//    auto [start_edge, end_edge] = route.at(0);
-//    auto vector_in_coordinate_system = argos::CVector2(end_edge.x - start_edge.x, end_edge.y - start_edge.y);
-//    auto relative_vector = vector_in_coordinate_system.Rotate(-agent->heading);
-//    relativeSections.push_back(relative_vector);
-//
-//    for (int i=0; i<route.size()-1; i++) {
-//        auto [start_edge1, end_edge1] = route.at(i);
-//        auto vector_in_coordinate_system_1 = argos::CVector2(end_edge1.x - start_edge1.x, end_edge1.y - start_edge1.y);
-//        auto [start_edge2, end_edge2] = route.at(i+1);
-//        auto vector_in_coordinate_system_2 = argos::CVector2(end_edge2.x - start_edge2.x, end_edge2.y - start_edge2.y);
-//        auto relative_vector =
-//
-//    }
-//    return relativeSections;
-//}
 
 std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target) const {
     return getRouteSections(agent, start, target);
@@ -43,7 +12,6 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
     auto [cell, box, edge_index, _] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
     if (cell == nullptr) return {{start, target}};
     std::vector<std::pair<Coordinate, Coordinate>> route;
-    route.emplace_back(start, target);
     auto [start_edge, end_edge] = getEdgeCoordinates(box, edge_index);
     auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
 
