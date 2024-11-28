@@ -104,7 +104,7 @@ namespace quadtree {
                             currentBox = Box{currentBoxTopLeft, currentBox.size / 2};
                         }
                         if (atEnd) continue; //The corresponding cell is not visited yet
-                        if (current_cell->quadNode.LConfidence <=0) {
+                        if (current_cell->quadNode.occupancy==OCCUPIED){
                             this->neighbors.at(neighbor_index) = current_cell;
                             auto opposite_neighbor_index = neighbor_index < 2 ? neighbor_index + 2 : neighbor_index - 2;
                             current_cell->neighbors.at(opposite_neighbor_index) = this;
@@ -641,7 +641,7 @@ namespace quadtree {
         float l_min = -3.5;
         float l_max = 2;
         float l_free = 0.4;
-        float l_occupied = -0.85;
+        float l_occupied = -0.41; //P=0.4
 
 
 
@@ -799,7 +799,7 @@ namespace quadtree {
                            newNode.occupancy == AMBIGUOUS && "new cell occupancy should be FREE or OCCUPIED or AMBIGUOUS");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
-                    if (cell->quadNode.LConfidence <=0) {
+                    if (cell->quadNode.occupancy == OCCUPIED) { //Occupied
                         //Set neighbors
                         cell->add_occupied_neighbors(box.size);
                     } else {
@@ -1156,10 +1156,16 @@ namespace quadtree {
                 ) {
 //                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
                 cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
-                if (cell->quadNode.LConfidence <=0) {
+                if (cell->quadNode.LConfidence <=l_occupied) {
+                    cell->quadNode.occupancy = OCCUPIED;
                     //Set neighbors
                     cell->add_occupied_neighbors(box.getSize());
                 } else {
+                    if (cell->quadNode.LConfidence >= l_free) {
+                        cell->quadNode.occupancy = FREE;
+                    } else {
+                        cell->quadNode.occupancy = AMBIGUOUS;
+                    }
                     //Remove neighbors; Make sure to remove neighbors if the cell is not occupied, or we will have pointer issues.
                     cell->remove_neighbors();
                 }
