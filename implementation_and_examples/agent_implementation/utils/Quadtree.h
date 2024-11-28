@@ -792,20 +792,20 @@ namespace quadtree {
                             occ = OCCUPIED;
                         }
                         newNode.occupancy = occ;
-                        if (newNode.LConfidence <=0) {
-                            //Set neighbors
-                            cell->add_occupied_neighbors(box.size);
-                        } else {
-                            //Remove neighbors; Make sure to remove neighbors if the cell is not occupied, or we will have pointer issues.
-                            cell->remove_neighbors();
-                        }
-
                     }
+
                     assert(newNode.occupancy == FREE ||
                            newNode.occupancy == OCCUPIED ||
                            newNode.occupancy == AMBIGUOUS && "new cell occupancy should be FREE or OCCUPIED or AMBIGUOUS");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
+                    if (cell->quadNode.LConfidence <=0) {
+                        //Set neighbors
+                        cell->add_occupied_neighbors(box.size);
+                    } else {
+                        //Remove neighbors; Make sure to remove neighbors if the cell is not occupied, or we will have pointer issues.
+                        cell->remove_neighbors();
+                    }
                     returnBox = box;
 
 
