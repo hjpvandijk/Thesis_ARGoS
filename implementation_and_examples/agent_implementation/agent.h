@@ -19,11 +19,12 @@
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
 #include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
 #include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
+#include "agent_implementation/agent_control/path_planning/PathFollower.h"
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
+//#define WALL_FOLLOWING_ENABLED
 #define PATH_PLANNING_ENABLED
 //#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
@@ -56,7 +57,11 @@ public:
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     FrontierEvaluator frontierEvaluator;
 #endif
+#ifdef PATH_PLANNING_ENABLED
     SimplePathPlanner pathPlanner;
+    PathFollower pathFollower;
+#endif
+
 
     double DISTANCE_SENSOR_NOISE_CM = 5.0;
     double ORIENTATION_NOISE_DEGREES = 5.0;

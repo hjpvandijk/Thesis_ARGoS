@@ -20,6 +20,8 @@ add_library(agent_implementation SHARED
         agent_control/path_planning/WallFollower.cpp
         agent_control/path_planning/SimplePathPlanner.h
         agent_control/path_planning/SimplePathPlanner.cpp
+        agent_control/path_planning/PathFollower.h
+        agent_control/path_planning/PathFollower.cpp
         utils/CustomComparator.h
         agent_control/path_planning/FrontierEvaluator.h
         agent_control/path_planning/FrontierEvaluator.cpp
