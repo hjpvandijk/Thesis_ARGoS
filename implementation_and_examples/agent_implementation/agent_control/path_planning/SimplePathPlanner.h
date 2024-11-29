@@ -26,7 +26,7 @@ private:
     std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> directionToTargetFree(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const;
     int directionToTargetFree(Agent* agent, Coordinate start, double box_size, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const;
 
-    static std::vector<std::pair<quadtree::Quadtree::Cell*, int>> elegible_edges(quadtree::Quadtree::Cell * cell, int edge_index) ;
+    static std::vector<std::pair<quadtree::Quadtree::Cell*, int>> elegible_edges(Agent* agent, quadtree::Quadtree::Cell * cell, int edge_index, double box_size) ;
 
     std::tuple<quadtree::Quadtree::Cell *, quadtree::Box, int, double> rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate end) const;
 

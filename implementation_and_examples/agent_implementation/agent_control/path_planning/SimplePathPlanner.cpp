@@ -52,7 +52,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
         return;
     }
     auto [begin_last_edge, end_last_edge] = *route.rbegin();
-    auto edges = elegible_edges(cell, edge_index);
+    auto edges = elegible_edges(agent, cell, edge_index, box_size);
 
     quadtree::Quadtree::Cell * bestCell = nullptr;
     int bestEdgeIndex = -1;
@@ -199,19 +199,22 @@ int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, dou
 }
 
 
-std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegible_edges(quadtree::Quadtree::Cell * cell, int edge_index) {
+ std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegible_edges(Agent* agent, quadtree::Quadtree::Cell * cell, int edge_index, double box_size) {
     std::vector<std::pair<quadtree::Quadtree::Cell*, int>> edges;
     int opposite_edge_index = edge_index < 2 ? edge_index + 2 : edge_index - 2;
 
-    edges.emplace_back(cell, (edge_index+1)%4);
-    edges.emplace_back(cell, (edge_index+3)%4);
+//    bool edge1_in_list = true;
+//    bool edge2_in_list = true;
+//
+//    edges.emplace_back(cell, (edge_index+1)%4);
+//    edges.emplace_back(cell, (edge_index+3)%4);
 
     for (int i = 0; i < 4; i++) {
         if (cell->neighbors.at(i) != nullptr) {
-            auto index = std::find(edges.begin(), edges.end(), std::pair{cell, i});
-            if (index != edges.end()) {
-                edges.erase(index);
-            }
+//            auto index = std::find(edges.begin(), edges.end(), std::pair{cell, i});
+//            if (index != edges.end()) {
+//                edges.erase(index);
+//            }
             if (i != edge_index && i != opposite_edge_index) {
                 if (cell->neighbors.at(i)->neighbors.at(edge_index) != nullptr) {
                     auto opposite_i = i < 2 ? i + 2 : i - 2;
@@ -220,8 +223,46 @@ std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegib
                     edges.emplace_back(cell->neighbors.at(i), edge_index);
                 }
             }
+        } else {
+            if (i != edge_index && i != opposite_edge_index) {
+                //If there is not an occupied cell diagonally from this cell, we can add this edge
+
+                auto x_factor = -1;
+                auto y_factor = -1;
+
+                if(edge_index == 0){
+                    x_factor = -1;
+                    if (i == 1) y_factor = 1;
+                    if (i == 3 ) y_factor = -1;
+                } else if (edge_index == 1){
+                    y_factor = 1;
+                    if (i == 0) x_factor = -1;
+                    if (i == 2) x_factor = 1;
+                } else if (edge_index == 2){
+                    x_factor = 1;
+                    if (i == 1) y_factor = 1;
+                    if (i == 3) y_factor = -1;
+                } else if (edge_index == 3){
+                    y_factor = -1;
+                    if (i == 0) x_factor = -1;
+                    if (i == 2) x_factor = 1;
+                }
+
+                auto diagonal_cell = Coordinate{cell->quadNode.coordinate.x + box_size*x_factor, cell->quadNode.coordinate.y + box_size*y_factor};
+                auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(diagonal_cell);
+
+                //If we haven't discovered the cell yet, or the cell is not occupied, we can add the edge
+                if (cell_and_box.first == nullptr || cell_and_box.first->quadNode.occupancy != quadtree::Occupancy::OCCUPIED) {
+                    edges.emplace_back(cell, i);
+                } else { //Add edge on that cell
+                    auto opposite_i = i < 2 ? i + 2 : i - 2;
+                    edges.emplace_back(cell_and_box.first, opposite_i);
+                }
+            }
         }
     }
+
+
     return edges;
 }
 
