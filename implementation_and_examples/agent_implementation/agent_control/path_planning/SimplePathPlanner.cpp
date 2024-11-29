@@ -91,6 +91,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
 
     if (bestCell != nullptr) {
         //If the direction from the agent to the end of the edge is free, don't add the edge to the route, as the we can go directly to the next edge
+        //TODO: This is not working as intended, it breaks the revisit check, resulting in an endless loop. BUt it is useful for route optimization
 //        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route)) {
 //////        }
 //////            assert(route.size() >= 2);
