@@ -37,15 +37,21 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
 
 void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
     //If the direction to the target is free from the cell, return
-    if (directionToTargetFree(agent, cell, box_size, edge_index, target, route)) {
+    auto [direction_free, intersection_cell, intersection_edge_index, intersection_edge_coordinate] = directionToTargetFree(agent, cell, box_size, edge_index, target, route);
+    if (direction_free > 0) { //If the direction is free (to some extent)
         //Delete the last full edge, and with a line to the middle of the last edge
-        auto [begin_last_edge, end_last_edge] = *route.rbegin();
-        auto edge_middle = Coordinate{(begin_last_edge.x + end_last_edge.x) / 2, (begin_last_edge.y + end_last_edge.y) / 2};
-        route.erase(route.end() - 1);
-
-        route.emplace_back(begin_last_edge, edge_middle);
+//        auto [begin_last_edge, end_last_edge] = *route.rbegin();
+//        auto edge_middle = Coordinate{(begin_last_edge.x + end_last_edge.x) / 2, (begin_last_edge.y + end_last_edge.y) / 2};
+//        route.erase(route.end() - 1);
+//
+//        route.emplace_back(begin_last_edge, edge_middle);
+        if (direction_free == 1) { //We are hitting an edge not in route yet, continue exploring that edge
+//            route.emplace_back(edge_middle, intersection_edge_coordinate);
+            getWallFollowingRoute(agent, intersection_cell, box_size, intersection_edge_index, target, route);
+        }
         return;
     }
+    auto [begin_last_edge, end_last_edge] = *route.rbegin();
     auto edges = elegible_edges(cell, edge_index);
 
     quadtree::Quadtree::Cell * bestCell = nullptr;
@@ -59,36 +65,60 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
         auto cBoxTopLeft = Coordinate{c->quadNode.coordinate.x - box_size /2, c->quadNode.coordinate.y + box_size / 2};
         auto cBox = quadtree::Box(cBoxTopLeft, box_size);
         auto [start_edge, end_edge] = getEdgeCoordinates(cBox, e);
-        auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
+        if (start_edge == end_last_edge || end_edge == end_last_edge) { //Only use the edge that is connected to the point we are at (end point of last edge)
+            auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
 
-        auto cell_to_edge_distance = sqrt(pow(edge_middle.x - agent->position.x, 2) + pow(edge_middle.y - agent->position.y, 2));
-        auto [begin_last_edge, end_last_edge] = *route.rbegin();
-        //If the end of the last edge is not the same as the start of the current edge, flip the edge, to keep the order correct
-        if(end_last_edge == end_edge){
-            //Flip start and end
-            std::swap(start_edge, end_edge);
-        }
+            auto cell_to_edge_distance = sqrt(
+                    pow(edge_middle.x - agent->position.x, 2) + pow(edge_middle.y - agent->position.y, 2));
+            //If the end of the last edge is not the same as the start of the current edge, flip the edge, to keep the order correct
+            if (end_last_edge == end_edge) {
+                //Flip start and end
+                std::swap(start_edge, end_edge);
+            }
 
-        //If the edge (either way) is not already in the route, and the distance to the edge is the largest, save the cell and edge
-        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) == route.end() &&
-            std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) == route.end() &&
-            cell_to_edge_distance > max_distance) {
-            bestCell = c;
-            bestEdgeIndex = e;
-            bestEdgeStart = start_edge;
-            bestEdgeEnd = end_edge;
-            max_distance = cell_to_edge_distance;
+            //If the edge (either way) is not already in the route, and the distance to the edge is the largest, save the cell and edge
+            if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) == route.end() &&
+                std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) == route.end() &&
+                cell_to_edge_distance > max_distance) {
+                bestCell = c;
+                bestEdgeIndex = e;
+                bestEdgeStart = start_edge;
+                bestEdgeEnd = end_edge;
+                max_distance = cell_to_edge_distance;
+            }
         }
     }
 
     if (bestCell != nullptr) {
+        //If the direction from the agent to the end of the edge is free, don't add the edge to the route, as the we can go directly to the next edge
+//        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route)) {
+//////        }
+//////            assert(route.size() >= 2);
+//////        }
+//////            route.erase(route.begin() + 1, route.end());; //Delete all except the first one
+//            route.clear();
+//            route.emplace_back(agent->position, bestEdgeStart);
+//        }
         route.emplace_back(bestEdgeStart, bestEdgeEnd);
         getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, route);
     }
 
 }
 
-bool SimplePathPlanner::directionToTargetFree(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const{
+/**
+ * Checks if the line from the agent to the target is free from obstacles
+ * If it is completely free, return 2
+ * If it is free, for at least box_size/2, return 1, and the cell and edge information
+ * If it is not free, return 0
+ * @param agent
+ * @param cell
+ * @param box_size
+ * @param edge_index
+ * @param target
+ * @param route
+ * @return
+ */
+std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::directionToTargetFree(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const{
     Coordinate start = cell->quadNode.coordinate;
 
     //Get the middle of the edge
@@ -102,26 +132,79 @@ bool SimplePathPlanner::directionToTargetFree(Agent* agent, quadtree::Quadtree::
 
     if (intersection_cell != nullptr) {
         if (intersection_cell == cell)
-            return false; //If we intersect the same cell, the line is going through the cell, so the direction is not free
+            return {0, nullptr, -1, Coordinate{0,0}}; //If we intersect the same cell, the line is going through the cell, so the direction is not free
 
-        auto [start_edge, end_edge] = getEdgeCoordinates(intersection_box, intersection_edge);
-        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) ==
-            route.end()) { //Can't go back to the same edge
-            return false;
+        auto [start_edge_intersection, end_edge_intersection] = getEdgeCoordinates(intersection_box, intersection_edge);
+        auto mid_edge_intersection = Coordinate{(start_edge_intersection.x + end_edge_intersection.x) / 2, (start_edge_intersection.y + end_edge_intersection.y) / 2};
+        if (std::find(route.begin(), route.end(), std::pair{start_edge_intersection, end_edge_intersection}) !=
+            route.end() ||
+            std::find(route.begin(), route.end(), std::pair{end_edge_intersection, start_edge_intersection}) !=
+            route.end() ||
+                std::find(route.begin(), route.end(), std::pair{mid_edge_intersection, start_edge_intersection}) !=
+                route.end() ||
+                std::find(route.begin(), route.end(), std::pair{mid_edge_intersection, end_edge_intersection}) !=
+                route.end() ) { //Can't go back to edge already in route
+            return {0, nullptr, -1, Coordinate{0,0}};
         }
-        if (distance_to_intersection > box_size / 2) return true;
+        if (distance_to_intersection > box_size / 2){
+            auto [begin_last_edge, end_last_edge] = *route.rbegin();
+            auto mid_last_edge = Coordinate{(begin_last_edge.x + end_last_edge.x) / 2, (begin_last_edge.y + end_last_edge.y) / 2};
+            route.erase(route.end() - 1);
+
+            route.emplace_back(begin_last_edge, mid_last_edge);
+
+            route.emplace_back(mid_last_edge, mid_edge_intersection);
+
+            auto distance_to_start = sqrt(pow(start_edge_intersection.x - agent->position.x, 2) + pow(start_edge_intersection.y - agent->position.y, 2));
+            auto distance_to_end = sqrt(pow(end_edge_intersection.x - agent->position.x, 2) + pow(end_edge_intersection.y - agent->position.y, 2));
+            if (distance_to_start >= distance_to_end) {
+                route.emplace_back(mid_edge_intersection, start_edge_intersection);
+            } else {
+                route.emplace_back(mid_edge_intersection, end_edge_intersection);
+            }
+            return {1, intersection_cell, intersection_edge, mid_edge_intersection}; //The intersection is far enough away to go to the edge
+        }
     }
-    return true; //No intersection, so the direction is free
+    auto [begin_last_edge, end_last_edge] = *route.rbegin();
+    auto edge_middle = Coordinate{(begin_last_edge.x + end_last_edge.x) / 2, (begin_last_edge.y + end_last_edge.y) / 2};
+    route.erase(route.end() - 1);
+
+    route.emplace_back(begin_last_edge, edge_middle);
+    return {2, nullptr, -1, Coordinate{0,0}}; //No intersection, so the direction is free
+
+}
+
+int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, double box_size, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const{
+
+    //Find the intersection with the quadtree
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
+
+    if (intersection_cell != nullptr) {
+        auto [start_edge, end_edge] = getEdgeCoordinates(intersection_box, intersection_edge);
+        auto mid_edge = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
+        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) !=
+            route.end() ||
+            std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) !=
+            route.end() ||
+            std::find(route.begin(), route.end(), std::pair{mid_edge, start_edge}) !=
+            route.end() ||
+            std::find(route.begin(), route.end(), std::pair{mid_edge, end_edge}) !=
+            route.end()) { //Can't go back to edge already in route
+            return 0;
+        }
+        if (distance_to_intersection > box_size / 2) return 1;
+    }
+    return 2; //No intersection, so the direction is free
 
 }
 
 
-std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegible_edges(quadtree::Quadtree::Cell * cell, int edge_index) const{
+std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegible_edges(quadtree::Quadtree::Cell * cell, int edge_index) {
     std::vector<std::pair<quadtree::Quadtree::Cell*, int>> edges;
     int opposite_edge_index = edge_index < 2 ? edge_index + 2 : edge_index - 2;
 
-    edges.push_back({cell, (edge_index+1)%4});
-    edges.push_back({cell, (edge_index+3)%4});
+    edges.emplace_back(cell, (edge_index+1)%4);
+    edges.emplace_back(cell, (edge_index+3)%4);
 
     for (int i = 0; i < 4; i++) {
         if (cell->neighbors.at(i) != nullptr) {
@@ -132,9 +215,9 @@ std::vector<std::pair<quadtree::Quadtree::Cell*, int>> SimplePathPlanner::elegib
             if (i != edge_index && i != opposite_edge_index) {
                 if (cell->neighbors.at(i)->neighbors.at(edge_index) != nullptr) {
                     auto opposite_i = i < 2 ? i + 2 : i - 2;
-                    edges.push_back({cell->neighbors.at(i)->neighbors.at(edge_index), opposite_i});
+                    edges.emplace_back(cell->neighbors.at(i)->neighbors.at(edge_index), opposite_i);
                 } else {
-                    edges.push_back({cell->neighbors.at(i), edge_index});
+                    edges.emplace_back(cell->neighbors.at(i), edge_index);
                 }
             }
         }

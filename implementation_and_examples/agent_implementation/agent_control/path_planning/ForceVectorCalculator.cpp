@@ -473,11 +473,15 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 #endif
 
 
+
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
 
 #ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
     agent->wallFollower.wallFollowing(agent, freeAngles, &closestFreeAngle, &closestFreeAngleRadians, relativeObjectAvoidanceAngle, targetAngle);
+#endif
+#ifdef PATH_PLANNING_ENABLED
+    agent->pathFollower.followPath(agent, freeAngles, relativeObjectAvoidanceAngle, targetAngle);
 #endif
     return true;
 
