@@ -7,7 +7,8 @@
 
 #include "coordinate.h"
 #include "radio.h"
-#include "Quadtree.h"
+#include "PheromoneMatrix.h"
+//#include "Quadtree.h"
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
@@ -100,7 +101,12 @@ public:
     std::vector<std::string> getMessages();
 
 
-    std::unique_ptr<quadtree::Quadtree> quadtree;
+//    std::unique_ptr<quadtree::Quadtree> quadtree;
+    std::unique_ptr<PheromoneMatrix> coverageMatrix;
+    std::unique_ptr<PheromoneMatrix> obstacleMatrix;
+
+    double COVERAGE_MATRIX_RESOLUTION = 0.2;
+    double OBSTACLE_MATRIX_RESOLUTION = 0.2;
 
 
     double PROXIMITY_RANGE = 2.0;
@@ -139,8 +145,8 @@ public:
     double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
 
-    std::vector<quadtree::Box> current_frontiers;
-    std::vector<std::vector<quadtree::Box>> current_frontier_regions;
+    std::vector<Coordinate> current_frontiers;
+    std::vector<std::vector<Coordinate>> current_frontier_regions;
 
 private:
     void checkForObstacles();

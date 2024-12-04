@@ -8,6 +8,8 @@
 #include "agent.h"
 #include <random>
 #include <utility>
+#include <unordered_map>
+#include <queue>
 
 
 Agent::Agent(std::string id) {
@@ -19,8 +21,10 @@ Agent::Agent(std::string id) {
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
-    auto box = quadtree::Box(-5, 5, 10);
-    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
+//    auto box = quadtree::Box(-5, 5, 10);
+//    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
+    this->coverageMatrix = std::make_unique<PheromoneMatrix>(10, 10, COVERAGE_MATRIX_RESOLUTION);
+    this->obstacleMatrix = std::make_unique<PheromoneMatrix>(10, 10, OBSTACLE_MATRIX_RESOLUTION);
 }
 
 
@@ -99,13 +103,14 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) c
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->coverageMatrix->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
+//        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
+        this->coverageMatrix->update(x, y, elapsed_ticks/ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -116,7 +121,8 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) c
  * @param objectCoordinate
  */
 void Agent::addObjectLocation(Coordinate objectCoordinate) const {
-    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+//    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+    this->obstacleMatrix->update(objectCoordinate, elapsed_ticks/ticks_per_second);
 }
 
 /**
@@ -144,7 +150,7 @@ void Agent::checkForObstacles() {
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
-                if (objectToAgent.Length() <= this->quadtree->getSmallestBoxSize()) {
+                if (objectToAgent.Length() <= this->coverageMatrix->getResolution()) {
                     close_to_other_agent = true;
                 }
             }
@@ -173,10 +179,12 @@ void Agent::checkForObstacles() {
 bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
 
     //Get occupied boxes within range
-    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position,
-                                                                                  OBJECT_AVOIDANCE_RADIUS * 2,
-                                                                                  this->elapsed_ticks /
-                                                                                  this->ticks_per_second);
+//    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position,
+//                                                                                  OBJECT_AVOIDANCE_RADIUS * 2,
+//                                                                                  this->elapsed_ticks /
+//                                                                                  this->ticks_per_second);
+
+
 
     std::set<argos::CDegrees> freeAngles = {};
     double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
@@ -188,67 +196,74 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
     }
 
     //For each occupied box, find the angles that are blocked relative to the agent
-    for (auto box: occupiedBoxes) {
+    for (int x =0; x<this->obstacleMatrix->getWidth(); x++){
+        for (int y = 0; y<this->obstacleMatrix->getHeight(); y++) {
+
+            auto cellValue = this->obstacleMatrix->getByIndex(x, y, elapsed_ticks / ticks_per_second);
+
+            if (cellValue == 0) continue;
+
+            Coordinate cellCenter = this->obstacleMatrix->getRealCoordinateFromIndex(x, y);
+
+            argos::CVector2 OC = argos::CVector2(cellCenter.x - this->position.x,
+                                                 cellCenter.y - this->position.y);
+            argos::CRadians Bq = argos::ASin(
+                    std::min(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
+            argos::CRadians Eta_q = OC.Angle();
+            if (AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS > OC.Length())
+                argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << AGENT_SAFETY_RADIUS
+                               << " + " << OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+
+            argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
+            argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());
+
+            if (maxAngle < minAngle) {
+                argos::CDegrees temp = minAngle;
+                minAngle = maxAngle;
+                maxAngle = temp;
+            }
 
 
-        argos::CVector2 OC = argos::CVector2(box.getCenter().x - this->position.x,
-                                             box.getCenter().y - this->position.y);
-        argos::CRadians Bq = argos::ASin(
-                std::min(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
-        argos::CRadians Eta_q = OC.Angle();
-        if (AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS > OC.Length())
-            argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << AGENT_SAFETY_RADIUS
-                           << " + " << OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+            //Round to multiples of 360/ANGLE_INTERVAL_STEPS
+            double minAngleVal = minAngle.GetValue();
+            double intervalDirectionMin = (minAngleVal < 0) ? -angleInterval : angleInterval;
+            //
+            auto minRoundedAngle1 = (int) (minAngleVal / angleInterval) * angleInterval;
+            auto minRoundedAngle2 = minRoundedAngle1 + intervalDirectionMin;
 
-        argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
-        argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());
+            auto roundedMinAngle = argos::CDegrees(
+                    (abs(minAngleVal - minRoundedAngle1) >= abs(minRoundedAngle2 - minAngleVal)) ? minRoundedAngle2
+                                                                                                 : minRoundedAngle1);
 
-        if (maxAngle < minAngle) {
-            argos::CDegrees temp = minAngle;
-            minAngle = maxAngle;
-            maxAngle = temp;
-        }
+            double maxAngleVal = maxAngle.GetValue();
+            double intervalDirectionMax = (maxAngleVal < 0) ? -angleInterval : angleInterval;
 
+            auto maxRoundedAngle1 = (int) (maxAngleVal / angleInterval) * angleInterval;
+            auto maxRoundedAngle2 = maxRoundedAngle1 + intervalDirectionMax;
 
-        //Round to multiples of 360/ANGLE_INTERVAL_STEPS
-        double minAngleVal = minAngle.GetValue();
-        double intervalDirectionMin = (minAngleVal < 0) ? -angleInterval : angleInterval;
-//
-        auto minRoundedAngle1 = (int) (minAngleVal / angleInterval) * angleInterval;
-        auto minRoundedAngle2 = minRoundedAngle1 + intervalDirectionMin;
+            auto roundedMaxAngle = argos::CDegrees(
+                    (abs(maxAngleVal - maxRoundedAngle1) >= abs(maxRoundedAngle2 - maxAngleVal)) ? maxRoundedAngle2
+                                                                                                 : maxRoundedAngle1);
 
-        auto roundedMinAngle = argos::CDegrees(
-                (abs(minAngleVal - minRoundedAngle1) >= abs(minRoundedAngle2 - minAngleVal)) ? minRoundedAngle2
-                                                                                             : minRoundedAngle1);
+            //Block all angles within range
+            for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
+                auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
 
-        double maxAngleVal = maxAngle.GetValue();
-        double intervalDirectionMax = (maxAngleVal < 0) ? -angleInterval : angleInterval;
+                if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) &&
+                    NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
+                    if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
+                        freeAngles.erase(angle);
+                    }
 
-        auto maxRoundedAngle1 = (int) (maxAngleVal / angleInterval) * angleInterval;
-        auto maxRoundedAngle2 = maxRoundedAngle1 + intervalDirectionMax;
+                } else if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) &&
+                           NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) <= argos::CRadians(0)) {
 
-        auto roundedMaxAngle = argos::CDegrees(
-                (abs(maxAngleVal - maxRoundedAngle1) >= abs(maxRoundedAngle2 - maxAngleVal)) ? maxRoundedAngle2
-                                                                                             : maxRoundedAngle1);
-
-        //Block all angles within range
-        for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
-            auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
-
-            if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) &&
-                NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
-                if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
-                    freeAngles.erase(angle);
+                    if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
+                        freeAngles.erase(angle);
+                    }
+                } else {
+                    argos::LOGERR << "Error: Eta_q not within range" << std::endl;
                 }
-
-            } else if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) &&
-                       NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) <= argos::CRadians(0)) {
-
-                if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
-                    freeAngles.erase(angle);
-                }
-            } else {
-                argos::LOGERR << "Error: Eta_q not within range" << std::endl;
             }
         }
 
@@ -405,79 +420,52 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
     return alignmentVector;
 }
 
-// Union-Find (Disjoint-Set) data structure
-class UnionFind {
-public:
-    void add(int x) {
-        if (parent.find(x) == parent.end()) {
-            parent[x] = x;
-            rank[x] = 0;
-        }
-    }
-
-    int find(int x) {
-        if (parent[x] != x) {
-            parent[x] = find(parent[x]);
-        }
-        return parent[x];
-    }
-
-    void unionSets(int x, int y) {
-        int rootX = find(x);
-        int rootY = find(y);
-        if (rootX != rootY) {
-            if (rank[rootX] > rank[rootY]) {
-                parent[rootY] = rootX;
-            } else if (rank[rootX] < rank[rootY]) {
-                parent[rootX] = rootY;
-            } else {
-                parent[rootY] = rootX;
-                rank[rootX]++;
-            }
-        }
-    }
+class FrontierMerger {
 
 private:
-    std::unordered_map<int, int> parent;
-    std::unordered_map<int, int> rank;
-};
+    // Directions for adjacency (up, down, left, right)
+    const std::vector<std::pair<int, int>> directions = {{-1, 0},
+                                                         {1,  0},
+                                                         {0,  -1},
+                                                         {0,  1}};
 
-void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
-                            std::vector<std::vector<quadtree::Box>> &frontierRegions) {
-    UnionFind uf;
-    std::unordered_map<int, quadtree::Box> boxMap;
-
-    // Initialize union-find structure
-    for (int i = 0; i < frontiers.size(); ++i) {
-        uf.add(i);
-        boxMap[i] = frontiers[i];
+// Check if a cell is within bounds
+    bool isValid(int x, int y, int X, int Y, const std::set<std::pair<int, int>> &cells,
+                 std::set<std::pair<int, int>> &visited) {
+        return x >= 0 && x < X && y >= 0 && y < Y && cells.count({x, y}) && !visited.count({x, y});
     }
 
-    // Check adjacency and union sets
-    for (int i = 0; i < frontiers.size(); ++i) {
-        for (int j = i + 1; j < frontiers.size(); ++j) {
-            Coordinate centerI = frontiers[i].getCenter();
-            Coordinate centerJ = frontiers[j].getCenter();
-            double distance = sqrt(pow(centerI.x - centerJ.x, 2) + pow(centerI.y - centerJ.y, 2));
-            double threshold = sqrt(2 * pow(frontiers[i].getSize() * 0.5 + frontiers[j].getSize() * 0.5, 2));
-            if (distance <= threshold) {
-                uf.unionSets(i, j);
+public:
+// Perform BFS to find a connected group
+    std::vector<std::pair<int, int>> bfs_group(
+            int startX, int startY, int X, int Y,
+            const std::set<std::pair<int, int>> &cells,
+            std::set<std::pair<int, int>> &visited) {
+        std::vector<std::pair<int, int>> group;
+        std::queue<std::pair<int, int>> q;
+
+        q.push({startX, startY});
+        visited.insert({startX, startY});
+
+        while (!q.empty()) {
+            auto [x, y] = q.front();
+            q.pop();
+            group.push_back({x, y});
+
+            for (const auto &dir: directions) {
+                int nx = x + dir.first;
+                int ny = y + dir.second;
+
+                if (isValid(nx, ny, X, Y, cells, visited)) {
+                    q.push({nx, ny});
+                    visited.insert({nx, ny});
+                }
             }
         }
-    }
 
-    // Group boxes by their root set representative
-    std::unordered_map<int, std::vector<quadtree::Box>> regions;
-    for (int i = 0; i < frontiers.size(); ++i) {
-        int root = uf.find(i);
-        regions[root].push_back(frontiers[i]);
+        return group;
     }
-
-    // Convert to the required format
-    for (const auto &region: regions) {
-        frontierRegions.push_back(region.second);
-    }
-}
+};
 
 argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //According to Dynamic frontier-led swarming:
@@ -496,45 +484,30 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_DIAMETER,
-                                                                              this->elapsed_ticks /
-                                                                              this->ticks_per_second);
-    current_frontiers = frontiers;
+//    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_DIAMETER,
+//                                                                              this->elapsed_ticks /
+//                                                                              this->ticks_per_second);
+    const std::vector<std::pair<int, int>> frontiers = this->coverageMatrix->getFrontierCells(elapsed_ticks / ticks_per_second);
+//    current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
-    std::vector<std::vector<quadtree::Box>> frontierRegions = {};
+//    std::vector<std::vector<Coordinate>> frontierRegions = {};
 
-    mergeAdjacentFrontiers(frontiers, frontierRegions);
+    std::vector<std::vector<std::pair<int, int>>> frontierRegions = {};
+    std::set<std::pair<int, int>> visited = {};
 
-// Iterate over each frontier box to merge adjacent ones into regions
-    for (auto frontier: frontiers) {
-        bool added = false; // Flag to check if the current frontier has been added to a region
+    std::set<std::pair<int, int>> frontierset(frontiers.begin(), frontiers.end());
 
-        // Iterate over existing regions to find a suitable one for the current frontier
-        for (auto &region: frontierRegions) {
-            for (auto box: region) {
-                // Calculate the center coordinates of the current box and the frontier
-                Coordinate boxCenter = box.getCenter();
-                Coordinate frontierCenter = frontier.getCenter();
-
-                // Check if the distance between the box and the frontier is less than or equal to
-                // the average diagonal of the two boxes (ensuring adjacency)
-                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(frontier.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
-                    region.push_back(frontier); // Add the frontier to the current region
-                    added = true; // Mark the frontier as added
-                    break; // Exit the loop since the frontier has been added to a region
-                }
-            }
-        }
-
-        // If the frontier was not added to any existing region, create a new region with it
-        if (!added) {
-            frontierRegions.push_back({frontier});
+    FrontierMerger frontierMerger;
+    for (const auto& cell : frontiers) {
+        if (!visited.count(cell)) {
+            // Start BFS for this cell
+            std::vector<std::pair<int, int>> group = frontierMerger.bfs_group(cell.first, cell.second, this->coverageMatrix->getWidth(), this->coverageMatrix->getHeight(), frontierset, visited);
+            frontierRegions.push_back(group);
         }
     }
 
-    current_frontier_regions = frontierRegions;
+//    current_frontier_regions = frontierRegions;
 
     //Now we have all frontier cells merged into frontier regions
     //Find F* by using the formula above
@@ -542,7 +515,6 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //Ψ_S = FRONTIER_SIZE_WEIGHT
 
     //Initialize variables to store the best frontier region and its score
-    std::vector<quadtree::Box> bestFrontierRegion = {};
     Coordinate bestFrontierRegionCenter = {0, 0};
     double bestFrontierScore = std::numeric_limits<double>::max();
 
@@ -551,17 +523,13 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         //Calculate the average position of the frontier region
         double sumX = 0;
         double sumY = 0;
-        double totalNumberOfCellsInRegion = 0;
-        for (auto box: region) {
-            double cellsInBox = box.getSize() / quadtree->getSmallestBoxSize();
-            assert(cellsInBox == 1);
-            sumX += box.getCenter().x *
-                    cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
-            sumY += box.getCenter().y * cellsInBox;
-            totalNumberOfCellsInRegion += cellsInBox;
+        for (auto cellIndex: region) {
+            auto realCellCoordinate = this->coverageMatrix->getRealCoordinateFromIndex(cellIndex.first, cellIndex.second);
+            sumX += realCellCoordinate.x;
+            sumY += realCellCoordinate.y;
         }
-        double frontierRegionX = sumX / totalNumberOfCellsInRegion;
-        double frontierRegionY = sumY / totalNumberOfCellsInRegion;
+        double frontierRegionX = sumX / region.size();
+        double frontierRegionY = sumY / region.size();
 
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
@@ -572,7 +540,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 //        }
 
         //Calculate the score of the frontier region
-        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
+        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * region.size();
 
         //If the score is lower than the best score, update the best score and best frontier region
         if (score < bestFrontierScore) {
@@ -676,7 +644,7 @@ void Agent::calculateNextPosition() {
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::vector<std::string> quadTreeToStrings = {};
-    this->quadtree->toStringVector(&quadTreeToStrings);
+//    this->quadtree->toStringVector(&quadTreeToStrings);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
     }
@@ -768,34 +736,34 @@ Coordinate coordinateFromString(std::string str) {
     return newCoordinate;
 }
 
-/**
- * Get a QuadNode from a string
- * @param str
- * @return
- */
-quadtree::QuadNode quadNodeFromString(std::string str) {
-    std::string visitedDelimiter = "@";
-    std::string occDelimiter = ":";
-    size_t visitedPos = 0;
-    size_t occPos = 0;
-    std::string coordinate;
-    std::string occ;
-    std::string visited;
-    occPos = str.find(occDelimiter);
-    coordinate = str.substr(0, occPos);
-    quadtree::QuadNode newQuadNode{};
-    newQuadNode.coordinate = coordinateFromString(coordinate);
-    str.erase(0, occPos + occDelimiter.length());
-    //Now we have the occupancy and ticks
-
-    visitedPos = str.find(visitedDelimiter);
-    occ = str.substr(0, visitedPos);
-    newQuadNode.occupancy = static_cast<quadtree::Occupancy>(std::stoi(occ));
-    str.erase(0, visitedPos + visitedDelimiter.length());
-    visited = str;
-    newQuadNode.visitedAtS = std::stod(visited);
-    return newQuadNode;
-}
+///**
+// * Get a QuadNode from a string
+// * @param str
+// * @return
+// */
+//quadtree::QuadNode quadNodeFromString(std::string str) {
+//    std::string visitedDelimiter = "@";
+//    std::string occDelimiter = ":";
+//    size_t visitedPos = 0;
+//    size_t occPos = 0;
+//    std::string coordinate;
+//    std::string occ;
+//    std::string visited;
+//    occPos = str.find(occDelimiter);
+//    coordinate = str.substr(0, occPos);
+//    quadtree::QuadNode newQuadNode{};
+//    newQuadNode.coordinate = coordinateFromString(coordinate);
+//    str.erase(0, occPos + occDelimiter.length());
+//    //Now we have the occupancy and ticks
+//
+//    visitedPos = str.find(visitedDelimiter);
+//    occ = str.substr(0, visitedPos);
+//    newQuadNode.occupancy = static_cast<quadtree::Occupancy>(std::stoi(occ));
+//    str.erase(0, visitedPos + visitedDelimiter.length());
+//    visited = str;
+//    newQuadNode.visitedAtS = std::stod(visited);
+//    return newQuadNode;
+//}
 
 
 argos::CVector2 vector2FromString(std::string str) {
@@ -827,9 +795,9 @@ void Agent::parseMessages() {
             std::stringstream ss(messageContent.substr(2));
             std::string chunk;
 
-            while (std::getline(ss, chunk, '|')) {
-                this->quadtree->add(quadNodeFromString(chunk));
-            }
+//            while (std::getline(ss, chunk, '|')) {
+//                this->quadtree->add(quadNodeFromString(chunk));
+//            }
 
         } else if (messageContent.at(0) == 'V') {
             std::string vectorString = messageContent.substr(2);

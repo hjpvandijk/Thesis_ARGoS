@@ -12,6 +12,8 @@ add_library(agent_implementation SHARED
         radio.cpp
         Quadtree.h
         Box.h
+        PheromoneMatrix.cpp
+        PheromoneMatrix.h
 )
 
 # Link directories (if you have specific libraries to link against)

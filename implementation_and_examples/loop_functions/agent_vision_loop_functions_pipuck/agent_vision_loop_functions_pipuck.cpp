@@ -25,22 +25,22 @@ std::chrono::time_point end = std::chrono::system_clock::now();
 
 
 
-/**
- * Get the coordinates in all occupied boxes of the quadtrees a given agent
- * @param pcFB
- * @param agent
- */
-void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
-    std::vector<quadtree::QuadNode> occupiedNodes = agent->quadtree->queryOccupied(agent->position,
-                                                                                   agent->PROXIMITY_RANGE * 2.0);
-
-    for (auto node: occupiedNodes) {
-        Coordinate nodePos = node.coordinate.FromOwnToArgos();
-        CVector3 pos = CVector3(nodePos.x, nodePos.y, 0.03f);
-        m_tObjectCoordinates[pcFB].push_back(pos);
-    }
-
-}
+///**
+// * Get the coordinates in all occupied boxes of the quadtrees a given agent
+// * @param pcFB
+// * @param agent
+// */
+//void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+//    std::vector<quadtree::QuadNode> occupiedNodes = agent->quadtree->queryOccupied(agent->position,
+//                                                                                   agent->PROXIMITY_RANGE * 2.0);
+//
+//    for (auto node: occupiedNodes) {
+//        Coordinate nodePos = node.coordinate.FromOwnToArgos();
+//        CVector3 pos = CVector3(nodePos.x, nodePos.y, 0.03f);
+//        m_tObjectCoordinates[pcFB].push_back(pos);
+//    }
+//
+//}
 
 /**
  * Get the coordinates of all other agents, received through messages
@@ -63,9 +63,15 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param agent
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
-    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
+//    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
+//    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
+    auto agentCoverageMatrix = agent->coverageMatrix->getMatrix();
+    auto agentObstacleMatrix = agent->obstacleMatrix->getMatrix();
 
-    m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
+    m_tCoverageMatrix[pcFB] = agentCoverageMatrix;
+    m_tObstacleMatrix[pcFB] = agentObstacleMatrix;
+
+//    m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
 }
 
 /****************************************/
@@ -100,10 +106,12 @@ void CAgentVisionLoopFunctions::Reset() {
     m_tOtherAgentCoordinates.clear();
     m_tAgentCoordinates.clear();
     m_tAgentBestFrontierCoordinate.clear();
-    m_tQuadTree.clear();
+//    m_tQuadTree.clear();
+    m_tCoverageMatrix.clear();
+    m_tObstacleMatrix.clear();
     m_tAgentElapsedTicks.clear();
-    m_tAgentFrontiers.clear();
-    m_tAgentFrontierRegions.clear();
+//    m_tAgentFrontiers.clear();
+//    m_tAgentFrontierRegions.clear();
 
 }
 
@@ -135,7 +143,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     std::chrono::duration<double> elapsed_seconds = end-start;
 
     argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
-              << std::endl;
+               << std::endl;
 
 //
     /* Get the map of all pi-pucks from the space */
@@ -145,10 +153,12 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tOtherAgentCoordinates.clear();
     m_tAgentCoordinates.clear();
     m_tAgentBestFrontierCoordinate.clear();
-    m_tQuadTree.clear();
+//    m_tQuadTree.clear();
+    m_tCoverageMatrix.clear();
+    m_tObstacleMatrix.clear();
     m_tAgentElapsedTicks.clear();
-    m_tAgentFrontiers.clear();
-    m_tAgentFrontierRegions.clear();
+//    m_tAgentFrontiers.clear();
+//    m_tAgentFrontierRegions.clear();
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
@@ -164,7 +174,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
 
 
-        findAndPushObjectCoordinates(pcFB, agent);
+//        findAndPushObjectCoordinates(pcFB, agent);
         findAndPushOtherAgentCoordinates(pcFB, agent);
 
         Coordinate pos = agent->position.FromOwnToArgos();
@@ -178,29 +188,68 @@ void CAgentVisionLoopFunctions::PostStep() {
 
     }
 
-    auto mBox = quadtree::Box(-5, 5, 10);
-    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
+//    auto mBox = quadtree::Box(-5, 5, 10);
+//    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
+//
+//    for (const auto & it : GetQuadTree()) {
+//        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it.second) {
+//            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
+//            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
+//            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+//
+//            quadtree::QuadNode node{};
+//            node.coordinate = box.getCenter();
+//            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
+//            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+//                continue;
+//            node.visitedAtS = visitedTimeS;
+//            combinedTree->add(node);
+//        }
+//
+////        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
+//    }
 
-    for (const auto & it : GetQuadTree()) {
-        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it.second) {
-            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+//    combinedCoverageMatrix = PheromoneMatrix(10, 10, 0.2);
 
-            quadtree::QuadNode node{};
-            node.coordinate = box.getCenter();
-            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-                continue;
-            node.visitedAtS = visitedTimeS;
-            combinedTree->add(node);
+    for (const auto& it : m_tCoverageMatrix) {
+//        double** coverageMatrix = it.second;
+//        int height = sizeof *coverageMatrix / sizeof coverageMatrix[0]; // rows
+//        int width = sizeof *coverageMatrix[0] / sizeof(double); // columns
+//        for (int i = 0; i < width; i++) {
+//            for (int j = 0; j < height; j++) {
+//                combinedCoverageMatrix.update(i, j, coverageMatrix[i][j]);
+//            }
+//        }
+        if(it.first->GetId() == "pipuck1"){
+            coverageMatrix = it.second;
+            coverageMatrixWidth = coverageMatrix.size();
+            coverageMatrixHeight = coverageMatrix[0].size(); // columns;
+            coverageMatrixResolution = 0.2;
         }
-
-//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
     }
-    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
 
-    combinedQuadTree = boxesAndOccupancyAndTicks;
+//    combinedObstacleMatrix = PheromoneMatrix(10, 10, 0.2);
+
+    for (const auto& it : m_tObstacleMatrix) {
+//        double** obstacleMatrix = it.second;
+//        int height = sizeof *obstacleMatrix / sizeof obstacleMatrix[0]; // rows
+//        int width = sizeof *obstacleMatrix[0] / sizeof(double); // columns
+//        for (int i = 0; i < width; i++) {
+//            for (int j = 0; j < height; j++) {
+//                combinedObstacleMatrix.update(i, j, obstacleMatrix[i][j]);
+//            }
+//        }
+        if(it.first->GetId() == "pipuck1"){
+            obstacleMatrix = it.second;
+            obstacleMatrixWidth = obstacleMatrix.size();
+            obstacleMatrixHeight = obstacleMatrix[0].size(); // columns;
+            obstacleMatrixResolution = 0.2;
+        }
+    }
+
+//    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
+
+//    combinedQuadTree = boxesAndOccupancyAndTicks;
 
     CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
     for(auto spawnObj: spawnableObjects) {
