@@ -52,6 +52,11 @@ void PheromoneMatrix::reset(Coordinate coordinate) {
     this->matrix[x_int][y_int] = -1;
 }
 
+void PheromoneMatrix::resetByIndex(int x, int y) {
+    //Reset the value of the matrix at the given coordinates
+    this->matrix[x][y] = -1;
+}
+
 //void PheromoneMatrix::update(double x, double y, double value) {
 //    //Update the value of the matrix at the given coordinates
 //    //Convert to matrix coordinates

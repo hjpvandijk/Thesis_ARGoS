@@ -876,7 +876,13 @@ void Agent::parseMessages() {
                     if (coverage) {
                         this->coverageMatrix->updateByIndex(i, j, std::stod(cellStr));
                     } else {
-                        this->obstacleMatrix->updateByIndex(i, j, std::stod(cellStr));
+                        auto value = std::stod(cellStr);
+                        this->obstacleMatrix->updateByIndex(i, j, value);
+                        //If we have an obstacle, reset the corresponding coverage matrix cell
+                        if (value != -1){
+                            auto realObstacleCoordinate = this->obstacleMatrix->getRealCoordinateFromIndex(i, j);
+                            this->coverageMatrix->reset(realObstacleCoordinate);
+                        }
                     }
                     j++;
                 }

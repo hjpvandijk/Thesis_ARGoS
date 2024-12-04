@@ -13,6 +13,7 @@ public:
     void update(Coordinate coordinate, double visitedTimeS);
     void updateByIndex(int x, int y, double visitedTimeS);
     void reset(Coordinate coordinate);
+    void resetByIndex(int x, int y);
     double get(double x, double y, double currentTimeS);
     double getByIndex(int x, int y, double currentTimeS);
     Coordinate getRealCoordinateFromIndex(int x, int y);
