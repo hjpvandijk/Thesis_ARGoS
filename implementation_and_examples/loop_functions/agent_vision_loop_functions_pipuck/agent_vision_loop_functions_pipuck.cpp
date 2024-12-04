@@ -112,6 +112,7 @@ void CAgentVisionLoopFunctions::Reset() {
     m_tAgentElapsedTicks.clear();
 //    m_tAgentFrontiers.clear();
     m_tAgentFrontierRegions.clear();
+    m_tAgentFreeAngles.clear();
 
 }
 
@@ -166,6 +167,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tAgentElapsedTicks.clear();
 //    m_tAgentFrontiers.clear();
     m_tAgentFrontierRegions.clear();
+    m_tAgentFreeAngles.clear();
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
@@ -199,6 +201,9 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFrontierRegions[pcFB].push_back(regionCoordinates);
         }
 
+        for(auto angle: agent->freeAnglesVisualization) {
+            m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
+        }
 
     }
 
@@ -264,6 +269,8 @@ void CAgentVisionLoopFunctions::PostStep() {
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
 
 //    combinedQuadTree = boxesAndOccupancyAndTicks;
+
+
 
 //    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
 //    for(auto spawnObj: spawnableObjects) {

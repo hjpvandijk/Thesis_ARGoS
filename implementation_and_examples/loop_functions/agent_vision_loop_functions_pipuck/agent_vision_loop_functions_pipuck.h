@@ -7,6 +7,7 @@
 
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
 //#include "agent_implementation/Quadtree.h"
+#include <set>
 using namespace argos;
 
 class CAgentVisionLoopFunctions : public CLoopFunctions {
@@ -27,6 +28,7 @@ public:
     std::map<CPiPuckEntity*, std::vector<std::vector<Coordinate>>> m_tAgentFrontierRegions;
 //    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
 //    PheromoneMatrix combinedCoverageMatrix;
+    std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
     std::vector<std::vector<double>> coverageMatrix;
     int coverageMatrixWidth;
     int coverageMatrixHeight;

@@ -12,7 +12,6 @@
 #include <queue>
 #include <array>
 
-
 Agent::Agent(std::string id) {
     this->id = std::move(id);
     this->position = {0.0, 0.0};
@@ -203,15 +202,31 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
         freeAngles.insert(angle);
     }
 
+    Coordinate min_real = Coordinate{this->position.x - OBJECT_AVOIDANCE_RADIUS, this->position.y - OBJECT_AVOIDANCE_RADIUS};
+    Coordinate max_real = Coordinate{this->position.x + OBJECT_AVOIDANCE_RADIUS, this->position.y + OBJECT_AVOIDANCE_RADIUS};
+//    int max_x_real = this->position.x + OBJECT_AVOIDANCE_RADIUS;
+//    int min_y_real = this->position.y - OBJECT_AVOIDANCE_RADIUS;
+//    int max_y_real = this->position.y + OBJECT_AVOIDANCE_RADIUS;
+
+    auto[min_x_index, min_y_index] = this->obstacleMatrix->getIndexFromRealCoordinate(min_real);
+    auto[max_x_index, max_y_index] = this->obstacleMatrix->getIndexFromRealCoordinate(max_real);
+
     //For each occupied box, find the angles that are blocked relative to the agent
-    for (int x =0; x<this->obstacleMatrix->getWidth(); x++){
-        for (int y = 0; y<this->obstacleMatrix->getHeight(); y++) {
+    //We only have to look in the area of the object avoidance radius
+    for (int x =min_x_index; x< std::min(this->obstacleMatrix->getWidth(), max_x_index); x++){
+        for (int y = min_y_index; y<std::min(this->obstacleMatrix->getHeight(), max_y_index); y++) {
+
+            Coordinate cellCenter = this->obstacleMatrix->getRealCoordinateFromIndex(x, y);
+            //If this cell is not within the object avoidance radius, skip it
+            if (std::sqrt(std::pow(cellCenter.x - this->position.x, 2) +
+                          std::pow(cellCenter.y - this->position.y, 2)) > OBJECT_AVOIDANCE_RADIUS) {
+                continue;
+            }
 
             auto cellValue = this->obstacleMatrix->getByIndex(x, y, elapsed_ticks / ticks_per_second);
 
             if (cellValue == 0) continue;
 
-            Coordinate cellCenter = this->obstacleMatrix->getRealCoordinateFromIndex(x, y);
 
             argos::CVector2 OC = argos::CVector2(cellCenter.x - this->position.x,
                                                  cellCenter.y - this->position.y);
@@ -277,6 +292,10 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     }
 
+    this->freeAnglesVisualization.clear();
+    for (auto freeAngle: freeAngles) {
+        this->freeAnglesVisualization.insert(freeAngle);
+    }
 
     if (freeAngles.empty()) return false;
 

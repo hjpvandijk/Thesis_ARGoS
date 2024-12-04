@@ -28,8 +28,8 @@ public:
     double getResolution() const { return this->resolution; }
     double getRealWidth() const { return this->width * this->resolution; }
     double getRealHeight() const { return this->height * this->resolution; }
-    double getWidth() const { return this->width; }
-    double getHeight() const { return this->height; }
+    int getWidth() const { return this->width; }
+    int getHeight() const { return this->height; }
     double calculatePheromone(double visitedTime, double currentTime) const;
     std::array<double, 9> MooreNeighbors(int x, int y, double currentTimeS);
 

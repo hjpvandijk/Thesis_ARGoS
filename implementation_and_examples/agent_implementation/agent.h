@@ -13,7 +13,7 @@
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
-
+#include <set>
 
 
 
@@ -147,6 +147,8 @@ public:
 
     std::vector<Coordinate> current_frontiers;
     std::vector<std::vector<std::pair<int,int>>> current_frontier_regions;
+
+    std::set<argos::CDegrees> freeAnglesVisualization;
 
 private:
     void checkForObstacles();
