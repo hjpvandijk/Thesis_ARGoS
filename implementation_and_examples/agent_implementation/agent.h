@@ -102,8 +102,8 @@ public:
 
 
 //    std::unique_ptr<quadtree::Quadtree> quadtree;
-    std::unique_ptr<PheromoneMatrix> coverageMatrix;
-    std::unique_ptr<PheromoneMatrix> obstacleMatrix;
+    std::unique_ptr<PheromoneMatrix> coverageMatrix; //Cells that contain pheromone > 0, are covered and obstacle free
+    std::unique_ptr<PheromoneMatrix> obstacleMatrix; //Cells that contain pheromone > 0, are covered and contain an obstacle
 
     double COVERAGE_MATRIX_RESOLUTION = 0.2;
     double OBSTACLE_MATRIX_RESOLUTION = 0.2;
@@ -158,6 +158,7 @@ private:
     argos::CVector2 calculateAgentAvoidanceVector();
     argos::CVector2 calculateAgentAlignmentVector();
     argos::CVector2 calculateUnexploredFrontierVector();
+    std::vector<std::pair<int, int>> getFrontierCells(double currentTimeS);
 
     std::vector<std::string> messages;
 

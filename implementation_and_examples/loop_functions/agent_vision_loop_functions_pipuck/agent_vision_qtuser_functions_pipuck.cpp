@@ -131,7 +131,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
                 CColor color = colors[i];
                 for (auto frontier: frontierRegion) {
                     Coordinate frontierCoordinateArgos = frontier.FromOwnToArgos();
-                    CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.04f);
+                    CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.05f);
 
                     DrawBox(frontierCoordinate, CQuaternion(),
                             CVector3(m_cAgVisLF.coverageMatrixResolution, m_cAgVisLF.coverageMatrixResolution, 0),

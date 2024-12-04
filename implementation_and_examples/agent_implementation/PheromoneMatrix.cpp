@@ -40,6 +40,13 @@ void PheromoneMatrix::update(Coordinate coordinate, double visitedTimeS) {
     this->matrix[x_int][y_int] = std::max(this->matrix[x_int][y_int], visitedTimeS);
 }
 
+void PheromoneMatrix::reset(Coordinate coordinate) {
+    //Reset the value of the matrix at the given coordinates
+    int x_int = int((coordinate.x - this->x_min) / this->resolution);
+    int y_int = int((coordinate.y - this->y_min)/ this->resolution);
+    this->matrix[x_int][y_int] = -1;
+}
+
 //void PheromoneMatrix::update(double x, double y, double value) {
 //    //Update the value of the matrix at the given coordinates
 //    //Convert to matrix coordinates
@@ -78,6 +85,16 @@ Coordinate PheromoneMatrix::getRealCoordinateFromIndex(int x, int y) {
     return {x_real + this->resolution/2, y_real + this->resolution/2};
 }
 
+std::pair<int, int> PheromoneMatrix::getIndexFromRealCoordinate(Coordinate coordinate) {
+    //Get the matrix coordinates from the real world coordinates
+
+    int x_int = int((coordinate.x - this->x_min) / this->resolution);
+    int y_int = int((coordinate.y - this->y_min)/ this->resolution);
+    return {x_int, y_int};
+}
+
+
+
 double PheromoneMatrix::calculatePheromone(double visitedTimeS, double currentTimeS) const {
     if (visitedTimeS == -1) {
         return 0;
@@ -91,38 +108,47 @@ double PheromoneMatrix::calculatePheromone(double visitedTimeS, double currentTi
 //1. Occupancy = explored, i.e. pheromone > 0
 //2. At least one neighbor is unexplored (i.e. pheromone == 0) using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
-std::vector<std::pair<int, int>> PheromoneMatrix::getFrontierCells(double currentTimeS){
-    std::vector<std::pair<int, int>> frontierCells;
-    for (int i = 0; i < this->width; i++) {
-        for (int j = 0; j < this->height; j++) {
-            if(this->matrix[i][j] > 0){ //Check if the cell is explored
-                //Check if at least one neighbor is unexplored
-                if (isMooreNeighborUnknown(i, j, currentTimeS)) {
-                    frontierCells.push_back({i, j});
-                }
-            }
-        }
-    }
-    return frontierCells;
-}
+//std::vector<std::pair<int, int>> PheromoneMatrix::getFrontierCells(double currentTimeS){
+//    std::vector<std::pair<int, int>> frontierCells;
+//    for (int i = 0; i < this->width; i++) {
+//        for (int j = 0; j < this->height; j++) {
+//            if(calculatePheromone(this->matrix[i][j], currentTimeS) > 0){ //Check if the cell is explored
+//                //Check if at least one neighbor is unexplored
+//                if (isMooreNeighbor0(i, j, currentTimeS)) {
+//                    frontierCells.push_back({i, j});
+//                }
+//            }
+//        }
+//    }
+//    return frontierCells;
+//}
 
-bool PheromoneMatrix::isMooreNeighborUnknown(int x, int y, double currentTimeS){
+std::array<double, 9> PheromoneMatrix::MooreNeighbors(int x, int y, double currentTimeS){
     //Check if at least one of the 8-connected moore neighboring quadnodes of a given cell is unexplored.
     //If the neighbor is outside the matrix, it is considered unknown
     //If the neighbor is inside the matrix and has a pheromone value of 0, it is considered unknown
     //If the neighbor is inside the matrix and has a pheromone value > 0, it is considered explored
+
+    std::array<double, 9> neighbors; //Index = (k+1) + 3*(l+1)
+
     for (int k = -1; k <= 1; k++) {
         for (int l = -1; l <= 1; l++) {
             //If neighbor (x+k, y+l) is inside the matrix
             if(x + k >= 0 && x + k < this->width && y + l >= 0 && y + l < this->height){
                 //If the neighbor has a pheromone value of 0, it is considered unknown
                 if(calculatePheromone(this->matrix[x + k][y + l], currentTimeS) == 0){
-                    return true;
+//                    return true;
+                    neighbors[(k + 1) + 3*(l + 1)] = 0;
+                } else {
+                    neighbors[(k + 1) + 3*(l + 1)] = 1;
                 }
             } else { //If the neighbor is outside the matrix, it is considered unknown
-                return true;
+//                return true;
+                neighbors[(k + 1) + 3*(l + 1)] = 0;
             }
         }
     }
-    return false;
+//    return false;
+    return neighbors;
+
 }

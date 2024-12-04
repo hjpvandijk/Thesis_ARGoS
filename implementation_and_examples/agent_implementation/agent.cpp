@@ -10,6 +10,7 @@
 #include <utility>
 #include <unordered_map>
 #include <queue>
+#include <array>
 
 
 Agent::Agent(std::string id) {
@@ -110,7 +111,12 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) c
 
     for (int s = 0; s < nSteps; s++) {
 //        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
+        //If the cell is occupied, don't set area as free
+        if (this->obstacleMatrix->get(x, y, elapsed_ticks/ticks_per_second) > 0) {
+            continue;
+        }
         this->coverageMatrix->update(x, y, elapsed_ticks/ticks_per_second);
+
         x += stepX;
         y += stepY;
     }
@@ -123,6 +129,8 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) c
 void Agent::addObjectLocation(Coordinate objectCoordinate) const {
 //    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
     this->obstacleMatrix->update(objectCoordinate, elapsed_ticks/ticks_per_second);
+    //Then set the same cell in the coverage matrix to -1
+    this->coverageMatrix->reset(objectCoordinate);
 }
 
 /**
@@ -467,6 +475,48 @@ public:
     }
 };
 
+//ONLY FOR COVERAGE MATRIX
+//A cell is a frontier iff:
+//1. Occupancy = explored, i.e. pheromone > 0
+//2. At least one neighbor is unexplored (i.e. pheromone == 0) using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
+
+//Global definition of grid occupancy:
+//0: unexplored
+//1: explored (and free)
+//2: obstacle
+
+//Global definition of frontier cell:
+//A cell is a frontier iff:
+//1. Occupancy  == 1
+//2. There is a 8 Moore neighbor, of which occupancy == 0
+
+std::vector<std::pair<int, int>> Agent::getFrontierCells(double currentTimeS){
+    std::vector<std::pair<int, int>> frontierCells;
+
+    for (int i = 0; i < this->coverageMatrix->getWidth(); i++) {
+        for (int j = 0; j < this->coverageMatrix->getHeight(); j++) {
+            if(this->coverageMatrix->getByIndex(i, j, currentTimeS) > 0){ //Check if the cell is explored
+                Coordinate realCoordinate = this->coverageMatrix->getRealCoordinateFromIndex(i, j);
+                auto [i_obstacle, j_obstacle] = this->obstacleMatrix->getIndexFromRealCoordinate(realCoordinate);
+                //Check if at least one neighbor is unexplored
+
+                std::array<double, 9> coverageMatrixNeighbors = this->coverageMatrix->MooreNeighbors(i, j, currentTimeS);
+                std::array<double, 9> obstacleMatrixNeighbors = this->obstacleMatrix->MooreNeighbors(i_obstacle, j_obstacle, currentTimeS);
+
+                for (int k = 0; k < 9; k++) {
+                    if (k == 4) continue; //Skip the middle cell
+                    if (coverageMatrixNeighbors[k] == 0 && obstacleMatrixNeighbors[k] == 0) {
+                        frontierCells.emplace_back(i, j); //At least one neighbor is unexplored (not free, and not an obstacle)
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return frontierCells;
+}
+
 argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //According to Dynamic frontier-led swarming:
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
@@ -480,14 +530,15 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //J^f is the number of cells in the frontier F^f
 
     //A cell is a frontier iff:
-    //1. Occupancy = explored
+    //1. Occupancy = explored (and free)
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
+    //Coverage status: 0 for unexplored, 1 for explored, and 2 for obstacle, respectively.
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
 //    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_DIAMETER,
 //                                                                              this->elapsed_ticks /
 //                                                                              this->ticks_per_second);
-    const std::vector<std::pair<int, int>> frontiers = this->coverageMatrix->getFrontierCells(elapsed_ticks / ticks_per_second);
+    const std::vector<std::pair<int, int>> frontiers = getFrontierCells(elapsed_ticks / ticks_per_second);
 //    current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
@@ -535,9 +586,9 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
 
 //        //If the frontier location is too close to the current position, disregard it as that area is explored already.
-//        if(distance < 0.1){
-//            continue;
-//        }
+        if(distance < 0.5){
+            continue;
+        }
 
         //Calculate the score of the frontier region
         double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * region.size();

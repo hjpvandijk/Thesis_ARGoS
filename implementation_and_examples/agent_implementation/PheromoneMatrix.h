@@ -2,6 +2,7 @@
 #define IMPLEMENTATION_AND_EXAMPLES_PHEROMONEMATRIX_H
 
 #include "coordinate.h"
+#include <array>
 
 class PheromoneMatrix {
 public:
@@ -10,9 +11,11 @@ public:
     ~PheromoneMatrix();
     void update(double x, double y, double visitedTimeS);
     void update(Coordinate coordinate, double visitedTimeS);
+    void reset(Coordinate coordinate);
     double get(double x, double y, double currentTimeS);
     double getByIndex(int x, int y, double currentTimeS);
     Coordinate getRealCoordinateFromIndex(int x, int y);
+    std::pair<int,int> getIndexFromRealCoordinate(Coordinate coordinate);
     std::vector<std::pair<int, int>> getFrontierCells(double currentTimeS);
 
     std::vector<std::vector<double>> getMatrix() const { return this->matrix; }
@@ -24,6 +27,8 @@ public:
     double getRealHeight() const { return this->height * this->resolution; }
     double getWidth() const { return this->width; }
     double getHeight() const { return this->height; }
+    double calculatePheromone(double visitedTime, double currentTime) const;
+    std::array<double, 9> MooreNeighbors(int x, int y, double currentTimeS);
 
 private:
     std::vector<std::vector<double>> matrix;
@@ -41,11 +46,9 @@ private:
     double resolution;
     static constexpr double EvaporationTime = 100.0;
 
-    double calculatePheromone(double visitedTime, double currentTime) const;
 //    void update(double x, double y, double value);
 //    void update(Coordinate coordinate, double value);
 
-    bool isMooreNeighborUnknown(int x, int y, double currentTimeS);
 
     };
 
