@@ -694,11 +694,12 @@ void Agent::calculateNextPosition() {
 
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
-    std::vector<std::string> quadTreeToStrings = {};
-//    this->quadtree->toStringVector(&quadTreeToStrings);
-    for (const std::string &str: quadTreeToStrings) {
-        broadcastMessage("M:" + str);
-    }
+    std::string coverageMatrixString = this->coverageMatrix->matrixToString();
+    broadcastMessage("MC:" + coverageMatrixString);
+    std::string obstacleMatrixString = this->obstacleMatrix->matrixToString();
+    broadcastMessage("MO:" + obstacleMatrixString);
+
+
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
             ":" + std::to_string(this->speed));
@@ -842,13 +843,28 @@ void Agent::parseMessages() {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = receivedPosition;
         } else if (messageContent.at(0) == 'M') {
+            auto substring = messageContent.substr(1);
+            auto coverage = substring.at(0) == 'C';
             std::vector<std::string> chunks;
-            std::stringstream ss(messageContent.substr(2));
+            std::stringstream ss(messageContent.substr(3));
             std::string chunk;
+            int i = 0;
+            while (std::getline(ss, chunk, '|')) {
+                std::stringstream chunkStream(chunk);
+                std::string cellStr;
+                int j = 0;
+                while(std::getline(chunkStream, cellStr, ';')){
+                    if (coverage) {
+                        this->coverageMatrix->updateByIndex(i, j, std::stod(cellStr));
+                    } else {
+                        this->obstacleMatrix->updateByIndex(i, j, std::stod(cellStr));
+                    }
+                    j++;
+                }
+                i++;
 
-//            while (std::getline(ss, chunk, '|')) {
-//                this->quadtree->add(quadNodeFromString(chunk));
-//            }
+
+            }
 
         } else if (messageContent.at(0) == 'V') {
             std::string vectorString = messageContent.substr(2);

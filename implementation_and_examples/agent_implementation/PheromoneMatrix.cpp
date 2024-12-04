@@ -40,6 +40,11 @@ void PheromoneMatrix::update(Coordinate coordinate, double visitedTimeS) {
     this->matrix[x_int][y_int] = std::max(this->matrix[x_int][y_int], visitedTimeS);
 }
 
+void PheromoneMatrix::updateByIndex(int x, int y, double visitedTimeS) {
+    //Update the value of the matrix at the given coordinates
+    this->matrix[x][y] = std::max(this->matrix[x][y], visitedTimeS);
+}
+
 void PheromoneMatrix::reset(Coordinate coordinate) {
     //Reset the value of the matrix at the given coordinates
     int x_int = int((coordinate.x - this->x_min) / this->resolution);
@@ -151,4 +156,20 @@ std::array<double, 9> PheromoneMatrix::MooreNeighbors(int x, int y, double curre
 //    return false;
     return neighbors;
 
+}
+
+std::string PheromoneMatrix::matrixToString(const std::string& rowDelimiter, const std::string& colDelimiter) {
+    std::ostringstream oss;
+    for (size_t i = 0; i < this->matrix.size(); ++i) {
+        for (size_t j = 0; j < this->matrix[i].size(); ++j) {
+            oss << this->matrix[i][j];
+            if (j + 1 < this->matrix[i].size()) { // Add column delimiter if not the last element in the row
+                oss << colDelimiter;
+            }
+        }
+        if (i + 1 < this->matrix.size()) { // Add row delimiter if not the last row
+            oss << rowDelimiter;
+        }
+    }
+    return oss.str();
 }

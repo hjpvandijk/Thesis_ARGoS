@@ -11,12 +11,15 @@ public:
     ~PheromoneMatrix();
     void update(double x, double y, double visitedTimeS);
     void update(Coordinate coordinate, double visitedTimeS);
+    void updateByIndex(int x, int y, double visitedTimeS);
     void reset(Coordinate coordinate);
     double get(double x, double y, double currentTimeS);
     double getByIndex(int x, int y, double currentTimeS);
     Coordinate getRealCoordinateFromIndex(int x, int y);
     std::pair<int,int> getIndexFromRealCoordinate(Coordinate coordinate);
     std::vector<std::pair<int, int>> getFrontierCells(double currentTimeS);
+    std::string matrixToString(const std::string& rowDelimiter = "|", const std::string& colDelimiter = ";");
+
 
     std::vector<std::vector<double>> getMatrix() const { return this->matrix; }
 
