@@ -146,7 +146,7 @@ public:
     uint32_t elapsed_ticks = 0;
 
     std::vector<Coordinate> current_frontiers;
-    std::vector<std::vector<Coordinate>> current_frontier_regions;
+    std::vector<std::vector<std::pair<int,int>>> current_frontier_regions;
 
 private:
     void checkForObstacles();

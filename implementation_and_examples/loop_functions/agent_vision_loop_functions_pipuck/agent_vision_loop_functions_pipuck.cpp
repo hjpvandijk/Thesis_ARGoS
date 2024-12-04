@@ -111,7 +111,7 @@ void CAgentVisionLoopFunctions::Reset() {
     m_tObstacleMatrix.clear();
     m_tAgentElapsedTicks.clear();
 //    m_tAgentFrontiers.clear();
-//    m_tAgentFrontierRegions.clear();
+    m_tAgentFrontierRegions.clear();
 
 }
 
@@ -124,6 +124,13 @@ void CAgentVisionLoopFunctions::PreStep() {
     argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
                << std::endl;
 
+}
+
+Coordinate getRealCoordinateFromIndex1(int x, int y) {
+    //Get the real world coordinates from the matrix coordinates
+    double x_real = -5 + x * 0.2;
+    double y_real = -5 + y * 0.2;
+    return {x_real + 0.2/2, y_real + 0.2/2};
 }
 
 
@@ -158,7 +165,7 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tObstacleMatrix.clear();
     m_tAgentElapsedTicks.clear();
 //    m_tAgentFrontiers.clear();
-//    m_tAgentFrontierRegions.clear();
+    m_tAgentFrontierRegions.clear();
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
@@ -183,7 +190,14 @@ void CAgentVisionLoopFunctions::PostStep() {
         pushQuadTree(pcFB, agent);
 
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
-//        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
+        for (auto regioncenter : agent->current_frontier_regions){
+            std::vector<Coordinate> regionCoordinates;
+            for (auto cellIndex: regioncenter) {
+                auto realCellCoordinate = getRealCoordinateFromIndex1(cellIndex.first, cellIndex.second);
+                regionCoordinates.push_back(realCellCoordinate);
+            }
+            m_tAgentFrontierRegions[pcFB].push_back(regionCoordinates);
+        }
 
 
     }

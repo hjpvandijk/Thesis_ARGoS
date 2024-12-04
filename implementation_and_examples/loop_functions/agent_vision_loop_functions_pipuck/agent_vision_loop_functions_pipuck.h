@@ -24,7 +24,7 @@ public:
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;
 //    std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
-//    std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>> m_tAgentFrontierRegions;
+    std::map<CPiPuckEntity*, std::vector<std::vector<Coordinate>>> m_tAgentFrontierRegions;
 //    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
 //    PheromoneMatrix combinedCoverageMatrix;
     std::vector<std::vector<double>> coverageMatrix;

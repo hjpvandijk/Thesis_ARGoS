@@ -507,7 +507,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
         }
     }
 
-//    current_frontier_regions = frontierRegions;
+    current_frontier_regions = frontierRegions;
 
     //Now we have all frontier cells merged into frontier regions
     //Find F* by using the formula above
