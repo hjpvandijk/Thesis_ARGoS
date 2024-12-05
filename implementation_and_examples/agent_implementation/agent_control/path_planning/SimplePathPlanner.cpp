@@ -28,6 +28,15 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
     }
 
     getWallFollowingRoute(agent, cell, box.size, edge_index, target, route);
+    int a = 0;
+    for (int i = 0; i < route.size(); i++) {
+        auto [begin, end] = route[i];
+        if (begin == agent->position) {
+            //Erase all edges before this one
+            a = i;
+        }
+    }
+    route.erase(route.begin(), route.begin() + a);
 
     //Append last point to target
     route.emplace_back(route.rbegin()->second, target);
@@ -75,10 +84,12 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
                 //Flip start and end
                 std::swap(start_edge, end_edge);
             }
-
+            auto mid_edge = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
             //If the edge (either way) is not already in the route, and the distance to the edge is the largest, save the cell and edge
             if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) == route.end() &&
                 std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) == route.end() &&
+                std::find(route.begin(), route.end(), std::pair{start_edge, mid_edge}) == route.end() &&
+                std::find(route.begin(), route.end(), std::pair{end_edge, mid_edge}) == route.end() &&
                 cell_to_edge_distance > max_distance) {
                 bestCell = c;
                 bestEdgeIndex = e;
@@ -88,18 +99,18 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
             }
         }
     }
-
+    //TODO: What if we can't find a new edge to go to? We should trace to the target, and go the other direction as in the route
     if (bestCell != nullptr) {
         //If the direction from the agent to the end of the edge is free, don't add the edge to the route, as the we can go directly to the next edge
         //TODO: This is not working as intended, it breaks the revisit check, resulting in an endless loop. BUt it is useful for route optimization
-//        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route)) {
+        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route)) {
 //////        }
 //////            assert(route.size() >= 2);
 //////        }
 //////            route.erase(route.begin() + 1, route.end());; //Delete all except the first one
 //            route.clear();
-//            route.emplace_back(agent->position, bestEdgeStart);
-//        }
+            route.emplace_back(agent->position, bestEdgeStart);
+        }
         route.emplace_back(bestEdgeStart, bestEdgeEnd);
         getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, route);
     }
@@ -122,6 +133,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
 std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::directionToTargetFree(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const{
     Coordinate start = cell->quadNode.coordinate;
 
+
     //Get the middle of the edge
     if (edge_index == 0) start.x = start.x - box_size / 2;
     else if (edge_index == 1) start.y = start.y + box_size / 2;
@@ -132,8 +144,10 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
     auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
 
     if (intersection_cell != nullptr) {
-        if (intersection_cell == cell)
-            return {0, nullptr, -1, Coordinate{0,0}}; //If we intersect the same cell, the line is going through the cell, so the direction is not free
+        //If we intersect the same cell, the line is going through the cell, so the direction is not free
+        //If the intersection edge has a neighbor on it, it is a raytracing accuracy mistake, so the direction is not free
+        if (intersection_cell == cell || intersection_cell->neighbors[intersection_edge] != nullptr)
+            return {0, nullptr, -1, Coordinate{0,0}};
 
         auto [start_edge_intersection, end_edge_intersection] = getEdgeCoordinates(intersection_box, intersection_edge);
         auto mid_edge_intersection = Coordinate{(start_edge_intersection.x + end_edge_intersection.x) / 2, (start_edge_intersection.y + end_edge_intersection.y) / 2};
@@ -181,6 +195,7 @@ int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, dou
     auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
 
     if (intersection_cell != nullptr) {
+        if (intersection_cell->neighbors[intersection_edge] != nullptr) return 0; //If the intersection edge has a neighbor on it, it is a raytracing accuracy mistake, so the direction is not free
         auto [start_edge, end_edge] = getEdgeCoordinates(intersection_box, intersection_edge);
         auto mid_edge = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
         if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) !=
