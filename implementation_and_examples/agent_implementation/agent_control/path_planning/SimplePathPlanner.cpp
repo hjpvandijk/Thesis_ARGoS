@@ -170,12 +170,22 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
 
             route.emplace_back(mid_last_edge, mid_edge_intersection);
 
-            auto distance_to_start = sqrt(pow(start_edge_intersection.x - agent->position.x, 2) + pow(start_edge_intersection.y - agent->position.y, 2));
-            auto distance_to_end = sqrt(pow(end_edge_intersection.x - agent->position.x, 2) + pow(end_edge_intersection.y - agent->position.y, 2));
-            if (distance_to_start >= distance_to_end) {
+            //If the intersection edge is connected to the last edge, we can go directly to the edge
+            if (end_last_edge == start_edge_intersection) {
+                route.emplace_back(mid_edge_intersection, end_edge_intersection);
+            } else if (end_last_edge == end_edge_intersection) {
                 route.emplace_back(mid_edge_intersection, start_edge_intersection);
             } else {
-                route.emplace_back(mid_edge_intersection, end_edge_intersection);
+
+                auto distance_to_start = sqrt(pow(start_edge_intersection.x - agent->position.x, 2) +
+                                              pow(start_edge_intersection.y - agent->position.y, 2));
+                auto distance_to_end = sqrt(pow(end_edge_intersection.x - agent->position.x, 2) +
+                                            pow(end_edge_intersection.y - agent->position.y, 2));
+                if (distance_to_start >= distance_to_end) {
+                    route.emplace_back(mid_edge_intersection, start_edge_intersection);
+                } else {
+                    route.emplace_back(mid_edge_intersection, end_edge_intersection);
+                }
             }
             return {1, intersection_cell, intersection_edge, mid_edge_intersection}; //The intersection is far enough away to go to the edge
         }

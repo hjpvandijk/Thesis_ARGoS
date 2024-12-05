@@ -1262,7 +1262,10 @@ namespace quadtree {
          * */
         std::pair<Cell*, Box> getCellandBoxFromCoordinate(Cell *node, const Box &box, const Coordinate &queryCoordinate) const {
             assert(node != nullptr);
-            assert(box.contains(queryCoordinate));
+//            assert(box.contains(queryCoordinate));
+            if (!box.contains(queryCoordinate)) {
+                return std::make_pair(nullptr, Box());
+            }
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
                 if (node->quadNode.visitedAtS == -1) {
