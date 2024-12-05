@@ -585,7 +585,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //Ψ_S = FRONTIER_SIZE_WEIGHT
 
     //Initialize variables to store the best frontier region and its score
-    Coordinate bestFrontierRegionCenter = {0, 0};
+    Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
     double bestFrontierScore = std::numeric_limits<double>::max();
 
     //Iterate over all frontier regions to find the best one
@@ -603,11 +603,10 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
-
-//        //If the frontier location is too close to the current position, disregard it as that area is explored already.
-        if(distance < 0.5){
-            continue;
-        }
+        //If the frontier location is too close to the current position, disregard it as that area is explored already.
+//        if(distance < 0.5){
+//            continue;
+//        }
 
         //Calculate the score of the frontier region
         double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * region.size();
@@ -620,6 +619,13 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     }
 
     this->currentBestFrontier = bestFrontierRegionCenter;
+
+    //Own fix:
+    //If there is no best frontier region, return a zero vector
+    if (bestFrontierRegionCenter.x == MAXFLOAT) {
+        return {0, 0};
+    }
+
 
 
 
