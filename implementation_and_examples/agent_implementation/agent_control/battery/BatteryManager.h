@@ -20,7 +20,7 @@ public:
         }
     };
 
-    BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity);
+    BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity);
     BatteryManager() = default;
 
     MotionSystemBatteryManager motionSystemBatteryManager;

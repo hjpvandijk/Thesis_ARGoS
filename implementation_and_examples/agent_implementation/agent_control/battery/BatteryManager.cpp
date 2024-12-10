@@ -2,8 +2,8 @@
 #include "agent.h"
 
 
-BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity) {
-    this->motionSystemBatteryManager = MotionSystemBatteryManager(robot_weight_kg, robot_wheel_radius_m, stall_torque_Nm, no_load_rpm, stall_current_A, no_load_current_A);
+BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity) {
+    this->motionSystemBatteryManager = MotionSystemBatteryManager(robot_weight_kg, robot_wheel_radius_m, robot_inter_wheel_distance_m, stall_torque_Nm, no_load_rpm, stall_current_A, no_load_current_A);
 //    this->microControllerBatteryManager = MicroControllerBatteryManager();
 
     battery = Battery{battery_voltage, battery_capacity, battery_capacity};

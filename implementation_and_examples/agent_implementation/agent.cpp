@@ -23,12 +23,17 @@ Agent::Agent(std::string id) {
     this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
-    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
     this->wallFollower = WallFollower();
 
     //TODO: Get values from config file
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
-    this->batteryManager = BatteryManager(0.4f, 0.0205f, 0.8, 250, 1.5, 0.16, 6, 1000);
+    //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
+    this->batteryManager = BatteryManager(0.4f, 0.0205f, 0.0565f, 0.8, 250, 1.5, 0.16, 6, 1000);
+    //Set the speed to the maximum achievable speed, based on the the motor specs. TODO: Put that info in differential drive instead
+    auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
+    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->TURNING_SPEED_RATIO));
+    this->speed = this->differential_drive.max_speed_straight;
+
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     this->frontierEvaluator = FrontierEvaluator(this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE, MAX_TICKS_IN_HITPOINT);

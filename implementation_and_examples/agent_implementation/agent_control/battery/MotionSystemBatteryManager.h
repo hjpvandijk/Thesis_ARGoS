@@ -9,13 +9,14 @@ class Agent;
 
 class MotionSystemBatteryManager {
 public:
-    MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A);
+    MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A);
     MotionSystemBatteryManager() = default;
 
     float EstimateMotorPowerUsage(Agent* agent, float turnAccelerationTime, float turnFullSpeedTime, float turnDecelerationTime, float accelerationTime, float driveTime, float decelerationTime);
 
     std::tuple<float, float> estimateMotorPowerUsageAndDuration(Agent* agent, std::vector<argos::CVector2> relativePath);
 
+    float getMaxAchievableSpeed() const;
 
 private:
 
@@ -35,15 +36,16 @@ private:
 //    float robot_weight_kg = 0.5; //In kg
 //    float robot_wheel_radius_m = 0.03; //In meters
 //    float rolling_force_without_acceleration_N = robot_weight_kg*9.81; //In Newtons
-//    float stall_torque_Nm = 0.8; //In kg.cm @ 6V
+//    float stall_torque_kg_cm = 0.8; //In kg.cm @ 6V
 //    float no_load_rpm = 250; //In RPM @ 6V
 //    float stall_current_A = 1.5; //In Amps @ 6V
 //    float no_load_current_A = 0.16; //In Amps @ 6V
 
     float robot_weight_kg; //In kg
     float robot_wheel_radius_m; //In meters
+    float robot_inter_wheel_distance_m = 0.0565; //In meters
     float rolling_force_without_acceleration_N; //In Newtons
-    float stall_torque_Nm ; //In kg.cm @ 6V
+    float stall_torque_kg_cm ; //In kg.cm @ 6V
     float no_load_rpm; //In RPM @ 6V
     float stall_current_A; //In Amps @ 6V
     float no_load_current_A ; //In Amps @ 6V
