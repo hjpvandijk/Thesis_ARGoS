@@ -1,4 +1,5 @@
 #include "MicroControllerBatteryManager.h"
+#include "agent.h"
 
 float MicroControllerBatteryManager::estimateCommunicationConsumption(Agent* agent, float seconds) {
     float transmitPower = estimateTransmitConsumption(agent, seconds);

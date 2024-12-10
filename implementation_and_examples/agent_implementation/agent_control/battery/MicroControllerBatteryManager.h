@@ -2,11 +2,12 @@
 #define IMPLEMENTATION_AND_EXAMPLES_MICROCONTROLLERBATTERYMANAGER_H
 
 
-#include "agent.h"
+class Agent;
 
 class MicroControllerBatteryManager {
 
 public:
+    MicroControllerBatteryManager() = default;
 
     int bytesPerMessage = 36; //Number of bytes in a message (average). It depends on the sign of the x and y coordinate, and the LConfidence.
     int targetSenderIDBytes = 19; //Number of bytes prepended for the target and sender ID

@@ -300,6 +300,12 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         //Calculate the distance between the agent and the frontier region
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
 
+//        //Relative vector to heading
+//        argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX, frontierRegionY)
+//                                           - argos::CVector2(agent->position.x, agent->position.y).Rotate(-agent->heading);
+//
+//        double powerUsage = agent->batteryManager.EstimateTotalPowerUsage(agent, {vectorToFrontier});
+
         //Calculate the score of the frontier region
         double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
 

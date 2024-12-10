@@ -25,6 +25,11 @@ Agent::Agent(std::string id) {
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
     this->wallFollower = WallFollower();
+
+    //TODO: Get values from config file
+    //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
+    this->batteryManager = BatteryManager(0.4f, 0.0205f, 0.8, 250, 1.5, 0.16, 6, 1000);
+
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     this->frontierEvaluator = FrontierEvaluator(this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE, MAX_TICKS_IN_HITPOINT);
 #endif
@@ -549,6 +554,13 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     }
     this->previousBestFrontier = this->currentBestFrontier;
     this->swarm_vector = total_vector;
+
+    //Relative vector to heading
+    argos::CVector2 vectorToFrontier = argos::CVector2(this->currentBestFrontier.x - this->position.x, this->currentBestFrontier.y - this->position.y).Rotate(-this->heading);
+
+    auto [powerUsage, duration] = this->batteryManager.EstimateTotalPowerUsage(this, {vectorToFrontier});
+    argos::LOG << "Power usage: " << powerUsage << std::endl;
+    argos::LOG << "Duration: " << duration << std::endl;
 }
 
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS

@@ -18,6 +18,7 @@
 #include "agent_implementation/agent_control/path_planning/WallFollower.h"
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
 #include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
+#include "agent_control/battery/BatteryManager.h"
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
@@ -30,6 +31,7 @@
 #endif
 #endif
 #define WALKING_STATE_WHEN_NO_FRONTIERS
+
 
 class Agent {
 public:
@@ -48,6 +50,9 @@ public:
     //Distance sensors
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
+
+    //Battery manager
+    BatteryManager batteryManager;
 
     //Path planning engines
     WallFollower wallFollower;

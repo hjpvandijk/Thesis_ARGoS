@@ -5,8 +5,15 @@
 
 class DifferentialDrive {
 public:
+    //m/s
     float max_speed_straight;
+    float acceleration;
+    float deceleration;
+
+    //Rad/s
     float max_speed_turn;
+    float turn_acceleration;
+    float turn_deceleration;
 
 
     float current_speed_right{};

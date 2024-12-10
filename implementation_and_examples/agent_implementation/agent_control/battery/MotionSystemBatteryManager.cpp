@@ -1,6 +1,22 @@
+#include <argos3/core/utility/logging/argos_log.h>
 #include "MotionSystemBatteryManager.h"
+#include "agent.h"
 
-float MotionSystemBatteryManager::EstimateMotorPowerUsage(double distance, double turns) {
+ MotionSystemBatteryManager::MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m,
+                                                        float stall_torque_Nm,
+                                                        float no_load_rpm, float stall_current_A,
+                                                        float no_load_current_A) {
+    this->robot_weight_kg = robot_weight_kg;
+     this->robot_wheel_radius_m = robot_wheel_radius_m;
+     this->rolling_force_without_acceleration_N = rolling_resistance_coefficient * robot_weight_kg*9.81f;
+     this->stall_torque_Nm = stall_torque_Nm;
+     this->no_load_rpm = no_load_rpm;
+     this->stall_current_A = stall_current_A;
+     this->no_load_current_A = no_load_current_A;
+ }
+
+
+float MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent* agent, float turnAccelerationTime, float turnFullSpeedTime, float turnDecelerationTime, float accelerationTime, float driveTime, float decelerationTime) {
     //Something like:
     //Know motor amperage at speed and load ??
     //Know voltage at speed and load ??
@@ -10,72 +26,127 @@ float MotionSystemBatteryManager::EstimateMotorPowerUsage(double distance, doubl
     //P = (V * I) / 2
     //Sum all power usages
 
+    float momentOfInertia = 0.5f * robot_weight_kg * 0.0362f*0.0362f; //In kg.m^2 , 0.0362 is the robot radius
+//    float turn
+
+    float accelerationForce = robot_weight_kg * agent->differential_drive.acceleration; //In Newtons
+    float decelerationForce = robot_weight_kg * agent->differential_drive.deceleration; //In Newtons
+//    float turnAccelerationForce = robot_weight_kg * agent->differential_drive.turn_acceleration; //In Newtons
+//    float turnDecelerationForce = robot_weight_kg * agent->differential_drive.turn_deceleration; //In Newtons
+    float turnAccelerationForce = momentOfInertia * agent->differential_drive.turn_acceleration / robot_wheel_radius_m; //In Newtons
+    float turnDecelerationForce = momentOfInertia * agent->differential_drive.turn_deceleration / robot_wheel_radius_m; //In Newtons
+
+    float totalForceDuringAcceleration = rolling_force_without_acceleration_N + accelerationForce; //In Newtons
+    float totalForceDuringDeceleration = rolling_force_without_acceleration_N + decelerationForce; //In Newtons
+    float totalForceDuringTurnAcceleration = rolling_force_without_acceleration_N + turnAccelerationForce; //In Newtons
+    float totalForceDuringTurnDeceleration = rolling_force_without_acceleration_N + turnDecelerationForce; //In Newtons
+
+    float forces[] = {totalForceDuringAcceleration, rolling_force_without_acceleration_N, totalForceDuringDeceleration, totalForceDuringTurnAcceleration, rolling_force_without_acceleration_N, totalForceDuringTurnDeceleration};
+    float forceDurations[] = {accelerationTime, driveTime, decelerationTime, turnAccelerationTime, turnFullSpeedTime, turnDecelerationTime};
+
+    float totalPowerUsage = 0.0; //In Wh
+
+    //We are assuming the motors provide the same torque (and current draw) in both directions
+    for (int i = 0; i < 6; i++) {
+        float force = forces[i]; //In Newtons
+        float forceDuration = forceDurations[i]; //In seconds
+        //Add rolling resistnace
+        float force_per_wheel = force / 2; //In Newtons
+        float torque_per_motor = force_per_wheel * robot_wheel_radius_m; //In N.M
+        float torque_per_motor_kg_cm = torque_per_motor * 10.1971621f; //In kg.cm
+        //Now we know the torque, we can estimate the current draw
+        //We can estimate the current draw by looking at the torque-speed curve of the motor
+        //Torque and speed are negatively linearly related: 0 torque at max speed, 0 speed at max torque (stall)
+        float rpm_at_torque = no_load_rpm - (torque_per_motor_kg_cm / stall_torque_Nm) * no_load_rpm; //In RPM @ 6V
+        //TODO: decide what speed we want, and calculate the current draw at that speed
+
+        float speed = rpm_at_torque * 2.0f * M_PIf32 * robot_wheel_radius_m / 60.0f; //In m/s
+        argos::LOG << "[" << agent->getId() << "] Speed: " << speed << std::endl;
+        //Calculate the current using the torque
+        float current_draw_A_per_motor = no_load_current_A + (stall_current_A - no_load_current_A) * (torque_per_motor_kg_cm / stall_torque_Nm); //In Amps @ 6V
+
+        //Calculate the power usage for both motors together
+        float total_power = current_draw_A_per_motor * 2 * 6; //In watts
+        totalPowerUsage += total_power * forceDuration; //In Wh
+    }
 
 
-    return 0;
+    return totalPowerUsage;
 }
 
-std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndDuration(std::vector<argos::CVector2> relativePath) {
+std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndDuration(Agent* agent, std::vector<argos::CVector2> relativePath) {
     //Estimate how long it will take the agent to travel the path
 
+    auto max_speed_turn_rad_s = agent->differential_drive.max_speed_turn /0.0565f; //0.0565 is inter-wheel distance in meters
+
     float totalMotorPowerUsage = 0;
-    double totalDuration = 0;
+    float totalDuration = 0;
+    //                                      rad/s                                           rad/s                                           rad/s/s
+    float angleToAccelerateTurn = max_speed_turn_rad_s * max_speed_turn_rad_s / (2 * agent->differential_drive.turn_acceleration); //In rad
+    float angleToDecelerateTurn = max_speed_turn_rad_s * max_speed_turn_rad_s / (2 * agent->differential_drive.turn_deceleration); //In rad
+
+    float distanceToAccelerateDrive = agent->differential_drive.max_speed_straight*agent->differential_drive.max_speed_straight / (2*agent->differential_drive.acceleration); //In meters
+    float distanceToDecelerateDrive = agent->differential_drive.max_speed_straight*agent->differential_drive.max_speed_straight / (2*agent->differential_drive.deceleration); //In meters
 
     for(auto &vector: relativePath) {
-        auto distance = vector.Length(); //In meters
-        auto turnAngle = vector.Angle().GetValue(); //In Radians
+        float distance = vector.Length(); //In meters
+        float turnAngle = std::abs(vector.Angle().GetValue()); //In Radians, we assume both directions yield the same power usage
 
         //Now we know the distance and the angle, we can estimate the time it will take to travel this path
-        auto forwardSpeed = 1.0;//Get speed from motor; //In m/s
-        auto acceleration = 1.0;//Get acceleration from motor; //In m/s^2
-        auto deceleration = 1.0;//Get deceleration from motor; //In m/s^2
-        auto turnSpeed = 1.0;//Get turn speed from motor; //In rad/s
-        auto turnAcceleration = 1.0;//Get turn acceleration from motor; //In rad/s^2
-        auto turnDeceleration = 1.0;//Get turn deceleration from motor; //In rad/s^2
+
 
         //We can estimate the time it will take to turn
-        auto totalTurnTime = 0.0;
-        auto angleToAccelerateTurn = turnSpeed * turnSpeed / (2 * turnAcceleration); //In rad
-        auto angleToDecelerateTurn = turnSpeed * turnSpeed / (2 * turnDeceleration); //In rad
+        float totalTurnTime = 0.0;
+
+        float timeToAccelerateTurn = 0.0;
+        float timeToDecelerateTurn = 0.0;
+        float timeToConstantTurn = 0.0;
+        float timeToAccelerateDrive = 0.0;
+        float timeToDecelerateDrive = 0.0;
+        float timeToConstantDrive = 0.0;
+
         if(angleToAccelerateTurn + angleToDecelerateTurn > turnAngle) {
             //We can't accelerate and decelerate in time
-            auto maxAchievedTurnSpeed =sqrt(2)*sqrt(turnAngle) / sqrt(turnAcceleration + turnDeceleration); //In rad/s
-            auto timeToAccelerateTurn = maxAchievedTurnSpeed / turnAcceleration; //In seconds
-            auto timeToDecelerateTurn = maxAchievedTurnSpeed / turnDeceleration; //In seconds
-            totalTurnTime = timeToAccelerateTurn + timeToDecelerateTurn; //In seconds
+//            auto maxAchievedTurnSpeed =sqrt(2)*sqrt(turnAngle) / sqrt(agent->differential_drive.turn_acceleration + agent->differential_drive.turn_deceleration); //In rad/s
+            float maxAchievedTurnSpeed = sqrt(2*turnAngle/ (1/agent->differential_drive.turn_acceleration + 1/agent->differential_drive.turn_deceleration)); //In rad/s
+            timeToAccelerateTurn = maxAchievedTurnSpeed / agent->differential_drive.turn_acceleration; //In seconds
+            timeToDecelerateTurn = maxAchievedTurnSpeed / agent->differential_drive.turn_deceleration; //In seconds
         } else {
             //We can accelerate and decelerate in time
-            auto timeToAccelerateTurn = turnSpeed / turnAcceleration; //In seconds
-            auto timeToDecelerateTurn = turnSpeed / turnDeceleration; //In seconds
-            auto angleToTravelTurn = turnAngle - angleToAccelerateTurn - angleToDecelerateTurn; //In rad
-            auto timeToConstantTurn = angleToTravelTurn / turnSpeed; //In seconds
-            totalTurnTime = timeToAccelerateTurn + timeToDecelerateTurn + timeToConstantTurn; //In seconds
+            timeToAccelerateTurn = max_speed_turn_rad_s / agent->differential_drive.turn_acceleration; //In seconds
+            timeToDecelerateTurn = max_speed_turn_rad_s/ agent->differential_drive.turn_deceleration; //In seconds
+            float angleToTravelTurn = turnAngle - angleToAccelerateTurn - angleToDecelerateTurn; //In rad
+            timeToConstantTurn = angleToTravelTurn / max_speed_turn_rad_s; //In seconds
         }
+        totalTurnTime = timeToAccelerateTurn + timeToDecelerateTurn + timeToConstantTurn; //In seconds
+
         //We can estimate the time it will take to drive
         //We can estimate the time it will take to travel the distance
-        auto totalDriveTime = 0.0;
-        auto distanceToAccelerateDrive = forwardSpeed*forwardSpeed / (2*acceleration); //In meters
-        auto distanceToDecelerateDrive = forwardSpeed*forwardSpeed / (2*deceleration); //In meters
+        float totalDriveTime = 0.0;
+
         if(distanceToAccelerateDrive + distanceToDecelerateDrive > distance) {
             //We can't accelerate and decelerate in time
-            auto maxAchievedDriveSpeed = sqrt(2) * sqrt(distance) / sqrt(acceleration + deceleration); //In m/s
-            auto timeToAccelerateDrive = maxAchievedDriveSpeed / acceleration; //In seconds
-            auto timeToDecelerateDrive = maxAchievedDriveSpeed / deceleration; //In seconds
-            totalDriveTime = timeToAccelerateDrive + timeToDecelerateDrive; //In seconds
+//            auto maxAchievedDriveSpeed = sqrt(2) * sqrt(distance) / sqrt(agent->differential_drive.acceleration + agent->differential_drive.deceleration); //In m/s
+            float maxAchievedDriveSpeed = sqrt(2*distance/ (1/agent->differential_drive.acceleration + 1/agent->differential_drive.deceleration)); //In rad/s
+            timeToAccelerateDrive = maxAchievedDriveSpeed / agent->differential_drive.acceleration; //In seconds
+            timeToDecelerateDrive = maxAchievedDriveSpeed / agent->differential_drive.deceleration; //In seconds
         } else {
             //We can accelerate and decelerate in time
-            auto timeToAccelerateDrive = forwardSpeed / acceleration; //In seconds
-            auto timeToDecelerateDrive = forwardSpeed / deceleration; //In seconds
-            auto distanceToTravelDrive = distance - distanceToAccelerateDrive - distanceToDecelerateDrive; //In meters
-            auto timeToConstantDrive = distanceToTravelDrive / forwardSpeed; //In seconds
-            totalDriveTime = timeToAccelerateDrive + timeToDecelerateDrive + timeToConstantDrive; //In seconds
+            timeToAccelerateDrive = agent->differential_drive.max_speed_straight / agent->differential_drive.acceleration; //In seconds
+            timeToDecelerateDrive = agent->differential_drive.max_speed_straight / agent->differential_drive.deceleration; //In seconds
+            float distanceToTravelDrive = distance - distanceToAccelerateDrive - distanceToDecelerateDrive; //In meters
+            timeToConstantDrive = distanceToTravelDrive / agent->differential_drive.max_speed_straight; //In seconds
         }
+        totalDriveTime = timeToAccelerateDrive + timeToDecelerateDrive + timeToConstantDrive; //In seconds
 
         totalDuration += totalDriveTime + totalTurnTime;
 
 
         //We can also estimate the power usage
-        auto motorPowerUsage = EstimateMotorPowerUsage(distance, turnAngle); //In watts
+        float motorPowerUsage = EstimateMotorPowerUsage(agent, timeToAccelerateTurn, timeToConstantTurn, timeToDecelerateTurn, timeToAccelerateDrive, timeToConstantDrive, timeToDecelerateDrive); //In Wh
         totalMotorPowerUsage += motorPowerUsage;
     }
+
+    return {totalMotorPowerUsage, totalDuration};
 }
+
