@@ -24,7 +24,7 @@ public:
     BatteryManager() = default;
 
     MotionSystemBatteryManager motionSystemBatteryManager;
-//    MicroControllerBatteryManager microControllerBatteryManager;
+    MicroControllerBatteryManager microControllerBatteryManager;
 
     Battery battery;
 
@@ -66,7 +66,7 @@ public:
      * Estimate how much power will be used by the IO board in the next given seconds
      * @return
      */
-    float EstimateBoardPowerUsage(float seconds);
+//    float EstimateBoardPowerUsage(float seconds);
 
 
     /***

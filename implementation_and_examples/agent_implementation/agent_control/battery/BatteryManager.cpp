@@ -2,7 +2,7 @@
 #include "agent.h"
 
 
-BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity) {
+BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity) : microControllerBatteryManager() {
     this->motionSystemBatteryManager = MotionSystemBatteryManager(robot_weight_kg, robot_wheel_radius_m, robot_inter_wheel_distance_m, stall_torque_Nm, no_load_rpm, stall_current_A, no_load_current_A);
 //    this->microControllerBatteryManager = MicroControllerBatteryManager();
 
@@ -10,29 +10,22 @@ BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m
 
 }
 
-//float BatteryManager::EstimateBoardPowerUsage(float seconds) {
-//    //Estimate how much power will be used by the IO board in the next given seconds
-//    //Predict CPU usage
-//    //Predict communication:
-//    //  - How many agents do we think there are
-//    //  - Have we already sent a message recently to them?
-//    //Translate into power usage
-//    return 0;
-//}
-
-
 /**
- * Estimate how much power will be used by the motors while traversing the given path
+ * Estimate how much power will be used by the motors while traversing the given path in
  * Each section of the path is relative to the former in terms of direction, the first section is relative to the current heading of the agent
- * //Also return the time it takes to traverse the path
+ * Considers both the power used by the motors and the power used by the microcontroller
  * @param agent
  * @param relativePath
  * @return
  */
 std::tuple<float, float> BatteryManager::EstimateTotalPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath){
 
-    auto motionSystemPowerUsage = motionSystemBatteryManager.estimateMotorPowerUsageAndDuration(agent, relativePath); //In Wh
-//    auto microControllerPowerUsage = microControllerBatteryManager.estimateCommunicationConsumption(agent, seconds);
+    auto [motionSystemPowerUsage, pathFollowingDurationS] = motionSystemBatteryManager.estimateMotorPowerUsageAndDuration(agent, relativePath); //In Wh
+    auto motionSystemPowerUsageAtVoltage = motionSystemPowerUsage / battery.voltage * 1000.0f;//In mAh
 
-    return motionSystemPowerUsage; //+ microControllerPowerUsage;
+
+    auto microControllerPowerUsage = microControllerBatteryManager.estimateCommunicationConsumption(agent, pathFollowingDurationS); // In mAh
+    argos::LOG << "Motion system power usage: " << motionSystemPowerUsageAtVoltage << " mAh" << std::endl;
+    argos::LOG << "Microcontroller power usage: " << microControllerPowerUsage << " mAh" << std::endl;
+    return {motionSystemPowerUsageAtVoltage + microControllerPowerUsage, pathFollowingDurationS};
 }

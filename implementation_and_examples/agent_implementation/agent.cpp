@@ -564,7 +564,7 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     argos::CVector2 vectorToFrontier = argos::CVector2(this->currentBestFrontier.x - this->position.x, this->currentBestFrontier.y - this->position.y).Rotate(-this->heading);
 
     auto [powerUsage, duration] = this->batteryManager.EstimateTotalPowerUsage(this, {vectorToFrontier});
-    argos::LOG << "Power usage: " << powerUsage << std::endl;
+    argos::LOG << "Total power usage: " << powerUsage << " mAh" << std::endl;
     argos::LOG << "Duration: " << duration << std::endl;
 }
 

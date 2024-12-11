@@ -1,13 +1,24 @@
 #include "MicroControllerBatteryManager.h"
 #include "agent.h"
 
-float MicroControllerBatteryManager::estimateCommunicationConsumption(Agent* agent, float seconds) {
-    float transmitPower = estimateTransmitConsumption(agent, seconds);
-    float receivePower = estimateReceiveConsumption(agent, seconds);
-    return transmitPower + receivePower;
+/**
+ * Estimate the power usage of the CPU for the given amount of seconds by estimating transmitting power, receiving power and idle power
+ * @param agent
+ * @param seconds
+ * @return
+ */
+float MicroControllerBatteryManager::estimateCommunicationConsumption(Agent* agent, float seconds) const {
+    auto [transmitPower, transmitTimeS] = estimateTransmitConsumption(agent, seconds);
+    auto [receivePower, receiveTimeS] = estimateReceiveConsumption(agent, seconds);
+
+    //Calculate the time we are not using RF
+    float idleTimeS = seconds - transmitTimeS - receiveTimeS;
+    float idlePowerUsage_mAh = idleTimeS * this->modemSleepConsumption240MHz_ma / 3600.0f; //In mAh
+
+    return transmitPower + receivePower + idlePowerUsage_mAh;
 }
 
-float MicroControllerBatteryManager::estimateTransmitConsumption(Agent* agent, float seconds){
+std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumption(Agent* agent, float seconds) const{
 
     //Predict communication:
     //  - How many agents do we think there are
@@ -54,24 +65,27 @@ float MicroControllerBatteryManager::estimateTransmitConsumption(Agent* agent, f
     int nMessages = std::floor(nNodes / nNodesPerMessage);
     int remainingNodes = nNodes - nMessages * nNodesPerMessage;
     //Calculate size of messages
-    int messageSize = nNodesPerMessage * this->bytesPerMessage + this->targetSenderIDBytes;
-    int remainingMessageSize = remainingNodes * this->bytesPerMessage + this->targetSenderIDBytes;
+    int messageSize = nNodesPerMessage * this->bytesPerNode + this->targetSenderIDBytes;
+    int remainingMessageSize = remainingNodes * this->bytesPerNode + this->targetSenderIDBytes;
 
     int totalNumberOfSentBytes = nMessages * messageSize + remainingMessageSize;
-    //Calculate time to send messages using the bandwidth
-    float timeToTransmitS = totalNumberOfSentBytes * 8 / this->bluetoothTransmitBandwidth_MHz;
+    //Calculate time to send all messages in a single exchange using the bandwidth
+    float timeToTransmitS = float(totalNumberOfSentBytes) * 8.0f / (this->bluetoothTransmitBandwidth_MHz* 1000000.0f);
 
     //Calculate power usage
-    float quadtreeExchangePowerUsage_mAh = timeToTransmitS * this->bluetoothTransmitConsumption_mA;
+    float quadtreeExchangePowerUsage_mAh = timeToTransmitS * this->bluetoothTransmitConsumption_mA / 3600.0f; //In mAh
 
-    float totalPowerUsage_mAh = quadtreeExchangePowerUsage_mAh * amountOfTransmits;
+    //Calculate total power usage, for all transmits within the given period
+    float totalPowerUsage_mAh = quadtreeExchangePowerUsage_mAh * float(amountOfTransmits);
 
-    return totalPowerUsage_mAh;
+    //Return the total power usage and the time we spend transmitting within the period
+    return {totalPowerUsage_mAh, timeToTransmitS*float(amountOfTransmits)};
 }
 
-float MicroControllerBatteryManager::estimateReceiveConsumption(Agent* agent, float seconds){
+std::pair<float, float> MicroControllerBatteryManager::estimateReceiveConsumption(Agent* agent, float seconds) const{
 
     float totalReceivePowerUsage_mAh = 0;
+    float totalReceiveTimeS = 0;
 
     for (auto &agentQuadtree : agent->agentLocations) { // We assume agent location is received in (roughly) the same tick as the quadtree messages
         int nExchangeIntervalsInPeriod = std::floor( seconds/agent->QUADTREE_EXCHANGE_INTERVAL_S);
@@ -87,12 +101,13 @@ float MicroControllerBatteryManager::estimateReceiveConsumption(Agent* agent, fl
         }
 
         int previousNBytesReceived = agent->agentQuadtreeBytesReceived[agentQuadtree.first]; //Amount of bytes we received from this agent previously (we use this for the calculation)
-        float timeToReceiveS = previousNBytesReceived * 8 / this->bluetoothTransmitBandwidth_MHz; //Time to receive the message
-        float quadtreeExchangePowerUsage_mAh = timeToReceiveS * this->bluetoothReceiveConsumption_mA; //Power usage to receive the message
-        totalReceivePowerUsage_mAh += quadtreeExchangePowerUsage_mAh * amountOfReceives; //Power usage to receive all the quadtree messages from this agent added to the total
+        float timeToReceiveS = float(previousNBytesReceived) * 8.0f / (this->bluetoothTransmitBandwidth_MHz * 1000000.0f); //Time to receive the message
+        float quadtreeExchangePowerUsage_mAh = timeToReceiveS * this->bluetoothReceiveConsumption_mA / 3600.0f; //In mAh, Power usage to receive the message
+        totalReceivePowerUsage_mAh += quadtreeExchangePowerUsage_mAh * float(amountOfReceives); //Power usage to receive all the quadtree messages from this agent added to the total
+        totalReceiveTimeS += timeToReceiveS * float(amountOfReceives); //Time to receive all the quadtree messages from this agent added to the total
     }
 
-    return totalReceivePowerUsage_mAh;
+    return {totalReceivePowerUsage_mAh, totalReceiveTimeS};
 
 }
 

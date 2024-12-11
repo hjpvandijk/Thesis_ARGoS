@@ -43,7 +43,7 @@ private:
 
     float robot_weight_kg; //In kg
     float robot_wheel_radius_m; //In meters
-    float robot_inter_wheel_distance_m = 0.0565; //In meters
+    float robot_inter_wheel_distance_m; //In meters
     float rolling_force_without_acceleration_N; //In Newtons
     float stall_torque_kg_cm ; //In kg.cm @ 6V
     float no_load_rpm; //In RPM @ 6V

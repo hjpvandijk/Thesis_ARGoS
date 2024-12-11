@@ -51,7 +51,7 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAcce
     //We are assuming the motors provide the same torque (and current draw) in both directions
     for (int i = 0; i < 6; i++) {
         float force = forces[i]; //In Newtons
-        float forceDuration = forceDurations[i]; //In seconds
+        float forceDuration = forceDurations[i] / 3600; //In hours
         //Add rolling resistnace
         float force_per_wheel = force / 2; //In Newtons
         float torque_per_motor = force_per_wheel * robot_wheel_radius_m; //In N.M
@@ -82,6 +82,7 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAcce
 
         //Calculate the power usage for both motors together
         float total_power = current_draw_A_per_motor * 2 * 6; //In watts
+
         totalPowerUsage += total_power * forceDuration; //In Wh
     }
 
@@ -131,7 +132,6 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
 
         if (angleToAccelerateTurn + angleToDecelerateTurn > turnAngle) {
             //We can't accelerate and decelerate in time
-//            auto maxAchievedTurnSpeed =sqrt(2)*sqrt(turnAngle) / sqrt(agent->differential_drive.turn_acceleration + agent->differential_drive.turn_deceleration); //In rad/s
             float maxAchievedTurnSpeed = sqrt(2 * turnAngle / (1 / agent->differential_drive.turn_acceleration + 1 /
                                                                                                                  agent->differential_drive.turn_deceleration)); //In rad/s
             timeToAccelerateTurn = maxAchievedTurnSpeed / agent->differential_drive.turn_acceleration; //In seconds
@@ -151,7 +151,6 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
 
         if (distanceToAccelerateDrive + distanceToDecelerateDrive > distance) {
             //We can't accelerate and decelerate in time
-//            auto maxAchievedDriveSpeed = sqrt(2) * sqrt(distance) / sqrt(agent->differential_drive.acceleration + agent->differential_drive.deceleration); //In m/s
             float maxAchievedDriveSpeed = sqrt(2 * distance / (1 / agent->differential_drive.acceleration +
                                                                1 / agent->differential_drive.deceleration)); //In rad/s
             timeToAccelerateDrive = maxAchievedDriveSpeed / agent->differential_drive.acceleration; //In seconds
