@@ -18,9 +18,9 @@ public:
 
     float getMaxAchievableSpeed() const;
 
-    float getVoltageAtSpeed(float speed_m_s);
+    void calculateVoltageAtSpeed(float speed_m_s);
 
-        private:
+    private:
 
     //https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674
     //https://einstronic.com/product/tt-motor-yellow-geared-dc-motor/
@@ -46,10 +46,11 @@ public:
     float stall_current_A; //In Amps @ 6V
     float no_load_current_A ; //In Amps @ 6V
 
-    float voltage_at_operating_speed = 6.0; //In Volts
-    float no_load_current_at_operating_speed_A = 0.16; //In Amps @ 6V
-    float stall_current_at_operating_speed_A = 1.5; //In Amps @ 6V
-    float stall_torque_at_operating_speed_kg_cm = 0.8; //In kg.cm @ 6V
+    float voltage_at_operating_speed; //In Volts
+    float no_load_rpm_at_voltage;
+    float no_load_current_at_voltage;
+    float stall_current_at_voltage;
+    float stall_torque_at_voltage;
 
     float rolling_resistance_coefficient = 0.01; //Typical value for rubber on concrete
 

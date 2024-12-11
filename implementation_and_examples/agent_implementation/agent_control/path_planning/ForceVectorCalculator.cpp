@@ -324,6 +324,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             distancesFromOtherAgents.push_back(distanceFromOtherAgent);
         }
 
+        //TODO: add battery and duration to the score
         //If that frontier is best to visit for a different agent, skip it.
         bool otherAgentLowerScore = false;
         for (auto distanceFromOtherAgent: distancesFromOtherAgents) {

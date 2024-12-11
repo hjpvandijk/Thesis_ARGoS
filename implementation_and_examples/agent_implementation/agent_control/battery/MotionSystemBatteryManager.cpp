@@ -62,7 +62,7 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAcce
         if(i == 1 || i == 4) {
             //Torque and speed are negatively linearly related: 0 torque at max speed, 0 speed at max torque (stall)
             float rpm_at_torque =
-                    no_load_rpm - (torque_per_motor_kg_cm / stall_torque_kg_cm) * no_load_rpm; //In RPM @ 6V
+                    no_load_rpm_at_voltage - (torque_per_motor_kg_cm / stall_torque_at_voltage) * no_load_rpm_at_voltage; //In RPM @ 6V
 
             float speed = rpm_at_torque * 2.0f * M_PIf32 * robot_wheel_radius_m / 60.0f; //In m/s
             //Make sure the speed is not higher than the max speed, this shouldn't happen
@@ -72,13 +72,13 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAcce
                 speed = agent->differential_drive.max_speed_straight;
                 //Calculate the torque at this speed
                 float rpm_at_speed = speed * 60.0f / (2.0f * M_PIf32 * robot_wheel_radius_m); //In RPM @ 6V
-                float torque_at_speed = (1 - rpm_at_speed / no_load_rpm) * stall_torque_kg_cm; //In kg.cm
+                float torque_at_speed = (1 - rpm_at_speed / no_load_rpm_at_voltage) * stall_torque_at_voltage; //In kg.cm
                 torque_per_motor_kg_cm = torque_at_speed;
             }
         }
         //Calculate the current using the torque
-        float current_draw_A_per_motor = no_load_current_A + (stall_current_A - no_load_current_A) *
-                                                             (torque_per_motor_kg_cm / stall_torque_kg_cm); //In Amps @ 6V
+        float current_draw_A_per_motor = no_load_current_at_voltage + (stall_current_at_voltage - no_load_current_at_voltage) *
+                                                             (torque_per_motor_kg_cm / stall_torque_at_voltage); //In Amps @ 6V
 
         //Calculate the power usage for both motors together
         float total_power = current_draw_A_per_motor * 2 * this->voltage_at_operating_speed; //In watts
@@ -204,7 +204,7 @@ float MotionSystemBatteryManager::getMaxAchievableSpeed() const {
  * @param speed_m_s
  * @return
  */
-float MotionSystemBatteryManager::getVoltageAtSpeed(float speed_m_s) {
+void MotionSystemBatteryManager::calculateVoltageAtSpeed(float speed_m_s) {
     //Calculate the torque at this speed_m_s
 
     float rpm_at_speed = speed_m_s * 60.0f / (2.0f * M_PIf32 * robot_wheel_radius_m); //In RPM @ 6V
@@ -229,14 +229,17 @@ float MotionSystemBatteryManager::getVoltageAtSpeed(float speed_m_s) {
     if(diff_6v < diff_4_5v && diff_6v < diff_3v) {
         this->voltage_at_operating_speed = voltage_at_speed_using_6v;
         //Interpolate no load current
-        return voltage_at_speed_using_6v;
     } else if(diff_4_5v < diff_6v && diff_4_5v < diff_3v) {
         this->voltage_at_operating_speed = voltage_at_speed_using_4_5v;
-        return voltage_at_speed_using_4_5v;
     } else {
         this->voltage_at_operating_speed = voltage_at_speed_using_3v;
-        return voltage_at_speed_using_3v;
     }
+
+    this->no_load_rpm_at_voltage = 120.0f + (250.0f - 120.0f) * (this->voltage_at_operating_speed - 3.0f) / 3.0f;
+    this->no_load_current_at_voltage = 0.15f + (0.16f - 0.15f) * (this->voltage_at_operating_speed - 3.0f) / 3.0f;
+    //Assume polynomial relationship between stall current and voltage (based on data)
+    this->stall_current_at_voltage = 1.5f + -0.266667f*this->voltage_at_operating_speed + 0.04444444f*this->voltage_at_operating_speed*this->voltage_at_operating_speed; //In A
+    this->stall_torque_at_voltage = 0.4f + (0.8f - 0.4f) * (this->voltage_at_operating_speed - 3.0f) / 3.0f;
 
 
 }

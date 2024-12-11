@@ -33,8 +33,8 @@ Agent::Agent(std::string id) {
     auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
     this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->TURNING_SPEED_RATIO));
     this->speed = this->differential_drive.max_speed_straight;
-    //Set the voltage to the voltage required for the current speed, to use in calculations.
-    this->batteryManager.motionSystemBatteryManager.getVoltageAtSpeed(this->speed);
+    //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
+    this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
 
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
