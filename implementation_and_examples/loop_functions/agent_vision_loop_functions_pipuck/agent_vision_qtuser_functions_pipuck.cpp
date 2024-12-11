@@ -37,6 +37,9 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //            if (i > colors.size()) i = 0;
 //        }
 //    }
+
+
+
     for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
          it != m_cAgVisLF.GetAgentFreeAngles().end();
          ++it) {
@@ -157,6 +160,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         //Draw IDs
         DrawText(it.second,
                  it.first->GetId()); // text
+        float batteryLevel = m_cAgVisLF.m_tAgentBatteryLevels.at(it.first);
+        DrawText(it.second + CVector3(0.1,0.1,0.1), std::to_string(batteryLevel) + '%', CColor::BLACK);
     }
 
 

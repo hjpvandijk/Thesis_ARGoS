@@ -25,7 +25,7 @@ std::tuple<float, float> BatteryManager::EstimateTotalPowerUsage(Agent* agent, s
 
 
     auto microControllerPowerUsage = microControllerBatteryManager.estimateCommunicationConsumption(agent, pathFollowingDurationS); // In mAh
-    argos::LOG << "Motion system power usage: " << motionSystemPowerUsageAtVoltage << " mAh" << std::endl;
-    argos::LOG << "Microcontroller power usage: " << microControllerPowerUsage << " mAh" << std::endl;
+//    argos::LOG << "Motion system power usage: " << motionSystemPowerUsageAtVoltage << " mAh" << std::endl;
+//    argos::LOG << "Microcontroller power usage: " << microControllerPowerUsage << " mAh" << std::endl;
     return {motionSystemPowerUsageAtVoltage + microControllerPowerUsage, pathFollowingDurationS};
 }

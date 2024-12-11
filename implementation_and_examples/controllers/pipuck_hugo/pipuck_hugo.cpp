@@ -96,7 +96,7 @@ void PiPuckHugo::ControlStep() {
 
 //    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
 
-    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
+//    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
 
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
@@ -115,6 +115,25 @@ void PiPuckHugo::ControlStep() {
     CRadians zAngle, yAngle, xAngle;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
     agentObject->setHeading(zAngle + orientationNoise);
+
+    //Update agent battery level
+    if (batteryMeasureTicks % 100 == 0) {
+
+        //Get relative vector
+        float traveledPathLength = sqrt(pow(agentObject->position.x - previousAgentPosition.GetX(), 2) +
+                                        pow(agentObject->position.y - previousAgentPosition.GetY(), 2));
+        CRadians traveledAngle = zAngle - previousAgentOrientation;
+        CVector2 traveledVector = CVector2(traveledPathLength, 0).Rotate(traveledAngle);
+        auto [usedPower, duration] = agentObject->batteryManager.EstimateTotalPowerUsage(agentObject.get(),
+                                                                                         {traveledVector});
+        agentObject->batteryManager.battery.charge -= usedPower;
+        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
+
+        previousAgentPosition = {-position.GetY(), position.GetX()};
+        previousAgentOrientation = zAngle;
+    }
+    batteryMeasureTicks++;
+
 
 //    RLOG << "Position: " << agentObject->position.x << std::endl;
 //    RLOG << "Orientation: " << agentObject->heading << std::endl;

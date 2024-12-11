@@ -32,6 +32,7 @@ public:
     std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>> m_tAgentFrontierRegions;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
     std::vector<std::tuple<quadtree::Box, float, double >> combinedQuadTree;
+    std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
 
 public:
 
