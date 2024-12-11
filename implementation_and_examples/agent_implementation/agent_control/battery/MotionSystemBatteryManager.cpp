@@ -192,7 +192,7 @@ float MotionSystemBatteryManager::getMaxAchievableSpeed() const {
     //We can estimate the current draw by looking at the torque-speed curve of the motor
     //Torque and speed are negatively linearly related: 0 torque at max speed, 0 speed at max torque (stall)
     float rpm_at_torque = no_load_rpm - (torque_per_motor_kg_cm_constant / stall_torque_kg_cm) * no_load_rpm; //In RPM @ 6V
-    //TODO: decide what speed we want, and calculate the current draw at that speed
+    //TODO: we are assuming 6V is the max voltage, correct?
 
     float max_speed = rpm_at_torque * 2.0f * M_PIf32 * robot_wheel_radius_m / 60.0f; //In m/s
     //Now we know the max achievable speed.
@@ -211,6 +211,7 @@ void MotionSystemBatteryManager::calculateVoltageAtSpeed(float speed_m_s) {
     float torque_at_speed = rolling_force_without_acceleration_N * robot_wheel_radius_m * 10.1971621f; //In kg.cm
     float torque_per_motor = torque_at_speed / 2; //In kg.cm
 
+    //TODO: set values through config file
     float speed_at_torque_at_3V = 120.0f * (1-torque_per_motor/0.4); //In RPM @ 3V: no-load rpm * (1 - torque/stall torque);
     float speed_at_torque_at_4_5V = 185.0f * (1-torque_per_motor/0.6); //In RPM @ 4.5V: no-load rpm * (1 - torque/stall torque);
     float speed_at_torque_at_6V = 250.0f * (1-torque_per_motor/0.8); //In RPM @ 6V: no-load rpm * (1 - torque/stall torque);

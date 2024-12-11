@@ -18,7 +18,7 @@ BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m
  * @param relativePath
  * @return
  */
-std::tuple<float, float> BatteryManager::EstimateTotalPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath){
+std::tuple<float, float> BatteryManager::estimateTotalPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath){
 
     auto [motionSystemPowerUsage, pathFollowingDurationS] = motionSystemBatteryManager.estimateMotorPowerUsageAndDuration(agent, relativePath); //In Wh
     auto motionSystemPowerUsageAtVoltage = motionSystemPowerUsage / battery.voltage * 1000.0f;//In mAh
@@ -29,3 +29,11 @@ std::tuple<float, float> BatteryManager::EstimateTotalPowerUsage(Agent* agent, s
 //    argos::LOG << "Microcontroller power usage: " << microControllerPowerUsage << " mAh" << std::endl;
     return {motionSystemPowerUsageAtVoltage + microControllerPowerUsage, pathFollowingDurationS};
 }
+
+std::tuple<float,float> BatteryManager::estimateMotionPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath){
+    auto [motionSystemPowerUsage, pathFollowingDurationS] = motionSystemBatteryManager.estimateMotorPowerUsageAndDuration(agent, relativePath); //In Wh
+    auto motionSystemPowerUsageAtVoltage = motionSystemPowerUsage / battery.voltage * 1000.0f;//In mAh
+
+    return {motionSystemPowerUsageAtVoltage, pathFollowingDurationS};
+}
+

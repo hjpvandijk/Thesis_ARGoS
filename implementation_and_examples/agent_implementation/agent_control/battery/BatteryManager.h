@@ -72,7 +72,9 @@ public:
     /***
      * Estimate how much power will be used in total over the given distance, with the given number of turns
      */
-    std::tuple<float, float> EstimateTotalPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath);
+    std::tuple<float, float> estimateTotalPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath);
+
+    std::tuple<float,float> estimateMotionPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath);
 private:
 
 };

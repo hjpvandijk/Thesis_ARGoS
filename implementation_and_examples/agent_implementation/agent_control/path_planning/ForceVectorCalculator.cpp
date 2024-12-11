@@ -303,8 +303,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX - agent->position.x, frontierRegionY - agent->position.y).Rotate(-agent->heading);
 
 
-
-        auto [powerUsage, duration] = agent->batteryManager.EstimateTotalPowerUsage(agent, {vectorToFrontier});
+        //Only need to compare the motion power usage of the agent to the frontier region
+        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, {vectorToFrontier});
 
         //Calculate the score of the frontier region
         double score =
@@ -325,6 +325,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         }
 
         //TODO: add battery and duration to the score
+        //TODO: Probably better; exchange messages about selected frontiers, so that agents can avoid each other's frontiers (highest ID priority for example)
         //If that frontier is best to visit for a different agent, skip it.
         bool otherAgentLowerScore = false;
         for (auto distanceFromOtherAgent: distancesFromOtherAgents) {

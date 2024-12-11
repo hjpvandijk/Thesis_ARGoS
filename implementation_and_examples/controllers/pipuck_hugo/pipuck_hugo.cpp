@@ -124,7 +124,7 @@ void PiPuckHugo::ControlStep() {
                                         pow(agentObject->position.y - previousAgentPosition.GetY(), 2));
         CRadians traveledAngle = zAngle - previousAgentOrientation;
         CVector2 traveledVector = CVector2(traveledPathLength, 0).Rotate(traveledAngle);
-        auto [usedPower, duration] = agentObject->batteryManager.EstimateTotalPowerUsage(agentObject.get(),
+        auto [usedPower, duration] = agentObject->batteryManager.estimateTotalPowerUsage(agentObject.get(),
                                                                                          {traveledVector});
         agentObject->batteryManager.battery.charge -= usedPower;
         argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
