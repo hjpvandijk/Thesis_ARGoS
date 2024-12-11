@@ -18,7 +18,9 @@ public:
 
     float getMaxAchievableSpeed() const;
 
-private:
+    float getVoltageAtSpeed(float speed_m_s);
+
+        private:
 
     //https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674
     //https://einstronic.com/product/tt-motor-yellow-geared-dc-motor/
@@ -28,18 +30,12 @@ private:
     //At 3VDC we measured 150mA @ 120 RPM no-load, and 1.1 Amps when stalled
     //At 4.5VDC we measured 155mA @ 185 RPM no-load, and 1.2 Amps when stalled
     //At 6VDC we measured 160mA @ 250 RPM no-load, and 1.5 Amps when stalled
+    //Stall Torque(3V): 0.4kg.cm
     //Stall Torque (6V): 0.8kg.cm
     //Min. Operating Speed (3V): 90RPM
     //Min. Operating Speed (6V): 200RPM
 
 
-//    float robot_weight_kg = 0.5; //In kg
-//    float robot_wheel_radius_m = 0.03; //In meters
-//    float rolling_force_without_acceleration_N = robot_weight_kg*9.81; //In Newtons
-//    float stall_torque_kg_cm = 0.8; //In kg.cm @ 6V
-//    float no_load_rpm = 250; //In RPM @ 6V
-//    float stall_current_A = 1.5; //In Amps @ 6V
-//    float no_load_current_A = 0.16; //In Amps @ 6V
 
     float robot_weight_kg; //In kg
     float robot_wheel_radius_m; //In meters
@@ -49,6 +45,11 @@ private:
     float no_load_rpm; //In RPM @ 6V
     float stall_current_A; //In Amps @ 6V
     float no_load_current_A ; //In Amps @ 6V
+
+    float voltage_at_operating_speed = 6.0; //In Volts
+    float no_load_current_at_operating_speed_A = 0.16; //In Amps @ 6V
+    float stall_current_at_operating_speed_A = 1.5; //In Amps @ 6V
+    float stall_torque_at_operating_speed_kg_cm = 0.8; //In kg.cm @ 6V
 
     float rolling_resistance_coefficient = 0.01; //Typical value for rubber on concrete
 

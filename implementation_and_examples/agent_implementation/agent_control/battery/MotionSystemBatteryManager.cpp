@@ -81,7 +81,7 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAcce
                                                              (torque_per_motor_kg_cm / stall_torque_kg_cm); //In Amps @ 6V
 
         //Calculate the power usage for both motors together
-        float total_power = current_draw_A_per_motor * 2 * 6; //In watts
+        float total_power = current_draw_A_per_motor * 2 * this->voltage_at_operating_speed; //In watts
 
         totalPowerUsage += total_power * forceDuration; //In Wh
     }
@@ -179,6 +179,10 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
     return {totalMotorPowerUsage, totalDuration};
 }
 
+/**
+ * Get the maximum achievable speed of the robot, based on max voltage (6v)
+ * @return
+ */
 float MotionSystemBatteryManager::getMaxAchievableSpeed() const {
     //Calculate maximum constant speed
     float force_per_wheel_constant = rolling_force_without_acceleration_N / 2; //In Newtons
@@ -193,5 +197,47 @@ float MotionSystemBatteryManager::getMaxAchievableSpeed() const {
     float max_speed = rpm_at_torque * 2.0f * M_PIf32 * robot_wheel_radius_m / 60.0f; //In m/s
     //Now we know the max achievable speed.
     return max_speed;
+}
+
+/**
+ * Get the voltage required for achieving the given speed in m/s
+ * @param speed_m_s
+ * @return
+ */
+float MotionSystemBatteryManager::getVoltageAtSpeed(float speed_m_s) {
+    //Calculate the torque at this speed_m_s
+
+    float rpm_at_speed = speed_m_s * 60.0f / (2.0f * M_PIf32 * robot_wheel_radius_m); //In RPM @ 6V
+    float torque_at_speed = rolling_force_without_acceleration_N * robot_wheel_radius_m * 10.1971621f; //In kg.cm
+    float torque_per_motor = torque_at_speed / 2; //In kg.cm
+
+    float speed_at_torque_at_3V = 120.0f * (1-torque_per_motor/0.4); //In RPM @ 3V: no-load rpm * (1 - torque/stall torque);
+    float speed_at_torque_at_4_5V = 185.0f * (1-torque_per_motor/0.6); //In RPM @ 4.5V: no-load rpm * (1 - torque/stall torque);
+    float speed_at_torque_at_6V = 250.0f * (1-torque_per_motor/0.8); //In RPM @ 6V: no-load rpm * (1 - torque/stall torque);
+
+    //Now we know the speed at the torque, we can calculate the voltage required to achieve the speed
+    float voltage_at_speed_using_6v = rpm_at_speed/speed_at_torque_at_6V * 6.0f; //In Volts
+    float voltage_at_speed_using_4_5v = rpm_at_speed/speed_at_torque_at_4_5V * 4.5f; //In Volts
+    float voltage_at_speed_using_3v = rpm_at_speed/speed_at_torque_at_3V * 3.0f; //In Volts
+
+    //Return the calculated voltage that is closest to the voltage used in calculation, this will be the most accurate
+    float diff_6v = std::abs(voltage_at_speed_using_6v - 6.0f);
+    float diff_4_5v = std::abs(voltage_at_speed_using_4_5v - 4.5f);
+    float diff_3v = std::abs(voltage_at_speed_using_3v - 3.0f);
+
+    //Interpolate values
+    if(diff_6v < diff_4_5v && diff_6v < diff_3v) {
+        this->voltage_at_operating_speed = voltage_at_speed_using_6v;
+        //Interpolate no load current
+        return voltage_at_speed_using_6v;
+    } else if(diff_4_5v < diff_6v && diff_4_5v < diff_3v) {
+        this->voltage_at_operating_speed = voltage_at_speed_using_4_5v;
+        return voltage_at_speed_using_4_5v;
+    } else {
+        this->voltage_at_operating_speed = voltage_at_speed_using_3v;
+        return voltage_at_speed_using_3v;
+    }
+
+
 }
 
