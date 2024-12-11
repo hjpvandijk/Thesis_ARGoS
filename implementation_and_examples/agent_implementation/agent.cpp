@@ -33,7 +33,7 @@ Agent::Agent(std::string id) {
     auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
     this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->TURNING_SPEED_RATIO));
     this->speed = this->differential_drive.max_speed_straight;
-    //Set the voltage to the voltage required for the current speed, to use in calculations. 
+    //Set the voltage to the voltage required for the current speed, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.getVoltageAtSpeed(this->speed);
 
 
@@ -561,13 +561,6 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     }
     this->previousBestFrontier = this->currentBestFrontier;
     this->swarm_vector = total_vector;
-
-    //Relative vector to heading
-    argos::CVector2 vectorToFrontier = argos::CVector2(this->currentBestFrontier.x - this->position.x, this->currentBestFrontier.y - this->position.y).Rotate(-this->heading);
-
-    auto [powerUsage, duration] = this->batteryManager.EstimateTotalPowerUsage(this, {vectorToFrontier});
-    argos::LOG << "Total power usage: " << powerUsage << " mAh" << std::endl;
-    argos::LOG << "Duration: " << duration << std::endl;
 }
 
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
