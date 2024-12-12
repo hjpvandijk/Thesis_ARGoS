@@ -49,7 +49,7 @@ void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB
  */
 void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     for (auto & it : agent->agentLocations) {
-        Coordinate agentLocation = (it.second.first);
+        Coordinate agentLocation = (std::get<0>(it.second));
         Coordinate agentLocationToArgos = agentLocation.FromOwnToArgos();
         CVector3 pos = CVector3(agentLocationToArgos.x, agentLocationToArgos.y, 0.02f);
         m_tOtherAgentCoordinates[pcFB].push_back(pos);
