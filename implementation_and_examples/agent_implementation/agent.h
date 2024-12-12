@@ -75,7 +75,7 @@ public:
     double POSITION_NOISE_CM = 5.0;
 
 
-    std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
+    std::map<std::string, std::tuple<Coordinate, Coordinate, double>> agentLocations; //id: (location, frontier, timestamp)
     double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
     double QUADTREE_EXCHANGE_INTERVAL_S = 5.0;
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
@@ -177,6 +177,10 @@ public:
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
+#endif
+
+#ifdef SEPARATE_FRONTIERS
+    double FRONTIER_CLOSE_DISTANCE = 0.5;
 #endif
 
 

@@ -295,9 +295,9 @@ void Agent::checkForObstacles() {
             //So check if the object coordinate is close to another agent
             bool close_to_other_agent = false;
             for (const auto &agentLocation: this->agentLocations) {
-                if((agentLocation.second.second - this->elapsed_ticks) / this->ticks_per_second > AGENT_LOCATION_RELEVANT_DURATION_S) continue;
+                if((std::get<2>(agentLocation.second) - this->elapsed_ticks) / this->ticks_per_second > AGENT_LOCATION_RELEVANT_DURATION_S) continue;
                 argos::CVector2 objectToAgent =
-                        argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
+                        argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
@@ -680,7 +680,7 @@ void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
 
     for (const auto& agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = agentLocationPair.second.second;
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             AGENT_LOCATION_RELEVANT_DURATION_S) {
@@ -701,7 +701,7 @@ void Agent::sendQuadtreeToCloseAgents() {
 }
 
 void Agent::doStep() {
-    broadcastMessage("C:" + this->position.toString());
+    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
     sendQuadtreeToCloseAgents();
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
@@ -788,6 +788,18 @@ std::string getIdFromMessage(const std::string &message) {
 
 }
 
+std::vector<std::string> splitString(const std::string &str, const std::string &delimiter) {
+    std::vector<std::string> strings;
+    size_t pos = 0;
+    size_t lastPos = 0;
+    while ((pos = str.find(delimiter, lastPos)) != std::string::npos) {
+        strings.push_back(str.substr(lastPos, pos - lastPos));
+        lastPos = pos + delimiter.length();
+    }
+    strings.push_back(str.substr(lastPos, str.length() - lastPos));
+    return strings;
+}
+
 /**
  * Get a coordinate from a string
  * @param str
@@ -861,8 +873,10 @@ void Agent::parseMessages() {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
-            Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
-            this->agentLocations[senderId] = std::make_pair(receivedPosition, this->elapsed_ticks);
+            auto splitStrings = splitString(messageContent.substr(2), "|");
+            Coordinate receivedPosition = coordinateFromString(splitStrings[0]);
+            Coordinate receivedFrontier = coordinateFromString(splitStrings[1]);
+            this->agentLocations[senderId] = std::make_tuple(receivedPosition, receivedFrontier, this->elapsed_ticks);
         } else if (messageContent.at(0) == 'M') {
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(2));

@@ -38,14 +38,14 @@ argos::CVector2 ForceVectorCalculator::getVirtualWallAvoidanceVector(Agent* agen
 bool ForceVectorCalculator::getAverageNeighborLocation(Agent* agent, Coordinate *averageNeighborLocation, double range) {
     int nAgentsWithinRange = 0;
     for (const auto &agentLocation: agent->agentLocations) {
-        if((agentLocation.second.second - agent->elapsed_ticks) / agent->ticks_per_second > agent->AGENT_LOCATION_RELEVANT_DURATION_S) continue;
+        if((std::get<2>(agentLocation.second) - agent->elapsed_ticks) / agent->ticks_per_second > agent->AGENT_LOCATION_RELEVANT_DURATION_S) continue;
         argos::CVector2 vectorToOtherAgent =
-                argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
+                argos::CVector2(std::get<0>(agentLocation.second) .x, std::get<0>(agentLocation.second).y)
                 - argos::CVector2(agent->position.x, agent->position.y);
 
         if (vectorToOtherAgent.Length() < range) {
-            averageNeighborLocation->x += agentLocation.second.first.x;
-            averageNeighborLocation->y += agentLocation.second.first.y;
+            averageNeighborLocation->x += std::get<0>(agentLocation.second) .x;
+            averageNeighborLocation->y += std::get<0>(agentLocation.second).y;
             nAgentsWithinRange++;
         }
     }
@@ -114,7 +114,7 @@ argos::CVector2 ForceVectorCalculator::calculateAgentAlignmentVector(Agent* agen
     //Get the velocities of the agents within range
     for (const auto &agentVelocity: agent->agentVelocities) {
         std::string agentID = agentVelocity.first;
-        Coordinate otherAgentLocation = agent->agentLocations[agentID].first;
+        Coordinate otherAgentLocation = std::get<0>(agent->agentLocations[agentID]);
         argos::CVector2 agentVector = agentVelocity.second.first;
         double agentSpeed = agentVelocity.second.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
@@ -328,29 +328,23 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 
 #ifdef SEPARATE_FRONTIERS
-        std::vector<double> distancesFromOtherAgents = {};
+        bool skipFrontier = false;
+        for (auto agentLocationTuple: agent->agentLocations) {
+            if((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second > agent->AGENT_LOCATION_RELEVANT_DURATION_S) continue;
 
-        for (const auto &agentLocationPair: agent->agentLocations) {
-            //Get the distance between the frontier and the last known location of other agents
-            Coordinate agentLocation = agentLocationPair.second.first;
-            double distanceFromOtherAgent = sqrt(
-                    pow(frontierRegionX - agentLocation.x, 2) + pow(frontierRegionY - agentLocation.y, 2));
-            distancesFromOtherAgents.push_back(distanceFromOtherAgent);
-        }
+            double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
+                                                 pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
 
-        //TODO: add battery and duration to the score
-        //TODO: Probably better; exchange messages about selected frontiers, so that agents can avoid each other's frontiers (highest ID priority for example)
-        //If that frontier is best to visit for a different agent, skip it.
-        bool otherAgentLowerScore = false;
-        for (auto distanceFromOtherAgent: distancesFromOtherAgents) {
-            double otherAgentScore = agent->FRONTIER_DISTANCE_WEIGHT * distanceFromOtherAgent -
-                    agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
-            if (otherAgentScore < score) {
-                otherAgentLowerScore = true;
-                break;
+            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE) {
+                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+                if (agentLocationTuple.first > agent->id) {
+                    //If the other agent has a higher ID, so we can't select this frontier
+                    skipFrontier = true;
+                    break;
+                }
             }
         }
-        if (otherAgentLowerScore) continue;
+        if (skipFrontier) continue;
 #endif
 
         //If the score is lower than the best score, update the best score and best frontier region

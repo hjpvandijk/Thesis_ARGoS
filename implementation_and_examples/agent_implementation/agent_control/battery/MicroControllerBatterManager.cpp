@@ -92,9 +92,9 @@ std::pair<float, float> MicroControllerBatteryManager::estimateReceiveConsumptio
         double remaining = seconds - nExchangeIntervalsInPeriod * agent->QUADTREE_EXCHANGE_INTERVAL_S;
 
         int amountOfReceives = 0;
-        if(agentQuadtree.second.second - agent->elapsed_ticks <= agent->QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
+        if(std::get<2>(agentQuadtree.second) - agent->elapsed_ticks <= agent->QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
             amountOfReceives += nExchangeIntervalsInPeriod; //We will exchange nExchangeIntervalsInPeriod times with this agent
-            if (agentQuadtree.second.second - agent->elapsed_ticks +
+            if (std::get<2>(agentQuadtree.second) - agent->elapsed_ticks +
                 agent->QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will (probably) receive soon
                 amountOfReceives++; //We are actually exchanging once more.
             }
