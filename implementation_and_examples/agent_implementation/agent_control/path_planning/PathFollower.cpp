@@ -27,7 +27,7 @@ void PathFollower::followPath(Agent *agent,
     }
 
 
-    argos::LOG << "route size: " << agent->route_to_best_frontier.size() << " and current path section: " << current_path_section << std::endl;
+//    argos::LOG << "route size: " << agent->route_to_best_frontier.size() << " and current path section: " << current_path_section << std::endl;
     auto [start, end] = agent->route_to_best_frontier.at(current_path_section);
 
     //Our target is the end of the edge
