@@ -25,6 +25,7 @@ Agent::Agent(std::string id) {
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->wallFollower = WallFollower();
 
+#ifdef BATTERY_MANAGEMENT_ENABLED
     //TODO: Get values from config file
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
     //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
@@ -35,6 +36,9 @@ Agent::Agent(std::string id) {
     this->speed = this->differential_drive.max_speed_straight;
     //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
+#else
+    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
+#endif
 
 #ifdef PATH_PLANNING_ENABLED
     this->pathPlanner = SimplePathPlanner();

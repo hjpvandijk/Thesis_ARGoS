@@ -313,7 +313,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #endif
         //Relative vector to heading
 
-
+#ifdef BATTERY_MANAGEMENT_ENABLED
         //Only need to compare the motion power usage of the agent to the frontier region
         auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, {vectorToFrontier});
 
@@ -321,7 +321,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double score =
                 agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
                 agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration;
-
+#else
+        //Calculate the score of the frontier region
+        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
+#endif
 
 
 #ifdef SEPARATE_FRONTIERS

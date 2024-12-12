@@ -26,6 +26,7 @@
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
 //#define WALL_FOLLOWING_ENABLED
+//#define BATTERY_MANAGEMENT_ENABLED
 //#define PATH_PLANNING_ENABLED
 //#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
@@ -53,8 +54,10 @@ public:
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
+#ifdef BATTERY_MANAGEMENT_ENABLED
     //Battery manager
     BatteryManager batteryManager;
+#endif
 
     //Path planning engines
     WallFollower wallFollower;

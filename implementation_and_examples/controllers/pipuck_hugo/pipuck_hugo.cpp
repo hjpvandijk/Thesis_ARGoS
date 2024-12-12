@@ -116,6 +116,7 @@ void PiPuckHugo::ControlStep() {
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
     agentObject->setHeading(zAngle + orientationNoise);
 
+#ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level
     if (batteryMeasureTicks % 100 == 0) {
 
@@ -133,6 +134,7 @@ void PiPuckHugo::ControlStep() {
         previousAgentOrientation = zAngle;
     }
     batteryMeasureTicks++;
+#endif
 
 
 //    RLOG << "Position: " << agentObject->position.x << std::endl;

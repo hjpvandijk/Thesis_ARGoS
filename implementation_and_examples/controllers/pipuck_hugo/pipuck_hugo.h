@@ -108,9 +108,11 @@ private:
    CCI_PositioningSensor* m_pcPositioningSensor;
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
 
+#ifdef BATTERY_MANAGEMENT_ENABLED
     CVector2 previousAgentPosition;
     CRadians previousAgentOrientation;
     int batteryMeasureTicks = 0;
+#endif
 
 
    /*
