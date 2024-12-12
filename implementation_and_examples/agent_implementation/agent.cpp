@@ -36,9 +36,10 @@ Agent::Agent(std::string id) {
     //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
 
-
+#ifdef PATH_PLANNING_ENABLED
     this->pathPlanner = SimplePathPlanner();
     this->pathFollower = PathFollower();
+#endif
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     this->frontierEvaluator = FrontierEvaluator(this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE, MAX_TICKS_IN_HITPOINT);
 #endif
