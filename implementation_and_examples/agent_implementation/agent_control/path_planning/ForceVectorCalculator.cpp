@@ -305,6 +305,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         //Calculate distance of route
         double distance = 0;
         route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
+        if (route_to_frontier.empty()) continue; //If no route is found, skip this frontier
         for (auto edge: route_to_frontier) {
             distance += sqrt(pow(edge.first.x - edge.second.x, 2) + pow(edge.first.y - edge.second.y, 2));
         }

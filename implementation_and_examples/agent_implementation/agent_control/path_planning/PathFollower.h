@@ -16,6 +16,8 @@ public:
 private:
     int current_path_section = 0;
     std::vector<std::pair<Coordinate, Coordinate>> current_route;
+    bool rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const;
+
 };
 
 

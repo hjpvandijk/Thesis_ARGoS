@@ -21,8 +21,8 @@ public:
     std::vector<std::pair<Coordinate, Coordinate>> getRoute(Agent* agent, Coordinate start, Coordinate end) const;
 
 private:
-    std::vector<std::pair<Coordinate, Coordinate>> getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const;
-    void getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction) const;
+    std::vector<std::pair<Coordinate, Coordinate>> getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, bool switched_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const;
+    void getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction,  bool switched_direction) const;
     std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> directionToTargetFree(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, int wall_following_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const;
     int directionToTargetFree(Agent* agent, Coordinate start, double box_size, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const;
 

@@ -34,11 +34,14 @@ void PathFollower::followPath(Agent *agent,
     Coordinate sub_target = end;
 
     //If we are close to the target, go to the next section
-    if (sqrt(pow(sub_target.x - agent->position.x, 2) + pow(sub_target.y - agent->position.y, 2)) < agent->OBJECT_AVOIDANCE_RADIUS*2) {
-        current_path_section++;
-        //If we are at the end of the path, return
-        if (current_path_section >= agent->route_to_best_frontier.size()) {
-            return;
+    if (sqrt(pow(sub_target.x - agent->position.x, 2) + pow(sub_target.y - agent->position.y, 2)) < agent->OBJECT_AVOIDANCE_RADIUS*3) {
+        //Check if direction to the sub_target is also free
+        if (!rayTraceQuadtreeOccupiedIntersection(agent, agent->position, sub_target)) {
+            current_path_section++;
+            //If we are at the end of the path, return
+            if (current_path_section >= agent->route_to_best_frontier.size()) {
+                return;
+            }
         }
     }
 
@@ -56,5 +59,32 @@ void PathFollower::followPath(Agent *agent,
 
     //Calculate the relative object avoidance angle
     *relativeObjectAvoidanceAngle = NormalizedDifference(ToRadians(closestFreeAngle), targetAngle);
+
+}
+
+bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
+    auto x = start.x;
+    auto y = start.y;
+    auto dx = target.x - start.x;
+    auto dy = target.y - start.y;
+    auto distance = sqrt(dx * dx + dy * dy);
+    auto stepSize = 0.01;
+    auto nSteps = std::ceil(distance / stepSize);
+    auto stepX = dx / nSteps;
+    auto stepY = dy / nSteps;
+
+    for (int s = 0; s < nSteps; s++) {
+        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
+        auto cell = cell_and_box.first;
+        auto box = cell_and_box.second;
+        if (cell != nullptr) {
+            if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
+                return true;
+            }
+        }
+        x += stepX;
+        y += stepY;
+    }
+    return false;
 
 }

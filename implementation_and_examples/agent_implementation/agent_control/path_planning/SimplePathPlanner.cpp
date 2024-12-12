@@ -7,10 +7,10 @@
 std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target) const {
     int wall_following_direction = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction (1= left, -1=
     std::vector<std::pair<Coordinate, Coordinate>> route;
-    return getRouteSections(agent, start, target, wall_following_direction, route);
+    return getRouteSections(agent, start, target, wall_following_direction, false, route);
 }
 
-std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
+std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, bool switched_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
     auto [cell, box, edge_index, _] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
     if (cell == nullptr) return {{start, target}};
     auto [start_edge, end_edge] = getEdgeCoordinates(box, edge_index);
@@ -37,7 +37,8 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
         route.emplace_back(edge_middle, end_edge);
     }
 
-    getWallFollowingRoute(agent, cell, box.size, edge_index, target, route, wall_following_direction);
+    getWallFollowingRoute(agent, cell, box.size, edge_index, target, route, wall_following_direction, switched_direction);
+    if (route.empty()) return route; //If the route is empty, we can't reach our target, return empty route
     int a = 0;
     for (int i = 0; i < route.size(); i++) {
         auto [begin, end] = route[i];
@@ -54,7 +55,7 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
     return route;
 }
 
-void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction) const {
+void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction, bool switched_direction) const {
     //If the direction to the target is free from the cell, return
     auto [direction_free, intersection_cell, intersection_edge_index, intersection_edge_coordinate] = directionToTargetFree(agent, cell, box_size, edge_index, target, wall_following_direction, route);
     if (direction_free > 0) { //If the direction is free (to some extent)
@@ -66,7 +67,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
 //        route.emplace_back(begin_last_edge, edge_middle);
         if (direction_free == 1) { //We are hitting an edge not in route yet, continue exploring that edge
 //            route.emplace_back(edge_middle, intersection_edge_coordinate);
-            getWallFollowingRoute(agent, intersection_cell, box_size, intersection_edge_index, target, route, wall_following_direction);
+            getWallFollowingRoute(agent, intersection_cell, box_size, intersection_edge_index, target, route, wall_following_direction, switched_direction);
         }
         return;
     }
@@ -110,11 +111,12 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
             route.emplace_back(agent->position, bestEdgeStart);
         }
         route.emplace_back(bestEdgeStart, bestEdgeEnd);
-        getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, route, wall_following_direction);
+        getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, route, wall_following_direction, switched_direction);
     } else {
         //If we can't find a new edge to go to, we should trace to the target, and go the other direction as in the route
         route.clear();
-        getRouteSections(agent, agent->position, target, -wall_following_direction, route);
+        if (switched_direction) return; //If we have already switched direction, return empty route
+        getRouteSections(agent, agent->position, target, -wall_following_direction, true, route);
     }
 
 }
