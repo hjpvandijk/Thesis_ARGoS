@@ -16,6 +16,38 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
  */
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
+
+    for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
+        for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
+            Coordinate neighbor1 = std::get<0>(neighborPair);
+            Coordinate neighbor2 = std::get<1>(neighborPair);
+
+            Coordinate neighbor1argos = neighbor1.FromOwnToArgos();
+            Coordinate neighbor2argos = neighbor2.FromOwnToArgos();
+
+            CVector3 pos1 = CVector3(neighbor1argos.x, neighbor1argos.y, 0.02f);
+            CVector3 pos2 = CVector3(neighbor2argos.x, neighbor2argos.y, 0.02f);
+            auto ray = CRay3(pos1, pos2);
+            DrawRay(ray, CColor::BLUE, 20.0f);
+        }
+    }
+
+    for (auto & m_tRoute : m_cAgVisLF.m_tAgentRoute){
+        for (std::tuple<Coordinate, Coordinate> route: m_tRoute.second) {
+            Coordinate start = std::get<0>(route);
+            Coordinate end = std::get<1>(route);
+
+
+            Coordinate startArgos = start.FromOwnToArgos();
+            Coordinate endArgos = end.FromOwnToArgos();
+
+            CVector3 pos1 = CVector3(startArgos.x, startArgos.y, 0.02f);
+            CVector3 pos2 = CVector3(endArgos.x, endArgos.y, 0.02f);
+            auto ray = CRay3(pos1, pos2);
+            DrawRay(ray, CColor::YELLOW, 10.0f);
+        }
+    }
+
     /* Go through all the robot waypoints and draw them */
 //    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
 //         it != m_cAgVisLF.GetAgentFrontierRegions().end();
@@ -116,6 +148,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         color = color.Blend(CColor::RED);
         if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
         DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+        DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
+
 
     }
 

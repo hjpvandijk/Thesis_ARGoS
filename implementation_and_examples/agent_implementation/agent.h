@@ -19,11 +19,14 @@
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
 #include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
 #include "agent_control/battery/BatteryManager.h"
+#include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
+#include "agent_implementation/agent_control/path_planning/PathFollower.h"
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
+//#define WALL_FOLLOWING_ENABLED
+#define PATH_PLANNING_ENABLED
 //#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -31,7 +34,6 @@
 #endif
 #endif
 #define WALKING_STATE_WHEN_NO_FRONTIERS
-
 
 class Agent {
 public:
@@ -59,6 +61,11 @@ public:
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     FrontierEvaluator frontierEvaluator;
 #endif
+#ifdef PATH_PLANNING_ENABLED
+    SimplePathPlanner pathPlanner;
+    PathFollower pathFollower;
+#endif
+
 
     double DISTANCE_SENSOR_NOISE_CM = 5.0;
     double ORIENTATION_NOISE_DEGREES = 5.0;
@@ -186,7 +193,7 @@ public:
     double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
     double P_POSITION = 0.9; // 90% probability for position to be correct
     double P_FREE = 0.6; // 70% probability for free to be correct
-    double P_OCCUPIED = 0.3; // 30% probability for occupied to be correct
+    double P_OCCUPIED = 0.4; // 30% probability for occupied to be correct
     float ALPHA_RECEIVE = 0.1; // Factor with which a received value's probability is pulled towards 0.5
     double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
 
@@ -206,6 +213,7 @@ public:
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
+    std::vector<std::pair<Coordinate, Coordinate>> route_to_best_frontier;
 
 
 
@@ -232,6 +240,7 @@ private:
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
+    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();

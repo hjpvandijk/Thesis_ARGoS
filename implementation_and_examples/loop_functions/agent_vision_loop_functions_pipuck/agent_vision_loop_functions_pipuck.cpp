@@ -64,6 +64,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = agent->quadtree->getAllBoxes();
+    m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
     m_tQuadTree[pcFB] = boxesAndConfidenceAndTicks;
 }
@@ -199,6 +200,8 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
 
+
+        m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
 
     }
 

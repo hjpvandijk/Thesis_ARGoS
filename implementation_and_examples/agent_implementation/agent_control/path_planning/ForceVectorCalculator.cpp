@@ -275,6 +275,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     std::vector<quadtree::Box> bestFrontierRegion = {};
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
     double bestFrontierScore = std::numeric_limits<double>::max();
+    std::vector<std::pair<Coordinate, Coordinate>> bestRoute = {};
 
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
@@ -298,7 +299,16 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #endif
 
         //Calculate the distance between the agent and the frontier region
+#ifdef PATH_PLANNING_ENABLED
+        //Calculate distance of route
+        double distance = 0;
+        auto route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
+        for (auto edge: route_to_frontier) {
+            distance += sqrt(pow(edge.first.x - edge.second.x, 2) + pow(edge.first.y - edge.second.y, 2));
+        }
+#else
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
+#endif
         //Relative vector to heading
         argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX - agent->position.x, frontierRegionY - agent->position.y).Rotate(-agent->heading);
 
@@ -343,11 +353,13 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         if (score < bestFrontierScore) {
             bestFrontierScore = score;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
+            bestRoute = route_to_frontier;
         }
     }
 
 
     agent->currentBestFrontier = bestFrontierRegionCenter;
+    agent->route_to_best_frontier = bestRoute;
 
 
 
@@ -479,6 +491,9 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
 #ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
     agent->wallFollower.wallFollowing(agent, freeAngles, &closestFreeAngle, &closestFreeAngleRadians, relativeObjectAvoidanceAngle, targetAngle);
+#endif
+#ifdef PATH_PLANNING_ENABLED
+    agent->pathFollower.followPath(agent, freeAngles, relativeObjectAvoidanceAngle, targetAngle);
 #endif
     return true;
 
