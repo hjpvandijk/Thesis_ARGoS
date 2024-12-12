@@ -18,11 +18,16 @@
 #include "agent_implementation/agent_control/path_planning/WallFollower.h"
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
 #include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
+#include "agent_control/battery/BatteryManager.h"
+#include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
+#include "agent_implementation/agent_control/path_planning/PathFollower.h"
 
 //#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
+//#define WALL_FOLLOWING_ENABLED
+//#define BATTERY_MANAGEMENT_ENABLED
+//#define PATH_PLANNING_ENABLED
 //#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -49,21 +54,32 @@ public:
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
+#ifdef BATTERY_MANAGEMENT_ENABLED
+    //Battery manager
+    BatteryManager batteryManager;
+#endif
+
     //Path planning engines
     WallFollower wallFollower;
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     FrontierEvaluator frontierEvaluator;
 #endif
+#ifdef PATH_PLANNING_ENABLED
+    SimplePathPlanner pathPlanner;
+    PathFollower pathFollower;
+#endif
 
-    double DISTANCE_SENSOR_NOISE_CM = 10.0;
-    double ORIENTATION_NOISE_DEGREES = 10.0;
-    double POSITION_NOISE_CM = 10.0;
+
+    double DISTANCE_SENSOR_NOISE_CM = 5.0;
+    double ORIENTATION_NOISE_DEGREES = 5.0;
+    double POSITION_NOISE_CM = 5.0;
 
 
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
     double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
     double QUADTREE_EXCHANGE_INTERVAL_S = 5.0;
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
+    std::map<std::string, int> agentQuadtreeBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
 
@@ -147,8 +163,10 @@ public:
     double AGENT_ALIGNMENT_WEIGHT = 0.5;//0.5;
     double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
 
-    double FRONTIER_DISTANCE_WEIGHT = 0.1;//0.001;
+    double FRONTIER_DISTANCE_WEIGHT = 0.0;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
+    double FRONTIER_REACH_BATTERY_WEIGHT = 4.0;
+    double FRONTIER_REACH_DURATION_WEIGHT = 0.5;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
@@ -198,6 +216,7 @@ public:
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
+    std::vector<std::pair<Coordinate, Coordinate>> route_to_best_frontier;
 
 
 

@@ -10,7 +10,11 @@ DifferentialDrive::DifferentialDrive() {
 
 DifferentialDrive::DifferentialDrive(float max_speed_straight, float max_speed_turn) {
     this->max_speed_straight = max_speed_straight;
-    this->max_speed_turn = max_speed_turn/2;
+    this->max_speed_turn = max_speed_turn / 2; //m/s (per wheel)
+    this->turn_acceleration = 53.097; // rad/s^2
+    this->turn_deceleration = 106.19; // rad/s^2
+    this->acceleration = 3.53;
+    this->deceleration = 3.53;
 
     this->current_speed_left = 0;
     this->current_speed_right = 0;

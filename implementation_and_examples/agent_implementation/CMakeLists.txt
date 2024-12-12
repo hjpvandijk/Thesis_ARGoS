@@ -18,11 +18,21 @@ add_library(agent_implementation SHARED
         agent_control/motion/simulation/DifferentialDrive.cpp
         agent_control/path_planning/WallFollower.h
         agent_control/path_planning/WallFollower.cpp
+        agent_control/path_planning/SimplePathPlanner.h
+        agent_control/path_planning/SimplePathPlanner.cpp
+        agent_control/path_planning/PathFollower.h
+        agent_control/path_planning/PathFollower.cpp
         utils/CustomComparator.h
         agent_control/path_planning/FrontierEvaluator.h
         agent_control/path_planning/FrontierEvaluator.cpp
         agent_control/path_planning/ForceVectorCalculator.h
         agent_control/path_planning/ForceVectorCalculator.cpp
+        agent_control/battery/BatteryManager.h
+        agent_control/battery/BatteryManager.cpp
+        agent_control/battery/MicroControllerBatteryManager.h
+        agent_control/battery/MicroControllerBatterManager.cpp
+        agent_control/battery/MotionSystemBatteryManager.h
+        agent_control/battery/MotionSystemBatteryManager.cpp
 )
 
 # Link directories (if you have specific libraries to link against)

@@ -23,8 +23,27 @@ Agent::Agent(std::string id) {
     this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-5, 5, 10);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
-    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
     this->wallFollower = WallFollower();
+
+#ifdef BATTERY_MANAGEMENT_ENABLED
+    //TODO: Get values from config file
+    //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
+    //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
+    this->batteryManager = BatteryManager(0.4f, 0.0205f, 0.0565f, 0.8, 250, 1.5, 0.16, 6, 1000);
+    //Set the speed to the maximum achievable speed, based on the the motor specs. TODO: Put that info in differential drive instead
+    auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
+    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->TURNING_SPEED_RATIO));
+    this->speed = this->differential_drive.max_speed_straight;
+    //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
+    this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
+#else
+    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
+#endif
+
+#ifdef PATH_PLANNING_ENABLED
+    this->pathPlanner = SimplePathPlanner();
+    this->pathFollower = PathFollower();
+#endif
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     this->frontierEvaluator = FrontierEvaluator(this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE, MAX_TICKS_IN_HITPOINT);
 #endif
@@ -659,7 +678,6 @@ Agent::calculateTotalVector(argos::CVector2 prev_total_vector, argos::CVector2 v
 
 void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
-    this->quadtree->toStringVector(&quadTreeToStrings);
 
     for (const auto& agentLocationPair: this->agentLocations) {
         double lastReceivedTick = agentLocationPair.second.second;
@@ -669,6 +687,9 @@ void Agent::sendQuadtreeToCloseAgents() {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
             if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] > QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                if (quadTreeToStrings.empty()) { //Only calculate the quadtree if we have not done so yet
+                    this->quadtree->toStringVector(&quadTreeToStrings);
+                }
                 for (const std::string &str: quadTreeToStrings) {
                     sendMessage("M:" + str, agentLocationPair.first);
                 }
@@ -833,6 +854,7 @@ argos::CVector2 vector2FromString(std::string str) {
  * Parse messages from other agents
  */
 void Agent::parseMessages() {
+    std::map<std::string, int> agentQuadtreeBytesReceivedCounter;
     for (const std::string &message: this->messages) {
         std::string targetId = getTargetIdFromMessage(message);
         if (targetId != "A" && targetId != getId()) continue; //If the message is not broadcast to all agents and not for this agent, skip it
@@ -845,7 +867,12 @@ void Agent::parseMessages() {
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(2));
             std::string chunk;
-
+            //Keep track of the total amount of bytes received from the sender
+            if (agentQuadtreeBytesReceivedCounter.count(senderId) == 0){ //If the sender has not sent any bytes this tick yet
+                agentQuadtreeBytesReceivedCounter[senderId] = messageContent.size();
+            } else {
+                agentQuadtreeBytesReceivedCounter[senderId] += messageContent.size();
+            }
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
                 quadtree::Box addedBox = this->quadtree->add(newQuadNode, ALPHA_RECEIVE);
@@ -867,6 +894,10 @@ void Agent::parseMessages() {
             double newSpeed = std::stod(vectorString);
             agentVelocities[senderId] = {newVector, newSpeed};
         }
+    }
+    //Update the total amount of bytes received from each sender
+    for (auto & it : agentQuadtreeBytesReceivedCounter){
+        this->agentQuadtreeBytesReceived[it.first] = it.second;
     }
 
 }

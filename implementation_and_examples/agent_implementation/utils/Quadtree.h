@@ -28,6 +28,7 @@ namespace quadtree {
         Occupancy occupancy;
         double visitedAtS;
         float LConfidence = 0.0; //The L(n) confidence of the reachability of this node by the agent. Positive is FREE, negative is OCCUPIED.
+
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
         }
@@ -37,6 +38,102 @@ namespace quadtree {
     class Quadtree {
 
     public:
+        int numberOfNodes = 0; //Number of leaf nodes not UNKNOWN or ANY
+        int numberOfNodesPerMessage = 50; //Number of nodes to send per message
+
+        struct Cell {
+            Cell * parent;
+            std::array<std::unique_ptr<Cell>, 4> children;
+            std::array<Cell *, 4> neighbors; //Neighbors with the same occupancy: [left, top, right, bottom]
+            //            std::vector<QuadNode> values;
+            QuadNode quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
+
+//            Cell(){
+//                quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
+//            }
+//
+//
+//
+//            // Custom copy constructor
+//            Cell(const Cell& other) : parent(other.parent), neighbors(other.neighbors), quadNode(other.quadNode) {
+//                for (size_t i = 0; i < children.size(); ++i) {
+//                    if (other.children[i]) {
+//                        children[i] = std::make_unique<Cell>(*other.children[i]);
+//                    }
+//                }
+//            }
+
+            void add_occupied_neighbors(double boxSize){
+                if (this->parent == nullptr) return;
+
+                auto left = Coordinate{this->quadNode.coordinate.x-boxSize, this->quadNode.coordinate.y};
+                auto top = Coordinate{this->quadNode.coordinate.x, this->quadNode.coordinate.y+boxSize};
+                auto right = Coordinate{this->quadNode.coordinate.x+boxSize, this->quadNode.coordinate.y};
+                auto bottom = Coordinate{this->quadNode.coordinate.x, this->quadNode.coordinate.y-boxSize};
+                Coordinate neighbor_array[] = {left, top, right, bottom};
+
+
+                for (int neighbor_index = 0; neighbor_index < 4; neighbor_index++) {
+                    if (this->neighbors.at(neighbor_index) != nullptr) continue;
+                    auto current_cell = this->parent;
+                    auto currentBoxTopLeft = Coordinate{this->parent->quadNode.coordinate.x - boxSize, this->parent->quadNode.coordinate.y + boxSize};
+                    auto currentBox = Box{currentBoxTopLeft, boxSize * 2};
+
+                    auto neighbor_coordinate = neighbor_array[neighbor_index];
+                    auto atRoot = false;
+                    while(!currentBox.contains(neighbor_coordinate)){
+                        if (current_cell->parent == nullptr){
+                            atRoot = true; //If we are at the root, we can't go further (when we are at the edge of the mbox)
+                            break;
+                        }
+                        currentBoxTopLeft = Coordinate{current_cell->parent->quadNode.coordinate.x - currentBox.size, current_cell->parent->quadNode.coordinate.y + currentBox.size};
+                        currentBox = Box{currentBoxTopLeft, currentBox.size * 2};
+                        current_cell = current_cell->parent;
+                    }
+                    if (atRoot) continue; //If we are at the root, we can't go further (when we are at the edge of the mbox)
+                    if (currentBox.contains(neighbor_coordinate)) {
+                        auto atEnd = false;
+                        //Find the cell
+                        while (static_cast<bool>(current_cell->children.at(0))) { //Until leaf
+                            auto childIndex = currentBox.getQuadrant(neighbor_coordinate);
+                            auto child = current_cell->children.at(childIndex).get();
+                            if (child->quadNode.visitedAtS == -1) { //The child is never set
+                                atEnd = true;
+                                break;
+                            }
+                            current_cell = current_cell->children.at(childIndex).get();
+                            currentBoxTopLeft = Coordinate{current_cell->quadNode.coordinate.x - currentBox.size / 4, current_cell->quadNode.coordinate.y + currentBox.size / 4};
+                            currentBox = Box{currentBoxTopLeft, currentBox.size / 2};
+                        }
+                        if (atEnd) continue; //The corresponding cell is not visited yet
+                        if (current_cell->quadNode.occupancy==OCCUPIED){
+                            this->neighbors.at(neighbor_index) = current_cell;
+                            auto opposite_neighbor_index = neighbor_index < 2 ? neighbor_index + 2 : neighbor_index - 2;
+                            current_cell->neighbors.at(opposite_neighbor_index) = this;
+                        }
+                    }
+                }
+
+            }
+
+            /**
+             * @brief Remove the neighbors of this cell, and remove this cell from the neighbors
+             */
+            void remove_neighbors(){
+                for (int i = 0; i < 4; i++) {
+                    if (this->neighbors.at(i) != nullptr) {
+                        auto opposite_neighbor_index = i < 2 ? i + 2 : i - 2;
+                        //Delete this cell from the neighbor
+                        this->neighbors.at(i)->neighbors.at(opposite_neighbor_index) = nullptr;
+                        //Delete the neighbor from this cell
+                        this->neighbors.at(i) = nullptr;
+                    }
+                }
+            }
+
+
+        };
+
         Quadtree(const Box &box) :
                 mBox(box), mRoot(std::make_unique<Cell>()) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
@@ -297,10 +394,15 @@ namespace quadtree {
             return boxes;
         }
 
-        /**
-         * Returns the Occupancy of the QuadNode containing the coordinate
-         * @param coordinate
-         */
+
+        [[nodiscard]] std::pair<Cell *, Box> getCellandBoxFromCoordinate(Coordinate coordinate) const {
+            return getCellandBoxFromCoordinate(mRoot.get(), mBox, coordinate);
+        }
+
+            /**
+             * Returns the Occupancy of the QuadNode containing the coordinate
+             * @param coordinate
+             */
         Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
             QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
             return quadNode.occupancy;
@@ -405,10 +507,10 @@ namespace quadtree {
                             std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
                             std::to_string(cell->quadNode.LConfidence) + '@' + std::to_string(cell->quadNode.visitedAtS);
 
-                    //Group every 10 nodes
+                    //Group every numberOfNodesPerMessage nodes
                     grouped_message.append(str);
 
-                    if (counter == 49) {
+                    if (counter == this->numberOfNodesPerMessage - 1) {
                         strings->emplace_back(grouped_message);
                         grouped_message.clear();
                         counter = 0;
@@ -475,6 +577,45 @@ namespace quadtree {
 
         }
 
+        /**
+         * Get all the boxes in the quadtree
+         * @return
+         */
+        std::vector<std::tuple<Coordinate, Coordinate>> getAllNeighborPairs() {
+            std::vector<std::tuple<Coordinate, Coordinate>> pairs = {};
+            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Coordinate, Coordinate>> *)> traverse;
+            traverse = [&](const Cell *cell, const Box &box,
+                           std::vector<std::tuple<Coordinate, Coordinate>> *pairs) {
+                if (cell == nullptr) return;
+                bool allSameOccupancy = false;
+//                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
+//                        continue;
+                // If the occupancy is OCCUPIED or FREE or AMBIGUOUS, we want to exchange that information. And we don't have to send any children as they will be all the same.
+                if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) {
+                    allSameOccupancy = true;
+                    for (auto neighbor: cell->neighbors) {
+                        if (neighbor == nullptr) continue;
+                        pairs->emplace_back(cell->quadNode.coordinate, neighbor->quadNode.coordinate);
+                    }
+                }
+
+                // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
+                if (!allSameOccupancy) {
+                    for (int i = 0; i < 4; i++) {
+                        if (cell->children.at(i)) {
+                            traverse(cell->children.at(i).get(), computeBox(box, i), pairs);
+                        }
+                    }
+                }
+            };
+
+            traverse(this->mRoot.get(), this->mBox, &pairs);
+
+
+            return pairs;
+
+        }
+
         double getMinSize() {
             return this->MinSize;
         }
@@ -502,14 +643,9 @@ namespace quadtree {
         float l_min = -3.5;
         float l_max = 2;
         float l_free = 0.4;
-        float l_occupied = -0.85;
+        float l_occupied = -0.41; //P=0.4
 
 
-        struct Cell {
-            std::array<std::unique_ptr<Cell>, 4> children;
-//            std::vector<QuadNode> values;
-            QuadNode quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
-        };
 
         Box mBox;
         std::unique_ptr<Cell> mRoot;
@@ -658,7 +794,8 @@ namespace quadtree {
                     if (box.size <= Smallest_Box_Size) Smallest_Box_Size = box.size;
 
                     QuadNode newNode = QuadNode();
-                    newNode.coordinate = value.coordinate;
+//                    newNode.coordinate = value.coordinate;
+                    newNode.coordinate = box.getCenter();
                     if (cell->quadNode.visitedAtS == -1) { //If the cell is empty
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
@@ -693,18 +830,28 @@ namespace quadtree {
                         Occupancy occ = AMBIGUOUS;
                         if (newNode.LConfidence >= l_free){
                             occ = FREE;
-                        } else if (newNode.LConfidence <= l_occupied){
+                        } else if (newNode.LConfidence <= l_occupied){ //Most probably occupied
                             occ = OCCUPIED;
                         }
                         newNode.occupancy = occ;
-
                     }
+
                     assert(newNode.occupancy == FREE ||
                            newNode.occupancy == OCCUPIED ||
                            newNode.occupancy == AMBIGUOUS && "new cell occupancy should be FREE or OCCUPIED or AMBIGUOUS");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
+                    numberOfNodes++;
+                    if (cell->quadNode.occupancy == OCCUPIED) { //Occupied
+                        //Set neighbors
+                        cell->add_occupied_neighbors(box.size);
+                    } else {
+                        //Remove neighbors; Make sure to remove neighbors if the cell is not occupied, or we will have pointer issues.
+                        cell->remove_neighbors();
+                    }
                     returnBox = box;
+
+
                 }
                     // Otherwise, we split and we try again
                 else {
@@ -763,6 +910,7 @@ namespace quadtree {
                                 occ = OCCUPIED;
                             }
                             newNode.occupancy = occ;
+                            cell->quadNode = newNode;
                             //Else if cell has occupancy ANY or UNKNOWN, we add to the children
                         } else {
                             //When adding a new coordinate and occupancy to that parent, we should set the remaining (yet unset) children to the value occupancy.
@@ -791,7 +939,7 @@ namespace quadtree {
 //
                     // Else we add the value to the appropriate child
                 } else {
-                    auto i = getQuadrant(box, value.coordinate);
+                    auto i = box.getQuadrant(value.coordinate);
                     // Add the value in a child if the value is entirely contained in it
                     assert(i != -1 && "A value should be contained in a quadrant");
                     assert(i != 4 && "A value should not be the same as the center of the box");
@@ -806,7 +954,7 @@ namespace quadtree {
                     double maxVisitedTime = -1;
 
                     if (cell->children.at(0)->quadNode.visitedAtS == -1)
-                        confidencesTooFarApart = true;
+                        confidencesTooFarApart = true; //If the first child is empty, it is not the same occupancy as the others
                     else {
                         //Get the occupancy of the first child (if it is empty, it is not the same occupancy as the others)
 //                        firstOccupancy = cell->children.at(0)->quadNode.occupancy;
@@ -832,8 +980,9 @@ namespace quadtree {
                             if (child->quadNode.visitedAtS > maxVisitedTime)
                                 maxVisitedTime = child->quadNode.visitedAtS;
                         }
-                        //If the occupancies are too far apart, the children should be kep
-                        if (P(maxConfidence) - P(minConfidence) > MAX_ALLOWED_P_CONFIDENCE_DIFF)
+                        //If one of the children is occupied, all children should be kept
+                        //If the occupancies are too far apart, the children should be kept
+                        if (minConfidence < l_free || P(maxConfidence) - P(minConfidence) > MAX_ALLOWED_P_CONFIDENCE_DIFF)
                             confidencesTooFarApart = true;
                         //If the visited times are too far apart, the children should be kept
                         if (maxVisitedTime - minVisitedTime > MAX_ALLOWED_VISITED_TIME_DIFF)
@@ -849,6 +998,7 @@ namespace quadtree {
                             PConfidenceSum += P(child->quadNode.LConfidence);
                             child.reset();
                         }
+                        numberOfNodes -= 3; //We remove 4 children and the parent is now a leaf node.
                         assert(isLeaf(cell) && "The cell should be a leaf again now");
                         cell->quadNode.LConfidence = L(PConfidenceSum / 4.0);
 
@@ -885,8 +1035,10 @@ namespace quadtree {
             assert(cell != nullptr);
             assert(isLeaf(cell) && "Only leaves can be split");
             // Create children
-            for (auto &child: cell->children)
+            for (auto &child: cell->children){
                 child = std::make_unique<Cell>();
+                child->parent = cell;
+            }
 
             assert(!isLeaf(cell) && "A cell should not be a leaf after splitting");
 
@@ -922,7 +1074,7 @@ namespace quadtree {
                 removeValue(node, value);
             } else {
                 // Remove the value in a child if the value is entirely contained in it
-                auto i = getQuadrant(box, value.coordinate);
+                auto i = box.getQuadrant(value.coordinate);
                 if (i ==
                     4) { // If the value is the same as the center of the box, we remove the value from the current node
                     removeValue(node, value);
@@ -1046,9 +1198,23 @@ namespace quadtree {
                 (functionSpace.contains(cell->quadNode.coordinate) || functionSpace.intersects_or_contains(box))
 //                &&
 //                currentTimeS - cell->quadNode.visitedAtS > MAX_ALLOWED_VISITED_TIME_DIFF
-                )
+                ) {
 //                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
                 cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
+                if (cell->quadNode.LConfidence <=l_occupied) {
+                    cell->quadNode.occupancy = OCCUPIED;
+                    //Set neighbors
+                    cell->add_occupied_neighbors(box.getSize());
+                } else {
+                    if (cell->quadNode.LConfidence >= l_free) {
+                        cell->quadNode.occupancy = FREE;
+                    } else {
+                        cell->quadNode.occupancy = AMBIGUOUS;
+                    }
+                    //Remove neighbors; Make sure to remove neighbors if the cell is not occupied, or we will have pointer issues.
+                    cell->remove_neighbors();
+                }
+            }
 
             //Only check further if the occupancy of the non-leaf cell is not all the same for its children, so ANY.
             if (!isLeaf(cell) && (cell->quadNode.visitedAtS == -1 || cell->quadNode.occupancy == ANY ||
@@ -1112,7 +1278,7 @@ namespace quadtree {
                 //If the node occupancy is ANY or UNKNOWN, there can be nested nodes with different occupancies
                 assert(node->quadNode.visitedAtS != -1 && "Cell should have a value");
                 if (node->quadNode.occupancy == ANY || node->quadNode.occupancy == UNKNOWN) {
-                    auto i = getQuadrant(box, queryCoordinate);
+                    auto i = box.getQuadrant(queryCoordinate);
                     //If i=4, so the query coordinate is the exact center, check all children
                     if (i == 4) {
                         for (int j = 0; j < node->children.size(); j++) {
@@ -1131,6 +1297,52 @@ namespace quadtree {
                 }
             }
             return QuadNode{queryCoordinate, UNKNOWN, 0};
+        }
+
+        /**
+         * @brief Get the QuadNode that contains the given coordinate
+         * @param node
+         * @param box
+         * @param queryCoordinate
+         * */
+        std::pair<Cell*, Box> getCellandBoxFromCoordinate(Cell *node, const Box &box, const Coordinate &queryCoordinate) const {
+            assert(node != nullptr);
+//            assert(box.contains(queryCoordinate));
+            if (!box.contains(queryCoordinate)) {
+                return std::make_pair(nullptr, Box());
+            }
+            //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
+            if (isLeaf(node)) {
+                if (node->quadNode.visitedAtS == -1) {
+                    return std::make_pair(nullptr, Box());
+                } else {
+                    assert(node->quadNode.occupancy != ANY && "leaf occupancy should never be ANY");
+                    return std::make_pair(node, box);
+                }
+                // If it is not a leaf node, find the nested nodes, and search them.
+            } else {
+                //If the node occupancy is ANY or UNKNOWN, there can be nested nodes with different occupancies
+                assert(node->quadNode.visitedAtS != -1 && "Cell should have a value");
+                if (node->quadNode.occupancy == ANY || node->quadNode.occupancy == UNKNOWN) {
+                    auto i = box.getQuadrant(queryCoordinate);
+                    //If i=4, so the query coordinate is the exact center, check all children
+                    if (i == 4) {
+                        for (int j = 0; j < node->children.size(); j++) {
+                            auto childBox = computeBox(box, static_cast<int>(j));
+
+                            return getCellandBoxFromCoordinate(node->children.at(j).get(), childBox, queryCoordinate);
+                        }
+                    } else {
+                        auto childBox = computeBox(box, static_cast<int>(i));
+
+                        return getCellandBoxFromCoordinate(node->children.at(i).get(), childBox, queryCoordinate);
+                    }
+                    //Else the nested nodes have the same occupancy, so parent node can be returned.
+                } else {
+                    return std::make_pair(node, box);
+                }
+            }
+            return std::make_pair(nullptr, Box());;
         }
 
         void findAllIntersections(Cell *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {
