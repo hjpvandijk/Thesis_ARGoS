@@ -136,11 +136,19 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
     Coordinate start = cell->quadNode.coordinate;
 
 
+
+
     //Get the middle of the edge
     if (edge_index == 0) start.x = start.x - box_size / 2;
     else if (edge_index == 1) start.y = start.y + box_size / 2;
     else if (edge_index == 2) start.x = start.x + box_size / 2;
     else if (edge_index == 3) start.y = start.y - box_size / 2;
+
+    //If the target lies within the cell we are in, the direction technically not free, but we have pretty much arrived
+    if (sqrt(pow(target.x - start.x, 2) + pow(target.y - start.y, 2)) < box_size/2) {
+        //Check if the target is in the same cell as the agent
+        return {2, nullptr, -1, Coordinate{0,0}};
+    }
 
     //Find the intersection with the quadtree
     auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);

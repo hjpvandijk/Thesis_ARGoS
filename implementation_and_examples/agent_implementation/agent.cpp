@@ -525,9 +525,10 @@ void Agent::calculateNextPosition() {
 frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
 #endif
     //If the current best frontier is blacklisted
-    frontierReached || //Or the agent is close to the frontier
-    //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
-    frontierPheromoneEvaporated()) {
+    frontierReached //|| //Or the agent is close to the frontier
+//    //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
+//    frontierPheromoneEvaporated() //It can be that the frontier is not in an explored cell due to being the average location of the region
+    ) {
 #ifdef WALL_FOLLOWING_ENABLED
         //If we are not currently wall following
         if (wallFollower.wallFollowingDirection == 0) {
@@ -535,6 +536,16 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
             unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
         }
 #else
+        bool a = false;
+        bool b = false;
+        bool c = false;
+
+        a = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
+        if (!a){
+            b = frontierReached;
+            if (!b) c = frontierPheromoneEvaporated();
+        }
+
         //Find new frontier
         unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 #endif

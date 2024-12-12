@@ -22,12 +22,12 @@
 #include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
 #include "agent_implementation/agent_control/path_planning/PathFollower.h"
 
-//#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
 //#define WALL_FOLLOWING_ENABLED
 //#define BATTERY_MANAGEMENT_ENABLED
-//#define PATH_PLANNING_ENABLED
+#define PATH_PLANNING_ENABLED
 //#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
