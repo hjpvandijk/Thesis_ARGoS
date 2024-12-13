@@ -177,10 +177,12 @@ public:
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
+    float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = 5.0;
+    int last_feasibility_check_tick = 0;
 #endif
 
 #ifdef SEPARATE_FRONTIERS
-    double FRONTIER_CLOSE_DISTANCE = 0.5;
+    double FRONTIER_CLOSE_DISTANCE = 1.0;
 #endif
 
 

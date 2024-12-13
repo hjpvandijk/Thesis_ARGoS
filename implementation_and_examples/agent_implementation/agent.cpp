@@ -518,6 +518,8 @@ void Agent::calculateNextPosition() {
                            this->TURN_THRESHOLD_DEGREES * 2 ||
                            unexploredFrontierVector.Length() <= this->OBJECT_AVOIDANCE_RADIUS;
 
+    bool periodic_check_required = (this->elapsed_ticks - this->last_feasibility_check_tick) > this->ticks_per_second * this->PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
+
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
 #ifdef AVOID_UNREACHABLE_FRONTIERS
@@ -528,6 +530,7 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     frontierReached //|| //Or the agent is close to the frontier
 //    //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
 //    frontierPheromoneEvaporated() //It can be that the frontier is not in an explored cell due to being the average location of the region
+    || periodic_check_required
     ) {
 #ifdef WALL_FOLLOWING_ENABLED
         //If we are not currently wall following
@@ -536,18 +539,9 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
             unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
         }
 #else
-        bool a = false;
-        bool b = false;
-        bool c = false;
-
-        a = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
-        if (!a){
-            b = frontierReached;
-            if (!b) c = frontierPheromoneEvaporated();
-        }
-
         //Find new frontier
         unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+        this->last_feasibility_check_tick = this->elapsed_ticks;
 #endif
     }
 

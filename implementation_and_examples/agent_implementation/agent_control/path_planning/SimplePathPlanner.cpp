@@ -5,6 +5,7 @@
 
 
 std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target) const {
+    srand(target.x + target.y);
     int wall_following_direction = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction (1= left, -1=
     std::vector<std::pair<Coordinate, Coordinate>> route;
     return getRouteSections(agent, start, target, wall_following_direction, false, route);

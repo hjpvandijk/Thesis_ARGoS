@@ -336,7 +336,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
                                                  pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
 
-            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE) {
+            double distanceFromOtherAgentsPosition = sqrt(pow(agent->position.x - std::get<0>(agentLocationTuple.second).x, 2) +
+                                                 pow(agent->position.y - std::get<0>(agentLocationTuple.second).y, 2));
+
+            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE || distanceFromOtherAgentsPosition <= agent->FRONTIER_CLOSE_DISTANCE) {
                 //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
                 if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
