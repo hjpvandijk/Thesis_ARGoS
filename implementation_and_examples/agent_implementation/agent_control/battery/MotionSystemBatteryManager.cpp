@@ -15,20 +15,15 @@ MotionSystemBatteryManager::MotionSystemBatteryManager(float robot_weight_kg, fl
     this->no_load_rpm = no_load_rpm;
     this->stall_current_A = stall_current_A;
     this->no_load_current_A = no_load_current_A;
+    this->speed_conversion *= robot_wheel_radius_m;
+    this->speed_conversion_inverse = 1.0f / this->speed_conversion;
 }
 
-
-float
-MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAccelerationTime, float turnFullSpeedTime,
-                                                    float turnDecelerationTime, float accelerationTime, float driveTime,
-                                                    float decelerationTime) {
+void MotionSystemBatteryManager::calculateForces(float (& forces)[6], Agent* agent) const {
     float momentOfInertia = 0.5f * robot_weight_kg * 0.0362f * 0.0362f; //In kg.m^2 , 0.0362 is the robot radius
-//    float turn
 
     float accelerationForce = robot_weight_kg * agent->differential_drive.acceleration; //In Newtons
     float decelerationForce = robot_weight_kg * agent->differential_drive.deceleration; //In Newtons
-//    float turnAccelerationForce = robot_weight_kg * agent->differential_drive.turn_acceleration; //In Newtons
-//    float turnDecelerationForce = robot_weight_kg * agent->differential_drive.turn_deceleration; //In Newtons
     float turnAccelerationForce =
             momentOfInertia * agent->differential_drive.turn_acceleration / robot_wheel_radius_m; //In Newtons
     float turnDecelerationForce =
@@ -39,13 +34,17 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAcce
     float totalForceDuringTurnAcceleration = rolling_force_without_acceleration_N + turnAccelerationForce; //In Newtons
     float totalForceDuringTurnDeceleration = rolling_force_without_acceleration_N + turnDecelerationForce; //In Newtons
 
+    forces[0] = totalForceDuringAcceleration; //In Newtons
+    forces[1] = rolling_force_without_acceleration_N; //In Newtons
+    forces[2] = totalForceDuringDeceleration; //In Newtons
+    forces[3] = totalForceDuringTurnAcceleration; //In Newtons
+    forces[4] = rolling_force_without_acceleration_N; //In Newtons
+    forces[5] = totalForceDuringTurnDeceleration; //In Newtons
+}
 
-    float forces[] = {totalForceDuringAcceleration, rolling_force_without_acceleration_N, totalForceDuringDeceleration,
-                      totalForceDuringTurnAcceleration, rolling_force_without_acceleration_N,
-                      totalForceDuringTurnDeceleration};
-    float forceDurations[] = {accelerationTime, driveTime, decelerationTime, turnAccelerationTime, turnFullSpeedTime,
-                              turnDecelerationTime};
 
+float
+MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float forces[], float forceDurations[]) {
     float totalPowerUsage = 0.0; //In Wh
 
     //We are assuming the motors provide the same torque (and current draw) in both directions
@@ -64,14 +63,14 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float turnAcce
             float rpm_at_torque =
                     no_load_rpm_at_voltage - (torque_per_motor_kg_cm / stall_torque_at_voltage) * no_load_rpm_at_voltage; //In RPM @ 6V
 
-            float speed = rpm_at_torque * 2.0f * M_PIf32 * robot_wheel_radius_m / 60.0f; //In m/s
+            float speed = rpm_at_torque * speed_conversion;//In m/s
             //Make sure the speed is not higher than the max speed, this shouldn't happen
             assert(agent->differential_drive.max_speed_straight <= speed);
             //If the achievable speed is higher than the speed we want, we need to adjust the speed and torque
             if (agent->differential_drive.max_speed_straight < speed) {
                 speed = agent->differential_drive.max_speed_straight;
                 //Calculate the torque at this speed
-                float rpm_at_speed = speed * 60.0f / (2.0f * M_PIf32 * robot_wheel_radius_m); //In RPM @ 6V
+                float rpm_at_speed = speed * speed_conversion_inverse; //In RPM @ 6V
                 float torque_at_speed = (1 - rpm_at_speed / no_load_rpm_at_voltage) * stall_torque_at_voltage; //In kg.cm
                 torque_per_motor_kg_cm = torque_at_speed;
             }
@@ -111,6 +110,9 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
     float distanceToDecelerateDrive =
             agent->differential_drive.max_speed_straight * agent->differential_drive.max_speed_straight /
             (2 * agent->differential_drive.deceleration); //In meters
+
+    float forces[6];
+    calculateForces(forces, agent);
 
     for (auto &vector: relativePath) {
         float distance = vector.Length(); //In meters
@@ -168,11 +170,11 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
 
         totalDuration += totalDriveTime + totalTurnTime;
 
+        float forceDurations[] = {timeToAccelerateDrive, timeToConstantDrive, timeToDecelerateDrive, timeToAccelerateTurn, timeToConstantTurn,
+                                  timeToDecelerateTurn};
 
         //We can also estimate the power usage
-        float motorPowerUsage = EstimateMotorPowerUsage(agent, timeToAccelerateTurn, timeToConstantTurn,
-                                                        timeToDecelerateTurn, timeToAccelerateDrive,
-                                                        timeToConstantDrive, timeToDecelerateDrive); //In Wh
+        float motorPowerUsage = EstimateMotorPowerUsage(agent, forces, forceDurations); //In Wh
         totalMotorPowerUsage += motorPowerUsage;
     }
 

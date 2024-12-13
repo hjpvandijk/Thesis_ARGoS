@@ -12,7 +12,7 @@ public:
     MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A);
     MotionSystemBatteryManager() = default;
 
-    float EstimateMotorPowerUsage(Agent* agent, float turnAccelerationTime, float turnFullSpeedTime, float turnDecelerationTime, float accelerationTime, float driveTime, float decelerationTime);
+    float EstimateMotorPowerUsage(Agent *agent, float forces[], float forceDurations[]);
 
     std::tuple<float, float> estimateMotorPowerUsageAndDuration(Agent* agent, std::vector<argos::CVector2> relativePath);
 
@@ -53,6 +53,8 @@ public:
     float stall_torque_at_voltage;
 
     float rolling_resistance_coefficient = 0.01; //Typical value for rubber on concrete
+    float speed_conversion = 2.0f * M_PIf32 / 60.0f;
+    float speed_conversion_inverse;
 
 //    float forwardSpeed = 1.0;//Get speed from motor; //In m/s
 //    float acceleration = 1.0;//Get acceleration from motor; //In m/s^2
@@ -61,6 +63,9 @@ public:
 //    float turnSpeed = 1.0;//Get turn speed from motor; //In rad/s
 //    float turnAcceleration = 1.0;//Get turn acceleration from motor; //In rad/s^2
 //    float turnDeceleration = 1.0;//Get turn deceleration from motor; //In rad/s^2
+
+    void calculateForces(float (& forces)[6],Agent* agent) const;
+
 };
 
 
