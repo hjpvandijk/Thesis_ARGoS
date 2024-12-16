@@ -183,7 +183,7 @@ namespace quadtree {
         }
 
 
-        void remove(const QuadNode &value) const {
+        void remove(const QuadNode &value) {
             remove(mRoot.get(), mBox, value);
         }
 
@@ -572,7 +572,6 @@ namespace quadtree {
 
             traverse(mRoot.get(), mBox, &boxesAndConfidenceAndTicks);
 
-
             return boxesAndConfidenceAndTicks;
 
         }
@@ -800,6 +799,7 @@ namespace quadtree {
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
                         newNode.LConfidence = value.LConfidence;
+                        this->numberOfNodes++;
                     } else {
                         //OCCUPIED always takes precedence over FREE
                         //Update with the most precedent or up-to-date information.
@@ -841,7 +841,6 @@ namespace quadtree {
                            newNode.occupancy == AMBIGUOUS && "new cell occupancy should be FREE or OCCUPIED or AMBIGUOUS");
                     // Make the only value the 'merged cell'
                     cell->quadNode = newNode;
-                    numberOfNodes++;
                     if (cell->quadNode.occupancy == OCCUPIED) { //Occupied
                         //Set neighbors
                         cell->add_occupied_neighbors(box.size);
@@ -878,6 +877,7 @@ namespace quadtree {
                         newNode.occupancy = value.occupancy;
                         newNode.visitedAtS = value.visitedAtS;
                         newNode.LConfidence = value.LConfidence;
+                        this->numberOfNodes++;
                     } else {
                         //If cell has occupancy FREE or OCCUPIED, it entails all its children are also of that value, so we just update this parent.
 //                        if (cell->quadNode.occupancy == FREE) {
@@ -1016,6 +1016,7 @@ namespace quadtree {
 
                     } else {
                         //If the children have different occupancies, or the visited times are too far apart, the parent should have occupancy ANY
+                        if(cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) this->numberOfNodes--; //We are changing it to ANY, so this is not a leafnode anymore
                         cell->quadNode.occupancy = ANY;
                         cell->quadNode.LConfidence = 0.0; //Ambiguous
 
@@ -1055,6 +1056,7 @@ namespace quadtree {
                                              cell->quadNode.visitedAtS, cell->quadNode.LConfidence};
                     add(cell->children.at(static_cast<std::size_t>(i)).get(), childBox, quadNode);
                 }
+                this->numberOfNodes--;
             }
             cell->quadNode = QuadNode{box.getCenter(), ANY, 0, 0.0};
         }
@@ -1066,20 +1068,25 @@ namespace quadtree {
          * @param value
          * @return
          */
-        void remove(Cell *node, const Box &box, const QuadNode &value) const {
+        void remove(Cell *node, const Box &box, const QuadNode &value) {
             assert(node != nullptr);
             assert(box.contains(value.coordinate));
             if (isLeaf(node)) {
                 // Remove the value from node
                 removeValue(node, value);
+                this->numberOfNodes--;
             } else {
                 // Remove the value in a child if the value is entirely contained in it
                 auto i = box.getQuadrant(value.coordinate);
                 if (i ==
                     4) { // If the value is the same as the center of the box, we remove the value from the current node
                     removeValue(node, value);
-                    for (auto &child: node->children)
+                    this->numberOfNodes--;
+                    for (auto &child: node->children){
+                        if(child->quadNode.visitedAtS != -1) this->numberOfNodes--; //If the child is not empty, we are removing a node
                         child.reset();
+                    }
+
                 } else {
                     assert(i != -1);
                     remove(node->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value);
@@ -1092,9 +1099,9 @@ namespace quadtree {
 
                     if (!atLeastOneChildWithValue) {
                         removeValue(node, node->quadNode);
+                        //Node count has been decreased for every child with a value already, and this cell is also removed (so not a leaf) so we don't need to decrease it here.
                         for (auto &child: node->children)
                             child.reset();
-
                         assert(isLeaf(node));
                     }
 
@@ -1193,7 +1200,7 @@ namespace quadtree {
             assert(functionSpace.intersects_or_contains(box));
 
             //Only update the confidence if we haven't seen this FREE cell in a while
-            if (
+            if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN &&
 //                    cell->quadNode.occupancy == FREE &&
                 (functionSpace.contains(cell->quadNode.coordinate) || functionSpace.intersects_or_contains(box))
 //                &&
