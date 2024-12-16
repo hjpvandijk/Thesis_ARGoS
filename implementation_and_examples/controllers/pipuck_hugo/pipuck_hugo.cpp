@@ -118,7 +118,7 @@ void PiPuckHugo::ControlStep() {
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level
-    if (batteryMeasureTicks % 100 == 0) {
+    if (batteryMeasureTicks % 15 == 0) {
 
         //Get relative vector
         float traveledPathLength = sqrt(pow(agentObject->position.x - previousAgentPosition.GetX(), 2) +
@@ -132,6 +132,7 @@ void PiPuckHugo::ControlStep() {
 
         previousAgentPosition = {-position.GetY(), position.GetX()};
         previousAgentOrientation = zAngle;
+        batteryMeasureTicks = 0;
     }
     batteryMeasureTicks++;
 #endif
