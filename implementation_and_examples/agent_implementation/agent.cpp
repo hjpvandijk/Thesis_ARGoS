@@ -132,7 +132,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
     for (int s = 0; s < nSteps; s++) {
         if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
             double p = (this->P_FREE*Psensor - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
-            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second);
+            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second, elapsed_ticks/ticks_per_second);
         } else {
             break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
         }
@@ -147,7 +147,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
     for(int s = 1; s <= 2; s++){ //Add slight occupied confidence to the two steps after the object
         if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as more occupied
             double p = (0.5-occ_probability) * (double(s)/double(10)) + occ_probability; //Increasingly more uncertain the further away from the agent
-            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second);
+            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         }
         x += stepX;
         y += stepY;
@@ -176,7 +176,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
         if (objectBox.size > 0) {
             if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
                 double p = (this->P_FREE - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
-                this->quadtree->add(Coordinate{x, y}, p * Psensor, elapsed_ticks / ticks_per_second);
+                this->quadtree->add(Coordinate{x, y}, p * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
             } else {
                 break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
             }
@@ -203,7 +203,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, this->P_FREE * Psensor, elapsed_ticks / ticks_per_second);
+        this->quadtree->add(Coordinate{x, y}, this->P_FREE * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -226,7 +226,7 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps-1; s++) {
-        this->quadtree->add(Coordinate{x, y}, this->P_OCCUPIED, elapsed_ticks / ticks_per_second);
+        this->quadtree->add(Coordinate{x, y}, this->P_OCCUPIED, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -265,7 +265,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
  */
 quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) const {
     quadtree::Box objectBox = this->quadtree->add(objectCoordinate, this->P_OCCUPIED / Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
-                                                  elapsed_ticks / ticks_per_second);
+                                                  elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
     if (objectBox.getSize() != 0) // If the box is not the zero (not added)
         checkIfAgentFitsBetweenObstacles(objectBox);
@@ -894,7 +894,7 @@ void Agent::parseMessages() {
             }
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
-                quadtree::Box addedBox = this->quadtree->add(newQuadNode, ALPHA_RECEIVE);
+                quadtree::Box addedBox = this->quadtree->add(newQuadNode, ALPHA_RECEIVE, elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
                 if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)
                     checkIfAgentFitsBetweenObstacles(addedBox);

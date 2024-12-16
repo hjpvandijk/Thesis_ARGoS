@@ -167,6 +167,7 @@ public:
     double FRONTIER_SIZE_WEIGHT = 1.0;
     double FRONTIER_REACH_BATTERY_WEIGHT = 4.0;
     double FRONTIER_REACH_DURATION_WEIGHT = 0.5;
+    double FRONTIER_PHEROMONE_WEIGHT = -4.0; //Negative because higher pheromone is better
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
@@ -217,8 +218,8 @@ public:
 
     uint32_t elapsed_ticks = 0;
 
-    std::vector<quadtree::Box> current_frontiers;
-    std::vector<std::vector<quadtree::Box>> current_frontier_regions;
+    std::vector<std::pair<quadtree::Box, double>> current_frontiers;
+    std::vector<std::vector<std::pair<quadtree::Box, double>>> current_frontier_regions;
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;

@@ -172,10 +172,10 @@ private:
     std::unordered_map<int, int> rank;
 };
 
-void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
-                            std::vector<std::vector<quadtree::Box>> &frontierRegions) {
+void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> &frontiers,
+                            std::vector<std::vector<std::pair<quadtree::Box, double>>> &frontierRegions) {
     UnionFind uf;
-    std::unordered_map<int, quadtree::Box> boxMap;
+    std::unordered_map<int, std::pair<quadtree::Box, double>> boxMap;
 
     // Initialize union-find structure
     for (int i = 0; i < frontiers.size(); ++i) {
@@ -185,11 +185,13 @@ void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
 
     // Check adjacency and union sets
     for (int i = 0; i < frontiers.size(); ++i) {
+        auto boxI = frontiers[i].first;
         for (int j = i + 1; j < frontiers.size(); ++j) {
-            Coordinate centerI = frontiers[i].getCenter();
-            Coordinate centerJ = frontiers[j].getCenter();
+            auto boxJ = frontiers[j].first;
+            Coordinate centerI = boxI.getCenter();
+            Coordinate centerJ = boxJ.getCenter();
             double distance = sqrt(pow(centerI.x - centerJ.x, 2) + pow(centerI.y - centerJ.y, 2));
-            double threshold = sqrt(2 * pow(frontiers[i].getSize() * 0.5 + frontiers[j].getSize() * 0.5, 2));
+            double threshold = sqrt(2 * pow(boxI.getSize() * 0.5 + boxJ.getSize() * 0.5, 2));
             if (distance <= threshold) {
                 uf.unionSets(i, j);
             }
@@ -197,7 +199,7 @@ void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
     }
 
     // Group boxes by their root set representative
-    std::unordered_map<int, std::vector<quadtree::Box>> regions;
+    std::unordered_map<int, std::vector<std::pair<quadtree::Box, double>>> regions;
     for (int i = 0; i < frontiers.size(); ++i) {
         int root = uf.find(i);
         regions[root].push_back(frontiers[i]);
@@ -226,32 +228,32 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-    std::vector<quadtree::Box> frontiers = agent->quadtree->queryFrontierBoxes(agent->position, agent->FRONTIER_SEARCH_DIAMETER,
+    std::vector<std::pair<quadtree::Box, double>> frontiers = agent->quadtree->queryFrontierBoxes(agent->position, agent->FRONTIER_SEARCH_DIAMETER,
                                                                               agent->elapsed_ticks /
                                                                               agent->ticks_per_second);
     agent->current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
-    std::vector<std::vector<quadtree::Box>> frontierRegions = {};
+    std::vector<std::vector<std::pair<quadtree::Box, double>>> frontierRegions = {};
 
     mergeAdjacentFrontiers(frontiers, frontierRegions);
 
 // Iterate over each frontier box to merge adjacent ones into regions
-    for (auto frontier: frontiers) {
+    for (auto [frontierbox, frontierpheromone]: frontiers) {
         bool added = false; // Flag to check if the current frontier has been added to a region
 
         // Iterate over existing regions to find a suitable one for the current frontier
         for (auto &region: frontierRegions) {
-            for (auto box: region) {
+            for (auto [box, pheromone]: region) {
                 // Calculate the center coordinates of the current box and the frontier
                 Coordinate boxCenter = box.getCenter();
-                Coordinate frontierCenter = frontier.getCenter();
+                Coordinate frontierCenter = frontierbox.getCenter();
 
                 // Check if the distance between the box and the frontier is less than or equal to
                 // the average diagonal of the two boxes (ensuring adjacency)
                 if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(frontier.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
-                    region.push_back(frontier); // Add the frontier to the current region
+                    sqrt(2 * pow(frontierbox.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
+                    region.push_back({frontierbox, frontierpheromone}); // Add the frontier to the current region
                     added = true; // Mark the frontier as added
                     break; // Exit the loop since the frontier has been added to a region
                 }
@@ -260,7 +262,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
         // If the frontier was not added to any existing region, create a new region with it
         if (!added) {
-            frontierRegions.push_back({frontier});
+            frontierRegions.push_back({{frontierbox, frontierpheromone}});
         }
     }
 
@@ -283,16 +285,19 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double sumX = 0;
         double sumY = 0;
         double totalNumberOfCellsInRegion = 0;
-        for (auto box: region) {
+        double averagePheromoneInRegion = 0;
+        for (auto [box, pheromone]: region) {
             double cellsInBox = box.getSize() / agent->quadtree->getSmallestBoxSize();
             assert(cellsInBox == 1);
             sumX += box.getCenter().x *
                     cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
             sumY += box.getCenter().y * cellsInBox;
             totalNumberOfCellsInRegion += cellsInBox;
+            averagePheromoneInRegion += pheromone;
         }
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
+        averagePheromoneInRegion /= totalNumberOfCellsInRegion;
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier
@@ -321,10 +326,12 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         //Calculate the score of the frontier region
         double score =
                 agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
-                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration;
+                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
+                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
 #else
         //Calculate the score of the frontier region
-        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
+        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+                       agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
 #endif
 
 

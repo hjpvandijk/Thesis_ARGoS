@@ -15,6 +15,12 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
  * Also draw the 'vision' area of the agents
  */
 
+double calculatePheromone(double visitedTime, double PConfidence, double currentTime) {
+    double pheromoneFactor = 1.0 - std::min((currentTime - visitedTime) / 100.0, (1.0 - 0.05));
+    double pheromone = pheromoneFactor * (PConfidence-0.5) + 0.5;
+    return pheromone;
+}
+
 void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
@@ -108,7 +114,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
 
         double currentTimeS = m_cAgVisLF.globalElapsedTicks;
-        double pheromone = 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
+
+        double pheromone = calculatePheromone(visitedTimeS, PConfidence, currentTimeS);
 
         Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
         CVector3 pos = CVector3(boxCenterArgos.x, boxCenterArgos.y, 0.02f);
@@ -144,9 +151,9 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
 
         color = CColor::GREEN;
-        color.SetAlpha(UInt8(PConfidence * 255));
+        color.SetAlpha(UInt8(pheromone * 255));
         color = color.Blend(CColor::RED);
-        if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
+//        if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
         DrawPolygon(pos, CQuaternion(), posVec, color, fill);
         DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
 
