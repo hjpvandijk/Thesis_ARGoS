@@ -18,12 +18,17 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
 double calculatePheromone(double visitedTime, double PConfidence, double currentTime) {
     double pheromoneFactor = 1.0 - std::min((currentTime - visitedTime) / 100.0, (1.0 - 0.05));
     double pheromone = pheromoneFactor * (PConfidence-0.5) + 0.5;
+    //This makes sure that a value once set to occupied or free, will not be changed to ambiguous again due to evaporation.
+    //So we assume that if a cell is occupied or free, it will stay that way, albeit with a lower confidence.
+    if (PConfidence <= 0.4) pheromone = pheromoneFactor * (PConfidence - 0.4) + 0.4;
+//    if (PConfidence >= 0.6) pheromone = pheromoneFactor * (PConfidence - 0.6) + 0.6;
     return pheromone;
 }
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
+        if (m_tCell.first->GetId() != "pipuck1") continue;
         for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
             Coordinate neighbor1 = std::get<0>(neighborPair);
             Coordinate neighbor2 = std::get<1>(neighborPair);
@@ -116,7 +121,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         double currentTimeS = m_cAgVisLF.globalElapsedTicks;
 
         double pheromone = calculatePheromone(visitedTimeS, PConfidence, currentTimeS);
-
+        
         Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
         CVector3 pos = CVector3(boxCenterArgos.x, boxCenterArgos.y, 0.02f);
 
@@ -157,6 +162,9 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         DrawPolygon(pos, CQuaternion(), posVec, color, fill);
         DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
 
+//        DrawText(pos, std::to_string(pheromone), CColor::BLACK);
+//        //Also write the coordinates in the box
+//        DrawText(pos - CVector3(0.05,-0.05,0), std::to_string(box.getCenter().x) + " " + std::to_string(box.getCenter().y), CColor::BLACK);
 
     }
 

@@ -146,10 +146,11 @@ namespace quadtree {
          */
         Box add(Coordinate coordinate, float Pn_zt, double visitedAtS, double currentTimeS) {
             auto LConfidence = L(Pn_zt);
+            double pheromone = calculatePheromone(visitedAtS, Pn_zt, currentTimeS);
             Occupancy occ = AMBIGUOUS;
-            if (LConfidence >= l_free){
+            if (pheromone >= l_free){
                 occ = FREE;
-            } else if (LConfidence <= l_occupied){
+            } else if (pheromone <= l_occupied){
                 occ = OCCUPIED;
             }
             auto node = QuadNode{coordinate, occ, visitedAtS, LConfidence};
@@ -176,7 +177,7 @@ namespace quadtree {
             Occupancy occ = AMBIGUOUS;
             if (pheromone >= P(l_free)){
                 occ = FREE;
-            } else if (value.LConfidence <= P(l_occupied)){
+            } else if (pheromone <= P(l_occupied)){
                 occ = OCCUPIED;
             }
             value.occupancy = occ;
@@ -849,11 +850,11 @@ namespace quadtree {
 //                        }
                         newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence, value.LConfidence);
                         newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                        double pheromone = calculatePheromone(newNode.visitedAtS, newNode.LConfidence, currentTimeS);
+                        double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence), currentTimeS);
                         Occupancy occ = AMBIGUOUS;
                         if (pheromone >= P(l_free)){
                             occ = FREE;
-                        } else if (newNode.LConfidence <= P(l_occupied)){ //Most probably occupied
+                        } else if (pheromone <= P(l_occupied)){ //Most probably occupied
                             occ = OCCUPIED;
                         }
                         newNode.occupancy = occ;
@@ -926,10 +927,11 @@ namespace quadtree {
                         if (cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == AMBIGUOUS) {
                             newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence, value.LConfidence);
                             newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                            double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence), currentTimeS);
                             Occupancy occ = AMBIGUOUS;
-                            if (newNode.LConfidence >= l_free){
+                            if (pheromone >= l_free){
                                 occ = FREE;
-                            } else if (newNode.LConfidence <= l_occupied){
+                            } else if (pheromone <= l_occupied){
                                 occ = OCCUPIED;
                             }
                             newNode.occupancy = occ;
@@ -1024,12 +1026,12 @@ namespace quadtree {
                         numberOfNodes -= 3; //We remove 4 children and the parent is now a leaf node.
                         assert(isLeaf(cell) && "The cell should be a leaf again now");
                         cell->quadNode.LConfidence = L(PConfidenceSum / 4.0);
-
+                        double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                         //If all children have the same occupancy, give the parent that occupancy
                         Occupancy occ = AMBIGUOUS;
-                        if (cell->quadNode.LConfidence >= l_free){
+                        if (pheromone >= P(l_free)){
                             occ = FREE;
-                        } else if (cell->quadNode.LConfidence <= l_occupied){
+                        } else if (pheromone <= P(l_occupied)){
                             occ = OCCUPIED;
                         }
                         cell->quadNode.occupancy = occ;
@@ -1179,7 +1181,7 @@ namespace quadtree {
             assert(cell != nullptr);
             assert(queryBox.intersects_or_contains(box));
             //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
-            if ((cell->quadNode.occupancy == Occupancy::FREE || cell->quadNode.occupancy == AMBIGUOUS)) {
+            if (cell->quadNode.occupancy != Occupancy::ANY && cell->quadNode.occupancy != UNKNOWN) {
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                 if (pheromone >= P(l_free)) {
                     cell->quadNode.occupancy = Occupancy::FREE;
@@ -1188,6 +1190,7 @@ namespace quadtree {
                 } else {
                     cell->quadNode.occupancy = Occupancy::AMBIGUOUS;
                 }
+                if (cell->quadNode.occupancy != OCCUPIED) cell->remove_neighbors();
 //                cell->quadNode.occupancy = Occupancy::UNKNOWN;
                 //Keep a list of the to be removed values, as we cant delete them now due to concurrency issues. These will be deleted after the querying is done.
 //                values_to_be_removed.push_back(cell->quadNode);
@@ -1227,7 +1230,7 @@ namespace quadtree {
             assert(cell != nullptr);
             assert(queryBox.intersects_or_contains(box));
             //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
-            if ((cell->quadNode.occupancy == Occupancy::FREE || cell->quadNode.occupancy == AMBIGUOUS)) {
+            if (cell->quadNode.occupancy != Occupancy::ANY && cell->quadNode.occupancy != UNKNOWN) {
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                 if (pheromone >= P(l_free)) {
                     cell->quadNode.occupancy = Occupancy::FREE;
@@ -1236,8 +1239,10 @@ namespace quadtree {
                 } else {
                     cell->quadNode.occupancy = Occupancy::AMBIGUOUS;
                 }
+                if (cell->quadNode.occupancy != OCCUPIED) cell->remove_neighbors();
+//                cell->quadNode.occupancy = Occupancy::UNKNOWN;
                 //Keep a list of the to be removed values, as we cant delete them now due to concurrency issues. These will be deleted after the querying is done.
-                values_to_be_removed.push_back(cell->quadNode);
+//                values_to_be_removed.push_back(cell->quadNode);
             }
 
 
@@ -1262,6 +1267,11 @@ namespace quadtree {
         double calculatePheromone(double visitedTime, double PConfidence, double currentTime) const {
             double pheromoneFactor = 1.0 - std::min((currentTime - visitedTime) / EvaporationTime, (1.0 - MinExploredPheromoneFactor));
             double pheromone = pheromoneFactor * (PConfidence-0.5) + 0.5;
+            //This makes sure that a value once set to occupied or free, will not be changed to ambiguous again due to evaporation.
+            //So we assume that if a cell is occupied, it will stay that way, albeit with a lower confidence.
+            if (PConfidence <= P(l_occupied)) pheromone = pheromoneFactor * (PConfidence - P(l_occupied)) + P(l_occupied);
+            //But if a cell is free, it can become ambiguous again, as new obstacles can appear.
+//            if (PConfidence >= P(l_free)) pheromone = pheromoneFactor * (PConfidence - P(l_free)) + P(l_free);
             return pheromone;
         }
 
@@ -1287,12 +1297,12 @@ namespace quadtree {
 //                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
                 cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                if (cell->quadNode.LConfidence <=P(l_occupied)) {
+                if (pheromone <=P(l_occupied)) {
                     cell->quadNode.occupancy = OCCUPIED;
                     //Set neighbors
                     cell->add_occupied_neighbors(box.getSize());
                 } else {
-                    if (cell->quadNode.LConfidence >= P(l_free)) {
+                    if (pheromone >= P(l_free)) {
                         cell->quadNode.occupancy = FREE;
                     } else {
                         cell->quadNode.occupancy = AMBIGUOUS;
@@ -1332,12 +1342,12 @@ namespace quadtree {
             return Ln_z1t;
         }
 
-        float L(float p) {
+        float L(float p) const{
             assert(p >= 0 && p < 1);
             return std::log(p / (1-p));
         }
 
-        float P(float l) {
+        float P(float l) const {
             return std::exp(l) / (1 + std::exp(l));
         }
 
