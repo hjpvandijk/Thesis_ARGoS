@@ -484,7 +484,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 bool Agent::frontierPheromoneEvaporated() {
     quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getSmallestBoxSize(),
                                  this->elapsed_ticks / this->ticks_per_second); //Update pheromone of frontier cell
-    if (quadtree->isCoordinateUnknown(this->currentBestFrontier)) return true;
+    if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
     return false;
 }
 

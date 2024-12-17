@@ -299,6 +299,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
         averagePheromoneInRegion /= totalNumberOfCellsInRegion;
 
+
 #ifdef AVOID_UNREACHABLE_FRONTIERS
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier
 #endif
@@ -323,14 +324,20 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         //Only need to compare the motion power usage of the agent to the frontier region
         auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, {vectorToFrontier});
 
+//        //Calculate the score of the frontier region
+//        double score =
+//                agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+//                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
+//                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
+
         //Calculate the score of the frontier region
         double score =
                 agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
-                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
+                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration +
                 agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
 #else
         //Calculate the score of the frontier region
-        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion +
                        agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
 #endif
 
