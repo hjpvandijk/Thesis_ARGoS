@@ -293,7 +293,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                     cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
             sumY += box.getCenter().y * cellsInBox;
             totalNumberOfCellsInRegion += cellsInBox;
-            averagePheromoneInRegion += pheromone;
+            averagePheromoneInRegion += std::abs(pheromone-0.5);
         }
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
@@ -303,6 +303,32 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier
 #endif
+
+#ifdef SEPARATE_FRONTIERS
+        bool skipFrontier = false;
+        for (auto agentLocationTuple: agent->agentLocations) {
+            if((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second > agent->AGENT_LOCATION_RELEVANT_DURATION_S) continue;
+
+            double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
+                                                          pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
+
+            double distanceFromOtherAgentsPosition = sqrt(pow(agent->position.x - std::get<0>(agentLocationTuple.second).x, 2) +
+                                                          pow(agent->position.y - std::get<0>(agentLocationTuple.second).y, 2));
+
+            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE || distanceFromOtherAgentsPosition <= agent->FRONTIER_CLOSE_DISTANCE) {
+                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+                if (agentLocationTuple.first > agent->id) {
+                    //If the other agent has a higher ID, so we can't select this frontier
+                    skipFrontier = true;
+                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+                               << " because it is close to another agent's frontier or position" << std::endl;
+                    break;
+                }
+            }
+        }
+        if (skipFrontier) continue;
+#endif
+
         argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX - agent->position.x, frontierRegionY - agent->position.y).Rotate(-agent->heading);
         std::vector<std::pair<Coordinate, Coordinate>> route_to_frontier = {{agent->position, Coordinate{frontierRegionX, frontierRegionY}}};
 
@@ -333,8 +359,24 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         //Calculate the score of the frontier region
         double score =
                 agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
-                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration +
+                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
                 agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
+
+        if (agent->id == "pipuck1") {
+            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << score
+                       << std::endl;
+            argos::LOG << "Distance * weight = " << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = +"
+                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
+            argos::LOG << "Size * weight = -" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
+                       << " = " << -agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
+            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
+                       << " = " << -agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
+            argos::LOG << "Reach duration * weight = -" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
+                       << " = " << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
+            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
+                       << averagePheromoneInRegion << " = "
+                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion << std::endl;
+        }
 #else
         //Calculate the score of the frontier region
         double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion +
@@ -342,28 +384,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #endif
 
 
-#ifdef SEPARATE_FRONTIERS
-        bool skipFrontier = false;
-        for (auto agentLocationTuple: agent->agentLocations) {
-            if((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second > agent->AGENT_LOCATION_RELEVANT_DURATION_S) continue;
 
-            double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
-                                                 pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
-
-            double distanceFromOtherAgentsPosition = sqrt(pow(agent->position.x - std::get<0>(agentLocationTuple.second).x, 2) +
-                                                 pow(agent->position.y - std::get<0>(agentLocationTuple.second).y, 2));
-
-            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE || distanceFromOtherAgentsPosition <= agent->FRONTIER_CLOSE_DISTANCE) {
-                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
-                if (agentLocationTuple.first > agent->id) {
-                    //If the other agent has a higher ID, so we can't select this frontier
-                    skipFrontier = true;
-                    break;
-                }
-            }
-        }
-        if (skipFrontier) continue;
-#endif
 
         //If the score is lower than the best score, update the best score and best frontier region
         if (score < bestFrontierScore) {
