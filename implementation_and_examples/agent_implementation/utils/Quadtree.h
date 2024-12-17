@@ -148,9 +148,9 @@ namespace quadtree {
             auto LConfidence = L(Pn_zt);
             double pheromone = calculatePheromone(visitedAtS, Pn_zt, currentTimeS);
             Occupancy occ = AMBIGUOUS;
-            if (pheromone >= l_free){
+            if (pheromone >= P(l_free)){
                 occ = FREE;
-            } else if (pheromone <= l_occupied){
+            } else if (pheromone <= P(l_occupied)){
                 occ = OCCUPIED;
             }
             auto node = QuadNode{coordinate, occ, visitedAtS, LConfidence};
@@ -929,9 +929,9 @@ namespace quadtree {
                             newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
                             double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence), currentTimeS);
                             Occupancy occ = AMBIGUOUS;
-                            if (pheromone >= l_free){
+                            if (pheromone >= P(l_free)){
                                 occ = FREE;
-                            } else if (pheromone <= l_occupied){
+                            } else if (pheromone <= P(l_occupied)){
                                 occ = OCCUPIED;
                             }
                             newNode.occupancy = occ;
