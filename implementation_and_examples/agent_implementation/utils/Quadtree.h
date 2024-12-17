@@ -1326,8 +1326,12 @@ namespace quadtree {
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                 if (pheromone <=P_occupied) {
                     cell->quadNode.occupancy = OCCUPIED;
-                    //Set neighbors
-                    cell->add_occupied_neighbors(box.getSize());
+                    if (box.getSize() > Smallest_Box_Size){
+                        split(cell, box, currentTimeS);
+                    } else {
+                        //Set neighbors
+                        cell->add_occupied_neighbors(box.getSize());
+                    }
                 } else {
                     if (pheromone >= P_free) {
                         cell->quadNode.occupancy = FREE;
