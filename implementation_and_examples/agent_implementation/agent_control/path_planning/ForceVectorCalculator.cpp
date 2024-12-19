@@ -338,8 +338,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double distance = 0;
         route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
         if (route_to_frontier.empty()) continue; //If no route is found, skip this frontier
-        for (auto edge: route_to_frontier) {
-            distance += sqrt(pow(edge.first.x - edge.second.x, 2) + pow(edge.first.y - edge.second.y, 2));
+        std::vector<argos::CVector2> relativeRoute = agent->pathPlanner.coordinateRouteToRelativeVectors(route_to_frontier, agent->heading);
+        for (auto edge: relativeRoute) {
+            distance += edge.Length();
         }
 #else
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
@@ -348,7 +349,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
         //Only need to compare the motion power usage of the agent to the frontier region
-        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, {vectorToFrontier});
+        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, relativeRoute);
 
 //        //Calculate the cost of the frontier region
 //        double cost =
@@ -361,7 +362,22 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
                 agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
                 agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
-        
+
+        if (agent->id == "pipuck1") {
+            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
+                       << std::endl;
+            argos::LOG << "Distance * weight = -" << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = -"
+                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
+            argos::LOG << "Size * weight = +" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
+                       << " = +" << agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
+            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
+                       << " = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
+            argos::LOG << "Reach duration * weight =-" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
+                       << " = -" << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
+            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
+                       << averagePheromoneCertainty << " = "
+                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty << std::endl;
+        }
 #else
         //Calculate the cost of the frontier region
         double fitness = -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
