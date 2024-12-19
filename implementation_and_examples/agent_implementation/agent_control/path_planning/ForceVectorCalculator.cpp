@@ -276,7 +276,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //Initialize variables to store the best frontier region and its score
     std::vector<quadtree::Box> bestFrontierRegion = {};
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
-    double bestFrontierScore = std::numeric_limits<double>::max();
+    double highestFrontierFitness = -std::numeric_limits<double>::max();
     std::vector<std::pair<Coordinate, Coordinate>> bestRoute = {};
 
     //Iterate over all frontier regions to find the best one
@@ -285,7 +285,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double sumX = 0;
         double sumY = 0;
         double totalNumberOfCellsInRegion = 0;
-        double averagePheromoneInRegion = 0;
+        double averagePheromoneCertainty = 0;
         for (auto [box, pheromone]: region) {
             double cellsInBox = box.getSize() / agent->quadtree->getSmallestBoxSize();
             assert(cellsInBox == 1);
@@ -293,11 +293,11 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                     cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
             sumY += box.getCenter().y * cellsInBox;
             totalNumberOfCellsInRegion += cellsInBox;
-            averagePheromoneInRegion += std::abs(pheromone-0.5);
+            averagePheromoneCertainty += std::abs(pheromone - 0.5);
         }
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
-        averagePheromoneInRegion /= totalNumberOfCellsInRegion;
+        averagePheromoneCertainty /= totalNumberOfCellsInRegion;
 
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
@@ -350,45 +350,30 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         //Only need to compare the motion power usage of the agent to the frontier region
         auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, {vectorToFrontier});
 
-//        //Calculate the score of the frontier region
-//        double score =
+//        //Calculate the cost of the frontier region
+//        double cost =
 //                agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
 //                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
-//                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
+//                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 
-        //Calculate the score of the frontier region
-        double score =
-                agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+        //Calculate the fitness of the frontier region
+        double fitness =
+                -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
                 agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
-                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
-
-        if (agent->id == "pipuck1") {
-            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << score
-                       << std::endl;
-            argos::LOG << "Distance * weight = " << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = +"
-                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
-            argos::LOG << "Size * weight = -" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
-                       << " = " << -agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
-            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
-                       << " = " << -agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
-            argos::LOG << "Reach duration * weight = -" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
-                       << " = " << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
-            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
-                       << averagePheromoneInRegion << " = "
-                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion << std::endl;
-        }
+                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
+        
 #else
-        //Calculate the score of the frontier region
-        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion +
-                       agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneInRegion;
+        //Calculate the cost of the frontier region
+        double fitness = -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+                       agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 #endif
 
 
 
 
-        //If the score is lower than the best score, update the best score and best frontier region
-        if (score < bestFrontierScore) {
-            bestFrontierScore = score;
+        //If the cost is lower than the best cost, update the best cost and best frontier region
+        if (fitness > highestFrontierFitness) {
+            highestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
             bestRoute = route_to_frontier;
         }

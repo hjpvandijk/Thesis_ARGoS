@@ -302,7 +302,7 @@ void Agent::checkForObstacles() {
 
                 //If detected object and another agent are not close, add the object as an obstacle
                 if (objectToAgent.Length() <= this->quadtree->getSmallestBoxSize()) {
-                    close_to_other_agent = true;
+                    close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
