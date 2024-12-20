@@ -28,7 +28,7 @@
 //#define WALL_FOLLOWING_ENABLED
 #define BATTERY_MANAGEMENT_ENABLED
 #define PATH_PLANNING_ENABLED
-#define AVOID_UNREACHABLE_FRONTIERS
+//#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -224,6 +224,7 @@ public:
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
     std::vector<std::pair<Coordinate, Coordinate>> route_to_best_frontier;
+    std::vector<std::pair<quadtree::Box, double>> bestFrontierRegionBoxes = {};
 
 
 

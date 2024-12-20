@@ -279,6 +279,10 @@ namespace quadtree {
 //            argos::LOG << "Checking moore neighbours of box: " << box.getCenter().x << " " << box.getCenter().y << " of size " << box.getSize() << std::endl;
             //0=NW, 1=NE, 2=SW, 3=SE
 
+            //If we find an unexplored (pheromone == 0.5) cell, return that pheromone, else return the minimum pheromone found
+
+            double pheromones[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
+
             //Only check the moore neighbours that are at the outer edges of the queried box
             //So only check if current quadrant in the WEST (left)
             if (current_quadrant == -1 || current_quadrant == 0 || current_quadrant == 2) {
@@ -287,8 +291,10 @@ namespace quadtree {
                 if (mBox.contains(left)) {
 //                argos::LOG << "left: " << left.x << " " << left.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(left, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[0] = pheromone;
                     }
                 }
             }
@@ -299,8 +305,10 @@ namespace quadtree {
                 if (mBox.contains(right)) {
 //                argos::LOG << "right: " << right.x << " " << right.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(right, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[1] = pheromone;
                     }
                 }
             }
@@ -311,8 +319,10 @@ namespace quadtree {
                 if (mBox.contains(top)) {
 //                argos::LOG << "top: " << top.x << " " << top.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(top, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[2] = pheromone;
                     }
                 }
             }
@@ -323,8 +333,10 @@ namespace quadtree {
                 if (mBox.contains(bottom)) {
 //                argos::LOG << "bottom: " << bottom.x << " " << bottom.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(bottom, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[3] = pheromone;
                     }
                 }
             }
@@ -335,8 +347,10 @@ namespace quadtree {
                 if (mBox.contains(topLeft)) {
 //                argos::LOG << "topLeft: " << topLeft.x << " " << topLeft.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(topLeft, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[4] = pheromone;
                     }
                 }
             }
@@ -347,8 +361,10 @@ namespace quadtree {
                 if (mBox.contains(topRight)) {
 //                argos::LOG << "topRight: " << topRight.x << " " << topRight.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(topRight, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[5] = pheromone;
                     }
                 }
             }
@@ -359,8 +375,10 @@ namespace quadtree {
                 if (mBox.contains(bottomLeft)) {
 //                argos::LOG << "bottomLeft: " << bottomLeft.x << " " << bottomLeft.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(bottomLeft, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[6] = pheromone;
                     }
                 }
             }
@@ -371,10 +389,28 @@ namespace quadtree {
                 if (mBox.contains(bottomRight)) {
 //                argos::LOG << "bottomRight: " << bottomRight.x << " " << bottomRight.y << std::endl;
                     double pheromone = getPheromoneFromCoordinate(bottomRight, currentTimeS);
-                    if (pheromone != -1) {
+                    if (pheromone == 0.5) {
                         return pheromone;
+                    } else {
+                        pheromones[7] = pheromone;
                     }
                 }
+            }
+
+            int minDiffIndex;
+            double minDiff = 1;
+            for (int i = 0; i < 8; i++) {
+                auto pheromone = pheromones[i];
+                if (pheromone != -1) {
+                    auto diff = std::abs(pheromone - 0.5);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        minDiffIndex = i;
+                    }
+                }
+            }
+            if (minDiff < 1) {
+                return pheromones[minDiffIndex];
             }
 
             return -1;

@@ -4,7 +4,6 @@
 
 #include <argos3/core/utility/math/vector2.h>
 #include "agent_implementation/utils/coordinate.h"
-
 class Agent;
 
 class ForceVectorCalculator {

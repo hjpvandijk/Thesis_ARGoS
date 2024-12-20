@@ -238,34 +238,34 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
     mergeAdjacentFrontiers(frontiers, frontierRegions);
 
-// Iterate over each frontier box to merge adjacent ones into regions
-    for (auto [frontierbox, frontierpheromone]: frontiers) {
-        bool added = false; // Flag to check if the current frontier has been added to a region
-
-        // Iterate over existing regions to find a suitable one for the current frontier
-        for (auto &region: frontierRegions) {
-            for (auto [box, pheromone]: region) {
-                // Calculate the center coordinates of the current box and the frontier
-                Coordinate boxCenter = box.getCenter();
-                Coordinate frontierCenter = frontierbox.getCenter();
-
-                // Check if the distance between the box and the frontier is less than or equal to
-                // the average diagonal of the two boxes (ensuring adjacency)
-                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(frontierbox.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
-                    region.push_back({frontierbox, frontierpheromone}); // Add the frontier to the current region
-                    added = true; // Mark the frontier as added
-                    break; // Exit the loop since the frontier has been added to a region
-                }
-            }
-        }
-
-        // If the frontier was not added to any existing region, create a new region with it
-        if (!added) {
-            frontierRegions.push_back({{frontierbox, frontierpheromone}});
-        }
-    }
-
+//// Iterate over each frontier box to merge adjacent ones into regions
+//    for (auto [frontierbox, frontierpheromone]: frontiers) {
+//        bool added = false; // Flag to check if the current frontier has been added to a region
+//
+//        // Iterate over existing regions to find a suitable one for the current frontier
+//        for (auto &region: frontierRegions) {
+//            for (auto [box, pheromone]: region) {
+//                // Calculate the center coordinates of the current box and the frontier
+//                Coordinate boxCenter = box.getCenter();
+//                Coordinate frontierCenter = frontierbox.getCenter();
+//
+//                // Check if the distance between the box and the frontier is less than or equal to
+//                // the average diagonal of the two boxes (ensuring adjacency)
+//                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
+//                    sqrt(2 * pow(frontierbox.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
+//                    region.push_back({frontierbox, frontierpheromone}); // Add the frontier to the current region
+//                    added = true; // Mark the frontier as added
+//                    break; // Exit the loop since the frontier has been added to a region
+//                }
+//            }
+//        }
+//
+//        // If the frontier was not added to any existing region, create a new region with it
+//        if (!added) {
+//            frontierRegions.push_back({{frontierbox, frontierpheromone}});
+//        }
+//    }
+    if (!agent->bestFrontierRegionBoxes.empty()) frontierRegions.push_back(agent->bestFrontierRegionBoxes);
     agent->current_frontier_regions = frontierRegions;
 
     //Now we have all frontier cells merged into frontier regions
@@ -278,6 +278,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
     double highestFrontierFitness = -std::numeric_limits<double>::max();
     std::vector<std::pair<Coordinate, Coordinate>> bestRoute = {};
+#ifdef PATH_PLANNING_ENABLED
+    int bestFrontierRouteWallFollowingDirection;
+#endif
 
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
@@ -336,7 +339,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #ifdef PATH_PLANNING_ENABLED
         //Calculate distance of route
         double distance = 0;
-        route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
+        route_to_frontier.clear();
+        int wall_following_direction = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY}, route_to_frontier);
         if (route_to_frontier.empty()) continue; //If no route is found, skip this frontier
         std::vector<argos::CVector2> relativeRoute = agent->pathPlanner.coordinateRouteToRelativeVectors(route_to_frontier, agent->heading);
         for (auto edge: relativeRoute) {
@@ -391,13 +395,21 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         if (fitness > highestFrontierFitness) {
             highestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
+            agent->bestFrontierRegionBoxes = region;
             bestRoute = route_to_frontier;
+#ifdef PATH_PLANNING_ENABLED
+            bestFrontierRouteWallFollowingDirection = wall_following_direction;
+#endif
         }
     }
 
 
     agent->currentBestFrontier = bestFrontierRegionCenter;
     agent->route_to_best_frontier = bestRoute;
+#ifdef PATH_PLANNING_ENABLED
+    agent->pathPlanner.setTarget(bestFrontierRegionCenter);
+    agent->pathPlanner.setWallFollowingDirection(bestFrontierRouteWallFollowingDirection);
+#endif
 
 
 
