@@ -172,10 +172,10 @@ private:
     std::unordered_map<int, int> rank;
 };
 
-void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
-                            std::vector<std::vector<quadtree::Box>> &frontierRegions) {
+void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> &frontiers,
+                            std::vector<std::vector<std::pair<quadtree::Box, double>>> &frontierRegions) {
     UnionFind uf;
-    std::unordered_map<int, quadtree::Box> boxMap;
+    std::unordered_map<int, std::pair<quadtree::Box, double>> boxMap;
 
     // Initialize union-find structure
     for (int i = 0; i < frontiers.size(); ++i) {
@@ -185,11 +185,13 @@ void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
 
     // Check adjacency and union sets
     for (int i = 0; i < frontiers.size(); ++i) {
+        auto boxI = frontiers[i].first;
         for (int j = i + 1; j < frontiers.size(); ++j) {
-            Coordinate centerI = frontiers[i].getCenter();
-            Coordinate centerJ = frontiers[j].getCenter();
+            auto boxJ = frontiers[j].first;
+            Coordinate centerI = boxI.getCenter();
+            Coordinate centerJ = boxJ.getCenter();
             double distance = sqrt(pow(centerI.x - centerJ.x, 2) + pow(centerI.y - centerJ.y, 2));
-            double threshold = sqrt(2 * pow(frontiers[i].getSize() * 0.5 + frontiers[j].getSize() * 0.5, 2));
+            double threshold = sqrt(2 * pow(boxI.getSize() * 0.5 + boxJ.getSize() * 0.5, 2));
             if (distance <= threshold) {
                 uf.unionSets(i, j);
             }
@@ -197,7 +199,7 @@ void mergeAdjacentFrontiers(const std::vector<quadtree::Box> &frontiers,
     }
 
     // Group boxes by their root set representative
-    std::unordered_map<int, std::vector<quadtree::Box>> regions;
+    std::unordered_map<int, std::vector<std::pair<quadtree::Box, double>>> regions;
     for (int i = 0; i < frontiers.size(); ++i) {
         int root = uf.find(i);
         regions[root].push_back(frontiers[i]);
@@ -226,44 +228,44 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-    std::vector<quadtree::Box> frontiers = agent->quadtree->queryFrontierBoxes(agent->position, agent->FRONTIER_SEARCH_DIAMETER,
+    std::vector<std::pair<quadtree::Box, double>> frontiers = agent->quadtree->queryFrontierBoxes(agent->position, agent->FRONTIER_SEARCH_DIAMETER,
                                                                               agent->elapsed_ticks /
                                                                               agent->ticks_per_second);
     agent->current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
-    std::vector<std::vector<quadtree::Box>> frontierRegions = {};
+    std::vector<std::vector<std::pair<quadtree::Box, double>>> frontierRegions = {};
 
     mergeAdjacentFrontiers(frontiers, frontierRegions);
 
-// Iterate over each frontier box to merge adjacent ones into regions
-    for (auto frontier: frontiers) {
-        bool added = false; // Flag to check if the current frontier has been added to a region
-
-        // Iterate over existing regions to find a suitable one for the current frontier
-        for (auto &region: frontierRegions) {
-            for (auto box: region) {
-                // Calculate the center coordinates of the current box and the frontier
-                Coordinate boxCenter = box.getCenter();
-                Coordinate frontierCenter = frontier.getCenter();
-
-                // Check if the distance between the box and the frontier is less than or equal to
-                // the average diagonal of the two boxes (ensuring adjacency)
-                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-                    sqrt(2 * pow(frontier.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
-                    region.push_back(frontier); // Add the frontier to the current region
-                    added = true; // Mark the frontier as added
-                    break; // Exit the loop since the frontier has been added to a region
-                }
-            }
-        }
-
-        // If the frontier was not added to any existing region, create a new region with it
-        if (!added) {
-            frontierRegions.push_back({frontier});
-        }
-    }
-
+//// Iterate over each frontier box to merge adjacent ones into regions
+//    for (auto [frontierbox, frontierpheromone]: frontiers) {
+//        bool added = false; // Flag to check if the current frontier has been added to a region
+//
+//        // Iterate over existing regions to find a suitable one for the current frontier
+//        for (auto &region: frontierRegions) {
+//            for (auto [box, pheromone]: region) {
+//                // Calculate the center coordinates of the current box and the frontier
+//                Coordinate boxCenter = box.getCenter();
+//                Coordinate frontierCenter = frontierbox.getCenter();
+//
+//                // Check if the distance between the box and the frontier is less than or equal to
+//                // the average diagonal of the two boxes (ensuring adjacency)
+//                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
+//                    sqrt(2 * pow(frontierbox.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
+//                    region.push_back({frontierbox, frontierpheromone}); // Add the frontier to the current region
+//                    added = true; // Mark the frontier as added
+//                    break; // Exit the loop since the frontier has been added to a region
+//                }
+//            }
+//        }
+//
+//        // If the frontier was not added to any existing region, create a new region with it
+//        if (!added) {
+//            frontierRegions.push_back({{frontierbox, frontierpheromone}});
+//        }
+//    }
+    if (!agent->bestFrontierRegionBoxes.empty()) frontierRegions.push_back(agent->bestFrontierRegionBoxes);
     agent->current_frontier_regions = frontierRegions;
 
     //Now we have all frontier cells merged into frontier regions
@@ -274,8 +276,11 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //Initialize variables to store the best frontier region and its score
     std::vector<quadtree::Box> bestFrontierRegion = {};
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
-    double bestFrontierScore = std::numeric_limits<double>::max();
+    double highestFrontierFitness = -std::numeric_limits<double>::max();
     std::vector<std::pair<Coordinate, Coordinate>> bestRoute = {};
+#ifdef PATH_PLANNING_ENABLED
+    int bestFrontierRouteWallFollowingDirection;
+#endif
 
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
@@ -283,20 +288,50 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double sumX = 0;
         double sumY = 0;
         double totalNumberOfCellsInRegion = 0;
-        for (auto box: region) {
+        double averagePheromoneCertainty = 0;
+        for (auto [box, pheromone]: region) {
             double cellsInBox = box.getSize() / agent->quadtree->getSmallestBoxSize();
             assert(cellsInBox == 1);
             sumX += box.getCenter().x *
                     cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)
             sumY += box.getCenter().y * cellsInBox;
             totalNumberOfCellsInRegion += cellsInBox;
+            averagePheromoneCertainty += std::abs(pheromone - 0.5);
         }
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
+        averagePheromoneCertainty /= totalNumberOfCellsInRegion;
+
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier
 #endif
+
+#ifdef SEPARATE_FRONTIERS
+        bool skipFrontier = false;
+        for (auto agentLocationTuple: agent->agentLocations) {
+            if((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second > agent->AGENT_LOCATION_RELEVANT_DURATION_S) continue;
+
+            double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
+                                                          pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
+
+            double distanceFromOtherAgentsPosition = sqrt(pow(agent->position.x - std::get<0>(agentLocationTuple.second).x, 2) +
+                                                          pow(agent->position.y - std::get<0>(agentLocationTuple.second).y, 2));
+
+            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE || distanceFromOtherAgentsPosition <= agent->FRONTIER_CLOSE_DISTANCE) {
+                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+                if (agentLocationTuple.first > agent->id) {
+                    //If the other agent has a higher ID, so we can't select this frontier
+                    skipFrontier = true;
+                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+                               << " because it is close to another agent's frontier or position" << std::endl;
+                    break;
+                }
+            }
+        }
+        if (skipFrontier) continue;
+#endif
+
         argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX - agent->position.x, frontierRegionY - agent->position.y).Rotate(-agent->heading);
         std::vector<std::pair<Coordinate, Coordinate>> route_to_frontier = {{agent->position, Coordinate{frontierRegionX, frontierRegionY}}};
 
@@ -304,10 +339,12 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #ifdef PATH_PLANNING_ENABLED
         //Calculate distance of route
         double distance = 0;
-        route_to_frontier = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY});
+        route_to_frontier.clear();
+        int wall_following_direction = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY}, route_to_frontier);
         if (route_to_frontier.empty()) continue; //If no route is found, skip this frontier
-        for (auto edge: route_to_frontier) {
-            distance += sqrt(pow(edge.first.x - edge.second.x, 2) + pow(edge.first.y - edge.second.y, 2));
+        std::vector<argos::CVector2> relativeRoute = agent->pathPlanner.coordinateRouteToRelativeVectors(route_to_frontier, agent->heading);
+        for (auto edge: relativeRoute) {
+            distance += edge.Length();
         }
 #else
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
@@ -316,52 +353,63 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
         //Only need to compare the motion power usage of the agent to the frontier region
-        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, {vectorToFrontier});
+        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, relativeRoute);
 
-        //Calculate the score of the frontier region
-        double score =
-                agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
-                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration;
-#else
-        //Calculate the score of the frontier region
-        double score = agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion;
-#endif
+//        //Calculate the cost of the frontier region
+//        double cost =
+//                agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+//                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
+//                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 
+        //Calculate the fitness of the frontier region
+        double fitness =
+                -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
+                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 
-#ifdef SEPARATE_FRONTIERS
-        bool skipFrontier = false;
-        for (auto agentLocationTuple: agent->agentLocations) {
-            if((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second > agent->AGENT_LOCATION_RELEVANT_DURATION_S) continue;
-
-            double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
-                                                 pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
-
-            double distanceFromOtherAgentsPosition = sqrt(pow(agent->position.x - std::get<0>(agentLocationTuple.second).x, 2) +
-                                                 pow(agent->position.y - std::get<0>(agentLocationTuple.second).y, 2));
-
-            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE || distanceFromOtherAgentsPosition <= agent->FRONTIER_CLOSE_DISTANCE) {
-                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
-                if (agentLocationTuple.first > agent->id) {
-                    //If the other agent has a higher ID, so we can't select this frontier
-                    skipFrontier = true;
-                    break;
-                }
-            }
+        if (agent->id == "pipuck1") {
+            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
+                       << std::endl;
+            argos::LOG << "Distance * weight = -" << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = -"
+                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
+            argos::LOG << "Size * weight = +" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
+                       << " = +" << agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
+            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
+                       << " = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
+            argos::LOG << "Reach duration * weight =-" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
+                       << " = -" << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
+            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
+                       << averagePheromoneCertainty << " = "
+                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty << std::endl;
         }
-        if (skipFrontier) continue;
+#else
+        //Calculate the cost of the frontier region
+        double fitness = -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+                       agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 #endif
 
-        //If the score is lower than the best score, update the best score and best frontier region
-        if (score < bestFrontierScore) {
-            bestFrontierScore = score;
+
+
+
+        //If the cost is lower than the best cost, update the best cost and best frontier region
+        if (fitness > highestFrontierFitness) {
+            highestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
+            agent->bestFrontierRegionBoxes = region;
             bestRoute = route_to_frontier;
+#ifdef PATH_PLANNING_ENABLED
+            bestFrontierRouteWallFollowingDirection = wall_following_direction;
+#endif
         }
     }
 
 
     agent->currentBestFrontier = bestFrontierRegionCenter;
     agent->route_to_best_frontier = bestRoute;
+#ifdef PATH_PLANNING_ENABLED
+    agent->pathPlanner.setTarget(bestFrontierRegionCenter);
+    agent->pathPlanner.setWallFollowingDirection(bestFrontierRouteWallFollowingDirection);
+#endif
 
 
 

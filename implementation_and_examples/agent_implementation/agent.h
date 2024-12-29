@@ -28,7 +28,7 @@
 //#define WALL_FOLLOWING_ENABLED
 #define BATTERY_MANAGEMENT_ENABLED
 #define PATH_PLANNING_ENABLED
-#define AVOID_UNREACHABLE_FRONTIERS
+//#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -165,8 +165,9 @@ public:
 
     double FRONTIER_DISTANCE_WEIGHT = 0.0;//0.001;
     double FRONTIER_SIZE_WEIGHT = 1.0;
-    double FRONTIER_REACH_BATTERY_WEIGHT = 4.0;
-    double FRONTIER_REACH_DURATION_WEIGHT = 0.5;
+    double FRONTIER_REACH_BATTERY_WEIGHT = 8.0;
+    double FRONTIER_REACH_DURATION_WEIGHT = 1.0;
+    double FRONTIER_PHEROMONE_WEIGHT = 500.0;
 
     double FRONTIER_SEARCH_DIAMETER = 8.0;
 
@@ -217,12 +218,13 @@ public:
 
     uint32_t elapsed_ticks = 0;
 
-    std::vector<quadtree::Box> current_frontiers;
-    std::vector<std::vector<quadtree::Box>> current_frontier_regions;
+    std::vector<std::pair<quadtree::Box, double>> current_frontiers;
+    std::vector<std::vector<std::pair<quadtree::Box, double>>> current_frontier_regions;
     std::set<argos::CDegrees> freeAnglesVisualization;
     argos::CVector2 perpendicularVectorVisualization;
     std::vector<Coordinate> lineVisualization;
     std::vector<std::pair<Coordinate, Coordinate>> route_to_best_frontier;
+    std::vector<std::pair<quadtree::Box, double>> bestFrontierRegionBoxes = {};
 
 
 

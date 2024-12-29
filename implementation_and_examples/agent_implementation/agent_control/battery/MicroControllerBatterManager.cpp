@@ -59,7 +59,7 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
     }
 
     //Amount of nodes to exchange
-    int nNodes = agent->quadtree->numberOfNodes; //It is unknown how many nodes will be added in next 'seconds' so we will use the current amount of nodes
+    int nNodes = agent->quadtree->numberOfLeafNodes; //It is unknown how many nodes will be added in next 'seconds' so we will use the current amount of nodes
     //Calculage amount of messages we will send
     int nNodesPerMessage = agent->quadtree->numberOfNodesPerMessage;
     int nMessages = std::floor(nNodes / nNodesPerMessage);

@@ -18,9 +18,13 @@ public:
 //     * @param quadtree
 //     * @return
 //     */
-    std::vector<std::pair<Coordinate, Coordinate>> getRoute(Agent* agent, Coordinate start, Coordinate end) const;
-
+    int getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const;
+    std::vector<argos::CVector2> coordinateRouteToRelativeVectors(const std::vector<std::pair<Coordinate, Coordinate>> & route, argos::CRadians agent_heading) const;
+    void setWallFollowingDirection(int direction) {this->current_wall_following_direction = direction;}
+    void setTarget(Coordinate target) {this->current_target = target;}
 private:
+    Coordinate current_target;
+    int current_wall_following_direction;
     std::vector<std::pair<Coordinate, Coordinate>> getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, bool switched_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const;
     void getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction,  bool switched_direction) const;
     std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> directionToTargetFree(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, int wall_following_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const;

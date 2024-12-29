@@ -4,11 +4,28 @@
 #include "agent_implementation/agent.h"
 
 
-std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target) const {
-    srand(target.x + target.y);
+ int SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
+    srand(target.x * 100 + target.y * 100);
     int wall_following_direction = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction (1= left, -1=
-    std::vector<std::pair<Coordinate, Coordinate>> route;
-    return getRouteSections(agent, start, target, wall_following_direction, false, route);
+    if (sqrt (pow(target.x - this->current_target.x, 2) + pow(target.y - this->current_target.y, 2)) < 2){
+        wall_following_direction = this->current_wall_following_direction;
+    }
+    getRouteSections(agent, start, target, wall_following_direction, false, route);
+    return wall_following_direction;
+}
+
+std::vector<argos::CVector2> SimplePathPlanner::coordinateRouteToRelativeVectors(const std::vector<std::pair<Coordinate, Coordinate>> & route, argos::CRadians agent_heading) const {
+    std::vector<argos::CVector2> relative_vectors;
+    for (int i = 0; i < route.size(); i++) {
+        auto [begin, end] = route[i];
+        if (i==0) {
+            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-agent_heading));
+        } else {
+            auto prev = relative_vectors.rbegin();
+            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-prev->Angle()));
+        }
+    }
+    return relative_vectors;
 }
 
 std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, bool switched_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
