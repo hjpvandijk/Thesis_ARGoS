@@ -17,12 +17,27 @@ void Radio::broadcast_message(std::string &messagePrependedWithId) const {
     radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
 }
 
+double calculateTransmissionTime(double messageSize, double transmissionRate) {
+    return messageSize / transmissionRate;
+}
+
+double calculateJitter(int max_jitter_ms) {
+    return (rand() % max_jitter_ms) * 1e-3;
+}
+
+void simulateTransmissionAndJitter(double transmissionTime, double jitter) {
+    //    sleep(transmissionTime + jitter); TODO: Implement threads so we can sleep
+}
+
 void Radio::send_message(std::string &messagePrependedWithId, const std::string& id) const {
     messagePrependedWithId.insert(0, "<" + id + ">"); //Prepend with target id
     argos::LOG << "Prepend target id size: " << messagePrependedWithId.size() << std::endl;
     auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
+    double transmissionTime = calculateTransmissionTime(messagePrependedWithId.size(), this->wifiTransferSpeed_Mbps * 1e6);
+    double jitter = calculateJitter(this->maxJitter_ms);
     argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
     argos::LOG << "Cmessage size: " << cMessage.Size() << std::endl;
+    simulateTransmissionAndJitter(transmissionTime, jitter);
     radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
 }
 
@@ -34,3 +49,4 @@ void Radio::receive_messages(std::vector<std::string> &messages) const {
         messages.push_back(messageStr);
     }
 }
+

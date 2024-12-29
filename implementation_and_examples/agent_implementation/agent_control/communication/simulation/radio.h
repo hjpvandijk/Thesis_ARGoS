@@ -23,6 +23,10 @@ public:
 
     void receive_messages(std::vector<std::string> &messages) const;
 
+private:
+    float wifiTransferSpeed_Mbps = 10; //Speed of the wifi transfer in Mbps
+    float maxJitter_ms = 10; //Max jitter in ms
+
 };
 
 
