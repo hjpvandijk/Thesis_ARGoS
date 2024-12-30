@@ -757,7 +757,7 @@ void Agent::broadcastMessage(const std::string &message) const {
  * Sends a message to an agents
  * @param message
  */
-void Agent::sendMessage(const std::string &message, const std::string& targetId) const {
+void Agent::sendMessage(const std::string &message, const std::string& targetId) {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
     this->wifi.send_message(messagePrependedWithId, targetId);
 }
@@ -768,7 +768,7 @@ void Agent::sendMessage(const std::string &message, const std::string& targetId)
  */
 void Agent::checkMessages() {
     //Read messages from other agents
-    this->wifi.receive_messages(this->messages);
+    this->wifi.receive_messages(this->messages, this->elapsed_ticks/this->ticks_per_second);
     if (!this->messages.empty()) parseMessages();
 
 }

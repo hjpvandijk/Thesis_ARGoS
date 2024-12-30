@@ -129,7 +129,7 @@ public:
 
     void sendQuadtreeToCloseAgents();
     void broadcastMessage(const std::string &message) const;
-    void sendMessage(const std::string &message, const std::string& targetId) const;
+    void sendMessage(const std::string &message, const std::string& targetId);
 
     void checkMessages();
 
