@@ -27,6 +27,7 @@ public:
 private:
     float wifiTransferSpeed_Mbps = 10; //Speed of the wifi transfer in Mbps
     float maxJitter_ms = 10; //Max jitter in ms
+    float message_drop_probability = 0.05; //Probability of a message being dropped
 
     struct MessageInTransit {
         argos::CByteArray cMessage;

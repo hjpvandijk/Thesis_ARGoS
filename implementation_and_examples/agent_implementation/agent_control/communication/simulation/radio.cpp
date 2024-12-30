@@ -54,6 +54,8 @@ void Radio::receive_messages(std::vector<std::string> &messages, double current_
     messages.clear();
     std::vector<argos::CByteArray> sensorMessages = radioSensor->GetInterfaces()[0].Messages;
     for (const auto &sensorMessage: sensorMessages) {
+        //Random probability of dropping the message
+        if ((rand() % 100) < this->message_drop_probability * 100) continue; //Ignore (drop) the message
         double transmissionTime = calculateTransmissionTime(sensorMessage.Size() * 8,
                                                             this->wifiTransferSpeed_Mbps * 1e6);
         double jitter = calculateJitter(this->maxJitter_ms);
