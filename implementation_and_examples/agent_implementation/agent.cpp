@@ -706,7 +706,8 @@ void Agent::sendQuadtreeToCloseAgents() {
 }
 
 void Agent::doStep() {
-    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
+    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString() + "@" +
+                     std::to_string(this->elapsed_ticks / this->ticks_per_second));
     sendQuadtreeToCloseAgents();
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
@@ -865,6 +866,11 @@ argos::CVector2 vector2FromString(std::string str) {
     newVector.SetY(std::stod(str));
     return newVector;
 }
+void Agent::syncMissionTime(double received_time_s) {
+    received_time_s += std::round(1.0/this->ticks_per_second * 1e6)/1e6; //Add one tick to the received time to account for the time it took to receive the message, rounded to 6 decimal places, same as double converted to string.
+    double average_time = (this->elapsed_ticks/this->ticks_per_second + received_time_s) / 2;
+    this->elapsed_ticks = std::round(average_time * this->ticks_per_second);
+}
 
 
 /**
@@ -878,9 +884,12 @@ void Agent::parseMessages() {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
-            auto splitStrings = splitString(messageContent.substr(2), "|");
-            Coordinate receivedPosition = coordinateFromString(splitStrings[0]);
-            Coordinate receivedFrontier = coordinateFromString(splitStrings[1]);
+            auto splitStrings1 = splitString(messageContent.substr(2), "|");
+            Coordinate receivedPosition = coordinateFromString(splitStrings1[0]);
+            auto splitStrings2 = splitString(splitStrings1[1], "@");
+            Coordinate receivedFrontier = coordinateFromString(splitStrings2[0]);
+            double received_mission_time = std::stod(splitStrings2[1]);
+            syncMissionTime(received_mission_time); //Sync mission time with the sender, average the times. This is important to counter oscillator drift between agents
             this->agentLocations[senderId] = std::make_tuple(receivedPosition, receivedFrontier, this->elapsed_ticks);
         } else if (messageContent.at(0) == 'M') {
             std::vector<std::string> chunks;
