@@ -21,6 +21,7 @@
 #include "agent_control/battery/BatteryManager.h"
 #include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
 #include "agent_implementation/agent_control/path_planning/PathFollower.h"
+#include "agent_control/communication/TimeSynchronizer.h"
 
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
@@ -54,6 +55,9 @@ public:
     static constexpr double num_sensors = 4;
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
+    //Time synchronizer between agents
+    TimeSynchronizer timeSynchronizer;
+
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //Battery manager
     BatteryManager batteryManager;
@@ -82,6 +86,8 @@ public:
     std::map<std::string, int> agentQuadtreeBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
+    double TIME_SYNC_INTERVAL_S = 10.0;
+    int last_time_sync_tick = 0;
 
     //Vector affected by swarm
     argos::CVector2 swarm_vector;
@@ -128,6 +134,7 @@ public:
     void doStep();
 
     void sendQuadtreeToCloseAgents();
+    void timeSyncWithCloseAgents();
     void broadcastMessage(const std::string &message) const;
     void sendMessage(const std::string &message, const std::string& targetId);
 
@@ -255,6 +262,8 @@ private:
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();
+
+    void syncMissionTime(double received_time);
 
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
     void enterWalkingState(argos::CVector2 & unexploredFrontierVector);

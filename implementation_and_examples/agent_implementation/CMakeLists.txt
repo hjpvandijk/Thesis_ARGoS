@@ -10,6 +10,8 @@ add_library(agent_implementation SHARED
         utils/coordinate.cpp
         agent_control/communication/simulation/radio.h
         agent_control/communication/simulation/radio.cpp
+        agent_control/communication/TimeSynchronizer.h
+        agent_control/communication/TimeSynchronizer.cpp
         utils/Quadtree.h
         utils/Box.h
         agent_control/sensing/simulation/distance_sensor/hc_sr04.h
