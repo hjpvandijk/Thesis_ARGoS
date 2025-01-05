@@ -70,10 +70,10 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
 
     int totalNumberOfSentBytes = nMessages * messageSize + remainingMessageSize;
     //Calculate time to send all messages in a single exchange using the bandwidth
-    float timeToTransmitS = float(totalNumberOfSentBytes) * 8.0f / (this->bluetoothTransmitBandwidth_MHz* 1000000.0f);
+    float timeToTransmitS = float(totalNumberOfSentBytes) * 8.0f / (this->wifiTransferSpeed_Mbps * 1000000.0f);
 
     //Calculate power usage
-    float quadtreeExchangePowerUsage_mAh = timeToTransmitS * this->bluetoothTransmitConsumption_mA / 3600.0f; //In mAh
+    float quadtreeExchangePowerUsage_mAh = timeToTransmitS * this->wifiTransmitConsumption_mA / 3600.0f; //In mAh
 
     //Calculate total power usage, for all transmits within the given period
     float totalPowerUsage_mAh = quadtreeExchangePowerUsage_mAh * float(amountOfTransmits);
@@ -101,8 +101,8 @@ std::pair<float, float> MicroControllerBatteryManager::estimateReceiveConsumptio
         }
 
         int previousNBytesReceived = agent->agentQuadtreeBytesReceived[agentQuadtree.first]; //Amount of bytes we received from this agent previously (we use this for the calculation)
-        float timeToReceiveS = float(previousNBytesReceived) * 8.0f / (this->bluetoothTransmitBandwidth_MHz * 1000000.0f); //Time to receive the message
-        float quadtreeExchangePowerUsage_mAh = timeToReceiveS * this->bluetoothReceiveConsumption_mA / 3600.0f; //In mAh, Power usage to receive the message
+        float timeToReceiveS = float(previousNBytesReceived) * 8.0f / (this->wifiTransferSpeed_Mbps * 1000000.0f); //Time to receive the message
+        float quadtreeExchangePowerUsage_mAh = timeToReceiveS * this->wifiReceiveConsumption_mA / 3600.0f; //In mAh, Power usage to receive the message
         totalReceivePowerUsage_mAh += quadtreeExchangePowerUsage_mAh * float(amountOfReceives); //Power usage to receive all the quadtree messages from this agent added to the total
         totalReceiveTimeS += timeToReceiveS * float(amountOfReceives); //Time to receive all the quadtree messages from this agent added to the total
     }
