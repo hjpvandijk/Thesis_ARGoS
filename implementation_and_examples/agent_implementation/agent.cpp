@@ -24,6 +24,7 @@ Agent::Agent(std::string id) {
     auto box = quadtree::Box(-5, 5, 10);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->wallFollower = WallFollower();
+    this->timeSynchronizer = TimeSynchronizer();
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //TODO: Get values from config file
@@ -705,13 +706,27 @@ void Agent::sendQuadtreeToCloseAgents() {
 
 }
 
+void Agent::timeSyncWithCloseAgents() {
+    for (const auto& agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            AGENT_LOCATION_RELEVANT_DURATION_S) {
+            //If we have not time synced with this agent in the past TIME_SYNC_INTERVAL_S seconds, do it
+            if (this->elapsed_ticks - this->timeSynchronizer.getLastSync(agentLocationPair.first) >= this->TIME_SYNC_INTERVAL_S * this->ticks_per_second) {
+                timeSynchronizer.initTimeSync(this); //Broadcasting time sync init
+            }
+        }
+    }
+}
+
 void Agent::doStep() {
-    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString() + "@" +
-                     std::to_string(this->elapsed_ticks / this->ticks_per_second));
+    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
     sendQuadtreeToCloseAgents();
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
             ":" + std::to_string(this->speed));
+    timeSyncWithCloseAgents();
 
     checkMessages();
 
@@ -740,8 +755,7 @@ void Agent::doStep() {
         }
     }
 
-
-    elapsed_ticks++;
+    this->elapsed_ticks++;
 }
 
 
@@ -866,11 +880,6 @@ argos::CVector2 vector2FromString(std::string str) {
     newVector.SetY(std::stod(str));
     return newVector;
 }
-void Agent::syncMissionTime(double received_time_s) {
-    received_time_s += std::round(1.0/this->ticks_per_second * 1e6)/1e6; //Add one tick to the received time to account for the time it took to receive the message, rounded to 6 decimal places, same as double converted to string.
-    double average_time = (this->elapsed_ticks/this->ticks_per_second + received_time_s) / 2;
-    this->elapsed_ticks = std::round(average_time * this->ticks_per_second);
-}
 
 
 /**
@@ -884,12 +893,9 @@ void Agent::parseMessages() {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
-            auto splitStrings1 = splitString(messageContent.substr(2), "|");
-            Coordinate receivedPosition = coordinateFromString(splitStrings1[0]);
-            auto splitStrings2 = splitString(splitStrings1[1], "@");
-            Coordinate receivedFrontier = coordinateFromString(splitStrings2[0]);
-            double received_mission_time = std::stod(splitStrings2[1]);
-            syncMissionTime(received_mission_time); //Sync mission time with the sender, average the times. This is important to counter oscillator drift between agents
+            auto splitStrings = splitString(messageContent.substr(2), "|");
+            Coordinate receivedPosition = coordinateFromString(splitStrings[0]);
+            Coordinate receivedFrontier = coordinateFromString(splitStrings[1]);
             this->agentLocations[senderId] = std::make_tuple(receivedPosition, receivedFrontier, this->elapsed_ticks);
         } else if (messageContent.at(0) == 'M') {
             std::vector<std::string> chunks;
@@ -921,6 +927,33 @@ void Agent::parseMessages() {
             vectorString.erase(0, speedPos + delimiter.length());
             double newSpeed = std::stod(vectorString);
             agentVelocities[senderId] = {newVector, newSpeed};
+        } else if (messageContent[0] == 'T') { //Time sync message
+            std::string timeSyncString = messageContent.substr(2);
+            auto splitStrings = splitString(timeSyncString, "|");
+            int messageType = std::stoi(splitStrings[0]);
+            switch (messageType) {
+                case 0: {
+                    int t_TXi = std::stoi(splitStrings[1]);
+                    timeSynchronizer.respondToTimeSync(senderId, this, t_TXi);
+                    break;
+                }
+                case 1: {
+                    int t_TXi = std::stoi(splitStrings[1]);
+                    int t_RXj = std::stoi(splitStrings[2]);
+                    int t_TXj = std::stoi(splitStrings[3]);
+                    timeSynchronizer.determineT_RXi(senderId, this, t_TXi, t_RXj, t_TXj);
+                    break;
+                }
+                case 2: {
+                    int t_RXi = std::stoi(splitStrings[1]);
+                    timeSynchronizer.receiveT_RXi(senderId, this, t_RXi);
+                    break;
+                }
+                default : {
+                    assert(0 && "Unknown time sync message type");
+                }
+            }
+
         }
     }
     //Update the total amount of bytes received from each sender
