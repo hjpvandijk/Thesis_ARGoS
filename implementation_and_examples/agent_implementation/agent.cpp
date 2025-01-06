@@ -586,7 +586,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 
     //Initialize variables to store the best frontier region and its score
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
-    double bestFrontierScore = std::numeric_limits<double>::max();
+    double highestFrontierFitness = -std::numeric_limits<double>::max();
 
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
@@ -608,12 +608,12 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 //            continue;
 //        }
 
-        //Calculate the score of the frontier region
-        double score = FRONTIER_DISTANCE_WEIGHT * distance - FRONTIER_SIZE_WEIGHT * region.size();
+        //Calculate the fitness of the frontier region
+        double fitness = -FRONTIER_DISTANCE_WEIGHT * distance + FRONTIER_SIZE_WEIGHT * region.size();
 
-        //If the score is lower than the best score, update the best score and best frontier region
-        if (score < bestFrontierScore) {
-            bestFrontierScore = score;
+        //If the fitness is lower than the best fitness, update the best fitness and best frontier region
+        if (fitness > highestFrontierFitness) {
+            highestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
         }
     }
