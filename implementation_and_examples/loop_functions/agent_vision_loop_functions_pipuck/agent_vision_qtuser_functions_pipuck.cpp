@@ -15,60 +15,18 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
  * Also draw the 'vision' area of the agents
  */
 
-double calculatePheromone(double visitedTime, double PConfidence, double currentTime) {
-    double pheromoneFactor = 1.0 - std::min((currentTime - visitedTime) / 300.0, (1.0 - 0.05));
-    double pheromone = pheromoneFactor * (PConfidence-0.5) + 0.5;
-    //This makes sure that a value once set to occupied or free, will not be changed to ambiguous again due to evaporation.
-    //So we assume that if a cell is occupied or free, it will stay that way, albeit with a lower confidence.
-    if (PConfidence <= 0.4) pheromone = pheromoneFactor * (PConfidence - 0.4) + 0.4;
-//    if (PConfidence >= 0.6) pheromone = pheromoneFactor * (PConfidence - 0.6) + 0.6;
-    return pheromone;
-}
-
 void CAgentVisionQTUserFunctions::DrawInWorld() {
-
-    for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
-        if (m_tCell.first->GetId() != "pipuck1") continue;
-        for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
-            Coordinate neighbor1 = std::get<0>(neighborPair);
-            Coordinate neighbor2 = std::get<1>(neighborPair);
-
-            Coordinate neighbor1argos = neighbor1.FromOwnToArgos();
-            Coordinate neighbor2argos = neighbor2.FromOwnToArgos();
-
-            CVector3 pos1 = CVector3(neighbor1argos.x, neighbor1argos.y, 0.02f);
-            CVector3 pos2 = CVector3(neighbor2argos.x, neighbor2argos.y, 0.02f);
-            auto ray = CRay3(pos1, pos2);
-            DrawRay(ray, CColor::BLUE, 20.0f);
-        }
-    }
-
-    for (auto & m_tRoute : m_cAgVisLF.m_tAgentRoute){
-        for (std::tuple<Coordinate, Coordinate> route: m_tRoute.second) {
-            Coordinate start = std::get<0>(route);
-            Coordinate end = std::get<1>(route);
-
-
-            Coordinate startArgos = start.FromOwnToArgos();
-            Coordinate endArgos = end.FromOwnToArgos();
-
-            CVector3 pos1 = CVector3(startArgos.x, startArgos.y, 0.02f);
-            CVector3 pos2 = CVector3(endArgos.x, endArgos.y, 0.02f);
-            auto ray = CRay3(pos1, pos2);
-            DrawRay(ray, CColor::YELLOW, 10.0f);
-        }
-    }
-
-//    /* Go through all the robot waypoints and draw them */
-//    for (auto & m_tAgentFrontierRegions : m_cAgVisLF.m_tAgentFrontierRegions) {
+    /* Go through all the robot waypoints and draw them */
+//    for (std::map<CPiPuckEntity *, std::vector<std::vector<quadtree::Box>>>::const_iterator it = m_cAgVisLF.GetAgentFrontierRegions().begin();
+//         it != m_cAgVisLF.GetAgentFrontierRegions().end();
+//         ++it) {
 //        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
 //                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
-//        if (m_tAgentFrontierRegions.first->GetId() != "pipuck1") continue;
 //        int i = 0;
-//        for (auto frontierRegions: m_tAgentFrontierRegions.second) {
+//        for (auto frontierRegion: it->second) {
 //            //Assign a differnet color to every frontierRegion
 //            CColor color = colors[i];
-//            for (auto [frontier, pheromone]: frontierRegions) {
+//            for (auto frontier: frontierRegion) {
 //                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
 //                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
 //
@@ -77,12 +35,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //            }
 //            i++;
 //            if (i > colors.size()) i = 0;
-//
 //        }
 //    }
-
-
-
     for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
          it != m_cAgVisLF.GetAgentFreeAngles().end();
          ++it) {
@@ -119,8 +73,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
 
         double currentTimeS = m_cAgVisLF.globalElapsedTicks;
-
-        double pheromone = calculatePheromone(visitedTimeS, PConfidence, currentTimeS);
+        double pheromone = 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
 
         Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
         CVector3 pos = CVector3(boxCenterArgos.x, boxCenterArgos.y, 0.02f);
@@ -156,15 +109,10 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
 
         color = CColor::GREEN;
-        color.SetAlpha(UInt8(pheromone * 255));
+        color.SetAlpha(UInt8(PConfidence * 255));
         color = color.Blend(CColor::RED);
-//        if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
+        if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
         DrawPolygon(pos, CQuaternion(), posVec, color, fill);
-        DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
-
-//        DrawText(pos, std::to_string(pheromone), CColor::BLACK);
-//        //Also write the coordinates in the box
-//        DrawText(pos - CVector3(0.05,-0.05,0), std::to_string(box.getCenter().x) + " " + std::to_string(box.getCenter().y), CColor::BLACK);
 
     }
 
@@ -209,10 +157,6 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         //Draw IDs
         DrawText(it.second,
                  it.first->GetId()); // text
-#ifdef BATTERY_MANAGEMENT_ENABLED
-        float batteryLevel = m_cAgVisLF.m_tAgentBatteryLevels.at(it.first);
-        DrawText(it.second + CVector3(0.1,0.1,0.1), std::to_string(batteryLevel) + '%', CColor::BLACK);
-#endif
     }
 
 
