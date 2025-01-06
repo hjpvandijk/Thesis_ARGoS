@@ -315,16 +315,29 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
                                                           pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
 
-            double distanceFromOtherAgentsPosition = sqrt(pow(agent->position.x - std::get<0>(agentLocationTuple.second).x, 2) +
-                                                          pow(agent->position.y - std::get<0>(agentLocationTuple.second).y, 2));
+            double distanceFromOtherAgentsPosition = sqrt(pow(frontierRegionX - std::get<0>(agentLocationTuple.second).x, 2) +
+                                                          pow(frontierRegionY - std::get<0>(agentLocationTuple.second).y, 2));
 
-            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE || distanceFromOtherAgentsPosition <= agent->FRONTIER_CLOSE_DISTANCE) {
+            if (distanceFromOtherAgentsFrontier <= agent->FRONTIER_CLOSE_DISTANCE) {
                 //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
                 if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
                     argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's frontier or position" << std::endl;
+                               << " because it is close to another agent's frontier" << std::endl;
+                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
+                    break;
+                }
+            }
+            if (distanceFromOtherAgentsPosition <= agent->FRONTIER_CLOSE_DISTANCE) {
+                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+                if (agentLocationTuple.first > agent->id) {
+                    //If the other agent has a higher ID, so we can't select this frontier
+                    skipFrontier = true;
+                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+                               << " because it is close to another agent's position" << std::endl;
+                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
+                               << std::endl;
                     break;
                 }
             }
