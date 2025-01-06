@@ -261,11 +261,11 @@
             </devices>
         </pipuck>
 
-<!--        <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">-->
-<!--            <body position="-1,2,0" orientation="85,0,0"/>-->
-<!--            <controller config="ppc"/>-->
+        <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-1,2,0" orientation="85,0,0"/>
+            <controller config="ppc"/>
 
-<!--        </pipuck>-->
+        </pipuck>
 
 
     </arena>

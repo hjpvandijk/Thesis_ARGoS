@@ -49,7 +49,7 @@ void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB
  */
 void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     for (auto & it : agent->agentLocations) {
-        Coordinate agentLocation = (it.second);
+        Coordinate agentLocation = (std::get<0>(it.second));
         Coordinate agentLocationToArgos = agentLocation.FromOwnToArgos();
         CVector3 pos = CVector3(agentLocationToArgos.x, agentLocationToArgos.y, 0.02f);
         m_tOtherAgentCoordinates[pcFB].push_back(pos);
@@ -64,6 +64,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = agent->quadtree->getAllBoxes();
+    m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
     m_tQuadTree[pcFB] = boxesAndConfidenceAndTicks;
 }
@@ -165,9 +166,9 @@ void CAgentVisionLoopFunctions::PostStep() {
         m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
         Coordinate subTarget = agent->subTarget.FromOwnToArgos();
         CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
-        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
+//        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
 #ifdef WALL_FOLLOWING_ENABLED
-        Coordinate wallFollowingSubTarget = agent->wallFollowingSubTarget.FromOwnToArgos();
+        Coordinate wallFollowingSubTarget = agent->wallFollower.wallFollowingSubTarget.FromOwnToArgos();
         CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
         m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
 #endif
@@ -197,38 +198,45 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 
+#ifdef BATTERY_MANAGEMENT_ENABLED
+        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
+#endif
+
+
+        m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
+
     }
 
-    auto mBox = quadtree::Box(-5, 5, 10);
-    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
+    auto mBox = quadtree::Box(-5.5, 5.5, 11);
+//    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
 
     for (const auto & it : GetQuadTree()) {
-        for (std::tuple<quadtree::Box, float, double> boxesAndConfidenceAndTicks: it.second) {
-            quadtree::Box box = std::get<0>(boxesAndConfidenceAndTicks);
-            float LConfidence = std::get<1>(boxesAndConfidenceAndTicks);
-            double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
+//        for (std::tuple<quadtree::Box, float, double> boxesAndConfidenceAndTicks: it.second) {
+//            quadtree::Box box = std::get<0>(boxesAndConfidenceAndTicks);
+//            float LConfidence = std::get<1>(boxesAndConfidenceAndTicks);
+//            double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
+//
+//            quadtree::QuadNode node{};
+//            node.coordinate = box.getCenter();
+//            node.LConfidence = LConfidence;
+//            quadtree::Occupancy occ = quadtree::AMBIGUOUS;
+//            if (node.LConfidence >= 0.4){
+//                occ = quadtree::FREE;
+//            } else if (node.LConfidence <= -0.85){
+//                occ = quadtree::OCCUPIED;
+//            }
+//            node.occupancy = occ;
+////            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+////                continue;
+//            node.visitedAtS = visitedTimeS;
+//            combinedTree->add(node);
+//        }
 
-            quadtree::QuadNode node{};
-            node.coordinate = box.getCenter();
-            node.LConfidence = LConfidence;
-            quadtree::Occupancy occ = quadtree::AMBIGUOUS;
-            if (node.LConfidence >= 0.4){
-                occ = quadtree::FREE;
-            } else if (node.LConfidence <= -0.85){
-                occ = quadtree::OCCUPIED;
-            }
-            node.occupancy = occ;
-//            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-//                continue;
-            node.visitedAtS = visitedTimeS;
-            combinedTree->add(node);
-        }
-
-//        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
+        if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
     }
-    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
+//    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 
-    combinedQuadTree = boxesAndConfidenceAndTicks;
+//    combinedQuadTree = boxesAndConfidenceAndTicks;
 
 //    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
 //    for(auto spawnObj: spawnableObjects) {
