@@ -22,7 +22,7 @@ public:
 
     static argos::CVector2 calculateUnexploredFrontierVector(Agent *agent);
 
-    static bool calculateObjectAvoidanceAngle(Agent* agent, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    static bool calculateObjectAvoidanceAngle(Agent* agent, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle, bool frontier_vector_zero);
 
 };
 #endif //IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H

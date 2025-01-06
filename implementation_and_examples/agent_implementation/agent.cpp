@@ -504,20 +504,20 @@ void Agent::calculateNextPosition() {
     argos::CVector2 agentAvoidanceVector = ForceVectorCalculator::calculateAgentAvoidanceVector(this);
     argos::CVector2 agentAlignmentVector = ForceVectorCalculator::calculateAgentAlignmentVector(this);
 
-    argos::CVector2 unexploredFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
+    argos::CVector2 targetVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                                this->currentBestFrontier.y - this->position.y);
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
-    frontierEvaluator.resetFrontierAvoidance(this, unexploredFrontierVector);
+    frontierEvaluator.resetFrontierAvoidance(this, targetVector);
 #endif
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     //If the agent is close to the frontier and is heading towards it, or if it is really close to the frontier.
     //So we don't 'reach' frontiers through walls.
-    bool frontierReached = unexploredFrontierVector.Length() <= FRONTIER_DIST_UNTIL_REACHED &&
-                           NormalizedDifference(this->targetHeading, unexploredFrontierVector.Angle()).GetValue() <
+    bool frontierReached = targetVector.Length() <= FRONTIER_DIST_UNTIL_REACHED &&
+                           NormalizedDifference(this->targetHeading, targetVector.Angle()).GetValue() <
                            this->TURN_THRESHOLD_DEGREES * 2 ||
-                           unexploredFrontierVector.Length() <= this->OBJECT_AVOIDANCE_RADIUS;
+                           targetVector.Length() <= this->OBJECT_AVOIDANCE_RADIUS;
 
     bool periodic_check_required = (this->elapsed_ticks - this->last_feasibility_check_tick) > this->ticks_per_second * this->PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
 
@@ -537,11 +537,11 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
         //If we are not currently wall following
         if (wallFollower.wallFollowingDirection == 0) {
             //Find new frontier
-            unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+            targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
         }
 #else
         //Find new frontier
-        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+        targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
         this->last_feasibility_check_tick = this->elapsed_ticks;
 #endif
     }
@@ -551,16 +551,16 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
 #ifdef WALL_FOLLOWING_ENABLED
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || wallFollower.wallFollowingDirection == 0) {
         //Find new frontier
-        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+        targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
     }
 #else
     //Find new frontier
-        unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+        targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 #endif
 #endif
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) {
-        enterWalkingState(unexploredFrontierVector);
+        enterWalkingState(targetVector);
     } else {
         this->subTarget = {MAXFLOAT, MAXFLOAT};
     }
@@ -570,8 +570,18 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     frontierEvaluator.updateConfidenceIfFrontierUnreachable(this);
 #endif
 
+#ifdef PATH_PLANNING_ENABLED
+    Coordinate nextPathTarget = this->pathFollower.followPath(this);
+    if (!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT})) {
+        this->subTarget = nextPathTarget;
+        targetVector = argos::CVector2(this->subTarget.x - this->position.x,
+                                       this->subTarget.y - this->position.y);
+    }
+
+#endif
+
     //If there are agents to avoid, do not explore
-    if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
+    if (agentAvoidanceVector.Length() != 0) targetVector = {0, 0};
 
 
     //Normalize vectors if they are not zero
@@ -579,16 +589,16 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
     if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
     if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
-    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
+    if (targetVector.Length() != 0) targetVector.Normalize();
 
     argos::CVector2 total_vector = calculateTotalVector(this->swarm_vector,
                                                         virtualWallAvoidanceVector,
                                                         agentCohesionVector,
                                                         agentAvoidanceVector,
                                                         agentAlignmentVector,
-                                                        unexploredFrontierVector);
+                                                        targetVector);
     argos::CRadians objectAvoidanceAngle;
-    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle, total_vector.Angle());
+    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle, total_vector.Angle(), false);//targetVector.Length() == 0);
 
     //If there is not a free angle to move to, do not move
     if (!isThereAFreeAngle) {

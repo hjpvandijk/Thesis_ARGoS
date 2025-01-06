@@ -11,7 +11,7 @@ class Agent;
 class PathFollower {
 public:
 //    void WallFollower::wallFollowing(Agent* agent, std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
-    void followPath(Agent *agent, std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    Coordinate followPath(Agent *agent);
 
 private:
     int current_path_section = 0;
