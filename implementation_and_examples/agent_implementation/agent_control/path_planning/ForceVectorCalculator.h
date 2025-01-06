@@ -31,6 +31,7 @@ public:
 
     static argos::CVector2 calculateUnexploredFrontierVector(Agent *agent);
 
+
     static argos::CVector2 calculateTotalVector(Agent* agent, vectors vectors);
 
     static void checkAvoidAndNormalizeVectors(ForceVectorCalculator::vectors &vectors);

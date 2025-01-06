@@ -334,6 +334,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier
 #endif
 
+
+
 #ifdef SEPARATE_FRONTIERS
         bool skipFrontier = false;
         for (auto agentLocationTuple: agent->agentLocations) {
@@ -350,9 +352,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's frontier" << std::endl;
-                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's frontier" << std::endl;
+//                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
                     break;
                 }
             }
@@ -361,10 +363,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's position" << std::endl;
-                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
-                               << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's position" << std::endl;
+//                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
+//                               << std::endl;
                     break;
                 }
             }
@@ -468,6 +470,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * @return The vector towards the free direction
  */
+
 bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::CRadians *relativeObjectAvoidanceAngle, ForceVectorCalculator::vectors vectors, argos::CVector2 & total_vector, bool frontier_vector_zero) {
 
     total_vector = ForceVectorCalculator::calculateTotalVector(agent, vectors);
@@ -572,6 +575,7 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
+
 
 //    if (frontier_vector_zero) return true; //If the frontier vector is zero, we must follow the force vector, so can't do wall/path following
 #ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
