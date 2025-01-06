@@ -242,13 +242,6 @@ private:
 
     bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const;
 
-    argos::CVector2 calculateTotalVector(argos::CVector2 prev_total_vector,
-                                         argos::CVector2 virtualWallAvoidanceVector,
-                                         argos::CVector2 agentCohesionVector,
-                                         argos::CVector2 agentAvoidanceVector,
-                                         argos::CVector2 agentAlignmentVector,
-                                         argos::CVector2 unexploredFrontierVector);
-
 
     std::vector<std::string> messages;
 

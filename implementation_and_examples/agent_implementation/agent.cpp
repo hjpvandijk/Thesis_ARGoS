@@ -65,6 +65,8 @@ void Agent::setHeading(argos::CRadians new_heading) {
 }
 
 
+
+
 Coordinate Agent::getPosition() const {
     return this->position;
 }
@@ -579,26 +581,13 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     }
 
 #endif
+    ForceVectorCalculator::vectors vectors{this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector, agentAvoidanceVector, agentAlignmentVector, targetVector};
 
-    //If there are agents to avoid, do not explore
-    if (agentAvoidanceVector.Length() != 0) targetVector = {0, 0};
+    ForceVectorCalculator::checkAvoidAndNormalizeVectors(vectors);
 
-
-    //Normalize vectors if they are not zero
-    if (virtualWallAvoidanceVector.Length() != 0) virtualWallAvoidanceVector.Normalize();
-    if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
-    if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
-    if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
-    if (targetVector.Length() != 0) targetVector.Normalize();
-
-    argos::CVector2 total_vector = calculateTotalVector(this->swarm_vector,
-                                                        virtualWallAvoidanceVector,
-                                                        agentCohesionVector,
-                                                        agentAvoidanceVector,
-                                                        agentAlignmentVector,
-                                                        targetVector);
+    argos::CVector2 total_vector;
     argos::CRadians objectAvoidanceAngle;
-    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle, total_vector.Angle(), false);//targetVector.Length() == 0);
+    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle, vectors, total_vector, false);//targetVector.Length() == 0);
 
     //If there is not a free angle to move to, do not move
     if (!isThereAFreeAngle) {
@@ -607,13 +596,13 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
 
 
 // According to the paper, the formula should be:
-//        this->force_vector = {(this->swarm_vector.GetX()) *
+//        this->force_vector = {(this->previous_total_vector.GetX()) *
 //                              argos::Cos(objectAvoidanceAngle) -
-//                              (this->swarm_vector.GetX()) *
+//                              (this->previous_total_vector.GetX()) *
 //                              argos::Sin(objectAvoidanceAngle),
-//                              (this->swarm_vector.GetY()) *
+//                              (this->previous_total_vector.GetY()) *
 //                              argos::Sin(objectAvoidanceAngle) +
-//                              (this->swarm_vector.GetY()) *
+//                              (this->previous_total_vector.GetY()) *
 //                              argos::Cos(objectAvoidanceAngle)};
 
 // However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
@@ -667,30 +656,6 @@ void Agent::enterWalkingState(argos::CVector2 & unexploredFrontierVector) {
 }
 #endif
 
-argos::CVector2
-Agent::calculateTotalVector(argos::CVector2 prev_total_vector, argos::CVector2 virtualWallAvoidanceVector,
-                            argos::CVector2 agentCohesionVector,
-                            argos::CVector2 agentAvoidanceVector,
-                            argos::CVector2 agentAlignmentVector,
-                            argos::CVector2 unexploredFrontierVector) {
-    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
-    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
-    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
-    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
-
-    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
-    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    argos::CVector2 total_vector = prev_total_vector +
-                                   virtualWallAvoidanceVector +
-                                   agentCohesionVector +
-                                   agentAvoidanceVector +
-                                   agentAlignmentVector +
-                                   unexploredFrontierVector;
-    if (total_vector.Length() != 0) total_vector.Normalize();
-
-    return total_vector;
-}
 
 void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
