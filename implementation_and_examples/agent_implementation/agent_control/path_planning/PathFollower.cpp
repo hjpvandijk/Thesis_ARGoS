@@ -24,7 +24,6 @@ Coordinate PathFollower::followPath(Agent *agent) {
         return Coordinate{MAXFLOAT, MAXFLOAT};
     }
 
-
 //    argos::LOG << "route size: " << agent->route_to_best_frontier.size() << " and current path section: " << current_path_section << std::endl;
     auto [start, end] = agent->route_to_best_frontier.at(current_path_section);
 
@@ -40,8 +39,12 @@ Coordinate PathFollower::followPath(Agent *agent) {
             if (current_path_section >= agent->route_to_best_frontier.size()) {
                 return Coordinate{MAXFLOAT, MAXFLOAT};
             }
+            auto [next_start, next_end] = agent->route_to_best_frontier.at(current_path_section);
+            sub_target = next_end;
         }
     }
+
+
 
     return sub_target;
 
