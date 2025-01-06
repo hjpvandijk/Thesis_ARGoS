@@ -26,10 +26,10 @@
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-//#define WALL_FOLLOWING_ENABLED
+#define WALL_FOLLOWING_ENABLED
 #define BATTERY_MANAGEMENT_ENABLED
-#define PATH_PLANNING_ENABLED
-//#define AVOID_UNREACHABLE_FRONTIERS
+//#define PATH_PLANNING_ENABLED
+#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -241,13 +241,6 @@ private:
     void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
 
     bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const;
-
-    argos::CVector2 calculateTotalVector(argos::CVector2 prev_total_vector,
-                                         argos::CVector2 virtualWallAvoidanceVector,
-                                         argos::CVector2 agentCohesionVector,
-                                         argos::CVector2 agentAvoidanceVector,
-                                         argos::CVector2 agentAlignmentVector,
-                                         argos::CVector2 unexploredFrontierVector);
 
 
     std::vector<std::string> messages;

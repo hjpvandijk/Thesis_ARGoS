@@ -30,12 +30,13 @@ std::vector<argos::CVector2> SimplePathPlanner::coordinateRouteToRelativeVectors
 
 std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, bool switched_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
     auto [cell, box, edge_index, _] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
-    if (cell == nullptr) return {{start, target}};
-    auto [start_edge, end_edge] = getEdgeCoordinates(box, edge_index);
-    auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
+    if (cell == nullptr) route = {{start, target}};
+    else {
+        auto [start_edge, end_edge] = getEdgeCoordinates(box, edge_index);
+        auto edge_middle = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
 
-    //Line from agent to middle of the intersection edge
-    route.emplace_back(agent->position, edge_middle);
+        //Line from agent to middle of the intersection edge
+        route.emplace_back(agent->position, edge_middle);
 
 
 
@@ -48,27 +49,29 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
 //        route.emplace_back(edge_middle, end_edge);
 //    }
 
-    //Line from middle of the intersection edge to the correct side of the line, depending on the distance of that end to the agent
-    if (wall_following_direction == 1) {
-        route.emplace_back(edge_middle, start_edge);
-    } else {
-        route.emplace_back(edge_middle, end_edge);
-    }
-
-    getWallFollowingRoute(agent, cell, box.size, edge_index, target, route, wall_following_direction, switched_direction);
-    if (route.empty()) return route; //If the route is empty, we can't reach our target, return empty route
-    int a = 0;
-    for (int i = 0; i < route.size(); i++) {
-        auto [begin, end] = route[i];
-        if (begin == agent->position) {
-            //Erase all edges before this one
-            a = i;
+        //Line from middle of the intersection edge to the correct side of the line, depending on the distance of that end to the agent
+        if (wall_following_direction == 1) {
+            route.emplace_back(edge_middle, start_edge);
+        } else {
+            route.emplace_back(edge_middle, end_edge);
         }
-    }
-    route.erase(route.begin(), route.begin() + a);
 
-    //Append last point to target
-    route.emplace_back(route.rbegin()->second, target);
+        getWallFollowingRoute(agent, cell, box.size, edge_index, target, route, wall_following_direction,
+                              switched_direction);
+        if (route.empty()) return route; //If the route is empty, we can't reach our target, return empty route
+        int a = 0;
+        for (int i = 0; i < route.size(); i++) {
+            auto [begin, end] = route[i];
+            if (begin == agent->position) {
+                //Erase all edges before this one
+                a = i;
+            }
+        }
+        route.erase(route.begin(), route.begin() + a);
+
+        //Append last point to target
+        route.emplace_back(route.rbegin()->second, target);
+    }
 
     return route;
 }

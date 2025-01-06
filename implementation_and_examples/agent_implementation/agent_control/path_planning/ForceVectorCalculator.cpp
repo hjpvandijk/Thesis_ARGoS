@@ -135,6 +135,27 @@ argos::CVector2 ForceVectorCalculator::calculateAgentAlignmentVector(Agent* agen
     return alignmentVector;
 }
 
+argos::CVector2
+ForceVectorCalculator::calculateTotalVector(Agent* agent, vectors vectors) {
+    vectors.virtualWallAvoidanceVector = agent->VIRTUAL_WALL_AVOIDANCE_WEIGHT * vectors.virtualWallAvoidanceVector;
+    vectors.agentCohesionVector = agent->AGENT_COHESION_WEIGHT * vectors.agentCohesionVector; //Normalize first
+    vectors.agentAvoidanceVector = agent->AGENT_AVOIDANCE_WEIGHT * vectors.agentAvoidanceVector;
+    vectors.agentAlignmentVector = agent->AGENT_ALIGNMENT_WEIGHT * vectors.agentAlignmentVector;
+    vectors.targetVector = agent->UNEXPLORED_FRONTIER_WEIGHT * vectors.targetVector;
+
+    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
+    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+    argos::CVector2 total_vector = vectors.previous_total_vector +
+                                   vectors.virtualWallAvoidanceVector +
+                                   vectors.agentCohesionVector +
+                                   vectors.agentAvoidanceVector +
+                                   vectors.agentAlignmentVector +
+                                   vectors.targetVector;
+    if (total_vector.Length() != 0) total_vector.Normalize();
+
+    return total_vector;
+}
+
 // Union-Find (Disjoint-Set) data structure
 class UnionFind {
 public:
@@ -265,8 +286,14 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //            frontierRegions.push_back({{frontierbox, frontierpheromone}});
 //        }
 //    }
-    if (!agent->bestFrontierRegionBoxes.empty()) frontierRegions.push_back(agent->bestFrontierRegionBoxes);
+    //Add the frontier region from the last best frontier to the options, if it is now out of range. To prevent unneccesary switching
+    //If we haven't reached the frontier yet, add the region to the list of frontier regions
+    if (sqrt(pow(agent->currentBestFrontier.x - agent->position.x, 2) + pow(agent->currentBestFrontier.y - agent->position.y, 2)) > agent->FRONTIER_DIST_UNTIL_REACHED) {
+        if (!agent->bestFrontierRegionBoxes.empty()) frontierRegions.push_back(agent->bestFrontierRegionBoxes);
+    }
+
     agent->current_frontier_regions = frontierRegions;
+    argos::LOG << "[" << agent->id << "] Found " << frontierRegions.size() << " frontier regions" << std::endl;
 
     //Now we have all frontier cells merged into frontier regions
     //Find F* by using the formula above
@@ -361,6 +388,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         }
 #else
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
+        std::vector<argos::CVector2> relativeRoute = {vectorToFrontier.Rotate(-agent->heading)};
 #endif
         //Relative vector to heading
 
@@ -380,21 +408,21 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
                 agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 
-        if (agent->id == "pipuck1") {
-            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
-                       << std::endl;
-            argos::LOG << "Distance * weight = -" << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = -"
-                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
-            argos::LOG << "Size * weight = +" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
-                       << " = +" << agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
-            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
-                       << " = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
-            argos::LOG << "Reach duration * weight =-" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
-                       << " = -" << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
-            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
-                       << averagePheromoneCertainty << " = "
-                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty << std::endl;
-        }
+//        if (agent->id == "pipuck1") {
+//            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
+//                       << std::endl;
+//            argos::LOG << "Distance * weight = -" << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = -"
+//                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
+//            argos::LOG << "Size * weight = +" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
+//                       << " = +" << agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
+//            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
+//                       << " = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
+//            argos::LOG << "Reach duration * weight =-" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
+//                       << " = -" << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
+//            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
+//                       << averagePheromoneCertainty << " = "
+//                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty << std::endl;
+//        }
 #else
         //Calculate the cost of the frontier region
         double fitness = -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
@@ -440,7 +468,11 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
  * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
  * @return The vector towards the free direction
  */
-bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
+bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::CRadians *relativeObjectAvoidanceAngle, ForceVectorCalculator::vectors vectors, argos::CVector2 & total_vector, bool frontier_vector_zero) {
+
+    total_vector = ForceVectorCalculator::calculateTotalVector(agent, vectors);
+
+    argos::CRadians targetAngle = total_vector.Angle();
 
     //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = agent->quadtree->queryOccupiedBoxes(agent->position,
@@ -537,27 +569,33 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
     //Get free angle closest to heading
     auto closestFreeAngle = *freeAngles.begin();
-#ifdef WALL_FOLLOWING_ENABLED
-    if (agent->wallFollower.wallFollowingDirection != 0) { //If wall following is not 0, find the closest free angle to the target angle.
-        for (auto freeAngle: freeAngles) {
-            if (std::abs(NormalizedDifference(ToRadians(freeAngle), targetAngle).GetValue()) <
-                std::abs(NormalizedDifference(ToRadians(closestFreeAngle), targetAngle).GetValue())) {
-                closestFreeAngle = freeAngle;
-            }
-        }
-    }
-#endif
-
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
 
+//    if (frontier_vector_zero) return true; //If the frontier vector is zero, we must follow the force vector, so can't do wall/path following
 #ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
-    agent->wallFollower.wallFollowing(agent, freeAngles, &closestFreeAngle, &closestFreeAngleRadians, relativeObjectAvoidanceAngle, targetAngle);
-#endif
-#ifdef PATH_PLANNING_ENABLED
-    agent->pathFollower.followPath(agent, freeAngles, relativeObjectAvoidanceAngle, targetAngle);
+    agent->wallFollower.wallFollowing(agent, vectors, total_vector, freeAngles, &closestFreeAngle, &closestFreeAngleRadians, relativeObjectAvoidanceAngle, targetAngle);
 #endif
     return true;
+
+}
+
+/**
+ * Check if we need to avoid an agent, and adjust the target vector accordingly
+ * Then normalize all agents
+ * @param agent
+ * @param vectors
+ */
+void ForceVectorCalculator::checkAvoidAndNormalizeVectors(ForceVectorCalculator::vectors &vectors) {
+    //If there are agents to avoid, do not explore
+    if (vectors.agentAvoidanceVector.Length() != 0) vectors.targetVector = {0, 0};
+
+    //Normalize vectors if they are not zero
+    if (vectors.virtualWallAvoidanceVector.Length() != 0) vectors.virtualWallAvoidanceVector.Normalize();
+    if (vectors.agentCohesionVector.Length() != 0) vectors.agentCohesionVector.Normalize();
+    if (vectors.agentAvoidanceVector.Length() != 0) vectors.agentAvoidanceVector.Normalize();
+    if (vectors.agentAlignmentVector.Length() != 0) vectors.agentAlignmentVector.Normalize();
+    if (vectors.targetVector.Length() != 0) vectors.targetVector.Normalize();
 
 }
