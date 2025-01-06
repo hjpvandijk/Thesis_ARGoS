@@ -1,5 +1,6 @@
 #include <argos3/core/utility/math/vector2.h>
 #include <set>
+#include <utility>
 #include "WallFollower.h"
 #include "utils/coordinate.h"
 #include "agent.h"
@@ -16,7 +17,7 @@
  * @param relativeObjectAvoidanceAngle
  * @param targetAngle
  */
-void WallFollower::wallFollowing(Agent* agent, std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
+void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors vectors, argos::CVector2 & total_vector, std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle){
     if (!(agent->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ||
         agent->previousBestFrontier == agent->currentBestFrontier) { // If we are still on route to the same frontier
         Coordinate target = !(agent->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ? agent->subTarget : agent->currentBestFrontier;
@@ -75,6 +76,9 @@ void WallFollower::wallFollowing(Agent* agent, std::set<argos::CDegrees, CustomC
         //Get the closest free angle to the wall following direction (90 degrees right or left)
         //Create a subtarget in that direction
         argos::CDegrees subtargetAngle = *freeAngles.begin();
+        //Create subtarget
+
+
         if (subtargetAngle != *closestFreeAngle) { //If angle is the same, the order of the free angles set isn't according to wall following yet
             //If the difference between the first free angle and the last is less than 90 degrees, agent will spin indefinitely. So go straight
             argos::CDegrees fst = NormalizedDifference(subtargetAngle, ToDegrees(agent->heading));
@@ -83,24 +87,49 @@ void WallFollower::wallFollowing(Agent* agent, std::set<argos::CDegrees, CustomC
             if (differenceBeginEnd < -1 && differenceBeginEnd >= -90) {
                 subtargetAngle = ToDegrees(agent->heading);
             }
+        }
+        argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+        subtargetVector.Rotate(ToRadians(subtargetAngle));
+        subtargetVector.Normalize();
+        subtargetVector *= agent->OBJECT_AVOIDANCE_RADIUS;
 
-            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
-            subtargetVector.Rotate(ToRadians(subtargetAngle));
-            subtargetVector.Normalize();
-            subtargetVector *= agent->OBJECT_AVOIDANCE_RADIUS;
-            this->wallFollowingSubTarget = {agent->position.x + subtargetVector.GetX(),
-                                            agent->position.y + subtargetVector.GetY()};
+        this->wallFollowingSubTarget = {agent->position.x + subtargetVector.GetX(),
+                                        agent->position.y + subtargetVector.GetY()};
+        //Calculate new total force
+        vectors.targetVector = argos::CVector2(this->wallFollowingSubTarget.x - agent->position.x,
+                                               this->wallFollowingSubTarget.y - agent->position.y);
+        ForceVectorCalculator::checkAvoidAndNormalizeVectors(vectors);
+        total_vector = ForceVectorCalculator::calculateTotalVector(agent, vectors);
+        targetAngle = total_vector.Angle();
 
-            *closestFreeAngle = subtargetAngle;
+        //Get closest angle to total force
+
+        if (agent->wallFollower.wallFollowingDirection != 0) { //If wall following is not 0, find the closest free angle to the target angle.
+            for (auto freeAngle: freeAngles) {
+                if (std::abs(NormalizedDifference(ToRadians(freeAngle), targetAngle).GetValue()) <
+                    std::abs(NormalizedDifference(ToRadians(*closestFreeAngle), targetAngle).GetValue())) {
+                    *closestFreeAngle = freeAngle;
+                }
+            }
+        }
+//
+////            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+////            subtargetVector.Rotate(ToRadians(subtargetAngle));
+////            subtargetVector.Normalize();
+////            subtargetVector *= agent->OBJECT_AVOIDANCE_RADIUS;
+////            this->wallFollowingSubTarget = {agent->position.x + subtargetVector.GetX(),
+////                                            agent->position.y + subtargetVector.GetY()};
+//
+//            *closestFreeAngle = subtargetAngle;
             *closestFreeAngleRadians = ToRadians(*closestFreeAngle);
             *relativeObjectAvoidanceAngle = NormalizedDifference(*closestFreeAngleRadians, targetAngle);
-        } else {
-            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
-            subtargetVector.Rotate(ToRadians(subtargetAngle));
-            subtargetVector.Normalize();
-            subtargetVector *= agent->OBJECT_AVOIDANCE_RADIUS;
-            this->wallFollowingSubTarget = {agent->position.x + subtargetVector.GetX(),
-                                            agent->position.y + subtargetVector.GetY()};        }
+//        } else {
+//            argos::CVector2 subtargetVector = argos::CVector2(1, 0);
+//            subtargetVector.Rotate(ToRadians(subtargetAngle));
+//            subtargetVector.Normalize();
+//            subtargetVector *= agent->OBJECT_AVOIDANCE_RADIUS;
+//            this->wallFollowingSubTarget = {agent->position.x + subtargetVector.GetX(),
+//                                            agent->position.y + subtargetVector.GetY()};        }
     } else {
 #ifdef WALKING_STATE_WHEN_NO_FRONTIERS
         if (!(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) { // If we have a frontier to go to, so not in the walking state
