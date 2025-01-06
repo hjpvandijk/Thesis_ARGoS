@@ -21,7 +21,7 @@ Agent::Agent(std::string id) {
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
-    auto box = quadtree::Box(-5, 5, 11);
+    auto box = quadtree::Box(-5.5, 5.5, 11);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->wallFollower = WallFollower();
     this->timeSynchronizer = TimeSynchronizer();
@@ -710,6 +710,7 @@ void Agent::sendQuadtreeToCloseAgents() {
         }
     }
 
+    if(!sendQuadtree) return; //If we don't need to send the quadtree to any agent, return
     this->quadtree->toStringVector(&quadTreeToStrings);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
