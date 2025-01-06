@@ -78,7 +78,11 @@ void FrontierEvaluator::updateConfidenceIfFrontierUnreachable(Agent* agent) {
 
     Coordinate target = agent->currentBestFrontier;
 //If we have no frontier (walking state), calculate the distance to the subtarget instead
+#ifdef PATH_PLANNING_ENABLED
+    if (!(agent->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) target = agent->subTarget;
+#else
     if (agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) target = agent->subTarget;
+#endif
     double distanceToTarget = sqrt(pow(agent->currentBestFrontier.x - agent->position.x, 2) +
                                    pow(agent->currentBestFrontier.y - agent->position.y, 2));
 

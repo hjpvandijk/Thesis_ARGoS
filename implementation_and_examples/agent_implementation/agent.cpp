@@ -568,9 +568,7 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     }
 #endif
 
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    frontierEvaluator.updateConfidenceIfFrontierUnreachable(this);
-#endif
+
 
 #ifdef PATH_PLANNING_ENABLED
     Coordinate nextPathTarget = this->pathFollower.followPath(this);
@@ -579,8 +577,12 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
         targetVector = argos::CVector2(this->subTarget.x - this->position.x,
                                        this->subTarget.y - this->position.y);
     }
-
 #endif
+
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+    frontierEvaluator.updateConfidenceIfFrontierUnreachable(this);
+#endif
+
     ForceVectorCalculator::vectors vectors{this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector, agentAvoidanceVector, agentAlignmentVector, targetVector};
 
     ForceVectorCalculator::checkAvoidAndNormalizeVectors(vectors);

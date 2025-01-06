@@ -204,7 +204,7 @@ public:
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
-    int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //2 seconds
+    int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //5 seconds
 #endif
 
     double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
