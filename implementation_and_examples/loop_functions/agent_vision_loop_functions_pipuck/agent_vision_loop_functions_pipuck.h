@@ -6,7 +6,7 @@
 #include <argos3/plugins/simulator/entities/box_entity.h>
 
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
-#include "agent_implementation/utils/Quadtree.h"
+#include "agent_implementation/Quadtree.h"
 using namespace argos;
 
 class CAgentVisionLoopFunctions : public CLoopFunctions {
@@ -26,15 +26,12 @@ public:
 
 
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, float, double >>> m_tQuadTree;
-    std::map<CPiPuckEntity*, std::vector<std::tuple<Coordinate, Coordinate>>> m_tNeighborPairs;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;
     std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
-    std::map<CPiPuckEntity*, std::vector<std::vector<std::pair<quadtree::Box, double>>>> m_tAgentFrontierRegions;
+    std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>> m_tAgentFrontierRegions;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
     std::vector<std::tuple<quadtree::Box, float, double >> combinedQuadTree;
-    std::map<CPiPuckEntity*, std::vector<std::pair<Coordinate, Coordinate>>> m_tAgentRoute;
-    std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
 
 public:
 
@@ -73,7 +70,7 @@ public:
         return m_tAgentFrontiers;
     }
 
-    inline const std::map<CPiPuckEntity*, std::vector<std::vector<std::pair<quadtree::Box, double>>>>& GetAgentFrontierRegions() const {
+    inline const std::map<CPiPuckEntity*, std::vector<std::vector<quadtree::Box>>>& GetAgentFrontierRegions() const {
         return m_tAgentFrontierRegions;
     }
 

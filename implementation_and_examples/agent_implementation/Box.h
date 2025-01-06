@@ -72,48 +72,6 @@ namespace quadtree {
         }
 
         /**
-         * @brief Get the quadrant which the given coordinate should go in in the node box
-         * @param nodeBox
-         * @param valueCoordinate
-         * @return
-         */
-        int getQuadrant(const Coordinate &valueCoordinate) const {
-            auto center = this->getCenter();
-
-            //If the value is the same as the center, it is not contained in any quadrant
-            if (center == valueCoordinate)
-                return 4;
-
-            // West
-            if (valueCoordinate.x < center.x) {
-                // North West
-                if (valueCoordinate.y > center.y)
-                    return 0;
-                    // South West
-                else if (valueCoordinate.y <= center.y)
-                    return 2;
-                    // Not contained in any quadrant
-                else
-                    return -1;
-            }
-                // East
-            else if (valueCoordinate.x >= center.x) {
-                // North East
-                if (valueCoordinate.y > center.y)
-                    return 1;
-                    // South East
-                else if (valueCoordinate.y <= center.y)
-                    return 3;
-                    // Not contained in any quadrant
-                else
-                    return -1;
-            }
-                // Not contained in any quadrant
-            else
-                return -1;
-        }
-
-        /**
          * @brief Check if the box intersects or contains another box
          * @param box
          * @return
