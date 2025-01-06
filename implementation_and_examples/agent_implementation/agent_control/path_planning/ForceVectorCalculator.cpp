@@ -272,7 +272,6 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     }
 
     agent->current_frontier_regions = frontierRegions;
-    argos::LOG << "[" << agent->id << "] Found " << frontierRegions.size() << " frontier regions" << std::endl;
 
     //Now we have all frontier cells merged into frontier regions
     //Find F* by using the formula above
@@ -313,6 +312,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier
 #endif
 
+
+
 #ifdef SEPARATE_FRONTIERS
         bool skipFrontier = false;
         for (auto agentLocationTuple: agent->agentLocations) {
@@ -329,9 +330,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's frontier" << std::endl;
-                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's frontier" << std::endl;
+//                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
                     break;
                 }
             }
@@ -340,10 +341,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's position" << std::endl;
-                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
-                               << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's position" << std::endl;
+//                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
+//                               << std::endl;
                     break;
                 }
             }
@@ -386,21 +387,21 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
                 agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 
-        if (agent->id == "pipuck1") {
-            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
-                       << std::endl;
-            argos::LOG << "Distance * weight = -" << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = -"
-                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
-            argos::LOG << "Size * weight = +" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
-                       << " = +" << agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
-            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
-                       << " = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
-            argos::LOG << "Reach duration * weight =-" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
-                       << " = -" << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
-            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
-                       << averagePheromoneCertainty << " = "
-                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty << std::endl;
-        }
+//        if (agent->id == "pipuck1") {
+//            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
+//                       << std::endl;
+//            argos::LOG << "Distance * weight = -" << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = -"
+//                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
+//            argos::LOG << "Size * weight = +" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
+//                       << " = +" << agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
+//            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
+//                       << " = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
+//            argos::LOG << "Reach duration * weight =-" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
+//                       << " = -" << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
+//            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
+//                       << averagePheromoneCertainty << " = "
+//                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty << std::endl;
+//        }
 #else
         //Calculate the cost of the frontier region
         double fitness = -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
