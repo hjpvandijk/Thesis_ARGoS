@@ -207,7 +207,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
     }
 
-    auto mBox = quadtree::Box(-5, 5, 10);
+    auto mBox = quadtree::Box(-5, 5, 11);
 //    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
 
     for (const auto & it : GetQuadTree()) {
