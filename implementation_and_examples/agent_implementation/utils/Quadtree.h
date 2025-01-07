@@ -1483,12 +1483,12 @@ namespace quadtree {
             assert(node != nullptr);
 //            assert(box.contains(queryCoordinate));
             if (!box.contains(queryCoordinate)) {
-                return std::make_pair(nullptr, Box());
+                return std::make_pair(nullptr, box);
             }
             //If it is a leaf node, return the QuadNode if it exists. If it does not exist, it means this coordinate is unexplored.
             if (isLeaf(node)) {
                 if (node->quadNode.visitedAtS == -1) {
-                    return std::make_pair(nullptr, Box());
+                    return std::make_pair(nullptr, box);
                 } else {
                     assert(node->quadNode.occupancy != ANY && "leaf occupancy should never be ANY");
                     return std::make_pair(node, box);
@@ -1516,7 +1516,7 @@ namespace quadtree {
                     return std::make_pair(node, box);
                 }
             }
-            return std::make_pair(nullptr, Box());;
+            return std::make_pair(nullptr, box);;
         }
 
         void findAllIntersections(Cell *node, std::vector<std::pair<QuadNode, QuadNode>> &intersections) const {

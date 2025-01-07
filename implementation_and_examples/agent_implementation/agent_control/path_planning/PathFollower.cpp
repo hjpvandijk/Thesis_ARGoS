@@ -4,6 +4,7 @@
 
 #include "PathFollower.h"
 #include "agent_implementation/agent.h"
+#include "utils/Algorithms.h"
 
 Coordinate PathFollower::followPath(Agent *agent) {
     if (agent->route_to_best_frontier.empty()) return Coordinate{MAXFLOAT, MAXFLOAT};
@@ -50,13 +51,14 @@ Coordinate PathFollower::followPath(Agent *agent) {
 
 }
 
+//Need to use this version as with the bresenhamLine we need to use the center of the cells, which can cause the line to miss an occupied cell which would be on the actual line
 bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
     auto x = start.x;
     auto y = start.y;
     auto dx = target.x - start.x;
     auto dy = target.y - start.y;
     auto distance = sqrt(dx * dx + dy * dy);
-    auto stepSize = 0.01;
+    auto stepSize = agent->quadtree->getSmallestBoxSize()/4;
     auto nSteps = std::ceil(distance / stepSize);
     auto stepX = dx / nSteps;
     auto stepY = dy / nSteps;
@@ -76,3 +78,31 @@ bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate
     return false;
 
 }
+//bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
+//    auto [start_cell, start_box] = agent->quadtree->getCellandBoxFromCoordinate(start);
+//    while (start_box.size > agent->quadtree->getSmallestBoxSize()) { //Make sure we are in the smallest box
+//        int quadrant = start_box.getQuadrant(start);
+//        if (quadrant == 4) start_box = start_box.boxFromQuadrant(0); //If the start is in the center, we can't get the quadrant, so we just take the top left
+//        else start_box = start_box.boxFromQuadrant(quadrant);
+//    }
+//    auto [target_cell, target_box] = agent->quadtree->getCellandBoxFromCoordinate(target);
+//    while (target_box.size > agent->quadtree->getSmallestBoxSize()) {
+//        int quadrant = target_box.getQuadrant(target);
+//        if (quadrant == 4) target_box = target_box.boxFromQuadrant(0); //If the target is in the center, we can't get the quadrant, so we just take the top left
+//        else target_box = target_box.boxFromQuadrant(quadrant);
+//
+//    }
+//    std::vector<Coordinate> linePoints = Algorithms::bresenhamLine(agent, start_box.getCenter(), target_box.getCenter());
+//    for (const auto& point: linePoints) {
+//        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(point);
+//        auto cell = cell_and_box.first;
+//        auto box = cell_and_box.second;
+//        if (cell != nullptr) {
+//            if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
+//                return true;
+//            }
+//        }
+//    }
+//    return false;
+//
+//}
