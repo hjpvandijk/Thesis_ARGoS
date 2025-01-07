@@ -995,17 +995,21 @@ namespace quadtree {
 //                            cell->quadNode = newNode;
 //                            returnBox = box;
                         if (cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == AMBIGUOUS) {
-                            newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence, value.LConfidence);
-                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                            double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence), currentTimeS);
-                            Occupancy occ = AMBIGUOUS;
-                            if (pheromone >= P_free){
-                                occ = FREE;
-                            } else if (pheromone <= P_occupied){
-                                occ = OCCUPIED;
+                            if (value.visitedAtS > cell->quadNode.visitedAtS) { //Only combine if the newly received value is more recent
+                                newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence,
+                                                                                            value.LConfidence);
+                                newNode.visitedAtS = value.visitedAtS;
+                                double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
+                                                                      currentTimeS);
+                                Occupancy occ = AMBIGUOUS;
+                                if (pheromone >= P_free) {
+                                    occ = FREE;
+                                } else if (pheromone <= P_occupied) {
+                                    occ = OCCUPIED;
+                                }
+                                newNode.occupancy = occ;
+                                cell->quadNode = newNode;
                             }
-                            newNode.occupancy = occ;
-                            cell->quadNode = newNode;
                             //Else if cell has occupancy ANY or UNKNOWN, we add to the children
                         } else {
                             //When adding a new coordinate and occupancy to that parent, we should set the remaining (yet unset) children to the value occupancy.
