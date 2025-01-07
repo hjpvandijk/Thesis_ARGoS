@@ -912,16 +912,22 @@ namespace quadtree {
 //                            assert(-1 &&
 //                                   "Shouldn't get here, as neither current cell or added cell are OCCUPIED or FREE");
 //                        }
-                        newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence, value.LConfidence);
-                        newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
-                        double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence), currentTimeS);
-                        Occupancy occ = AMBIGUOUS;
-                        if (pheromone >= P_free){
-                            occ = FREE;
-                        } else if (pheromone <= P_occupied){ //Most probably occupied
-                            occ = OCCUPIED;
+                        if (value.visitedAtS > cell->quadNode.visitedAtS) { //Only combine if the newly received value is more recent
+                            newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence,
+                                                                                        value.LConfidence);
+                            newNode.visitedAtS = value.visitedAtS;
+                            double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
+                                                                  currentTimeS);
+                            Occupancy occ = AMBIGUOUS;
+                            if (pheromone >= P_free) {
+                                occ = FREE;
+                            } else if (pheromone <= P_occupied) { //Most probably occupied
+                                occ = OCCUPIED;
+                            }
+                            newNode.occupancy = occ;
+                        } else {
+                            newNode = cell->quadNode;
                         }
-                        newNode.occupancy = occ;
                     }
 
                     assert(newNode.occupancy == FREE ||

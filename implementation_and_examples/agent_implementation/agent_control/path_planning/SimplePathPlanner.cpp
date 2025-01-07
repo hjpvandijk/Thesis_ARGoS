@@ -337,7 +337,7 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlan
     auto dx = target.x - start.x;
     auto dy = target.y - start.y;
     auto distance = sqrt(dx * dx + dy * dy);
-    auto stepSize = 0.01;
+    auto stepSize = agent->quadtree->getSmallestBoxSize()/4;
     auto nSteps = std::ceil(distance / stepSize);
     auto stepX = dx / nSteps;
     auto stepY = dy / nSteps;
