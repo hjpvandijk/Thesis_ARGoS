@@ -915,7 +915,7 @@ namespace quadtree {
                         if (value.visitedAtS > cell->quadNode.visitedAtS) { //Only combine if the newly received value is more recent
                             newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence,
                                                                                         value.LConfidence);
-                            newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                            newNode.visitedAtS = value.visitedAtS;
                             double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
                                                                   currentTimeS);
                             Occupancy occ = AMBIGUOUS;
