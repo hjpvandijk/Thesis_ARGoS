@@ -62,14 +62,18 @@ bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate
     auto nSteps = std::ceil(distance / stepSize);
     auto stepX = dx / nSteps;
     auto stepY = dy / nSteps;
+    quadtree::Box prev_box = quadtree::Box();
 
     for (int s = 0; s < nSteps; s++) {
-        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
-        auto cell = cell_and_box.first;
-        auto box = cell_and_box.second;
-        if (cell != nullptr) {
-            if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
-                return true;
+        auto coordinate = Coordinate{x, y};
+        if (!prev_box.contains(coordinate)) { //We don't have to check the same box twice
+            auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
+            auto cell = cell_and_box.first;
+            auto box = cell_and_box.second;
+            if (cell != nullptr) {
+                if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
+                    return true;
+                }
             }
         }
         x += stepX;
