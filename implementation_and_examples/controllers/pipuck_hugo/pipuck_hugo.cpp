@@ -98,23 +98,47 @@ void PiPuckHugo::ControlStep() {
 
 //    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
 
+
+
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
-
-    // Add noise to the sensor reading
-    double positionNoiseRange = agentObject->POSITION_NOISE_CM / 100.0;
-    double positionNoiseX = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
-    double positionNoiseY = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
-
-    agentObject->setPosition(-position.GetY() + positionNoiseX, position.GetX() + positionNoiseY); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
-
 
     const auto orientation = positionSensorReading.Orientation;
     argos::CRadians orientationNoiseRange = ToRadians(argos::CDegrees(agentObject->ORIENTATION_NOISE_DEGREES));
     argos::CRadians orientationNoise = (orientationNoiseRange-(rand()%2*orientationNoiseRange)); ; // Random number between -orientationNoiseRange and orientationNoiseRange rad, to simulate sensor noise
+
+
+    // Add noise to the sensor reading
+    double positionNoiseRange = agentObject->POSITION_NOISE_CM / 100.0;
+//    double positionNoiseX = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+//    double positionNoiseY = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+    double positionNoise= (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+
+    int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
+    int heatmapX = std::floor((-position.GetY() + this->map_size/2)/(this->map_size/heatmap_size));
+    argos::LOG << "Heatmap size " << heatmap_size << std::endl;
+    argos::LOG << "floor((" << -position.GetY() << " + " << this->map_size/2 << ")/(" << this->map_size/heatmap_size << ")) = " << heatmapX << std::endl;
+    int heatmapY = std::floor((position.GetX() + this->map_size/2)/(this->map_size/heatmap_size));
+    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX];
+    CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationNoise;
+    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX];
+    argos::LOG << "Location: " << -position.GetY() << ", " << position.GetX() << " : " << heatmapX << ", " << heatmapY << " = " << direction_heatmap_value << " : " << error_mean_heatmap_value << std::endl;
+    double error_magnitude = error_mean_heatmap_value + positionNoise;
+
+    CVector2 error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
+
+    agentObject->setPosition(-position.GetY() + error_vector.GetX(), position.GetX() + error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+
     CRadians zAngle, yAngle, xAngle;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
-    agentObject->setHeading(zAngle + orientationNoise);
+//    double pi = 3.14159265359;
+    CRadians orientationOffset = (CRadians(direction_heatmap_value) - CRadians::PI) * (agentObject->ORIENTATION_NOISE_DEGREES/180) * error_mean_heatmap_value;
+    argos::LOG << "(" << CRadians(direction_heatmap_value) << " - " << CRadians::PI << ") * " << agentObject->ORIENTATION_NOISE_DEGREES/180 << " * " << error_mean_heatmap_value << " = " << orientationOffset << std::endl;
+    argos::LOG << "orientationOffset: " << orientationOffset << std::endl;
+    argos::LOG << "new heading: " << zAngle + orientationOffset + orientationNoise*error_mean_heatmap_value << std::endl;
+    agentObject->setHeading(zAngle + orientationOffset + orientationNoise*error_mean_heatmap_value);
+
+// TWO DIFFERENT HEATMAPS WICH DON'T OVERLAP WILL CAUSE MANY SMALL NUMBERS. JUST MAKE A SEPARATE HEATMAP FOR ORIENTATION OFFSET MEAN.
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level

@@ -188,6 +188,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate pos = agent->position.FromOwnToArgos();
         CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
         m_tAgentCoordinates[pcFB] = agentPos;
+        m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
         pushQuadTree(pcFB, agent);
 
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;

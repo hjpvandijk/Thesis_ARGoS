@@ -81,29 +81,38 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //        }
 //    }
 
+for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
+    CRadians heading = m_cAgVisLF.m_tAgentHeadings[agentheading.first];
+    CVector3 pos = m_cAgVisLF.m_tAgentCoordinates[agentheading.first];
+    CVector3 ray_end = CVector3(pos.GetX() + cos(heading.GetValue()),
+                                pos.GetY() + sin(heading.GetValue()), 0.02f);
+    CRay3 ray = CRay3(pos, ray_end);
+    DrawRay(ray, CColor::RED, 10.0f);
+}
 
 
-    for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
-         it != m_cAgVisLF.GetAgentFreeAngles().end();
-         ++it) {
-        for (argos::CDegrees angle: it->second) {
-//            CVector3 pos = it->first->GetEmbodiedEntity().GetOriginAnchor().Position;
-//            CQuaternion orientation = it->first->GetEmbodiedEntity().GetOriginAnchor().Orientation;
 
-            //Get start of the ray
-            CVector3 agent_pos = m_cAgVisLF.GetAgentCoordinates().at(it->first);
-
-            //Get the angle of the ray
-            argos::CRadians angle_rad = ToRadians(angle);
-
-            //Get the end of the ray
-            CVector3 ray_end = CVector3(agent_pos.GetX() + cos(angle_rad.GetValue()),
-                                        agent_pos.GetY() + sin(angle_rad.GetValue()), 0.02f);
-
-            CRay3 ray = CRay3(agent_pos, ray_end);
-            DrawRay(ray, CColor::BLUE);
-        }
-    }
+//    for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
+//         it != m_cAgVisLF.GetAgentFreeAngles().end();
+//         ++it) {
+//        for (argos::CDegrees angle: it->second) {
+////            CVector3 pos = it->first->GetEmbodiedEntity().GetOriginAnchor().Position;
+////            CQuaternion orientation = it->first->GetEmbodiedEntity().GetOriginAnchor().Orientation;
+//
+//            //Get start of the ray
+//            CVector3 agent_pos = m_cAgVisLF.GetAgentCoordinates().at(it->first);
+//
+//            //Get the angle of the ray
+//            argos::CRadians angle_rad = ToRadians(angle);
+//
+//            //Get the end of the ray
+//            CVector3 ray_end = CVector3(agent_pos.GetX() + cos(angle_rad.GetValue()),
+//                                        agent_pos.GetY() + sin(angle_rad.GetValue()), 0.02f);
+//
+//            CRay3 ray = CRay3(agent_pos, ray_end);
+//            DrawRay(ray, CColor::BLUE);
+//        }
+//    }
 
 
 
