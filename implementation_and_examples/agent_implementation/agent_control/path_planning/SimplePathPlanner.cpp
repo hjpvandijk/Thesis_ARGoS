@@ -231,7 +231,7 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
     }
 
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, cell->quadNode.coordinate, target);
 
     if (intersection_cell != nullptr) {
         //If we intersect the same cell, the line is going through the cell, so the direction is not free
