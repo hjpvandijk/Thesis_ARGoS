@@ -226,7 +226,10 @@
         <box id="box_7" size="1.02,0.32,0.5" movable="false">
             <body position="-3.01,1.55,0" orientation="0,0,0"/>
         </box>
-        <box id="box_8" size="0.21,4.04,0.5" movable="false">
+<!--        <box id="box_8" size="0.21,4.04,0.5" movable="false">-->
+<!--            <body position="0.365,-2.38,0" orientation="0,0,0"/>-->
+<!--        </box>-->
+        <box id="box_8" size="0.21,3.9,0.5" movable="false">
             <body position="0.365,-2.38,0" orientation="0,0,0"/>
         </box>
         <box id="box_9" size="3.25,0.23,0.5" movable="false">
@@ -235,8 +238,11 @@
         <box id="box_10" size="3.38,0.24,0.5" movable="false">
             <body position="-1.27,-0.5,0" orientation="0,0,0"/>
         </box>
+<!--        <box id="box_11" size="3.31,0.24,0.5" movable="false">-->
+<!--            <body position="-1.245,-4.34,0" orientation="0,0,0"/>-->
+<!--        </box>-->
         <box id="box_11" size="3.31,0.24,0.5" movable="false">
-            <body position="-1.245,-4.34,0" orientation="0,0,0"/>
+            <body position="-1.245,-4.04,0" orientation="0,0,0"/>
         </box>
         <box id="box_12" size="0.37,3.39,0.5" movable="false">
             <body position="1.905,-2.445,0" orientation="0,0,0"/>

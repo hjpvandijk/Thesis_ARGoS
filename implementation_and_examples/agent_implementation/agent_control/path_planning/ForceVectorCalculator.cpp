@@ -380,14 +380,13 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         //Calculate the distance between the agent and the frontier region
 #ifdef PATH_PLANNING_ENABLED
         //Calculate distance of route
-        double distance = 0;
+//        double distance = 0;
         route_to_frontier.clear();
-        int wall_following_direction = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY}, route_to_frontier);
+        auto [wall_following_direction, relative_route, distance] = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY}, route_to_frontier);
         if (route_to_frontier.empty()) continue; //If no route is found, skip this frontier
-        std::vector<argos::CVector2> relativeRoute = agent->pathPlanner.coordinateRouteToRelativeVectors(route_to_frontier, agent->heading);
-        for (auto edge: relativeRoute) {
-            distance += edge.Length();
-        }
+//        for (auto edge: relative_route) {
+//            distance += edge.Length();
+//        }
 #else
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
         std::vector<argos::CVector2> relativeRoute = {vectorToFrontier.Rotate(-agent->heading)};
@@ -396,7 +395,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
         //Only need to compare the motion power usage of the agent to the frontier region
-        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, relativeRoute);
+        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, relative_route);
 
 //        //Calculate the cost of the frontier region
 //        double cost =

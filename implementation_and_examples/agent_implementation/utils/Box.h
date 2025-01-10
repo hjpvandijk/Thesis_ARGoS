@@ -113,6 +113,27 @@ namespace quadtree {
                 return -1;
         }
 
+
+        /**
+         * @brief Return a child box of the current box
+         * @param i
+         * @return
+         */
+        Box boxFromQuadrant(int i) const {
+            switch (i) {
+                case 0:
+                    return Box(left, top, size / 2);
+                case 1:
+                    return Box(left + size / 2, top, size / 2);
+                case 2:
+                    return Box(left, top - size / 2, size / 2);
+                case 3:
+                    return Box(left + size / 2, top - size / 2, size / 2);
+                default:
+                    return Box();
+            }
+        }
+
         /**
          * @brief Check if the box intersects or contains another box
          * @param box

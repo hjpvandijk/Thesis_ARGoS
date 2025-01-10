@@ -1,17 +1,74 @@
 
 #include "SimplePathPlanner.h"
 #include "agent_implementation/utils/Box.h"
+#include "agent_implementation/utils/Algorithms.h"
 #include "agent_implementation/agent.h"
 
 
- int SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
+ std::tuple<int, std::vector<argos::CVector2>, double> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
     srand(target.x * 100 + target.y * 100);
-    int wall_following_direction = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction (1= left, -1=
-    if (sqrt (pow(target.x - this->current_target.x, 2) + pow(target.y - this->current_target.y, 2)) < 2){
+    int wall_following_direction;
+    std::vector<argos::CVector2> relativeRoute;
+    double route_length = 0;
+     if (sqrt (pow(target.x - this->current_target.x, 2) + pow(target.y - this->current_target.y, 2)) < 2){
         wall_following_direction = this->current_wall_following_direction;
+        getRouteSections(agent, start, target, this->current_wall_following_direction, false, route);
+        relativeRoute = agent->pathPlanner.coordinateRouteToRelativeVectors(route, agent->heading);
+        for (auto edge: relativeRoute) {
+            route_length += edge.Length();
+        }
+    } else {
+         //Check both directions, and return the shortest path
+        std::vector<std::pair<Coordinate, Coordinate>> route1;
+        std::vector<std::pair<Coordinate, Coordinate>> route2;
+        getRouteSections(agent, start, target, 1, false, route1);
+        getRouteSections(agent, start, target, -1, false, route2);
+        std::vector<argos::CVector2> relativeRoute1 = agent->pathPlanner.coordinateRouteToRelativeVectors(route1, agent->heading);
+        std::vector<argos::CVector2> relativeRoute2 = agent->pathPlanner.coordinateRouteToRelativeVectors(route2, agent->heading);
+        //If one of the routes is empty, return the other
+        if (route1.empty()) {
+            wall_following_direction = -1;
+            route = route2;
+            relativeRoute = relativeRoute2;
+            route_length = 0;
+            for (auto edge: relativeRoute2) {
+                route_length += edge.Length();
+            }
+            return {wall_following_direction, relativeRoute, route_length};
+        } else if (route2.empty()) {
+            wall_following_direction = 1;
+            route = route1;
+            relativeRoute = relativeRoute1;
+            route_length = 0;
+            for (auto edge: relativeRoute1) {
+                route_length += edge.Length();
+            }
+            return {wall_following_direction, relativeRoute, route_length};
+        } else { //If both routes are not empty, return the shortest one
+            double length_route_1 = 0;
+            double length_route_2 = 0;
+            for (auto edge: relativeRoute1) {
+                length_route_1 += edge.Length();
+            }
+            for (auto edge: relativeRoute2) {
+                length_route_2 += edge.Length();
+            }
+
+            if (length_route_1 < length_route_2) {
+                wall_following_direction = 1;
+                route = route1;
+                relativeRoute = relativeRoute1;
+                route_length = length_route_1;
+            } else {
+                wall_following_direction = -1;
+                route = route2;
+                relativeRoute = relativeRoute2;
+                route_length = length_route_2;
+            }
+        }
+
     }
-    getRouteSections(agent, start, target, wall_following_direction, false, route);
-    return wall_following_direction;
+    return {wall_following_direction, relativeRoute, route_length};
 }
 
 std::vector<argos::CVector2> SimplePathPlanner::coordinateRouteToRelativeVectors(const std::vector<std::pair<Coordinate, Coordinate>> & route, argos::CRadians agent_heading) const {
@@ -86,7 +143,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
 //        route.erase(route.end() - 1);
 //
 //        route.emplace_back(begin_last_edge, edge_middle);
-        if (direction_free == 1) { //We are hitting an edge not in route yet, continue exploring that edge
+        if (direction_free == 1) { //We are hitting fan edge not in route yet, continue exploring that edge
 //            route.emplace_back(edge_middle, intersection_edge_coordinate);
             getWallFollowingRoute(agent, intersection_cell, box_size, intersection_edge_index, target, route, wall_following_direction, switched_direction);
         }
@@ -128,16 +185,16 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
     //TODO: What if we can't find a new edge to go to? We should trace to the target, and go the other direction as in the route
     if (bestCell != nullptr) {
         //If the direction from the agent to the end of the edge is free, don't add the edge to the route, as the we can go directly to the next edge
-        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route)) {
+        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route) == 2) {
             route.emplace_back(agent->position, bestEdgeStart);
         }
         route.emplace_back(bestEdgeStart, bestEdgeEnd);
         getWallFollowingRoute(agent, bestCell, box_size, bestEdgeIndex, target, route, wall_following_direction, switched_direction);
     } else {
-        //If we can't find a new edge to go to, we should trace to the target, and go the other direction as in the route
+        //If we can't find a new edge to go to, we should clear the route
         route.clear();
-        if (switched_direction) return; //If we have already switched direction, return empty route
-        getRouteSections(agent, agent->position, target, -wall_following_direction, true, route);
+//        if (switched_direction) return; //If we have already switched direction, return empty route
+//        getRouteSections(agent, agent->position, target, -wall_following_direction, true, route);
     }
 
 }
@@ -331,27 +388,79 @@ int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, dou
     return edges;
 }
 
-std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlanner::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
-    auto x = start.x;
-    auto y = start.y;
-    auto dx = target.x - start.x;
-    auto dy = target.y - start.y;
-    auto distance = sqrt(dx * dx + dy * dy);
-    auto stepSize = agent->quadtree->getSmallestBoxSize()/4;
-    auto nSteps = std::ceil(distance / stepSize);
-    auto stepX = dx / nSteps;
-    auto stepY = dy / nSteps;
 
-    //Already do one step to avoid the start cell
-    x += stepX;
-    y += stepY;
-    for (int s = 1; s < nSteps; s++) {
-        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
+//std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlanner::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
+//    auto x = start.x;
+//    auto y = start.y;
+//    auto dx = target.x - start.x;
+//    auto dy = target.y - start.y;
+//    auto distance = sqrt(dx * dx + dy * dy);
+//    auto stepSize = agent->quadtree->getSmallestBoxSize()/4;
+//    auto nSteps = std::ceil(distance / stepSize);
+//    auto stepX = dx / nSteps;
+//    auto stepY = dy / nSteps;
+//
+//    //Already do one step to avoid the start cell
+//    x += stepX;
+//    y += stepY;
+//    for (int s = 1; s < nSteps; s++) {
+//        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
+//        auto cell = cell_and_box.first;
+//        auto box = cell_and_box.second;
+//        if (cell != nullptr) {
+//            if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
+//                Coordinate intersection = liang_barsky(start, target, box);
+//                //Get the edge that the intersection is on (with small margin)
+//                //left = 0, top = 1, right = 2, bottom = 3
+//                auto edge_index = -1;
+//                if (std::abs(intersection.x - box.left)<0.00001) edge_index = 0;
+//                else if (std::abs(intersection.y - box.top)<0.00001) edge_index = 1;
+//                else if (std::abs(intersection.x - box.getRight())<0.00001) edge_index = 2;
+//                else if (std::abs(intersection.y - box.getBottom())<0.00001) edge_index = 3;
+//
+//                auto dist_to_intersection = sqrt(pow(intersection.x - start.x, 2) + pow(intersection.y - start.y, 2));
+//
+//                return {cell, box, edge_index, dist_to_intersection};
+//            }
+//        }
+//        x += stepX;
+//        y += stepY;
+//    }
+//    return {nullptr, quadtree::Box(), -1, 0};
+//
+//}
+
+/**
+ * Use the breseham line algorithm to get the points between the start and target
+ * Then check if the cell of the point is occupied
+ * If it is, return the cell, the box of the cell, the edge index of the intersection (liang_barsky), and the distance to the intersection
+ * @param agent
+ * @param start
+ * @param target
+ * @return
+ */
+std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlanner::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
+    auto [start_cell, start_box] = agent->quadtree->getCellandBoxFromCoordinate(start);
+    while (start_box.size > agent->quadtree->getSmallestBoxSize()) { //Make sure we are in the smallest box
+        int quadrant = start_box.getQuadrant(start);
+        if (quadrant == 4) start_box = start_box.boxFromQuadrant(0); //If the start is in the center, we can't get the quadrant, so we just take the top left
+        else start_box = start_box.boxFromQuadrant(quadrant);
+    }
+    auto [target_cell, target_box] = agent->quadtree->getCellandBoxFromCoordinate(target);
+    while (target_box.size > agent->quadtree->getSmallestBoxSize()) {
+        int quadrant = target_box.getQuadrant(target);
+        if (quadrant == 4) target_box = target_box.boxFromQuadrant(0); //If the target is in the center, we can't get the quadrant, so we just take the top left
+        else target_box = target_box.boxFromQuadrant(quadrant);
+
+    }
+    std::vector<Coordinate> linePoints = Algorithms::bresenhamLine(agent, start_box.getCenter(), target_box.getCenter());
+    for (const auto& point: linePoints) {
+        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(point);
         auto cell = cell_and_box.first;
         auto box = cell_and_box.second;
         if (cell != nullptr) {
             if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
-                Coordinate intersection = liang_barsky(start, target, box);
+                Coordinate intersection = liang_barsky(start_box.getCenter(), target_box.getCenter(), box);
                 //Get the edge that the intersection is on (with small margin)
                 //left = 0, top = 1, right = 2, bottom = 3
                 auto edge_index = -1;
@@ -365,8 +474,6 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlan
                 return {cell, box, edge_index, dist_to_intersection};
             }
         }
-        x += stepX;
-        y += stepY;
     }
     return {nullptr, quadtree::Box(), -1, 0};
 

@@ -8,12 +8,16 @@ add_library(agent_implementation SHARED
         agent.cpp
         utils/coordinate.h
         utils/coordinate.cpp
+        utils/Quadtree.h
+        utils/Box.h
+        utils/CustomComparator.h
+        utils/Algorithms.h
+        utils/Algorithms.cpp
         agent_control/communication/simulation/radio.h
         agent_control/communication/simulation/radio.cpp
         agent_control/communication/TimeSynchronizer.h
         agent_control/communication/TimeSynchronizer.cpp
-        utils/Quadtree.h
-        utils/Box.h
+
         agent_control/sensing/simulation/distance_sensor/hc_sr04.h
         agent_control/sensing/simulation/distance_sensor/hc_sr04.cpp
         agent_control/motion/simulation/DifferentialDrive.h
@@ -24,7 +28,6 @@ add_library(agent_implementation SHARED
         agent_control/path_planning/SimplePathPlanner.cpp
         agent_control/path_planning/PathFollower.h
         agent_control/path_planning/PathFollower.cpp
-        utils/CustomComparator.h
         agent_control/path_planning/FrontierEvaluator.h
         agent_control/path_planning/FrontierEvaluator.cpp
         agent_control/path_planning/ForceVectorCalculator.h
