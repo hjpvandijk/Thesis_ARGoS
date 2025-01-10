@@ -648,7 +648,7 @@ void Agent::enterWalkingState(argos::CVector2 & unexploredFrontierVector) {
         argos::CVector2 subtargetVector = argos::CVector2(1, 0);
         subtargetVector.Rotate(randomAngle);
         subtargetVector.Normalize();
-        subtargetVector *= rootBoxSize * 0.5;
+        subtargetVector *= 10 * 0.5;
         this->subTarget = {rootBoxCenter.x + subtargetVector.GetX(), rootBoxCenter.y + subtargetVector.GetY()};
         agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
                                            this->subTarget.y - this->position.y);;
@@ -735,6 +735,11 @@ void Agent::doStep() {
     }
 
     this->elapsed_ticks++;
+    argos::RLOG << "Cells: " << this->quadtree->cellcounter.getCount() << std::endl;
+    argos::RLOG << "Leaf cells: " << this->quadtree->numberOfLeafNodes << std::endl;
+//    std::ofstream outFile("quadtree_output_ " + this->id + ".txt");
+//    outFile << this->quadtree->printQuadtree();
+//    outFile.close();
 }
 
 

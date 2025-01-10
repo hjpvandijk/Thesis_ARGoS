@@ -329,6 +329,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
         averagePheromoneCertainty /= totalNumberOfCellsInRegion;
 
+//        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->FRONTIER_DIST_UNTIL_REACHED) {
+            //If the frontier is close to the agent, skip this frontier
+            continue;
+//        }
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
         if (agent->frontierEvaluator.skipFrontier(agent, frontierRegionX, frontierRegionY)) continue; //Skip agent frontier

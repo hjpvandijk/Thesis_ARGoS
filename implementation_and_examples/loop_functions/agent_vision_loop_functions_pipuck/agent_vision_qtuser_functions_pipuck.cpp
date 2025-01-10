@@ -154,14 +154,18 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
 //        }
 
+        if (LConfidence == 0) {
+            DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
+        } else {
 
-        color = CColor::GREEN;
-        color.SetAlpha(UInt8(pheromone * 255));
-        color = color.Blend(CColor::RED);
+
+            color = CColor::GREEN;
+            color.SetAlpha(UInt8(pheromone * 255));
+            color = color.Blend(CColor::RED);
 //        if(LConfidence > -0.85) color.SetAlpha(UInt8(pheromone * 255));
-        DrawPolygon(pos, CQuaternion(), posVec, color, fill);
-        DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
-
+            DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+            DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
+        }
 //        DrawText(pos, std::to_string(pheromone), CColor::BLACK);
 //        //Also write the coordinates in the box
 //        DrawText(pos - CVector3(0.05,-0.05,0), std::to_string(box.getCenter().x) + " " + std::to_string(box.getCenter().y), CColor::BLACK);

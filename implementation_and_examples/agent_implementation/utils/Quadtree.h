@@ -35,9 +35,44 @@ namespace quadtree {
 
     };
 
+
+
+
     class Quadtree {
 
     public:
+
+        class CellCounter {
+        public:
+//            static CellCounter& getInstance() {
+//                static CellCounter instance;
+//                return instance;
+//            }
+
+
+            void increment() {
+                count++;
+            }
+
+
+            void decrement() {
+                count--;
+            }
+
+
+            int getCount() const {
+                return count;
+            }
+
+            CellCounter() : count(0) {}
+
+        private:
+
+            int count;
+        };
+
+        CellCounter cellcounter;
+
         int numberOfLeafNodes = 0; //Number of leaf nodes not UNKNOWN or ANY
         int numberOfNodesPerMessage = 50; //Number of nodes to send per message
 
@@ -47,6 +82,19 @@ namespace quadtree {
             std::array<Cell *, 4> neighbors; //Neighbors with the same occupancy: [left, top, right, bottom]
             //            std::vector<QuadNode> values;
             QuadNode quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
+            Quadtree * quadtree;
+
+            Cell(Quadtree* qt) : quadtree(qt){
+                parent = nullptr;
+                children = {nullptr, nullptr, nullptr, nullptr};
+                neighbors = {nullptr, nullptr, nullptr, nullptr};
+                quadtree->cellcounter.increment();
+            }
+
+            virtual ~Cell(){
+                quadtree->cellcounter.decrement();
+            }
+
 
 //            Cell(){
 //                quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
@@ -135,7 +183,7 @@ namespace quadtree {
         };
 
         Quadtree(const Box &box) :
-                mBox(box), mRoot(std::make_unique<Cell>()) {
+                mBox(box), mRoot(std::make_unique<Cell>(this)) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
         }
 
@@ -624,6 +672,26 @@ namespace quadtree {
             }
         }
 
+        std::string printQuadtree() {
+            std::string str = "";
+            std::function<void(const Cell *, const Box &, int)> traverse;
+            traverse = [&](const Cell *cell, const Box &box, int depth) {
+                if (cell == nullptr) return;
+                for (int i = 0; i < depth; i++) {
+                    str += "_";
+                }
+                str += "Box: " + std::to_string(box.getCenter().x) + " " + std::to_string(box.getCenter().y) + "\n";
+                for (int i = 0; i < 4; i++) {
+                    if (cell->children.at(i)) {
+                        traverse(cell->children.at(i).get(), computeBox(box, i), depth + 1);
+                    }
+                }
+            };
+
+            traverse(mRoot.get(), mBox, 0);
+            return str;
+        }
+
         /**
          * Get all the boxes in the quadtree
          * @return
@@ -640,9 +708,10 @@ namespace quadtree {
                 // If the occupancy is OCCUPIED or FREE or AMBIGUOUS, we want to exchange that information. And we don't have to send any children as they will be all the same.
                 if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) {
                     allSameOccupancy = true;
-                    boxesAndConfidenceAndTicks->emplace_back(
-                            box, cell->quadNode.LConfidence, cell->quadNode.visitedAtS);
+
                 }
+                boxesAndConfidenceAndTicks->emplace_back(
+                        box, cell->quadNode.LConfidence, cell->quadNode.visitedAtS);
 
                 // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
                 if (!allSameOccupancy) {
@@ -1136,7 +1205,7 @@ namespace quadtree {
             assert(isLeaf(cell) && "Only leaves can be split");
             // Create children
             for (auto &child: cell->children){
-                child = std::make_unique<Cell>();
+                child = std::make_unique<Cell>(this);
                 child->parent = cell;
             }
 
