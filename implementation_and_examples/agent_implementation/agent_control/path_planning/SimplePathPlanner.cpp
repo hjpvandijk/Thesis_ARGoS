@@ -185,7 +185,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
     //TODO: What if we can't find a new edge to go to? We should trace to the target, and go the other direction as in the route
     if (bestCell != nullptr) {
         //If the direction from the agent to the end of the edge is free, don't add the edge to the route, as the we can go directly to the next edge
-        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route)) {
+        if (directionToTargetFree(agent, agent->position, box_size, bestEdgeEnd, route) == 2) {
             route.emplace_back(agent->position, bestEdgeStart);
         }
         route.emplace_back(bestEdgeStart, bestEdgeEnd);
