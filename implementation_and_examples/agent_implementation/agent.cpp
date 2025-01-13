@@ -32,7 +32,7 @@ Agent::Agent(std::string id) {
     //TODO: Get values from config file
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
     //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
-    this->batteryManager = BatteryManager(0.4f, 0.0205f, 0.0565f, 0.8, 250, 1.5, 0.16, 6, 1000);
+    this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS, this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE, this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT, this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE, this->config.BATTERY_CAPACITY);
     //Set the speed to the maximum achievable speed, based on the the motor specs. TODO: Put that info in differential drive instead
     auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
     this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->config.TURNING_SPEED_RATIO));
@@ -960,6 +960,10 @@ std::vector<std::string> Agent::getMessages() {
 void Agent::loadConfig() {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
+    this->config.ROBOT_WEIGHT = config_yaml["physical"]["robot_weight"].as<float>();
+    this->config.ROBOT_WHEEL_RADIUS = config_yaml["physical"]["robot_wheel_radius"].as<float>();
+    this->config.ROBOT_INTER_WHEEL_DISTANCE = config_yaml["physical"]["robot_inter_wheel_distance"].as<float>();
+
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
@@ -1007,6 +1011,14 @@ void Agent::loadConfig() {
     this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
     this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();
     this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
+
+    this->config.BATTERY_CAPACITY = config_yaml["battery"]["capacity"].as<double>();
+    this->config.BATTERY_VOLTAGE = config_yaml["battery"]["voltage"].as<double>();
+
+    this->config.MOTOR_STALL_CURRENT = config_yaml["motor"]["stall_current"].as<double>();
+    this->config.MOTOR_STALL_TORQUE = config_yaml["motor"]["stall_torque"].as<double>();
+    this->config.MOTOR_NO_LOAD_RPM = config_yaml["motor"]["no_load_rpm"].as<double>();
+    this->config.MOTOR_NO_LOAD_CURRENT = config_yaml["motor"]["no_load_current"].as<double>();
 }
 
 

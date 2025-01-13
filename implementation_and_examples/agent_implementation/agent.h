@@ -74,6 +74,10 @@ public:
 #endif
     struct Config {
 //        double ROBOT_DIAMETER;
+        float ROBOT_WEIGHT;
+        float ROBOT_WHEEL_RADIUS;
+        float ROBOT_INTER_WHEEL_DISTANCE;
+
         double OBJECT_SAFETY_RADIUS;
         double AGENT_SAFETY_RADIUS;
 
@@ -129,7 +133,12 @@ public:
         double QUADTREE_MERGE_MAX_VISITED_TIME_DIFF;
         double QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF;
 
-
+        double BATTERY_CAPACITY;
+        double BATTERY_VOLTAGE;
+        double MOTOR_STALL_CURRENT;
+        double MOTOR_STALL_TORQUE;
+        double MOTOR_NO_LOAD_RPM;
+        double MOTOR_NO_LOAD_CURRENT;
 
     };
     Config config;

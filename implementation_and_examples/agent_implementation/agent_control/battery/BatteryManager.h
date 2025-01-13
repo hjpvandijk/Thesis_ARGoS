@@ -11,9 +11,9 @@ class BatteryManager {
 
 public:
     struct Battery{
-        float voltage = 6.0; //In Volts
-        float capacity = 1000.0; //In mAh
-        float charge = 1000.0; //In mAh
+        float voltage;// = 6.0; //In Volts
+        float capacity;// = 1000.0; //In mAh
+        float charge;// = 1000.0; //In mAh
 
         float getStateOfCharge() const {
             return charge / capacity;
