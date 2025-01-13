@@ -52,10 +52,10 @@ void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors ve
             this->wallFollowingHitPoint = agent->position;
             this->prevWallFollowingDirection = this->wallFollowingDirection;
             //If agent is close to the target, or, we are passing 'behind' the hit point, stop wall following
-        } else if (agentToTarget <= agent->quadtree->getSmallestBoxSize()*2 || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= agent->quadtree->getSmallestBoxSize() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= agent->TURN_THRESHOLD_DEGREES)) {
+        } else if (agentToTarget <= agent->quadtree->getSmallestBoxSize()*2 || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= agent->quadtree->getSmallestBoxSize() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= agent->config.TURN_THRESHOLD_DEGREES)) {
             this->wallFollowingDirection = 0;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
-                   agent->TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
+                   agent->config.TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.
             double hitPointToFrontier = sqrt(pow(this->wallFollowingHitPoint.x - target.x, 2) +
                                              pow(this->wallFollowingHitPoint.y - target.y, 2));
             if (agentToTarget < hitPointToFrontier) { //If we are closer to the frontier than the hit point, or the angle to the target is way different than from the hitpoint to the target.
@@ -91,7 +91,7 @@ void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors ve
         argos::CVector2 subtargetVector = argos::CVector2(1, 0);
         subtargetVector.Rotate(ToRadians(subtargetAngle));
         subtargetVector.Normalize();
-        subtargetVector *= agent->OBJECT_AVOIDANCE_RADIUS;
+        subtargetVector *= agent->config.OBJECT_AVOIDANCE_RADIUS;
 
         this->wallFollowingSubTarget = {agent->position.x + subtargetVector.GetX(),
                                         agent->position.y + subtargetVector.GetY()};

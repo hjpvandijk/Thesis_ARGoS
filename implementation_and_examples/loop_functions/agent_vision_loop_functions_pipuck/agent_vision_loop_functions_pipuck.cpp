@@ -32,7 +32,7 @@ std::chrono::time_point end = std::chrono::system_clock::now();
  */
 void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<quadtree::QuadNode> occupiedNodes = agent->quadtree->queryOccupied(agent->position,
-                                                                                   agent->PROXIMITY_RANGE * 2.0);
+                                                                                   agent->config.DISTANCE_SENSOR_PROXIMITY_RANGE * 2.0);
 
     for (auto node: occupiedNodes) {
         Coordinate nodePos = node.coordinate.FromOwnToArgos();

@@ -10,9 +10,11 @@
 #include <random>
 #include <utility>
 #include "utils/CustomComparator.h"
+#include <yaml-cpp/yaml.h>
 
 
 Agent::Agent(std::string id) {
+    loadConfig();
     this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
@@ -22,7 +24,7 @@ Agent::Agent(std::string id) {
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-5.5, 5.5, 11);
-    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE, this->config.P_OCCUPIED, this->config.QUADTREE_RESOLUTION, this->config.QUADTREE_EVAPORATION_TIME_S, this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR, this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF, this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF);
     this->wallFollower = WallFollower();
     this->timeSynchronizer = TimeSynchronizer();
 
@@ -33,7 +35,7 @@ Agent::Agent(std::string id) {
     this->batteryManager = BatteryManager(0.4f, 0.0205f, 0.0565f, 0.8, 250, 1.5, 0.16, 6, 1000);
     //Set the speed to the maximum achievable speed, based on the the motor specs. TODO: Put that info in differential drive instead
     auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
-    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->TURNING_SPEED_RATIO));
+    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->config.TURNING_SPEED_RATIO));
     this->speed = this->differential_drive.max_speed_straight;
     //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
@@ -134,7 +136,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
 
     for (int s = 0; s < nSteps; s++) {
         if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
-            double p = (this->P_FREE*Psensor - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
+            double p = (this->config.P_FREE*Psensor - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
             this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second, elapsed_ticks/ticks_per_second);
         } else {
             break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
@@ -178,7 +180,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
     for (int s = 0; s < nSteps; s++) {
         if (objectBox.size > 0) {
             if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
-                double p = (this->P_FREE - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
+                double p = (this->config.P_FREE - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
                 this->quadtree->add(Coordinate{x, y}, p * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
             } else {
                 break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
@@ -206,7 +208,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, this->P_FREE * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+        this->quadtree->add(Coordinate{x, y}, this->config.P_FREE * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -229,7 +231,7 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps-1; s++) {
-        this->quadtree->add(Coordinate{x, y}, this->P_OCCUPIED, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+        this->quadtree->add(Coordinate{x, y}, this->config.P_OCCUPIED, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -267,7 +269,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
  * @param objectCoordinate
  */
 quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) const {
-    quadtree::Box objectBox = this->quadtree->add(objectCoordinate, this->P_OCCUPIED / Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
+    quadtree::Box objectBox = this->quadtree->add(objectCoordinate, this->config.P_OCCUPIED / Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
                                                   elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
     if (objectBox.getSize() != 0) // If the box is not the zero (not added)
@@ -285,7 +287,7 @@ void Agent::checkForObstacles() {
     bool addedObjectAtAgentLocation = false;
     for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
-        if (this->distance_sensors[sensor_index].getDistance() < PROXIMITY_RANGE) {
+        if (this->distance_sensors[sensor_index].getDistance() < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
             float sensor_probability = HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
 
@@ -298,7 +300,7 @@ void Agent::checkForObstacles() {
             //So check if the object coordinate is close to another agent
             bool close_to_other_agent = false;
             for (const auto &agentLocation: this->agentLocations) {
-                if((std::get<2>(agentLocation.second) - this->elapsed_ticks) / this->ticks_per_second > AGENT_LOCATION_RELEVANT_DURATION_S) continue;
+                if((std::get<2>(agentLocation.second) - this->elapsed_ticks) / this->ticks_per_second > this->config.AGENT_LOCATION_RELEVANT_S) continue;
                 argos::CVector2 objectToAgent =
                         argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
                         - argos::CVector2(object.x, object.y);
@@ -327,8 +329,8 @@ void Agent::checkForObstacles() {
 
 
         } else {
-            double opposite = argos::Sin(sensor_rotation) * PROXIMITY_RANGE;
-            double adjacent = argos::Cos(sensor_rotation) * PROXIMITY_RANGE;
+            double opposite = argos::Sin(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+            double adjacent = argos::Cos(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
 
 
             Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
@@ -346,7 +348,7 @@ void Agent::checkForObstacles() {
 void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
     Coordinate objectCoordinate = objectBox.getCenter();
     std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
-                                                                                  3.0*OBJECT_AVOIDANCE_RADIUS,
+                                                                                  3.0*this->config.OBJECT_AVOIDANCE_RADIUS,
                                                                                   this->elapsed_ticks /
                                                                                   this->ticks_per_second);
     //For each box, that is not the checked object, check if the agent fits between the object and the box
@@ -463,7 +465,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
         if (distance < 0.01) { // If they are adjacent (with a small margin)
             continue;
         } else if (distance <
-                   this->OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
+                this->config.OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
             //Add the area between the object and the box as occupied if there is no occupied area between already
             bool areaFree = true;
             for (int edge_count = 0; edge_count < objectEdges.size(); edge_count++) {
@@ -485,7 +487,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 
 
 bool Agent::frontierPheromoneEvaporated() {
-    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getSmallestBoxSize(),
+    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getSmallestBoxSize() / 2.0,
                                  this->elapsed_ticks / this->ticks_per_second); //Update pheromone of frontier cell
     if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
     return false;
@@ -516,12 +518,12 @@ void Agent::calculateNextPosition() {
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     //If the agent is close to the frontier and is heading towards it, or if it is really close to the frontier.
     //So we don't 'reach' frontiers through walls.
-    bool frontierReached = targetVector.Length() <= FRONTIER_DIST_UNTIL_REACHED &&
+    bool frontierReached = targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
                            NormalizedDifference(this->targetHeading, targetVector.Angle()).GetValue() <
-                           this->TURN_THRESHOLD_DEGREES * 2 ||
-                           targetVector.Length() <= this->OBJECT_AVOIDANCE_RADIUS;
+                           this->config.TURN_THRESHOLD_DEGREES * 2 ||
+                           targetVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
 
-    bool periodic_check_required = (this->elapsed_ticks - this->last_feasibility_check_tick) > this->ticks_per_second * this->PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
+    bool periodic_check_required = (this->elapsed_ticks - this->last_feasibility_check_tick) > this->ticks_per_second * this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
 
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
@@ -636,7 +638,7 @@ void Agent::enterWalkingState(argos::CVector2 & unexploredFrontierVector) {
                                                        this->subTarget.y - this->position.y);;
     if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    || agentToSubtarget.Length() <= FRONTIER_DIST_UNTIL_REACHED
+    || agentToSubtarget.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED
 #endif
     ) {
         //Find a random direction to walk in, by placing a subtarget on the edge of the root box in the quadtree
@@ -667,10 +669,10 @@ void Agent::sendQuadtreeToCloseAgents() {
         double lastReceivedTick = std::get<2>(agentLocationPair.second);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
-            AGENT_LOCATION_RELEVANT_DURATION_S) {
+            this->config.AGENT_LOCATION_RELEVANT_S) {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
             if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
-                this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] > QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] > this->config.QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
                 this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
             }
@@ -690,9 +692,9 @@ void Agent::timeSyncWithCloseAgents() {
         double lastReceivedTick = std::get<2>(agentLocationPair.second);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
-            AGENT_LOCATION_RELEVANT_DURATION_S) {
+            this->config.AGENT_LOCATION_RELEVANT_S) {
             //If we have not time synced with this agent in the past TIME_SYNC_INTERVAL_S seconds, do it
-            if (this->elapsed_ticks - this->timeSynchronizer.getLastSync(agentLocationPair.first) >= this->TIME_SYNC_INTERVAL_S * this->ticks_per_second) {
+            if (this->elapsed_ticks - this->timeSynchronizer.getLastSync(agentLocationPair.first) >= this->config.TIME_SYNC_INTERVAL_S * this->ticks_per_second) {
                 timeSynchronizer.initTimeSync(this); //Broadcasting time sync init
             }
         }
@@ -722,7 +724,7 @@ void Agent::doStep() {
         argos::CDegrees diffDeg = ToDegrees(diff);
 
 
-        if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
+        if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
             //Go straight
             this->differential_drive.forward();
         } else if (diffDeg > argos::CDegrees(0)) {
@@ -888,7 +890,7 @@ void Agent::parseMessages() {
             }
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
-                quadtree::Box addedBox = this->quadtree->add(newQuadNode, ALPHA_RECEIVE, elapsed_ticks / ticks_per_second);
+                quadtree::Box addedBox = this->quadtree->add(newQuadNode, config.ALPHA_RECEIVE, elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
                 if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)
                     checkIfAgentFitsBetweenObstacles(addedBox);
@@ -953,6 +955,58 @@ void Agent::setWifi(Radio newWifi) {
 
 std::vector<std::string> Agent::getMessages() {
     return this->messages;
+}
+
+void Agent::loadConfig() {
+    YAML::Node config_yaml = YAML::LoadFile(config_file);
+
+    this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
+    this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
+    this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
+    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
+    this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
+    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
+    this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
+    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
+
+    this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
+    this->config.QUADTREE_EXCHANGE_INTERVAL_S = config_yaml["communication"]["quadtree_exchange_interval"].as<double>();
+    this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
+
+    this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();
+    this->config.DISTANCE_SENSOR_NOISE_CM = config_yaml["sensors"]["distance_sensor_noise"].as<double>();
+    this->config.POSITION_NOISE_CM = config_yaml["sensors"]["position_noise"].as<double>();
+    this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
+//
+    this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
+    this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
+    this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();
+    this->config.AGENT_ALIGNMENT_RADIUS = config_yaml["forces"]["agent_alignment_radius"].as<double>();
+    this->config.OBJECT_AVOIDANCE_RADIUS = this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS + config_yaml["forces"]["object_avoidance_radius_margin"].as<double>();
+
+    this->config.VIRTUAL_WALL_AVOIDANCE_WEIGHT = config_yaml["forces"]["virtual_wall_avoidance_weight"].as<double>();
+    this->config.AGENT_COHESION_WEIGHT = config_yaml["forces"]["agent_cohesion_weight"].as<double>();
+    this->config.AGENT_AVOIDANCE_WEIGHT = config_yaml["forces"]["agent_avoidance_weight"].as<double>();
+    this->config.AGENT_ALIGNMENT_WEIGHT = config_yaml["forces"]["agent_alignment_weight"].as<double>();
+    this->config.TARGET_WEIGHT = config_yaml["forces"]["target_weight"].as<double>();
+
+    this->config.FRONTIER_DISTANCE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["distance_weight"].as<double>();
+    this->config.FRONTIER_SIZE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["size_weight"].as<double>();
+    this->config.FRONTIER_REACH_BATTERY_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_battery_weight"].as<double>();
+    this->config.FRONTIER_REACH_DURATION_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_duration_weight"].as<double>();
+    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
+
+    this->config.P_FREE = config_yaml["confidence"]["p_free"].as<double>();
+    this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
+    this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
+    this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+
+    this->config.QUADTREE_RESOLUTION = config_yaml["quadtree"]["resolution"].as<double>();
+    this->config.QUADTREE_EVAPORATION_TIME_S = config_yaml["quadtree"]["evaporation_time"].as<double>();
+    this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
+    this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();
+    this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
 }
 
 
