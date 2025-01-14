@@ -259,7 +259,7 @@ namespace quadtree {
 * Returns all the frontier boxes surrounding the given coordinate within the given area size
 */
         std::vector<std::pair<Box, double>> queryFrontierBoxes(Coordinate coordinate, double areaRadius, double currentTimeS) {
-            Box box = Box(Coordinate{coordinate.x - areaRadius, coordinate.y + areaRadius}, areaRadius);
+            Box box = Box(Coordinate{coordinate.x - areaRadius, coordinate.y + areaRadius}, areaRadius*2.0);
             std::vector<Box> exploredBoxes = queryBoxes(box, {FREE, AMBIGUOUS}, currentTimeS); //Get FREE and AMBIGUOUS boxes, as the latter might be FREE
             std::vector<std::pair<Box, double>> frontierBoxesAndConfidence;
 
