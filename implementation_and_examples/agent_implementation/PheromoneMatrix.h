@@ -6,6 +6,8 @@
 
 class PheromoneMatrix {
 public:
+    int nodesPerMessage = 50;
+
     PheromoneMatrix() = default;
     PheromoneMatrix(double real_width, double real_height, double resolution, double evaporationTime);
     ~PheromoneMatrix();

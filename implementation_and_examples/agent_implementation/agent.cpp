@@ -155,7 +155,7 @@ void Agent::checkForObstacles() {
             bool close_to_other_agent = false;
             for (const auto &agentLocation: this->agentLocations) {
                 argos::CVector2 objectToAgent =
-                        argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                        argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
@@ -354,12 +354,12 @@ bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, doub
     int nAgentsWithinRange = 0;
     for (const auto &agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
-                argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                 - argos::CVector2(this->position.x, this->position.y);
 
-        if (vectorToOtherAgent.Length() < range) { //TODO: make different for cohesion and separation
-            averageNeighborLocation->x += agentLocation.second.x;
-            averageNeighborLocation->y += agentLocation.second.y;
+        if (vectorToOtherAgent.Length() < range) {
+            averageNeighborLocation->x += agentLocation.second.first.x;
+            averageNeighborLocation->y += agentLocation.second.first.y;
             nAgentsWithinRange++;
         }
     }
@@ -428,7 +428,7 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
     //Get the velocities of the agents within range
     for (const auto &agentVelocity: agentVelocities) {
         std::string agentID = agentVelocity.first;
-        Coordinate otherAgentLocation = agentLocations[agentID];
+        Coordinate otherAgentLocation = agentLocations[agentID].first;
         argos::CVector2 agentVector = agentVelocity.second.first;
         double agentSpeed = agentVelocity.second.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
@@ -875,7 +875,7 @@ void Agent::parseMessages() {
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
-            this->agentLocations[senderId] = receivedPosition;
+            this->agentLocations[senderId] = {receivedPosition, this->elapsed_ticks};
         } else if (messageContent.at(0) == 'M') {
             auto substring = messageContent.substr(1);
             auto coverage = substring.at(0) == 'C';
@@ -956,7 +956,7 @@ void Agent::loadConfig() {
 //    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
 //#endif
 //    this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
-//    this->config.QUADTREE_EXCHANGE_INTERVAL_S = config_yaml["communication"]["quadtree_exchange_interval"].as<double>();
+    this->config.MATRIX_EXCHANGE_INTERVAL_S = config_yaml["communication"]["matrix_exchange_interval"].as<double>();
 //    this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
 //
     this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();

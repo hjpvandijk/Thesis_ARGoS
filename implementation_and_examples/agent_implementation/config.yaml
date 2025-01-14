@@ -18,6 +18,7 @@ communication:
   wifi_speed: 10 # The speed of the wifi in mbps
   max_jitter: 10 # The maximum jitter in milliseconds
   message_loss_probability: 0.05 # The probability of a message being lost
+  matrix_exchange_interval: 10 # The interval in seconds between matrix exchanges
 
 forces:
   frontier_search_radius: 10.0 # The radius in meters around the agent to search for frontiers

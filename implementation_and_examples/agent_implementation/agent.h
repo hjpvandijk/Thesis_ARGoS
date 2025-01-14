@@ -66,6 +66,8 @@ public:
         double OBSTACLE_MATRIX_RESOLUTION;
         double OBSTACLE_MATRIX_EVAPORATION_TIME_S;
 
+        double MATRIX_EXCHANGE_INTERVAL_S;
+
         double BATTERY_CAPACITY;
 
         double WIFI_SPEED_MBPS;
@@ -75,7 +77,9 @@ public:
     };
     Config config;
 
-    std::map<std::string, Coordinate> agentLocations;
+    std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
+     std::map<std::string, double> agentMatrixSent; //id: sent timestamp
+    std::map<std::string, int> agentMatrixBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
 
     argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
@@ -151,7 +155,7 @@ public:
     std::unique_ptr<PheromoneMatrix> obstacleMatrix; //Cells that contain pheromone > 0, are covered and contain an obstacle
 
     Coordinate left_right_borders = {-10,10};
-    Coordinate upper_lower_borders = {10,-10};  
+    Coordinate upper_lower_borders = {10,-10};
 
     Coordinate currentBestFrontier = {0,0};
 

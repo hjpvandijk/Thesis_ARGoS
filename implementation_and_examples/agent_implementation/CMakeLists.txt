@@ -15,6 +15,16 @@ add_library(agent_implementation SHARED
         Box.h
         PheromoneMatrix.cpp
         PheromoneMatrix.h
+        agent_control/sensing/simulation/distance_sensor/hc_sr04.h
+        agent_control/sensing/simulation/distance_sensor/hc_sr04.cpp
+        agent_control/motion/simulation/DifferentialDrive.h
+        agent_control/motion/simulation/DifferentialDrive.cpp
+        agent_control/battery/BatteryManager.h
+        agent_control/battery/BatteryManager.cpp
+        agent_control/battery/MicroControllerBatteryManager.h
+        agent_control/battery/MicroControllerBatteryManager.cpp
+        agent_control/battery/MotionSystemBatteryManager.h
+        agent_control/battery/MotionSystemBatteryManager.cpp
 )
 
 # Link directories (if you have specific libraries to link against)
