@@ -32,7 +32,7 @@ Coordinate PathFollower::followPath(Agent *agent) {
     Coordinate sub_target = end;
 
     //If we are close to the target, go to the next section
-    if (sqrt(pow(sub_target.x - agent->position.x, 2) + pow(sub_target.y - agent->position.y, 2)) < agent->OBJECT_AVOIDANCE_RADIUS*3) {
+    if (sqrt(pow(sub_target.x - agent->position.x, 2) + pow(sub_target.y - agent->position.y, 2)) < agent->config.OBJECT_AVOIDANCE_RADIUS*3) {
         //Check if direction to the sub_target is also free
         if (!rayTraceQuadtreeOccupiedIntersection(agent, agent->position, sub_target)) {
             current_path_section++;
