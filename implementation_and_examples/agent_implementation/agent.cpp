@@ -487,7 +487,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 
 bool Agent::frontierPheromoneEvaporated() {
     quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getSmallestBoxSize() / 2.0,
-                                 this->elapsed_ticks / this->ticks_per_second); //Update pheromone of frontier cell
+                                 this->elapsed_ticks / this->ticks_per_second, this->config.MAX_FRONTIER_CELLS); //Update pheromone of frontier cell
     if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
     return false;
 }
@@ -995,6 +995,8 @@ void Agent::loadConfig() {
     this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
 //
     this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
+    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
+    this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
     this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
     this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();
     this->config.AGENT_ALIGNMENT_RADIUS = config_yaml["forces"]["agent_alignment_radius"].as<double>();

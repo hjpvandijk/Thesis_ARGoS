@@ -107,6 +107,8 @@ public:
         double FRONTIER_PHEROMONE_WEIGHT;
 
         double FRONTIER_SEARCH_RADIUS;
+        int MAX_FRONTIER_CELLS;
+        int MAX_FRONTIER_REGIONS;
         double AGENT_COHESION_RADIUS;
         double AGENT_AVOIDANCE_RADIUS;
         double AGENT_ALIGNMENT_RADIUS ;
