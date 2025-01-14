@@ -1,7 +1,7 @@
 #include "PheromoneMatrix.h"
 #include <algorithm>
 
-PheromoneMatrix::PheromoneMatrix(double real_width, double real_height, double resolution) {
+PheromoneMatrix::PheromoneMatrix(double real_width, double real_height, double resolution, double evaporationTime) {
     this->x_min = 0- real_width / 2;
     this->x_max = real_width / 2;
     this->y_min = 0 - real_height / 2;
@@ -11,6 +11,7 @@ PheromoneMatrix::PheromoneMatrix(double real_width, double real_height, double r
     this->width = int(real_width / resolution) +1;
     this->height = int(real_height / resolution)+1;
     this->resolution = resolution;
+    this->EvaporationTime = evaporationTime;
     //Create the matrix and set all values to 0
     this->matrix = std::vector<std::vector<double>>(this->width, std::vector<double>(this->height, -1));
 }
