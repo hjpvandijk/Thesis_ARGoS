@@ -20,6 +20,7 @@ control:
   disallow_frontier_switching:
     frontier_reach_distance: 0.5 # The distance in meters when we consider a frontier reached
     target_feasibility_check_interval: 5 # The time in seconds between target feasibility checks
+    feasibility_check_only_route: true # If true, we only check the feasibility of the route to the target, don't reevaluate the target itself
   separate_frontiers:
     distance_threshold: 1.0 # The distance in meters between two frontiers to consider them separate
 communication:

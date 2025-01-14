@@ -29,7 +29,6 @@ Agent::Agent(std::string id) {
     this->timeSynchronizer = TimeSynchronizer();
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
-    //TODO: Get values from config file
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
     //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
     this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS, this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE, this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT, this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE, this->config.BATTERY_CAPACITY);
@@ -535,7 +534,7 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     frontierReached //|| //Or the agent is close to the frontier
 //    //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
 //    frontierPheromoneEvaporated() //It can be that the frontier is not in an explored cell due to being the average location of the region
-    || periodic_check_required
+    || (periodic_check_required && !this->config.FEASIBILITY_CHECK_ONLY_ROUTE) //Or if it is time for a periodic check, and we are not only checking the route
     ) {
 #ifdef WALL_FOLLOWING_ENABLED
         //If we are not currently wall following
@@ -548,7 +547,16 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
         targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
         this->last_feasibility_check_tick = this->elapsed_ticks;
 #endif
+    } else if (periodic_check_required && this->config.FEASIBILITY_CHECK_ONLY_ROUTE){
+        this->route_to_best_frontier.clear();
+        this->pathPlanner.getRoute(this, this->position, this->currentBestFrontier, this->route_to_best_frontier);
+        if (this->route_to_best_frontier.empty()) { //If there is no route to the frontier, find a new frontier
+            targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+        }
+        this->last_feasibility_check_tick = this->elapsed_ticks;
+
     }
+
 
 #else
 
@@ -970,9 +978,13 @@ void Agent::loadConfig() {
     this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
     this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
     this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
+    this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();
+#endif
+#ifdef SEPARATE_FRONTIERS
     this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
-
+#endif
     this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
     this->config.QUADTREE_EXCHANGE_INTERVAL_S = config_yaml["communication"]["quadtree_exchange_interval"].as<double>();
     this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
