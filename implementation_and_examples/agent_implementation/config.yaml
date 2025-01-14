@@ -29,6 +29,8 @@ communication:
   time_sync_interval: 10 # The time in seconds between time synchronization
 forces:
   frontier_search_radius: 4.0 # The radius in meters around the agent to search for frontiers
+  max_frontier_cells: 200 # The maximum number of queried frontier cells
+  max_frontier_regions: 10 # The maximum number of frontier regions
   agent_avoidance_radius: 0.68 # The radius in meters around the agent to avoid other agents
   agent_cohesion_radius: 1.5 # The radius in meters around the agent to align with other agents
   agent_alignment_radius: 1.5 # The radius in meters around the agent to align with other agents

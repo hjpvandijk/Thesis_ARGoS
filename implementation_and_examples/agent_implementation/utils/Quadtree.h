@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <memory>
+#include <random>
 #include <type_traits>
 #include <vector>
 #include "Box.h"
@@ -258,9 +259,15 @@ namespace quadtree {
 /**
 * Returns all the frontier boxes surrounding the given coordinate within the given area size
 */
-        std::vector<std::pair<Box, double>> queryFrontierBoxes(Coordinate coordinate, double areaRadius, double currentTimeS) {
+        std::vector<std::pair<Box, double>> queryFrontierBoxes(Coordinate coordinate, double areaRadius, double currentTimeS, int max_cells) {
             Box box = Box(Coordinate{coordinate.x - areaRadius, coordinate.y + areaRadius}, areaRadius*2.0);
             std::vector<Box> exploredBoxes = queryBoxes(box, {FREE, AMBIGUOUS}, currentTimeS); //Get FREE and AMBIGUOUS boxes, as the latter might be FREE
+            //Get random subset of the explored boxes, of size max_cells
+            if (exploredBoxes.size() > max_cells) {
+                std::shuffle(exploredBoxes.begin(), exploredBoxes.end(), std::mt19937(std::random_device()()));
+                exploredBoxes.resize(max_cells);
+            }
+
             std::vector<std::pair<Box, double>> frontierBoxesAndConfidence;
 
             for (const auto &exploredBox: exploredBoxes) {

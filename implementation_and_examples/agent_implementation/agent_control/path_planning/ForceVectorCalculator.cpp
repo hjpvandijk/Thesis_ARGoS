@@ -197,7 +197,7 @@ private:
 };
 
 void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> &frontiers,
-                            std::vector<std::vector<std::pair<quadtree::Box, double>>> &frontierRegions) {
+                            std::vector<std::vector<std::pair<quadtree::Box, double>>> &frontierRegions, int max_regions) {
     UnionFind uf;
     std::unordered_map<int, std::pair<quadtree::Box, double>> boxMap;
 
@@ -233,6 +233,14 @@ void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> 
     for (const auto &region: regions) {
         frontierRegions.push_back(region.second);
     }
+
+    //Truncate the regions to the maximum amount of regions, by removing the smallest regions
+    if (frontierRegions.size() > max_regions) {
+        std::sort(frontierRegions.begin(), frontierRegions.end(), [](const auto &a, const auto &b) {
+            return a.size() > b.size();
+        });
+        frontierRegions.resize(max_regions);
+    }
 }
 
 argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* agent) {
@@ -254,13 +262,14 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
     std::vector<std::pair<quadtree::Box, double>> frontiers = agent->quadtree->queryFrontierBoxes(agent->position, agent->config.FRONTIER_SEARCH_RADIUS,
                                                                               agent->elapsed_ticks /
-                                                                              agent->ticks_per_second);
+                                                                              agent->ticks_per_second, agent->config.MAX_FRONTIER_CELLS);
     agent->current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<std::pair<quadtree::Box, double>>> frontierRegions = {};
 
-    mergeAdjacentFrontiers(frontiers, frontierRegions);
+    mergeAdjacentFrontiers(frontiers, frontierRegions, agent->config.MAX_FRONTIER_REGIONS);
+
 
 //// Iterate over each frontier box to merge adjacent ones into regions
 //    for (auto [frontierbox, frontierpheromone]: frontiers) {
@@ -341,36 +350,46 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 #ifdef SEPARATE_FRONTIERS
         bool skipFrontier = false;
-        for (auto agentLocationTuple: agent->agentLocations) {
-            if((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second > agent->config.AGENT_LOCATION_RELEVANT_S) continue;
 
-            double distanceFromOtherAgentsFrontier = sqrt(pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
-                                                          pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
+        //If the frontier is close to our agent, skip it
+        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+            skipFrontier = true;
+        } else {
+            for (auto agentLocationTuple: agent->agentLocations) {
+                if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
+                    agent->config.AGENT_LOCATION_RELEVANT_S)
+                    continue;
 
-            double distanceFromOtherAgentsPosition = sqrt(pow(frontierRegionX - std::get<0>(agentLocationTuple.second).x, 2) +
-                                                          pow(frontierRegionY - std::get<0>(agentLocationTuple.second).y, 2));
+                double distanceFromOtherAgentsFrontier = sqrt(
+                        pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
+                        pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
 
-            if (distanceFromOtherAgentsFrontier <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
-                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
-                if (agentLocationTuple.first > agent->id) {
-                    //If the other agent has a higher ID, so we can't select this frontier
-                    skipFrontier = true;
+                double distanceFromOtherAgentsPosition = sqrt(
+                        pow(frontierRegionX - std::get<0>(agentLocationTuple.second).x, 2) +
+                        pow(frontierRegionY - std::get<0>(agentLocationTuple.second).y, 2));
+
+                if (distanceFromOtherAgentsFrontier <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+                    //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+                    if (agentLocationTuple.first > agent->id) {
+                        //If the other agent has a higher ID, so we can't select this frontier
+                        skipFrontier = true;
 //                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
 //                               << " because it is close to another agent's frontier" << std::endl;
 //                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
-                    break;
+                        break;
+                    }
                 }
-            }
-            if (distanceFromOtherAgentsPosition <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
-                //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
-                if (agentLocationTuple.first > agent->id) {
-                    //If the other agent has a higher ID, so we can't select this frontier
-                    skipFrontier = true;
+                if (distanceFromOtherAgentsPosition <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+                    //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+                    if (agentLocationTuple.first > agent->id) {
+                        //If the other agent has a higher ID, so we can't select this frontier
+                        skipFrontier = true;
 //                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
 //                               << " because it is close to another agent's position" << std::endl;
 //                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
 //                               << std::endl;
-                    break;
+                        break;
+                    }
                 }
             }
         }
