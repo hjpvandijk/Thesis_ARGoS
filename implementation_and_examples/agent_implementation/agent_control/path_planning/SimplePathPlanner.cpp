@@ -230,8 +230,11 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
         return {2, nullptr, -1, Coordinate{0,0}};
     }
 
+    //Because start is on an edge, we will add a small offset to the start, towards the target, so the raytracing method selects the correct cell
+    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
+
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, cell->quadNode.coordinate, target);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target);
 
     if (intersection_cell != nullptr) {
         //If we intersect the same cell, the line is going through the cell, so the direction is not free

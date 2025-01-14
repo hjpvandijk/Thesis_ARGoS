@@ -264,7 +264,7 @@ namespace quadtree {
             std::vector<Box> exploredBoxes = queryBoxes(box, {FREE, AMBIGUOUS}, currentTimeS); //Get FREE and AMBIGUOUS boxes, as the latter might be FREE
             //Get random subset of the explored boxes, of size max_cells
             if (exploredBoxes.size() > max_cells) {
-                std::shuffle(exploredBoxes.begin(), exploredBoxes.end(), std::mt19937(std::random_device()()));
+                std::random_shuffle(exploredBoxes.begin(), exploredBoxes.end(), [](int i) { return rand() % i; });
                 exploredBoxes.resize(max_cells);
             }
 
