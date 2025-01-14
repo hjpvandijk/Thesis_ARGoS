@@ -958,6 +958,7 @@ Radio Agent::getWifi() const {
 
 void Agent::setWifi(Radio newWifi) {
     this->wifi = newWifi;
+    this->wifi.config(this->config.WIFI_SPEED_MBPS, this->config.MAX_JITTER_MS, this->config.MESSAGE_LOSS_PROBABILITY);
 
 }
 
@@ -1033,6 +1034,10 @@ void Agent::loadConfig() {
     this->config.MOTOR_STALL_TORQUE = config_yaml["motor"]["stall_torque"].as<double>();
     this->config.MOTOR_NO_LOAD_RPM = config_yaml["motor"]["no_load_rpm"].as<double>();
     this->config.MOTOR_NO_LOAD_CURRENT = config_yaml["motor"]["no_load_current"].as<double>();
+
+    this->config.WIFI_SPEED_MBPS = config_yaml["communication"]["wifi_speed"].as<double>();
+    this->config.MAX_JITTER_MS = config_yaml["communication"]["max_jitter"].as<double>();
+    this->config.MESSAGE_LOSS_PROBABILITY = config_yaml["communication"]["message_loss_probability"].as<double>();
 }
 
 

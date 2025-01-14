@@ -10,6 +10,12 @@ Radio::Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRa
     this->radioSensor = radioSensor;
 }
 
+void Radio::config(float wifiTransferSpeed_Mbps, float maxJitter_ms, float message_loss_probability){
+    this->wifiTransferSpeed_Mbps = wifiTransferSpeed_Mbps;
+    this->maxJitter_ms = maxJitter_ms;
+    this->message_loss_probability = message_loss_probability;
+}
+
 void Radio::broadcast_message(std::string &messagePrependedWithId) const {
     messagePrependedWithId.insert(0, "<A>"); //Prepend with ALL
     auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
@@ -55,7 +61,7 @@ void Radio::receive_messages(std::vector<std::string> &messages, double current_
     std::vector<argos::CByteArray> sensorMessages = radioSensor->GetInterfaces()[0].Messages;
     for (const auto &sensorMessage: sensorMessages) {
         //Random probability of dropping the message
-        if ((rand() % 100) < this->message_drop_probability * 100) continue; //Ignore (drop) the message
+        if ((rand() % 100) < this->message_loss_probability * 100) continue; //Ignore (drop) the message
         double transmissionTime = calculateTransmissionTime(sensorMessage.Size() * 8,
                                                             this->wifiTransferSpeed_Mbps * 1e6);
         double jitter = calculateJitter(this->maxJitter_ms);

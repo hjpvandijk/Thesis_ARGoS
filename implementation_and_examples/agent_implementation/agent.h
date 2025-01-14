@@ -143,6 +143,10 @@ public:
         double MOTOR_NO_LOAD_RPM;
         double MOTOR_NO_LOAD_CURRENT;
 
+        double WIFI_SPEED_MBPS;
+        double MAX_JITTER_MS;
+        double MESSAGE_LOSS_PROBABILITY;
+
     };
     Config config;
 
