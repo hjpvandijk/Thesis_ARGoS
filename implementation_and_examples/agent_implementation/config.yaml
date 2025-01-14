@@ -51,7 +51,7 @@ confidence:
   p_occupied_threshold: 0.4 # The threshold for a cell to be considered occupied
 quadtree:
   resolution: 0.2 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size
-  evaporation_time: 10 # The time in seconds it takes for a pheromone value to evaporate
+  evaporation_time: 100 # The time in seconds it takes for a pheromone value to evaporate
   evaporated_pheromone_factor: 0.05 # If a cell has ever been explored, the pheromone value will never be lower than this factor of the maximum confidence value (from 0.5)
   merge_max_visited_time_difference: 5 # The maximum time difference in seconds between two quadtree nodes to merge them
   merge_max_confidence_diff: 0.05 # The maximum confidence difference between two quadtree nodes to merge them
