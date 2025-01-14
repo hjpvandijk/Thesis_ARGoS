@@ -24,7 +24,9 @@ public:
     bool skipFrontier(Agent* agent, double frontierRegionX, double frontierRegionY);
     void resetFrontierAvoidance(Agent* agent, argos::CVector2 unexploredFrontierVector);
     bool frontierHasLowConfidenceOrAvoiding(Agent* agent);
-    void updateConfidenceIfFrontierUnreachable(Agent* agent);
+#ifdef AVOID_UNREACHABLE_FRONTIERS
+void updateConfidenceIfFrontierUnreachable(Agent* agent);
+#endif
     };
 
 

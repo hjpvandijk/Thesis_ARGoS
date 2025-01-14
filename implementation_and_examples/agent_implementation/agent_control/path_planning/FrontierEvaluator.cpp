@@ -66,6 +66,7 @@ bool FrontierEvaluator::frontierHasLowConfidenceOrAvoiding(Agent* agent){
     return true;
 }
 
+#ifdef AVOID_UNREACHABLE_FRONTIERS
 /**
  * Update the confidence of cells if they are around a currently unreachable frontier.
  * If the agent is hitting the same hitpoint multiple times, decrease the frontier confidence.
@@ -130,3 +131,4 @@ void FrontierEvaluator::updateConfidenceIfFrontierUnreachable(Agent* agent) {
 //        this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
     }
 }
+#endif
