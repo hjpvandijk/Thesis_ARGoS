@@ -64,7 +64,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 
-def generate_heatmap(size, num_spots=30, min_spot_size = 5, max_spot_size=15, max_amplitude=1, min_amplitude=0):
+def generate_heatmap(size, num_spots=60, min_spot_size = 1, max_spot_size=3, max_amplitude=1, min_amplitude=0):
     # Create a random array to store the heatmap values
     heatmap = np.zeros(size)
 
@@ -76,8 +76,8 @@ def generate_heatmap(size, num_spots=30, min_spot_size = 5, max_spot_size=15, ma
         spot_amplitude = np.random.uniform(min_amplitude, max_amplitude)
 
         # Randomly stretch the Gaussian in different directions (elliptical distortion)
-        stretch_x = 1#np.random.uniform(0.5, 8)  # Stretch factor in X direction
-        stretch_y = 1#np.random.uniform(0.5, 8)  # Stretch factor in Y direction
+        stretch_x = np.random.uniform(0.2, 5)  # Stretch factor in X direction
+        stretch_y = np.random.uniform(0.2, 5)  # Stretch factor in Y direction
 
         # Generate the distorted spot using a Gaussian distribution
         Y, X = np.ogrid[:size[0], :size[1]]
@@ -88,7 +88,7 @@ def generate_heatmap(size, num_spots=30, min_spot_size = 5, max_spot_size=15, ma
         heatmap += np.clip(spot, min_amplitude, max_amplitude)
 
     # Apply a lower amount of smoothing to preserve more peaks/valleys
-    # heatmap = gaussian_filter(heatmap, sigma=2)  # lower sigma value
+    # heatmap = gaussian_filter(heatmap, sigma=1)  # lower sigma value
 
     # Normalize the heatmap to have values between 0 and 1
     heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
@@ -184,28 +184,28 @@ def generate_error_heatmap(size):
 
 
 # Initialize variables
-# errors = generate_error_heatmap(heatmap_size)
+errors = generate_error_heatmap(heatmap_size)
 
 
-# # # Save the directions heatmap to a file
-# with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'w') as f:
-#     # f.write('{')
-#     for row in errors:
-#         f.write('{')
-#         f.write(', '.join(map(str, row)))
-#         f.write('},\n')
+# # Save the directions heatmap to a file
+with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'w') as f:
+    # f.write('{')
+    for row in errors:
+        f.write('{')
+        f.write(', '.join(map(str, row)))
+        f.write('},\n')
     # f.write('}\n')
 # positions = [initial_position]
 
 # Read the directions heatmap from a file
-errors = []
-with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'r') as f:
-    lines = f.readlines()
-    for line in lines:
-        if line.strip().startswith('{') and line.strip().endswith('},'):
-            row = line.strip()[1:-2].split(', ')
-            errors.append([float(val) for val in row])
-errors = np.array(errors)
+# errors = []
+# with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'r') as f:
+#     lines = f.readlines()
+#     for line in lines:
+#         if line.strip().startswith('{') and line.strip().endswith('},'):
+#             row = line.strip()[1:-2].split(', ')
+#             errors.append([float(val) for val in row])
+# errors = np.array(errors)
 
 # Visualize the directional heatmap using colors to represent angles
 angle_colors = (errors / (max_error-min_error))  # Normalize angles to [0, 1] for coloring
