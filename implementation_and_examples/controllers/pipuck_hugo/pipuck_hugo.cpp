@@ -84,6 +84,13 @@ void PiPuckHugo::ControlStep() {
                 proxReadings[sensor.Label] = sensor.Proximity;
             };
     m_pcRangeFindersSensor->Visit(visitFn);
+
+    int agentIdVal = 0;
+    for (char c : agentObject->id) {
+        agentIdVal += static_cast<int>(c);
+    }
+    agentIdVal *= 1234; //Multiply with some number to offset the differences between agents.
+
     for(int i = 0; i < num_sensors; i++){
         auto sensorReading = proxReadings[i];
         double sensorNoiseM = 0.0;
@@ -100,30 +107,36 @@ void PiPuckHugo::ControlStep() {
 
 
 
+
+
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
 
-    const auto orientation = positionSensorReading.Orientation;
-    argos::CRadians orientationNoiseRange = ToRadians(argos::CDegrees(agentObject->ORIENTATION_NOISE_DEGREES));
-    argos::CRadians orientationNoise = (orientationNoiseRange-(rand()%2*orientationNoiseRange)); ; // Random number between -orientationNoiseRange and orientationNoiseRange rad, to simulate sensor noise
+    double agentPersonalOrientationNoise = agentObject->ORIENTATION_NOISE_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->ORIENTATION_NOISE_DEGREES/5*2) - agentObject->ORIENTATION_NOISE_DEGREES/5 : 0;
+    double agentPersonalPositionNoise =  agentObject->POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->POSITION_NOISE_CM/5*2) - agentObject->POSITION_NOISE_CM/5) / 100.0 : 0;
 
+    const auto orientation = positionSensorReading.Orientation;
+    double orientationJitterRange = agentObject->ORIENTATION_JITTER_DEGREES;
+    argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
+    argos::CRadians agentPersonalOrientationNoiseRad = ToRadians(CDegrees(agentPersonalOrientationNoise));
 
     // Add noise to the sensor reading
-    double positionNoiseRange = agentObject->POSITION_NOISE_CM / 100.0;
-//    double positionNoiseX = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
-//    double positionNoiseY = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
-    double positionNoise= (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+    double positionJitterRange = agentObject->POSITION_JITTER_CM / 100.0;
+    double positionJitter= (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
 
     int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
     int heatmapX = std::floor((-position.GetY() + this->map_size/2)/(this->map_size/heatmap_size));
-    argos::LOG << "Heatmap size " << heatmap_size << std::endl;
-    argos::LOG << "floor((" << -position.GetY() << " + " << this->map_size/2 << ")/(" << this->map_size/heatmap_size << ")) = " << heatmapX << std::endl;
+//    argos::LOG << "Heatmap size " << heatmap_size << std::endl;
+//    argos::LOG << "floor((" << -position.GetY() << " + " << this->map_size/2 << ")/(" << this->map_size/heatmap_size << ")) = " << heatmapX << std::endl;
     int heatmapY = std::floor((position.GetX() + this->map_size/2)/(this->map_size/heatmap_size));
-    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX];
-    CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationNoise;
+    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX] * ToRadians(CDegrees(agentObject->ORIENTATION_NOISE_DEGREES)).GetValue();
+    CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter;
     double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX];
-    argos::LOG << "Location: " << -position.GetY() << ", " << position.GetX() << " : " << heatmapX << ", " << heatmapY << " = " << direction_heatmap_value << " : " << error_mean_heatmap_value << std::endl;
-    double error_magnitude = error_mean_heatmap_value + positionNoise;
+//    argos::LOG << "Location: " << -position.GetY() << ", " << position.GetX() << " : " << heatmapX << ", " << heatmapY << " = " << direction_heatmap_value << " : " << error_mean_heatmap_value << std::endl;
+    double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
+//    double error_magnitude = agentObject->POSITION_NOISE_CM != 0 ? error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise : 0;
+//    argos::LOG << "Error magnitude: " << error_mean_heatmap_value << " + " << positionJitter << " + " << agentPersonalPositionNoise << " = " << error_magnitude << std::endl;
+//    argos::LOG << "Error direction offset: " << direction_heatmap_value << " + " << orientationJitter << " = " << error_direction_offset << std::endl;
 
     CVector2 error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
 
@@ -132,13 +145,12 @@ void PiPuckHugo::ControlStep() {
     CRadians zAngle, yAngle, xAngle;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
 //    double pi = 3.14159265359;
-    CRadians orientationOffset = (CRadians(direction_heatmap_value) - CRadians::PI) * (agentObject->ORIENTATION_NOISE_DEGREES/180) * error_mean_heatmap_value;
-    argos::LOG << "(" << CRadians(direction_heatmap_value) << " - " << CRadians::PI << ") * " << agentObject->ORIENTATION_NOISE_DEGREES/180 << " * " << error_mean_heatmap_value << " = " << orientationOffset << std::endl;
-    argos::LOG << "orientationOffset: " << orientationOffset << std::endl;
-    argos::LOG << "new heading: " << zAngle + orientationOffset + orientationNoise*error_mean_heatmap_value << std::endl;
-    agentObject->setHeading(zAngle + orientationOffset + orientationNoise*error_mean_heatmap_value);
+    CRadians orientationOffset = ToRadians(CDegrees(this->orientation_offset_heatmap[heatmapY][heatmapX]*agentObject->ORIENTATION_NOISE_DEGREES));
+//    argos::LOG << "total orientation offset: " << orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad << std::endl;
+//    argos::LOG << "new heading: " << zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad << std::endl;
+    agentObject->setHeading(zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad);
 
-// TWO DIFFERENT HEATMAPS WICH DON'T OVERLAP WILL CAUSE MANY SMALL NUMBERS. JUST MAKE A SEPARATE HEATMAP FOR ORIENTATION OFFSET MEAN.
+// TWO DIFFERENT HEATMAPS WHICH DON'T OVERLAP WILL CAUSE MANY SMALL NUMBERS. JUST MAKE A SEPARATE HEATMAP FOR ORIENTATION OFFSET MEAN.
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level
@@ -152,7 +164,7 @@ void PiPuckHugo::ControlStep() {
         auto [usedPower, duration] = agentObject->batteryManager.estimateTotalPowerUsage(agentObject.get(),
                                                                                          {traveledVector});
         agentObject->batteryManager.battery.charge -= usedPower;
-        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
+//        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
 
         previousAgentPosition = {-position.GetY(), position.GetX()};
         previousAgentOrientation = zAngle;

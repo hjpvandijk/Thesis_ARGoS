@@ -75,8 +75,10 @@ public:
 
 
     double DISTANCE_SENSOR_NOISE_CM = 5.0;
-    double ORIENTATION_NOISE_DEGREES = 10.0;
-    double POSITION_NOISE_CM = 0.0;
+    double ORIENTATION_NOISE_DEGREES = 15.0; //Maximum noise in degrees
+    double ORIENTATION_JITTER_DEGREES = 5.0;
+    double POSITION_NOISE_CM = 20.0;
+    double POSITION_JITTER_CM = 10.0;
 
 
     std::map<std::string, std::tuple<Coordinate, Coordinate, double>> agentLocations; //id: (location, frontier, timestamp)

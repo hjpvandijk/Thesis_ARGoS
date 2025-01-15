@@ -12,12 +12,14 @@ heatmap_size = (64, 64)  # Size of the heatmap grid
 # Generate a directional heatmap with smooth variations
 def generate_directional_heatmap(size):
     """Create a heatmap where each point has a smooth, correlated random direction."""
-    angles = np.random.uniform(0, 2* np.pi, size)  # Uniform distribution of initial angles
+    angles = np.random.uniform(-1, 1, size)  # Uniform distribution of initial angles
     for i in range(1, size[0]):
         angles[i, :] += 0.4 * (angles[i - 1, :] - angles[i, :])  # Smooth variation in rows
     for j in range(1, size[1]):
-        angles[:, j] += 0.4 * (angles[:, j - 1] - angles[:, j])  # Smooth variation in columns
-    return np.mod(angles, 2 * np.pi)
+        angles[:, j] += 0. * (angles[:, j - 1] - angles[:, j])  # Smooth variation in columns
+    # return np.mod(angles, 2 * np.pi)
+    return np.clip(angles, -1*np.pi, 1*np.pi)
+
 
 # Drift step with directional heatmap input
 def drift_step_with_heatmap(current_position, directions, grid_size):
@@ -34,7 +36,7 @@ def drift_step_with_heatmap(current_position, directions, grid_size):
 # Initialize variables
 directions = generate_directional_heatmap(heatmap_size)
 # Save the directions heatmap to a file
-with open('/home/hugo/Documents/Thesis_ARGoS/directions_heatmap.txt', 'w') as f:
+with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'w') as f:
     # f.write('{')
     for row in directions:
         f.write('{')
@@ -54,7 +56,7 @@ with open('/home/hugo/Documents/Thesis_ARGoS/directions_heatmap.txt', 'w') as f:
 # directions = np.array(directions)
 
 # Visualize the directional heatmap using colors to represent angles
-angle_colors = (directions / (2 * np.pi))  # Normalize angles to [0, 1] for coloring
+angle_colors = (directions)  # Normalize angles to [0, 1] for coloring
 plt.figure(figsize=(8, 8))
 plt.imshow(angle_colors, cmap='Spectral', origin='lower', extent=[0, heatmap_size[0], 0, heatmap_size[1]])
 plt.colorbar(label='Angle (normalized)')
