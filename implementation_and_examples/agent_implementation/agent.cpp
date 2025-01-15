@@ -25,8 +25,8 @@ Agent::Agent(std::string id) {
     this->messages = std::vector<std::string>(0);
 //    auto box = quadtree::Box(-5, 5, 10);
 //    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
-    this->coverageMatrix = std::make_unique<PheromoneMatrix>(10, 10, this->config.COVERAGE_MATRIX_RESOLUTION, this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S);
-    this->obstacleMatrix = std::make_unique<PheromoneMatrix>(10, 10, this->config.OBSTACLE_MATRIX_RESOLUTION, this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S);
+    this->coverageMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.COVERAGE_MATRIX_RESOLUTION, this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S);
+    this->obstacleMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.OBSTACLE_MATRIX_RESOLUTION, this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S);
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
     //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
     this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS, this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE, this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT, this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE, this->config.BATTERY_CAPACITY);

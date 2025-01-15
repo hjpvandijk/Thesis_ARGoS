@@ -8,12 +8,6 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
         m_cAgVisLF(dynamic_cast<CAgentVisionLoopFunctions &>(CSimulator::GetInstance().GetLoopFunctions())) {
 }
 
-Coordinate getRealCoordinateFromIndex(int x, int y) {
-    //Get the real world coordinates from the matrix coordinates
-    double x_real = -5 + x * 0.2;
-    double y_real = -5 + y * 0.2;
-    return {x_real + 0.2/2, y_real + 0.2/2};
-}
 
 /**
  * Draw the explored boxes of the quadtree in the world
@@ -51,15 +45,13 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     for (int i = 0; i < m_cAgVisLF.coverageMatrixWidth; i++) {
         for (int j = 0; j < m_cAgVisLF.coverageMatrixHeight; j++) {
-//            argos::LOG << "i: " << i << " j: " << j << std::endl;
             double visitedTimeS = m_cAgVisLF.coverageMatrix[i][j];
             double currentTimeS = m_cAgVisLF.globalElapsedTicks;
             double pheromone = visitedTimeS == -1 ? 0 : 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
             if (pheromone == 0) continue;
-//            argos::LOG << "visitedTimeS: " << visitedTimeS << " currentTimeS: " << currentTimeS << " pheromone: " << pheromone << std::endl;
 
 //            Coordinate cellCoordinate = m_cAgVisLF.combinedCoverageMatrix.getRealCoordinateFromIndex(i, j).FromOwnToArgos();
-            Coordinate cellCoordinate = getRealCoordinateFromIndex(i, j);
+            Coordinate cellCoordinate = m_cAgVisLF.getRealCoordinateFromIndex(i, j, m_cAgVisLF.coverageMatrixResolution);
 //            argos::LOG << "cellCoordinate: " << cellCoordinate.x << " " << cellCoordinate.y << std::endl;
 //
 //            CVector3 pos = CVector3(i, j, 0.02f);
@@ -105,7 +97,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //            argos::LOG << "visitedTimeS: " << visitedTimeS << " currentTimeS: " << currentTimeS << " pheromone: " << pheromone << std::endl;
 
 //            Coordinate cellCoordinate = m_cAgVisLF.combinedCoverageMatrix.getRealCoordinateFromIndex(i, j).FromOwnToArgos();
-            Coordinate cellCoordinate = getRealCoordinateFromIndex(i, j);
+            Coordinate cellCoordinate = m_cAgVisLF.getRealCoordinateFromIndex(i, j, m_cAgVisLF.obstacleMatrixResolution);
 //
 //            CVector3 pos = CVector3(i, j, 0.02f);
 //            CColor color = CColor::GREEN;

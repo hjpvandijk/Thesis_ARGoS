@@ -127,11 +127,11 @@ void CAgentVisionLoopFunctions::PreStep() {
 
 }
 
-Coordinate getRealCoordinateFromIndex1(int x, int y) {
+Coordinate CAgentVisionLoopFunctions::getRealCoordinateFromIndex(int x, int y, double resolution) const {
     //Get the real world coordinates from the matrix coordinates
-    double x_real = -5 + x * 0.2;
-    double y_real = -5 + y * 0.2;
-    return {x_real + 0.2/2, y_real + 0.2/2};
+    double x_real = this->real_x_min + x * resolution;
+    double y_real = this->real_y_min + y * resolution;
+    return {x_real + resolution/2, y_real + resolution/2};
 }
 
 
@@ -195,7 +195,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         for (auto regioncenter : agent->current_frontier_regions){
             std::vector<Coordinate> regionCoordinates;
             for (auto cellIndex: regioncenter) {
-                auto realCellCoordinate = getRealCoordinateFromIndex1(cellIndex.first, cellIndex.second);
+                auto realCellCoordinate = getRealCoordinateFromIndex(cellIndex.first, cellIndex.second,
+                                                                     agent->coverageMatrix->getResolution());
                 regionCoordinates.push_back(realCellCoordinate);
             }
             m_tAgentFrontierRegions[pcFB].push_back(regionCoordinates);
@@ -245,7 +246,9 @@ void CAgentVisionLoopFunctions::PostStep() {
             coverageMatrix = it.second;
             coverageMatrixWidth = coverageMatrix.size();
             coverageMatrixHeight = coverageMatrix[0].size(); // columns;
-            coverageMatrixResolution = 0.2;
+            coverageMatrixResolution = -(real_x_min * 2) / coverageMatrixWidth;
+            argos::LOG << "setting" << std::endl;
+
         }
     }
 
@@ -264,7 +267,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             obstacleMatrix = it.second;
             obstacleMatrixWidth = obstacleMatrix.size();
             obstacleMatrixHeight = obstacleMatrix[0].size(); // columns;
-            obstacleMatrixResolution = 0.2;
+            obstacleMatrixResolution = -(real_x_min * 2) / obstacleMatrixWidth;
         }
     }
 
