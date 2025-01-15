@@ -1,13 +1,16 @@
 physical:
-  robot_diameter: 0.08 # Agent diameter in meters
+    robot_diameter: 0.08 # Agent diameter in meters
+    robot_weight: 0.4 # Agent weight in kg
+    robot_wheel_radius: 0.0205 # Agent wheel radius in meters
+    robot_inter_wheel_distance: 0.0656 # Agent inter-wheel distance in meters
 battery:
   capacity: 400 # Battery capacity in mAh
-#  voltage: 7.2 # Battery voltage in volts
+  voltage: 7.2 # Battery voltage in volts
 motor:
-#  stall_current: 1.5 # Motor stall current in A
-#  stall_torque: 0.8 # Motor stall torque in Nm
-#  no_load_rpm: 250 # Max rpm of the motor with no load
-#  no_load_current: 0.16 # Motor no load current in A
+  stall_current: 1.5 # Motor stall current in A
+  stall_torque: 0.8 # Motor stall torque in Nm
+  no_load_rpm: 250 # Max rpm of the motor with no load
+  no_load_current: 0.16 # Motor no load current in A
 control:
   turn_threshold: 15 # The min angle difference in degrees between the desired and current orientation to start turning
   turn_speed_ratio: 0.1 # The ratio of the maximum speed of the motors to use when turning

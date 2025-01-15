@@ -6,7 +6,6 @@
 #define THESIS_ARGOS_AGENT_H
 
 #include "coordinate.h"
-#include "radio.h"
 #include "PheromoneMatrix.h"
 //#include "Quadtree.h"
 #include <string>
@@ -14,7 +13,9 @@
 #include <argos3/core/utility/math/quaternion.h>
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
-
+#include "agent_control/battery/BatteryManager.h"
+#include "agent_control/motion/simulation/DifferentialDrive.h"
+#include "agent_control/communication/simulation/Radio.h"
 
 
 class Agent {
@@ -23,12 +24,14 @@ public:
     Coordinate position{};
     argos::CRadians heading;
     argos::CRadians targetHeading;
-    double speed{};
-    Radio wifi{};
+    float speed{};
     static constexpr double num_sensors = 4;
     std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
 
     struct Config {
+        float ROBOT_WEIGHT;
+        float ROBOT_WHEEL_RADIUS;
+        float ROBOT_INTER_WHEEL_DISTANCE;
 
         double OBJECT_SAFETY_RADIUS;
         double AGENT_SAFETY_RADIUS;
@@ -69,6 +72,11 @@ public:
         double MATRIX_EXCHANGE_INTERVAL_S;
 
         double BATTERY_CAPACITY;
+        double BATTERY_VOLTAGE;
+        double MOTOR_STALL_CURRENT;
+        double MOTOR_STALL_TORQUE;
+        double MOTOR_NO_LOAD_RPM;
+        double MOTOR_NO_LOAD_CURRENT;
 
         double WIFI_SPEED_MBPS;
         double MAX_JITTER_MS;
@@ -82,7 +90,12 @@ public:
     std::map<std::string, int> agentMatrixBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
 
-    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
+//    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
+    DifferentialDrive differential_drive;
+
+    Radio wifi;
+
+    BatteryManager batteryManager;
 
 
     //Distance sensor
@@ -109,7 +122,7 @@ public:
 
     void setHeading(argos::CRadians new_heading);
 
-    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive);
+//    void setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive);
 
     Coordinate getPosition() const;
 
@@ -141,6 +154,7 @@ public:
 
 
     void broadcastMessage(const std::string& message) const;
+    void sendMessage(const std::string &message, const std::string& targetId);
 
     void checkMessages();
 

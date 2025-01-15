@@ -205,6 +205,8 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 
+        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
+
     }
 
 //    auto mBox = quadtree::Box(-5, 5, 10);

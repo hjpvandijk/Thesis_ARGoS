@@ -9,10 +9,6 @@ add_library(agent_implementation SHARED
         config.yaml
         coordinate.h
         coordinate.cpp
-        radio.h
-        radio.cpp
-        Quadtree.h
-        Box.h
         PheromoneMatrix.cpp
         PheromoneMatrix.h
         agent_control/sensing/simulation/distance_sensor/hc_sr04.h
@@ -25,6 +21,8 @@ add_library(agent_implementation SHARED
         agent_control/battery/MicroControllerBatteryManager.cpp
         agent_control/battery/MotionSystemBatteryManager.h
         agent_control/battery/MotionSystemBatteryManager.cpp
+        agent_control/communication/simulation/Radio.h
+        agent_control/communication/simulation/Radio.cpp
 )
 
 # Link directories (if you have specific libraries to link against)

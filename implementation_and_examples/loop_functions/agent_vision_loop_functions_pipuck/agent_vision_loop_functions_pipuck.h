@@ -38,6 +38,7 @@ public:
     int obstacleMatrixWidth;
     int obstacleMatrixHeight;
     double obstacleMatrixResolution;
+    std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
 
 public:
 

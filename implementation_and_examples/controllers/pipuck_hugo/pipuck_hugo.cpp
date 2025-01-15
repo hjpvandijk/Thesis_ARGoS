@@ -5,6 +5,7 @@
 /* 2D vector definition */
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/logging/argos_log.h>
+#include "agent_implementation/agent_control/communication/simulation/Radio.h"
 
 /****************************************/
 /****************************************/
@@ -69,7 +70,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     agentObject = std::make_shared<Agent>(Agent(this->m_strId));
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
-    agentObject->setDiffDrive(m_pcWheels);
+    agentObject->differential_drive.setActuator(m_pcWheels);
 
 
 }
@@ -85,21 +86,55 @@ void PiPuckHugo::ControlStep() {
             };
     m_pcRangeFindersSensor->Visit(visitFn);
     for(int i = 0; i < num_sensors; i++){
-        agentObject->setLastRangeReadings(i, proxReadings[i]);
+        auto sensorReading = proxReadings[i];
+        double sensorNoiseM = 0.0;
+        double sensorNoiseRange = agentObject->config.DISTANCE_SENSOR_NOISE_CM * 100;
+        // Add noise to the sensor reading, if it is not the maximum range (nothing hit)
+        if(sensorReading != agentObject->config.DISTANCE_SENSOR_PROXIMITY_RANGE) sensorNoiseM = (sensorNoiseRange - (rand() % 2 * sensorNoiseRange)) * 0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
+        agentObject->setLastRangeReadings(i, sensorReading + sensorNoiseM);
     }
 
 
 //    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
 
-    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
+//    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
 
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
+
+    // Add noise to the sensor reading
+    double positionNoiseRange = agentObject->config.POSITION_NOISE_CM / 100.0;
+    double positionNoiseX = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+    double positionNoiseY = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+
+    agentObject->setPosition(-position.GetY() + positionNoiseX, position.GetX() + positionNoiseY); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+
+
     const auto orientation = positionSensorReading.Orientation;
-    agentObject->setPosition(-position.GetY(), position.GetX()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+    argos::CRadians orientationNoiseRange = ToRadians(argos::CDegrees(agentObject->config.ORIENTATION_NOISE_DEGREES));
+    argos::CRadians orientationNoise = (orientationNoiseRange-(rand()%2*orientationNoiseRange)); ; // Random number between -orientationNoiseRange and orientationNoiseRange rad, to simulate sensor noise
     CRadians zAngle, yAngle, xAngle;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
-    agentObject->setHeading(zAngle);
+    agentObject->setHeading(zAngle + orientationNoise);
+
+    //Update agent battery level
+    if (batteryMeasureTicks % 15 == 0) {
+
+        //Get relative vector
+        float traveledPathLength = sqrt(pow(agentObject->position.x - previousAgentPosition.GetX(), 2) +
+                                        pow(agentObject->position.y - previousAgentPosition.GetY(), 2));
+        CRadians traveledAngle = zAngle - previousAgentOrientation;
+        CVector2 traveledVector = CVector2(traveledPathLength, 0).Rotate(traveledAngle);
+        auto [usedPower, duration] = agentObject->batteryManager.estimateTotalPowerUsage(agentObject.get(),
+                                                                                         {traveledVector});
+        agentObject->batteryManager.battery.charge -= usedPower;
+        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
+
+        previousAgentPosition = {-position.GetY(), position.GetX()};
+        previousAgentOrientation = zAngle;
+        batteryMeasureTicks = 0;
+    }
+    batteryMeasureTicks++;
 
 //    RLOG << "Position: " << agentObject->position.x << std::endl;
 //    RLOG << "Orientation: " << agentObject->heading << std::endl;

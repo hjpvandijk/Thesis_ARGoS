@@ -27,6 +27,15 @@ Agent::Agent(std::string id) {
 //    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     this->coverageMatrix = std::make_unique<PheromoneMatrix>(10, 10, this->config.COVERAGE_MATRIX_RESOLUTION, this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S);
     this->obstacleMatrix = std::make_unique<PheromoneMatrix>(10, 10, this->config.OBSTACLE_MATRIX_RESOLUTION, this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S);
+    //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
+    //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
+    this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS, this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE, this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT, this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE, this->config.BATTERY_CAPACITY);
+    //Set the speed to the maximum achievable speed, based on the the motor specs. TODO: Put that info in differential drive instead
+    auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
+    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->config.TURNING_SPEED_RATIO));
+    this->speed = this->differential_drive.max_speed_straight;
+    //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
+    this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
 }
 
 
@@ -43,9 +52,9 @@ void Agent::setHeading(argos::CRadians new_heading) {
     this->heading = Coordinate::ArgosHeadingToOwn(new_heading).SignedNormalize();
 }
 
-void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive) {
-    this->diffdrive = newDiffdrive;
-}
+//void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive) {
+//    this->diffdrive = newDiffdrive;
+//}
 
 
 Coordinate Agent::getPosition() const {
@@ -745,7 +754,7 @@ void Agent::doStep() {
     calculateNextPosition();
 
     //If there is no force vector, do not move
-    if (this->force_vector == argos::CVector2{0, 0}) this->diffdrive->SetLinearVelocity(0, 0);
+    if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
     else {
 
         argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
@@ -755,20 +764,18 @@ void Agent::doStep() {
 
         if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
             //Go straight
-            this->diffdrive->SetLinearVelocity(this->speed, this->speed);
+            this->differential_drive.forward();
         } else if (diffDeg > argos::CDegrees(0)) {
             //turn right
-            this->diffdrive->SetLinearVelocity(this->speed * this->config.TURNING_SPEED_RATIO, 0);
-
+            this->differential_drive.turnRight();
         } else {
             //turn left
-            this->diffdrive->SetLinearVelocity(0, this->speed * this->config.TURNING_SPEED_RATIO);
-
+            this->differential_drive.turnLeft();
         }
     }
 
 
-    elapsed_ticks++;
+    this->elapsed_ticks++;
 }
 
 
@@ -778,10 +785,19 @@ void Agent::doStep() {
  */
 void Agent::broadcastMessage(const std::string &message) const {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
-    auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
-    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
-    this->wifi.broadcast_message(cMessage);
+    this->wifi.broadcast_message(messagePrependedWithId);
 }
+
+/**
+ * Sends a message to an agents
+ * @param message
+ */
+void Agent::sendMessage(const std::string &message, const std::string& targetId) {
+    std::string messagePrependedWithId = "[" + getId() + "]" + message;
+    this->wifi.send_message(messagePrependedWithId, targetId);
+}
+
+
 
 /**
  * Check for messages from other agents
@@ -789,8 +805,18 @@ void Agent::broadcastMessage(const std::string &message) const {
  */
 void Agent::checkMessages() {
     //Read messages from other agents
-    this->wifi.receive_messages(this->messages);
+    this->wifi.receive_messages(this->messages, this->elapsed_ticks/this->ticks_per_second);
     if (!this->messages.empty()) parseMessages();
+
+}
+
+/**
+ * Get the target id from a message
+ * @param message
+ * @return
+ */
+std::string getTargetIdFromMessage(const std::string &message) {
+    return message.substr(message.find('<')+1, message.find('>') - 1 - message.find('<'));
 
 }
 
@@ -800,7 +826,7 @@ void Agent::checkMessages() {
  * @return
  */
 std::string getIdFromMessage(const std::string &message) {
-    return message.substr(1, message.find(']') - 1);
+    return message.substr(message.find('[')+1, message.find(']') - 1 - message.find('['));
 
 }
 
@@ -922,12 +948,14 @@ void Agent::parseMessages() {
 
 }
 
+
 Radio Agent::getWifi() const {
     return this->wifi;
 }
 
 void Agent::setWifi(Radio newWifi) {
     this->wifi = newWifi;
+    this->wifi.config(this->config.WIFI_SPEED_MBPS, this->config.MAX_JITTER_MS, this->config.MESSAGE_LOSS_PROBABILITY);
 
 }
 
@@ -938,9 +966,9 @@ std::vector<std::string> Agent::getMessages() {
 void Agent::loadConfig() {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
-//    this->config.ROBOT_WEIGHT = config_yaml["physical"]["robot_weight"].as<float>();
-//    this->config.ROBOT_WHEEL_RADIUS = config_yaml["physical"]["robot_wheel_radius"].as<float>();
-//    this->config.ROBOT_INTER_WHEEL_DISTANCE = config_yaml["physical"]["robot_inter_wheel_distance"].as<float>();
+    this->config.ROBOT_WEIGHT = config_yaml["physical"]["robot_weight"].as<float>();
+    this->config.ROBOT_WHEEL_RADIUS = config_yaml["physical"]["robot_wheel_radius"].as<float>();
+    this->config.ROBOT_INTER_WHEEL_DISTANCE = config_yaml["physical"]["robot_inter_wheel_distance"].as<float>();
 //
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
@@ -1000,12 +1028,12 @@ void Agent::loadConfig() {
 //    this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
 //
     this->config.BATTERY_CAPACITY = config_yaml["battery"]["capacity"].as<double>();
-//    this->config.BATTERY_VOLTAGE = config_yaml["battery"]["voltage"].as<double>();
+    this->config.BATTERY_VOLTAGE = config_yaml["battery"]["voltage"].as<double>();
 //
-//    this->config.MOTOR_STALL_CURRENT = config_yaml["motor"]["stall_current"].as<double>();
-//    this->config.MOTOR_STALL_TORQUE = config_yaml["motor"]["stall_torque"].as<double>();
-//    this->config.MOTOR_NO_LOAD_RPM = config_yaml["motor"]["no_load_rpm"].as<double>();
-//    this->config.MOTOR_NO_LOAD_CURRENT = config_yaml["motor"]["no_load_current"].as<double>();
+    this->config.MOTOR_STALL_CURRENT = config_yaml["motor"]["stall_current"].as<double>();
+    this->config.MOTOR_STALL_TORQUE = config_yaml["motor"]["stall_torque"].as<double>();
+    this->config.MOTOR_NO_LOAD_RPM = config_yaml["motor"]["no_load_rpm"].as<double>();
+    this->config.MOTOR_NO_LOAD_CURRENT = config_yaml["motor"]["no_load_current"].as<double>();
 //
     this->config.WIFI_SPEED_MBPS = config_yaml["communication"]["wifi_speed"].as<double>();
     this->config.MAX_JITTER_MS = config_yaml["communication"]["max_jitter"].as<double>();
