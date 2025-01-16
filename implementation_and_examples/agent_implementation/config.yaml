@@ -27,6 +27,9 @@ communication:
   agent_info_relevant: 10 # The time in seconds received information from another agent is relevant in the agent's decision making
   quadtree_exchange_interval: 5 # The time in seconds between quadtree exchanges
   time_sync_interval: 10 # The time in seconds between time synchronization
+  wifi_speed: 10 # The wifi speed in Mbps
+  max_jitter: 10 # The maximum jitter in milliseconds
+  message_loss_probability: 0.05 # The probability of a message being lost
 forces:
   frontier_search_radius: 10.0 # The radius in meters around the agent to search for frontiers
   max_frontier_cells: 200 # The maximum number of queried frontier cells
