@@ -590,19 +590,9 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
             argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
             //Erase all angles 90 degrees to the left and right of the sensor
             //12.5% to the left
-            argos::CDegrees minAngle = argos::CDegrees(int(ToDegrees(sensor_rotation - argos::CRadians::PI_OVER_FOUR).GetValue())).SignedNormalize();
-            argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(sensor_rotation + argos::CRadians::PI_OVER_FOUR).GetValue())).SignedNormalize();
-
-
-            auto d1 = NormalizedDifference(argos::CDegrees(-100), argos::CDegrees(-145));
-            auto d2 = NormalizedDifference(argos::CDegrees(170), argos::CDegrees(-145));
-            auto d3 = NormalizedDifference(argos::CDegrees(170), argos::CDegrees(125));
-            auto d4 = NormalizedDifference(argos::CDegrees(80), argos::CDegrees(125));
-            auto d5 = NormalizedDifference(argos::CDegrees(80), argos::CDegrees(35));
-            auto d6 = NormalizedDifference(argos::CDegrees(-10), argos::CDegrees(35));
-            auto d7 = NormalizedDifference(argos::CDegrees(-10), argos::CDegrees(-55));
-            auto d8 = NormalizedDifference(argos::CDegrees(-100), argos::CDegrees(-55));
-
+            argos::CDegrees minAngle = argos::CDegrees(int(ToDegrees(sensor_rotation - argos::CRadians::PI_OVER_SIX).GetValue())).SignedNormalize();
+            argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(sensor_rotation + argos::CRadians::PI_OVER_SIX).GetValue())).SignedNormalize();
+            
             if (maxAngle.GetValue() < minAngle.GetValue()) {
                 argos::CDegrees temp = minAngle;
                 minAngle = maxAngle;
@@ -614,12 +604,12 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
 
             if (diffMinSensor >= argos::CRadians(0) && diffMaxSensor <= argos::CRadians(0)) {
-                for (int a = 0; a < 90; a++) {
+                for (int a = 0; a < 60; a++) {
                     auto angle = (minAngle - argos::CDegrees(a)).SignedNormalize();
                     freeAngles.erase(argos::CDegrees(angle));
                 }
             } else if (diffMinSensor <= argos::CRadians(0) && diffMaxSensor >= argos::CRadians(0)) {
-                for (int a = 0; a < 90; a++) {
+                for (int a = 0; a < 60; a++) {
                     auto angle = (minAngle + argos::CDegrees(a)).SignedNormalize();
                     freeAngles.erase(argos::CDegrees(angle));
                 }
