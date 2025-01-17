@@ -136,7 +136,8 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
     for (int s = 0; s < nSteps; s++) {
         if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
             double p = (this->config.P_FREE*Psensor - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
-            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second, elapsed_ticks/ticks_per_second);
+            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+            this->quadtree->add(Coordinate{x + 0.0000000001, y+0.0000000001}, p, elapsed_ticks / ticks_per_second, elapsed_ticks/ticks_per_second);
         } else {
             break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
         }
@@ -180,7 +181,8 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
         if (objectBox.size > 0) {
             if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
                 double p = (this->config.P_FREE - 0.5) * (1 - double(s) / double(nSteps)) + 0.5; //Increasingly more uncertain the further away from the agent
-                this->quadtree->add(Coordinate{x, y}, p * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+                //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+                this->quadtree->add(Coordinate{x + 0.0000000001, y+0.0000000001}, p * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
             } else {
                 break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
             }
@@ -207,7 +209,8 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps; s++) {
-        this->quadtree->add(Coordinate{x, y}, this->config.P_FREE * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+        this->quadtree->add(Coordinate{x + 0.0000000001, y+0.0000000001}, this->config.P_FREE * Psensor, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -230,7 +233,8 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double stepY = dy / nSteps;
 
     for (int s = 0; s < nSteps-1; s++) {
-        this->quadtree->add(Coordinate{x, y}, this->config.P_OCCUPIED, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+        this->quadtree->add(Coordinate{x + 0.0000000001, y+0.0000000001}, this->config.P_OCCUPIED, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         x += stepX;
         y += stepY;
     }
@@ -268,7 +272,8 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
  * @param objectCoordinate
  */
 quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) const {
-    quadtree::Box objectBox = this->quadtree->add(objectCoordinate, this->config.P_OCCUPIED / Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
+    //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+    quadtree::Box objectBox = this->quadtree->add(Coordinate{objectCoordinate.x + 0.0000000001, objectCoordinate.y+0.0000000001}, this->config.P_OCCUPIED / Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
                                                   elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
     if (objectBox.getSize() != 0) // If the box is not the zero (not added)
