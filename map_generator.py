@@ -3,8 +3,8 @@ from tkinter import simpledialog, filedialog
 from PIL import Image, ImageTk
 import math
 
-canvas_width = 1400
-canvas_height = 1400
+canvas_width = 1934
+canvas_height = 1064
 meter_pixels = 100
 
 class DrawApp:
@@ -34,7 +34,9 @@ class DrawApp:
         self.canvas.bind("<Button-1>", self.on_button_press)
         self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
-        self.canvas.bind("<MouseWheel>", self.on_mouse_wheel)
+        # self.canvas.bind("<MouseWheel>", self.on_mouse_wheel)
+        # self.canvas.bind("<Button-4>", self.zoom_in)
+        # self.canvas.bind("<Button-5>", self.zoom_out)
 
         self.image = None
         self.image_id = None
@@ -42,9 +44,11 @@ class DrawApp:
         self.image_x = 0
         self.image_y = 0
 
+        self.load_image()
+
         # Add a button to load the background image
-        self.load_image_button = tk.Button(root, text="Load Background Image", command=self.load_image)
-        self.load_image_button.pack()
+        # self.load_image_button = tk.Button(root, text="Load Background Image", command=self.load_image)
+        # self.load_image_button.pack()
 
         # Add a scale to adjust the image size
         self.scale = tk.Scale(root, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, label="Scale Image", command=self.scale_image)
@@ -81,7 +85,7 @@ class DrawApp:
 
     def load_image(self):
         # file_path = filedialog.askopenfilename()
-        file_path = "dunder_mifflin.png"
+        file_path = "floorplan.jpg"
         if file_path:
             self.original_image = Image.open(file_path)
             self.display_image(1.0)
@@ -214,15 +218,18 @@ class DrawApp:
 
     def get_xml(self):
         return "\n".join(self.boxes)
-
-    def on_mouse_wheel(self, event):
-        print("Mouse wheel event")
-        if event.delta > 0:
-            self.scale_factor *= 1.1
-        else:
-            self.scale_factor /= 1.1
-        self.canvas.scale("all", 0, 0, self.scale_factor, self.scale_factor)
+    
+    def zoom_in(self, event):
+        self.scale_factor *= 1.1
+        self.canvas.scale("all", event.x, event.y, 1.1, 1.1)
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.display_image(self.scale_factor)
+
+    def zoom_out(self, event):
+        self.scale_factor *= 1/1.1
+        self.canvas.scale("all", event.x, event.y, 1/1.1, 1/1.1)
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.display_image(self.scale_factor)
 
 def main():
     root = tk.Tk()
