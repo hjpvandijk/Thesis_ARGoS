@@ -115,18 +115,18 @@ void PiPuckHugo::ControlStep() {
 
     agentObject->setPosition(-position.GetY() + positionNoiseX, position.GetX() + positionNoiseY); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
 
-    double agentPersonalOrientationNoise = agentObject->ORIENTATION_NOISE_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->ORIENTATION_NOISE_DEGREES/5*2) - agentObject->ORIENTATION_NOISE_DEGREES/5 : 0;
-    double agentPersonalPositionNoise =  agentObject->POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->POSITION_NOISE_CM/5*2) - agentObject->POSITION_NOISE_CM/5) / 100.0 : 0;
+    double agentPersonalOrientationNoise = agentObject->config.ORIENTATION_NOISE_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->config.ORIENTATION_NOISE_DEGREES/5*2) - agentObject->config.ORIENTATION_NOISE_DEGREES/5 : 0;
+    double agentPersonalPositionNoise =  agentObject->config.POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->config.POSITION_NOISE_CM/5*2) - agentObject->config.POSITION_NOISE_CM/5) / 100.0 : 0;
 
     const auto orientation = positionSensorReading.Orientation;
     argos::CRadians orientationNoiseRange = ToRadians(argos::CDegrees(agentObject->config.ORIENTATION_NOISE_DEGREES));
     argos::CRadians orientationNoise = (orientationNoiseRange-(rand()%2*orientationNoiseRange)); ; // Random number between -orientationNoiseRange and orientationNoiseRange rad, to simulate sensor noise
-    double orientationJitterRange = agentObject->ORIENTATION_JITTER_DEGREES;
+    double orientationJitterRange = agentObject->config.ORIENTATION_JITTER_DEGREES;
     argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
     argos::CRadians agentPersonalOrientationNoiseRad = ToRadians(CDegrees(agentPersonalOrientationNoise));
 
     // Add noise to the sensor reading
-    double positionJitterRange = agentObject->POSITION_JITTER_CM / 100.0;
+    double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
     double positionJitter= (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
 
     int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
@@ -134,13 +134,19 @@ void PiPuckHugo::ControlStep() {
 //    argos::LOG << "Heatmap size " << heatmap_size << std::endl;
 //    argos::LOG << "floor((" << -position.GetY() << " + " << this->map_size/2 << ")/(" << this->map_size/heatmap_size << ")) = " << heatmapX << std::endl;
     int heatmapY = std::floor((position.GetX() + this->map_size/2)/(this->map_size/heatmap_size));
-    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX] * ToRadians(CDegrees(agentObject->ORIENTATION_NOISE_DEGREES)).GetValue();
+    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX] + agentPersonalOrientationNoiseRad.GetValue();
+    argos::LOG << "heatmapX: " << heatmapX << ", heatmapY: " << heatmapY << std::endl;
+    argos::LOG << "DIRECTION" << std::endl;
+    argos::LOG << this->directions_heatmap[heatmapY][heatmapX] << " * " << ToRadians(CDegrees(360)).GetValue() << " + " << agentPersonalOrientationNoiseRad.GetValue() << " = " << direction_heatmap_value << std::endl;
     CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter;
-    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX];
+    argos::LOG << direction_heatmap_value << " + " << orientationJitter << " = " << error_direction_offset << std::endl;
+    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX] * agentObject->config.POSITION_NOISE_CM / 100.0;
 //    argos::LOG << "Location: " << -position.GetY() << ", " << position.GetX() << " : " << heatmapX << ", " << heatmapY << " = " << direction_heatmap_value << " : " << error_mean_heatmap_value << std::endl;
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
 //    double error_magnitude = agentObject->POSITION_NOISE_CM != 0 ? error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise : 0;
-//    argos::LOG << "Error magnitude: " << error_mean_heatmap_value << " + " << positionJitter << " + " << agentPersonalPositionNoise << " = " << error_magnitude << std::endl;
+    argos::LOG << "MAGNITUDE" << std::endl;
+
+    argos::LOG << "Error magnitude: " << this->error_mean_heatmap[heatmapY][heatmapX] << "*" << agentObject->config.POSITION_NOISE_CM / 100.0 << " + " << positionJitter << " + " << agentPersonalPositionNoise << " = " << error_magnitude << std::endl;
 //    argos::LOG << "Error direction offset: " << direction_heatmap_value << " + " << orientationJitter << " = " << error_direction_offset << std::endl;
 
     CVector2 error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
@@ -150,7 +156,7 @@ void PiPuckHugo::ControlStep() {
     CRadians zAngle, yAngle, xAngle;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
 //    double pi = 3.14159265359;
-    CRadians orientationOffset = ToRadians(CDegrees(this->orientation_offset_heatmap[heatmapY][heatmapX]*agentObject->ORIENTATION_NOISE_DEGREES));
+    CRadians orientationOffset = ToRadians(CDegrees(this->orientation_offset_heatmap[heatmapY][heatmapX]*agentObject->config.ORIENTATION_NOISE_DEGREES));
 //    argos::LOG << "total orientation offset: " << orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad << std::endl;
 //    argos::LOG << "new heading: " << zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad << std::endl;
     agentObject->setHeading(zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad);

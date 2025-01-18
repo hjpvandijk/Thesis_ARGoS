@@ -17,7 +17,7 @@ time_steps = 100  # Number of time steps for the simulation
 initial_position = np.array([0, 0])  # Starting position (x, y)
 average_error = 0.5  # Average drift error per time step (units)
 max_error = 1.0  # Maximum drift error per time step (units)
-heatmap_size = (64, 64)  # Size of the heatmap grid
+heatmap_size = (512, 512)  # Size of the heatmap grid
 
 def reorder_for_prominent_mountains_and_valleys(array):
     """Reorder values in a 2D array to create more recognizable mountains and valleys with random distribution."""
@@ -64,7 +64,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 
-def generate_heatmap(size, num_spots=60, min_spot_size = 1, max_spot_size=3, max_amplitude=1, min_amplitude=0):
+def generate_heatmap(size, num_spots=30, min_spot_size = 8, max_spot_size=50, max_amplitude=1, min_amplitude=0):
     # Create a random array to store the heatmap values
     heatmap = np.zeros(size)
 
@@ -187,25 +187,25 @@ def generate_error_heatmap(size):
 errors = generate_error_heatmap(heatmap_size)
 
 
-# # Save the directions heatmap to a file
-with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'w') as f:
-    # f.write('{')
-    for row in errors:
-        f.write('{')
-        f.write(', '.join(map(str, row)))
-        f.write('},\n')
-    # f.write('}\n')
-# positions = [initial_position]
+# # # Save the directions heatmap to a file
+# with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'w') as f:
+#     # f.write('{')
+#     for row in errors:
+#         f.write('{')
+#         f.write(', '.join(map(str, row)))
+#         f.write('},\n')
+#     # f.write('}\n')
+# # positions = [initial_position]
 
 # Read the directions heatmap from a file
-# errors = []
-# with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'r') as f:
-#     lines = f.readlines()
-#     for line in lines:
-#         if line.strip().startswith('{') and line.strip().endswith('},'):
-#             row = line.strip()[1:-2].split(', ')
-#             errors.append([float(val) for val in row])
-# errors = np.array(errors)
+errors = []
+with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'r') as f:
+    lines = f.readlines()
+    for line in lines:
+        if line.strip().startswith('{') and line.strip().endswith('},'):
+            row = line.strip()[1:-2].split(', ')
+            errors.append([float(val) for val in row])
+errors = np.array(errors)
 
 # Visualize the directional heatmap using colors to represent angles
 angle_colors = (errors / (max_error-min_error))  # Normalize angles to [0, 1] for coloring

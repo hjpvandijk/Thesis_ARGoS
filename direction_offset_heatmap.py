@@ -7,18 +7,38 @@ time_steps = 100  # Number of time steps for the simulation
 initial_position = np.array([0, 0])  # Starting position (x, y)
 average_error = 0.5  # Average drift error per time step (units)
 max_error = 1.0  # Maximum drift error per time step (units)
-heatmap_size = (64, 64)  # Size of the heatmap grid
+heatmap_size = (512, 512)  # Size of the heatmap grid
 
-# Generate a directional heatmap with smooth variations
-def generate_directional_heatmap(size):
-    """Create a heatmap where each point has a smooth, correlated random direction."""
-    angles = np.random.uniform(-1, 1, size)  # Uniform distribution of initial angles
-    for i in range(1, size[0]):
-        angles[i, :] += 0.4 * (angles[i - 1, :] - angles[i, :])  # Smooth variation in rows
-    for j in range(1, size[1]):
-        angles[:, j] += 0. * (angles[:, j - 1] - angles[:, j])  # Smooth variation in columns
-    # return np.mod(angles, 2 * np.pi)
-    return np.clip(angles, -1*np.pi, 1*np.pi)
+def generate_heatmap(size, num_spots=10, min_spot_size = 30, max_spot_size=100, max_amplitude=2*np.pi, min_amplitude=0):
+    # Create a random array to store the heatmap values
+    heatmap = np.zeros(size)
+
+    # Generate random heat and cold spots
+    for _ in range(num_spots):
+        # Randomly select spot characteristics
+        spot_center = (np.random.randint(0, size[0]), np.random.randint(0, size[1]))
+        spot_size = np.random.randint(min_spot_size, max_spot_size)
+        spot_amplitude = np.random.uniform(min_amplitude, max_amplitude)
+
+        # Randomly stretch the Gaussian in different directions (elliptical distortion)
+        stretch_x = np.random.uniform(1, 5)  # Stretch factor in X direction
+        stretch_y = np.random.uniform(1, 5)  # Stretch factor in Y direction
+
+        # Generate the distorted spot using a Gaussian distribution
+        Y, X = np.ogrid[:size[0], :size[1]]
+        distance = ((X - spot_center[1]) / stretch_x)**2 + ((Y - spot_center[0]) / stretch_y)**2
+        spot = spot_amplitude * np.exp(-distance / (2 * (spot_size**2)))
+
+        # Add the spot to the heatmap (making sure to clip the values to avoid overflow)
+        heatmap += np.clip(spot, min_amplitude, max_amplitude)
+
+    # Apply a lower amount of smoothing to preserve more peaks/valleys
+    # heatmap = gaussian_filter(heatmap, sigma=1)  # lower sigma value
+
+    # Normalize the heatmap to have values between 0 and 1
+    # heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
+    return np.mod(heatmap, 2*np.pi)
+
 
 
 # Drift step with directional heatmap input
@@ -33,9 +53,9 @@ def drift_step_with_heatmap(current_position, directions, grid_size):
 
     return next_position
 
-# Initialize variables
-directions = generate_directional_heatmap(heatmap_size)
-# Save the directions heatmap to a file
+# # # Initialize variables
+directions = generate_heatmap(heatmap_size)
+# # Save the directions heatmap to a file
 with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'w') as f:
     # f.write('{')
     for row in directions:
@@ -47,7 +67,7 @@ with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'w'
 
 # # Read the directions heatmap from a file
 # directions = []
-# with open('/home/hugo/Documents/Thesis_ARGoS/directions_heatmap.txt', 'r') as f:
+# with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'r') as f:
 #     lines = f.readlines()
 #     for line in lines:
 #         if line.strip().startswith('{') and line.strip().endswith('},'):
@@ -58,7 +78,7 @@ with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'w'
 # Visualize the directional heatmap using colors to represent angles
 angle_colors = (directions)  # Normalize angles to [0, 1] for coloring
 plt.figure(figsize=(8, 8))
-plt.imshow(angle_colors, cmap='Spectral', origin='lower', extent=[0, heatmap_size[0], 0, heatmap_size[1]])
+plt.imshow(angle_colors, cmap='twilight', origin='lower', extent=[0, heatmap_size[0], 0, heatmap_size[1]])
 plt.colorbar(label='Angle (normalized)')
 plt.title('Directional Heatmap (Color-encoded)')
 plt.xlabel('X Direction')
@@ -66,10 +86,10 @@ plt.ylabel('Y Direction')
 plt.grid(False)
 
 # Add arrows representing directions
-x_indices, y_indices = np.meshgrid(np.arange(heatmap_size[0]), np.arange(heatmap_size[1]))
-arrows_x = np.cos(directions)
-arrows_y = np.sin(directions)
-plt.quiver(x_indices, y_indices, arrows_x, arrows_y, scale=30, color='black', alpha=0.6)
+# x_indices, y_indices = np.meshgrid(np.arange(heatmap_size[0]), np.arange(heatmap_size[1]))
+# arrows_x = np.cos(directions)
+# arrows_y = np.sin(directions)
+# plt.quiver(x_indices, y_indices, arrows_x, arrows_y, scale=30, color='black', alpha=0.6)
 plt.show()
 
 # Fit a smooth equation to approximate the heatmap
