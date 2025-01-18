@@ -54,26 +54,26 @@ def drift_step_with_heatmap(current_position, directions, grid_size):
     return next_position
 
 # # # Initialize variables
-directions = generate_heatmap(heatmap_size)
-# # Save the directions heatmap to a file
-with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'w') as f:
-    # f.write('{')
-    for row in directions:
-        f.write('{')
-        f.write(', '.join(map(str, row)))
-        f.write('},\n')
-    # f.write('}\n')
-# positions = [initial_position]
+# directions = generate_heatmap(heatmap_size)
+# # # Save the directions heatmap to a file
+# with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'w') as f:
+#     # f.write('{')
+#     for row in directions:
+#         f.write('{')
+#         f.write(', '.join(map(str, row)))
+#         f.write('},\n')
+#     # f.write('}\n')
+# # positions = [initial_position]
 
 # # Read the directions heatmap from a file
-# directions = []
-# with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'r') as f:
-#     lines = f.readlines()
-#     for line in lines:
-#         if line.strip().startswith('{') and line.strip().endswith('},'):
-#             row = line.strip()[1:-2].split(', ')
-#             directions.append([float(val) for val in row])
-# directions = np.array(directions)
+directions = []
+with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'r') as f:
+    lines = f.readlines()
+    for line in lines:
+        if line.strip().startswith('{') and line.strip().endswith('},'):
+            row = line.strip()[1:-2].split(', ')
+            directions.append([float(val) for val in row])
+directions = np.array(directions)
 
 # Visualize the directional heatmap using colors to represent angles
 angle_colors = (directions)  # Normalize angles to [0, 1] for coloring

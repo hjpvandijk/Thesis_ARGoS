@@ -101,67 +101,53 @@ void PiPuckHugo::ControlStep() {
     }
 
 
-//    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
-
-//    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
-
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
 
-    // Add noise to the sensor reading
-    double positionNoiseRange = agentObject->config.POSITION_NOISE_CM / 100.0;
-    double positionNoiseX = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
-    double positionNoiseY = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+    // Simulate sensor readings with noise
 
-    agentObject->setPosition(-position.GetY() + positionNoiseX, position.GetX() + positionNoiseY); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
 
+    //Orientation noise
+    //Agent-dependent noise
     double agentPersonalOrientationNoise = agentObject->config.ORIENTATION_NOISE_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->config.ORIENTATION_NOISE_DEGREES/5*2) - agentObject->config.ORIENTATION_NOISE_DEGREES/5 : 0;
-    double agentPersonalPositionNoise =  agentObject->config.POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->config.POSITION_NOISE_CM/5*2) - agentObject->config.POSITION_NOISE_CM/5) / 100.0 : 0;
-
-    const auto orientation = positionSensorReading.Orientation;
-    argos::CRadians orientationNoiseRange = ToRadians(argos::CDegrees(agentObject->config.ORIENTATION_NOISE_DEGREES));
-    argos::CRadians orientationNoise = (orientationNoiseRange-(rand()%2*orientationNoiseRange)); ; // Random number between -orientationNoiseRange and orientationNoiseRange rad, to simulate sensor noise
-    double orientationJitterRange = agentObject->config.ORIENTATION_JITTER_DEGREES;
-    argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
     argos::CRadians agentPersonalOrientationNoiseRad = ToRadians(CDegrees(agentPersonalOrientationNoise));
 
-    // Add noise to the sensor reading
-    double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
-    double positionJitter= (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
+    // Orientation jitter
+    double orientationJitterRange = agentObject->config.ORIENTATION_JITTER_DEGREES;
+    argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
 
+    //Position noise
+    //Agent-dependent noise
+    double agentPersonalPositionNoise =  agentObject->config.POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->config.POSITION_NOISE_CM/5*2) - agentObject->config.POSITION_NOISE_CM/5) / 100.0 : 0;
+    //Position jitter
+    double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
+    double positionJitter = (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
+
+    //Get values from heatmap, and convert them into the correct range
     int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
     int heatmapX = std::floor((-position.GetY() + this->map_size/2)/(this->map_size/heatmap_size));
-//    argos::LOG << "Heatmap size " << heatmap_size << std::endl;
-//    argos::LOG << "floor((" << -position.GetY() << " + " << this->map_size/2 << ")/(" << this->map_size/heatmap_size << ")) = " << heatmapX << std::endl;
     int heatmapY = std::floor((position.GetX() + this->map_size/2)/(this->map_size/heatmap_size));
-    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX] + agentPersonalOrientationNoiseRad.GetValue();
-    argos::LOG << "heatmapX: " << heatmapX << ", heatmapY: " << heatmapY << std::endl;
-    argos::LOG << "DIRECTION" << std::endl;
-    argos::LOG << this->directions_heatmap[heatmapY][heatmapX] << " * " << ToRadians(CDegrees(360)).GetValue() << " + " << agentPersonalOrientationNoiseRad.GetValue() << " = " << direction_heatmap_value << std::endl;
-    CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter;
-    argos::LOG << direction_heatmap_value << " + " << orientationJitter << " = " << error_direction_offset << std::endl;
+
+    //Simulate position estimation offset
+    //Direction, including jitter and agent-dependent noise
+    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX];
+    CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
+    //Magnitude, including jitter and agent-dependent noise
     double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX] * agentObject->config.POSITION_NOISE_CM / 100.0;
-//    argos::LOG << "Location: " << -position.GetY() << ", " << position.GetX() << " : " << heatmapX << ", " << heatmapY << " = " << direction_heatmap_value << " : " << error_mean_heatmap_value << std::endl;
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
-//    double error_magnitude = agentObject->POSITION_NOISE_CM != 0 ? error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise : 0;
-    argos::LOG << "MAGNITUDE" << std::endl;
 
-    argos::LOG << "Error magnitude: " << this->error_mean_heatmap[heatmapY][heatmapX] << "*" << agentObject->config.POSITION_NOISE_CM / 100.0 << " + " << positionJitter << " + " << agentPersonalPositionNoise << " = " << error_magnitude << std::endl;
-//    argos::LOG << "Error direction offset: " << direction_heatmap_value << " + " << orientationJitter << " = " << error_direction_offset << std::endl;
+    CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
+    agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
 
-    CVector2 error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
-
-    agentObject->setPosition(-position.GetY() + error_vector.GetX(), position.GetX() + error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+    //Simulate orientation (IMU) estimation offset
+    double orientation_offset_heatmap_value = this->orientation_offset_heatmap[heatmapY][heatmapX]*agentObject->config.ORIENTATION_NOISE_DEGREES;
 
     CRadians zAngle, yAngle, xAngle;
+    const auto orientation = positionSensorReading.Orientation;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
-//    double pi = 3.14159265359;
-    CRadians orientationOffset = ToRadians(CDegrees(this->orientation_offset_heatmap[heatmapY][heatmapX]*agentObject->config.ORIENTATION_NOISE_DEGREES));
-//    argos::LOG << "total orientation offset: " << orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad << std::endl;
-//    argos::LOG << "new heading: " << zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad << std::endl;
+    CRadians orientationOffset = ToRadians(CDegrees(orientation_offset_heatmap_value));
     agentObject->setHeading(zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad);
 
-// TWO DIFFERENT HEATMAPS WHICH DON'T OVERLAP WILL CAUSE MANY SMALL NUMBERS. JUST MAKE A SEPARATE HEATMAP FOR ORIENTATION OFFSET MEAN.
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level

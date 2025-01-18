@@ -19,50 +19,6 @@ average_error = 0.5  # Average drift error per time step (units)
 max_error = 1.0  # Maximum drift error per time step (units)
 heatmap_size = (512, 512)  # Size of the heatmap grid
 
-def reorder_for_prominent_mountains_and_valleys(array):
-    """Reorder values in a 2D array to create more recognizable mountains and valleys with random distribution."""
-    rows, cols = array.shape
-    pattern = np.zeros((rows, cols))
-    
-    # Vary frequency and amplitude randomly for different areas
-    for i in range(rows):
-        for j in range(cols):
-            # Randomly select varying frequencies and amplitudes
-            freq1 = np.random.uniform(2, 5) if (i + j) % 2 == 0 else np.random.uniform(5, 8)
-            amp1 = np.random.uniform(1.0, 3.0)
-            freq2 = np.random.uniform(3, 6)
-            amp2 = np.random.uniform(0.8, 2.5)
-            local_noise = np.random.uniform(-1, 1)
-            
-            # Calculate position-based wave patterns
-            wave1 = amp1 * np.sin(freq1 * np.pi * i / rows)
-            wave2 = amp2 * np.cos(freq2 * np.pi * j / cols)
-            
-            # Combine waves with added local noise
-            pattern[i, j] = wave1 + wave2 + 0.5 * local_noise
-    
-    # Flatten the pattern and the array for sorting
-    pattern_flattened = pattern.flatten()
-    array_flattened = array.flatten()
-    
-    # Get indices to sort the pattern
-    pattern_sort_indices = np.argsort(pattern_flattened)
-    
-    # Sort the array values
-    sorted_values = np.sort(array_flattened)
-    
-    # Map sorted values to the pattern order
-    result_flattened = np.zeros_like(array_flattened)
-    result_flattened[pattern_sort_indices] = sorted_values
-    
-    # Reshape back to 2D
-    result = result_flattened.reshape(rows, cols)
-    
-    return result
-
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.ndimage import gaussian_filter
 
 def generate_heatmap(size, num_spots=30, min_spot_size = 8, max_spot_size=50, max_amplitude=1, min_amplitude=0):
     # Create a random array to store the heatmap values
@@ -184,7 +140,10 @@ def generate_error_heatmap(size):
 
 
 # Initialize variables
-errors = generate_error_heatmap(heatmap_size)
+# errors = generate_error_heatmap(heatmap_size)
+
+# #normalize errors
+# errors = (errors - np.min(errors)) / (np.max(errors) - np.min(errors))
 
 
 # # # Save the directions heatmap to a file

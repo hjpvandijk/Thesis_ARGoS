@@ -50,8 +50,8 @@ forces:
     reach_duration_weight: 1 # The weight of the time to reach the frontier in the fitness function
     pheromone_weight: 500 # The weight of the pheromone value in the fitness function
 confidence:
-  p_free: 0.6 # The probability of an observed free cell being free
-  p_occupied: 0.3 # The probability of an observed occupied cell being not free
+  p_free: 0.51 # The probability of an observed free cell being free
+  p_occupied: 0.46 # The probability of an observed occupied cell being not free
   alpha_receive: 0.1 # The factor with which we doubt a received confidence value
   p_free_threshold: 0.6 # The threshold for a cell to be considered free
   p_occupied_threshold: 0.4 # The threshold for a cell to be considered occupied
@@ -62,9 +62,9 @@ quadtree:
   merge_max_visited_time_difference: 5 # The maximum time difference in seconds between two quadtree nodes to merge them
   merge_max_confidence_diff: 0.05 # The maximum confidence difference between two quadtree nodes to merge them
 sensors:
-  position_noise: 50 # Position noise in centimeters (uniform)
+  position_noise: 103.3 # Position noise in centimeters (uniform)
   position_jitter: 10 # Position jitter in centimeters (uniform)
-  orientation_noise: 15 # Orientation sensor noise in degrees (uniform)
-  orientation_jitter: 5 # Orientation sensor jitter in degrees (uniform)
+  orientation_noise: 8 # Orientation sensor noise in degrees (uniform)
+  orientation_jitter: 2 # Orientation sensor jitter in degrees (uniform)
   distance_sensor_noise: 5 # Distance sensor noise in centimeters (uniform)
   distance_sensor_range: 2 # Distance sensor range in meters
