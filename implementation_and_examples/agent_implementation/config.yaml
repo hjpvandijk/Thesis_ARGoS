@@ -18,11 +18,12 @@ control:
   object_safety_radius: 0.1 # The safety radius around an object in meters
   agent_safety_radius_margin: 0.1 # The margin around the agent's safety radius in meters
 communication:
+  agent_info_relevant: 10 # The time in seconds received information from another agent is relevant in the agent's decision making, used for time synchronization
   wifi_speed: 10 # The speed of the wifi in mbps
   max_jitter: 10 # The maximum jitter in milliseconds
   message_loss_probability: 0.05 # The probability of a message being lost
   matrix_exchange_interval: 10 # The interval in seconds between matrix exchanges
-
+  time_sync_interval: 10 # The time in seconds between time synchronization
 forces:
   frontier_search_radius: 10.0 # The radius in meters around the agent to search for frontiers
   agent_avoidance_radius: 0.68 # The radius in meters around the agent to avoid other agents

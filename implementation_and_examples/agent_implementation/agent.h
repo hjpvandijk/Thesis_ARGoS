@@ -16,6 +16,7 @@
 #include "agent_control/battery/BatteryManager.h"
 #include "agent_control/motion/simulation/DifferentialDrive.h"
 #include "agent_control/communication/simulation/Radio.h"
+#include "agent_control/communication/TimeSynchronizer.h"
 
 
 class Agent {
@@ -40,6 +41,9 @@ public:
         float TURNING_SPEED_RATIO;
         double STEPS_360_DEGREES;
 
+        double AGENT_LOCATION_RELEVANT_S;
+        double TIME_SYNC_INTERVAL_S;
+        double MATRIX_EXCHANGE_INTERVAL_S;
 
         double DISTANCE_SENSOR_NOISE_CM;
         double ORIENTATION_NOISE_DEGREES;
@@ -71,7 +75,6 @@ public:
         double OBSTACLE_MATRIX_RESOLUTION;
         double OBSTACLE_MATRIX_EVAPORATION_TIME_S;
 
-        double MATRIX_EXCHANGE_INTERVAL_S;
 
         double BATTERY_CAPACITY;
         double BATTERY_VOLTAGE;
@@ -98,6 +101,10 @@ public:
     Radio wifi;
 
     BatteryManager batteryManager;
+
+
+    //Time synchronizer between agents
+    TimeSynchronizer timeSynchronizer;
 
 
     //Distance sensor
@@ -154,7 +161,7 @@ public:
 
     void doStep();
 
-
+    void timeSyncWithCloseAgents();
     void broadcastMessage(const std::string& message) const;
     void sendMessage(const std::string &message, const std::string& targetId);
 

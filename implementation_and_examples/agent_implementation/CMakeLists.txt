@@ -23,6 +23,8 @@ add_library(agent_implementation SHARED
         agent_control/battery/MotionSystemBatteryManager.cpp
         agent_control/communication/simulation/Radio.h
         agent_control/communication/simulation/Radio.cpp
+        agent_control/communication/TimeSynchronizer.h
+        agent_control/communication/TimeSynchronizer.cpp
 )
 
 # Link directories (if you have specific libraries to link against)

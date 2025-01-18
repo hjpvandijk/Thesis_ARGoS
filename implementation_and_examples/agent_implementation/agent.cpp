@@ -36,6 +36,7 @@ Agent::Agent(std::string id) {
     this->speed = this->differential_drive.max_speed_straight;
     //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
+    this->timeSynchronizer = TimeSynchronizer();
 }
 
 
@@ -735,13 +736,27 @@ void Agent::calculateNextPosition() {
     }
 }
 
+void Agent::timeSyncWithCloseAgents() {
+    for (const auto& agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = agentLocationPair.second.second;
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            this->config.AGENT_LOCATION_RELEVANT_S) {
+            //If we have not time synced with this agent in the past TIME_SYNC_INTERVAL_S seconds, do it
+            if (this->elapsed_ticks - this->timeSynchronizer.getLastSync(agentLocationPair.first) >= this->config.TIME_SYNC_INTERVAL_S * this->ticks_per_second) {
+                timeSynchronizer.initTimeSync(this); //Broadcasting time sync init
+            }
+        }
+    }
+}
+
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
     std::string coverageMatrixString = this->coverageMatrix->matrixToString();
     broadcastMessage("MC:" + coverageMatrixString);
     std::string obstacleMatrixString = this->obstacleMatrix->matrixToString();
     broadcastMessage("MO:" + obstacleMatrixString);
-
+    timeSyncWithCloseAgents();
 
     broadcastMessage(
             "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
@@ -891,6 +906,18 @@ argos::CVector2 vector2FromString(std::string str) {
     return newVector;
 }
 
+std::vector<std::string> splitString(const std::string &str, const std::string &delimiter) {
+    std::vector<std::string> strings;
+    size_t pos = 0;
+    size_t lastPos = 0;
+    while ((pos = str.find(delimiter, lastPos)) != std::string::npos) {
+        strings.push_back(str.substr(lastPos, pos - lastPos));
+        lastPos = pos + delimiter.length();
+    }
+    strings.push_back(str.substr(lastPos, str.length() - lastPos));
+    return strings;
+}
+
 
 /**
  * Parse messages from other agents
@@ -943,6 +970,33 @@ void Agent::parseMessages() {
             vectorString.erase(0, speedPos + delimiter.length());
             double newSpeed = std::stod(vectorString);
             agentVelocities[senderId] = {newVector, newSpeed};
+        } else if (messageContent[0] == 'T') { //Time sync message
+            std::string timeSyncString = messageContent.substr(2);
+            auto splitStrings = splitString(timeSyncString, "|");
+            int messageType = std::stoi(splitStrings[0]);
+            switch (messageType) {
+                case 0: {
+                    int t_TXi = std::stoi(splitStrings[1]);
+                    timeSynchronizer.respondToTimeSync(senderId, this, t_TXi);
+                    break;
+                }
+                case 1: {
+                    int t_TXi = std::stoi(splitStrings[1]);
+                    int t_RXj = std::stoi(splitStrings[2]);
+                    int t_TXj = std::stoi(splitStrings[3]);
+                    timeSynchronizer.determineT_RXi(senderId, this, t_TXi, t_RXj, t_TXj);
+                    break;
+                }
+                case 2: {
+                    int t_RXi = std::stoi(splitStrings[1]);
+                    timeSynchronizer.receiveT_RXi(senderId, this, t_RXi);
+                    break;
+                }
+                default : {
+                    assert(0 && "Unknown time sync message type");
+                }
+            }
+
         }
     }
 
@@ -983,9 +1037,9 @@ void Agent::loadConfig() {
 //#ifdef SEPARATE_FRONTIERS
 //    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
 //#endif
-//    this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
+    this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
     this->config.MATRIX_EXCHANGE_INTERVAL_S = config_yaml["communication"]["matrix_exchange_interval"].as<double>();
-//    this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
+    this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
 //
     this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();
     this->config.ORIENTATION_JITTER_DEGREES = config_yaml["sensors"]["orientation_jitter"].as<double>();
