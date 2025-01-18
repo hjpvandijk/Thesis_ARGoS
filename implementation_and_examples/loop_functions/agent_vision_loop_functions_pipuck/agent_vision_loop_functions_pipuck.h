@@ -18,6 +18,7 @@ public:
     TCoordinateMap m_tObjectCoordinates;
     TCoordinateMap m_tOtherAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
+    std::map<CPiPuckEntity*, CRadians> m_tAgentHeadings;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
 //    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, std::vector<std::vector<double>>> m_tCoverageMatrix;
@@ -114,7 +115,7 @@ private:
 
 //    void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
-    void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+    void pushMatrices(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
 
 };
 

@@ -43,7 +43,9 @@ public:
 
         double DISTANCE_SENSOR_NOISE_CM;
         double ORIENTATION_NOISE_DEGREES;
+        double ORIENTATION_JITTER_DEGREES;
         double POSITION_NOISE_CM;
+        double POSITION_JITTER_CM;
         double DISTANCE_SENSOR_PROXIMITY_RANGE;
 
         double VIRTUAL_WALL_AVOIDANCE_WEIGHT;

@@ -988,8 +988,10 @@ void Agent::loadConfig() {
 //    this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
 //
     this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();
+    this->config.ORIENTATION_JITTER_DEGREES = config_yaml["sensors"]["orientation_jitter"].as<double>();
     this->config.DISTANCE_SENSOR_NOISE_CM = config_yaml["sensors"]["distance_sensor_noise"].as<double>();
     this->config.POSITION_NOISE_CM = config_yaml["sensors"]["position_noise"].as<double>();
+    this->config.POSITION_JITTER_CM = config_yaml["sensors"]["position_jitter"].as<double>();
     this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
 ////
     this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();

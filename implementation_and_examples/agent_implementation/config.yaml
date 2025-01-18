@@ -43,7 +43,9 @@ map:
   coverage_evaporation_time: 100 # The time in seconds it takes for a coverage pheromone value to evaporate
   obstacle_evaporation_time: 100 # The time in seconds it takes for an obstacle pheromone value to evaporate
 sensors:
-  position_noise: 10 # Position noise in centimeters (uniform)
-  orientation_noise: 5 # Orientation sensor noise in degrees (uniform)
+  position_noise: 103.3 # Position noise in centimeters (uniform)
+  position_jitter: 10 # Position jitter in centimeters (uniform)
+  orientation_noise: 8 # Orientation sensor noise in degrees (uniform)
+  orientation_jitter: 2 # Orientation sensor jitter in degrees (uniform)
   distance_sensor_noise: 5 # Distance sensor noise in centimeters (uniform)
   distance_sensor_range: 2 # Distance sensor range in meters

@@ -62,7 +62,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param pcFB
  * @param agent
  */
-void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+void CAgentVisionLoopFunctions::pushMatrices(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
     auto agentCoverageMatrix = agent->coverageMatrix->getMatrix();
@@ -189,7 +189,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate pos = agent->position.FromOwnToArgos();
         CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
         m_tAgentCoordinates[pcFB] = agentPos;
-        pushQuadTree(pcFB, agent);
+        m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
+        pushMatrices(pcFB, agent);
 
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
         for (auto regioncenter : agent->current_frontier_regions){

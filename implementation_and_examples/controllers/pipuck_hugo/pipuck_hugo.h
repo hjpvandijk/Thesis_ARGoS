@@ -108,9 +108,12 @@ private:
     CCI_PositioningSensor* m_pcPositioningSensor;
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
 
+
+#ifdef BATTERY_MANAGEMENT_ENABLED
     CVector2 previousAgentPosition;
     CRadians previousAgentOrientation;
     int batteryMeasureTicks = 0;
+#endif
 
 
     /*
@@ -138,6 +141,17 @@ private:
     CRange<CRadians> m_cGoStraightAngleRange;
 
     lua_State *L;
+
+    double map_size = 11.0; // Height and Width (square)
+
+    double directions_heatmap[512][512];
+    double error_mean_heatmap[512][512];
+    double orientation_offset_heatmap[512][512];
+
+
+    void readHeatmapFromFile(const std::string& filename, double heatmap[512][512]);
+
+
 };
 
 #endif
