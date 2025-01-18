@@ -71,7 +71,27 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 
     agentObject->differential_drive.setActuator(m_pcWheels);
 
+    readHeatmapFromFile("directions_heatmap.txt", this->directions_heatmap);
+    readHeatmapFromFile("error_mean_heatmap.txt", this->error_mean_heatmap);
+    readHeatmapFromFile("orientation_offset_heatmap.txt", this->orientation_offset_heatmap);
 
+
+}
+
+void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double heatmap[512][512]) {
+    std::ifstream file(filename);
+    std::string line;
+    int row_index = 0;
+    while (std::getline(file, line) && row_index < 512) {
+        std::istringstream iss(line);
+        double value;
+        int col_index = 0;
+        while (iss >> value && col_index < 512) {
+            heatmap[row_index][col_index] = value;
+            col_index++;
+        }
+        row_index++;
+    }
 }
 
 /****************************************/
