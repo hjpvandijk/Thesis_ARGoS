@@ -29,8 +29,8 @@
 //#define WALL_FOLLOWING_ENABLED
 #define BATTERY_MANAGEMENT_ENABLED
 #define PATH_PLANNING_ENABLED
-//#define AVOID_UNREACHABLE_FRONTIERS
-#ifdef AVOID_UNREACHABLE_FRONTIERS
+#define SKIP_UNREACHABLE_FRONTIERS
+#ifdef SKIP_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #endif
@@ -65,7 +65,7 @@ public:
 
     //Path planning engines
     WallFollower wallFollower;
-#ifdef AVOID_UNREACHABLE_FRONTIERS
+#ifdef SKIP_UNREACHABLE_FRONTIERS
     FrontierEvaluator frontierEvaluator;
 #endif
 #ifdef PATH_PLANNING_ENABLED
@@ -281,11 +281,6 @@ public:
 //    double ANGLE_INTERVAL_STEPS = 360;
 
 
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
-    int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //5 seconds
-    double P_AVOIDANCE = 0.3; // 30% probability for avoidance to be correct
-#endif
 
 //    double P_POSITION = 0.9; // 90% probability for position to be correct
 //    double P_FREE = 0.6; // 60% probability for free to be correct

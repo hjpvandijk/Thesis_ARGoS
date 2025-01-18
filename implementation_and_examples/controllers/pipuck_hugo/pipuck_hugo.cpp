@@ -129,7 +129,7 @@ void PiPuckHugo::ControlStep() {
 
     //Orientation noise
     //Agent-dependent noise
-    double agentPersonalOrientationNoise = agentObject->config.ORIENTATION_NOISE_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->config.ORIENTATION_NOISE_DEGREES/5*2) - agentObject->config.ORIENTATION_NOISE_DEGREES/5 : 0;
+    double agentPersonalOrientationNoise = agentObject->config.ORIENTATION_JITTER_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->config.ORIENTATION_JITTER_DEGREES*2) - agentObject->config.ORIENTATION_JITTER_DEGREES : 0;
     argos::CRadians agentPersonalOrientationNoiseRad = ToRadians(CDegrees(agentPersonalOrientationNoise));
 
     // Orientation jitter
@@ -138,7 +138,7 @@ void PiPuckHugo::ControlStep() {
 
     //Position noise
     //Agent-dependent noise
-    double agentPersonalPositionNoise =  agentObject->config.POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->config.POSITION_NOISE_CM/5*2) - agentObject->config.POSITION_NOISE_CM/5) / 100.0 : 0;
+    double agentPersonalPositionNoise =  agentObject->config.POSITION_JITTER_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->config.POSITION_JITTER_CM*2) - agentObject->config.POSITION_JITTER_CM) / 100.0 : 0;
     //Position jitter
     double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
     double positionJitter = (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise

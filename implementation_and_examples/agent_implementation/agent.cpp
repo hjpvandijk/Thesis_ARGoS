@@ -46,8 +46,8 @@ Agent::Agent(std::string id) {
     this->pathPlanner = SimplePathPlanner();
     this->pathFollower = PathFollower();
 #endif
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    this->frontierEvaluator = FrontierEvaluator(this->CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE, MAX_TICKS_IN_HITPOINT);
+#ifdef SKIP_UNREACHABLE_FRONTIERS
+    this->frontierEvaluator = FrontierEvaluator();
 #endif
 }
 
@@ -515,7 +515,7 @@ void Agent::calculateNextPosition() {
     argos::CVector2 targetVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                                this->currentBestFrontier.y - this->position.y);
 
-#ifdef AVOID_UNREACHABLE_FRONTIERS
+#ifdef SKIP_UNREACHABLE_FRONTIERS
     frontierEvaluator.resetFrontierAvoidance(this, targetVector);
 #endif
 
@@ -531,10 +531,10 @@ void Agent::calculateNextPosition() {
 
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
-#ifdef AVOID_UNREACHABLE_FRONTIERS
+        #ifdef SKIP_UNREACHABLE_FRONTIERS
     //Or if the frontier has low confidence
-frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
-#endif
+        frontierEvaluator.avoidingFrontier(this) ||
+        #endif
     //If the current best frontier is blacklisted
     frontierReached //|| //Or the agent is close to the frontier
 //    //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
@@ -594,9 +594,7 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     }
 #endif
 
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-    frontierEvaluator.updateConfidenceIfFrontierUnreachable(this);
-#endif
+
 
     ForceVectorCalculator::vectors vectors{this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector, agentAvoidanceVector, agentAlignmentVector, targetVector};
 
@@ -605,7 +603,9 @@ frontierEvaluator.frontierHasLowConfidenceOrAvoiding(this) ||
     argos::CVector2 total_vector;
     argos::CRadians objectAvoidanceAngle;
     bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle, vectors, total_vector, false);//targetVector.Length() == 0);
-
+#ifdef SKIP_UNREACHABLE_FRONTIERS
+    frontierEvaluator.skipIfFrontierUnreachable(this, objectAvoidanceAngle, total_vector);
+#endif
     //If there is not a free angle to move to, do not move
     if (!isThereAFreeAngle) {
         this->force_vector = {0, 0};

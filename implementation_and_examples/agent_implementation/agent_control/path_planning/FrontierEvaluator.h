@@ -10,23 +10,23 @@ class Agent;
 class FrontierEvaluator {
 public:
     std::vector<Coordinate> avoidingFrontiers;
-    double minDistFromFrontier = MAXFLOAT;
-    Coordinate closestCoordinateToCurrentFrontier = {MAXFLOAT, MAXFLOAT};
-    int closestCoordinateCounter = 0;
-    int ticksInHitpoint = 0;
-    int closest_coordinate_hit_count_before_decreasing_confidence;
-    int max_ticks_in_hitpoint;
-    bool lastTickInFrontierHitPoint = false;
+
+    //If the agent is counts this many ticks without a direction to the target, it will skip the target
+    int MAX_COUNT_NO_DIRECTION = 150;
+
+    //Count the number of ticks the agent has no direction to the target
+    int countNoDirectionToTarget = 0;
+
 
     FrontierEvaluator() = default;
-    FrontierEvaluator(int closest_coordinate_hit_count_before_decreasing_confidence, int max_ticks_in_hitpoint);
+    FrontierEvaluator(int closest_coordinate_hit_count_before_decreasing_confidence, int max_ticks_no_direction);
 
-    bool skipFrontier(Agent* agent, double frontierRegionX, double frontierRegionY);
     void resetFrontierAvoidance(Agent* agent, argos::CVector2 unexploredFrontierVector);
-    bool frontierHasLowConfidenceOrAvoiding(Agent* agent);
-#ifdef AVOID_UNREACHABLE_FRONTIERS
-void updateConfidenceIfFrontierUnreachable(Agent* agent);
-#endif
+    bool avoidingFrontier(Agent* agent);
+    void skipIfFrontierUnreachable(Agent* agent, argos::CRadians objectAvoidanceAngle, argos::CVector2 total_vector);
+
+private:
+    Coordinate previousTarget = {MAXFLOAT, MAXFLOAT};
     };
 
 
