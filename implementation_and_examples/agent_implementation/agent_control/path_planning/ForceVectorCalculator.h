@@ -38,5 +38,6 @@ public:
 
     static bool calculateObjectAvoidanceAngle(Agent* agent, argos::CRadians *relativeObjectAvoidanceAngle, ForceVectorCalculator::vectors, argos::CVector2 & total_vector, bool frontier_vector_zero);
 
+
 };
 #endif //IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
