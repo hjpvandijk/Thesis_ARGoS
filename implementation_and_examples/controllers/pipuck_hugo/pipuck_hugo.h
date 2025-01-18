@@ -149,7 +149,7 @@ private:
     double orientation_offset_heatmap[512][512];
 
 
-    void readHeatmapFromFile(const std::string& filename, double heatmap[512][512]);
+    void readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]);
 
 
 };
