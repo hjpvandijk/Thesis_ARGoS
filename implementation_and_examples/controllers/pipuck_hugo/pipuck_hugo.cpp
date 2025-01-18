@@ -71,26 +71,40 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 
     agentObject->differential_drive.setActuator(m_pcWheels);
 
-    readHeatmapFromFile("directions_heatmap.txt", this->directions_heatmap);
-    readHeatmapFromFile("error_mean_heatmap.txt", this->error_mean_heatmap);
-    readHeatmapFromFile("orientation_offset_heatmap.txt", this->orientation_offset_heatmap);
-
-
+    readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);
+    readHeatmapFromFile("controllers/pipuck_hugo/orientation_offset.txt", this->orientation_offset_heatmap);
+    readHeatmapFromFile("controllers/pipuck_hugo/error_heatmap.txt", this->error_mean_heatmap);
 }
 
-void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double heatmap[512][512]) {
+void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]) {
     std::ifstream file(filename);
     std::string line;
     int row_index = 0;
+    assert(file.good());
     while (std::getline(file, line) && row_index < 512) {
-        std::istringstream iss(line);
         double value;
         int col_index = 0;
-        while (iss >> value && col_index < 512) {
+        //Remove the first character, which is a '{'
+        line = line.substr(1);
+        //Remove the last two characters, which are a '}' and a ','
+        line = line.substr(0, line.size() - 2);
+        std::stringstream ss(line);
+        while (ss >> value && col_index < 512) {
             heatmap[row_index][col_index] = value;
+            if (ss.peek() == ',') ss.ignore();
             col_index++;
         }
+
         row_index++;
+    }
+}
+
+int mirrored_mod(int x, int m) {
+    int q = std::floor(x / m);
+    if (q % 2 == 0) {
+        return x % m;
+    } else {
+        return m - (x % m);
     }
 }
 
@@ -129,7 +143,8 @@ void PiPuckHugo::ControlStep() {
 
     //Orientation noise
     //Agent-dependent noise
-    double agentPersonalOrientationNoise = agentObject->config.ORIENTATION_JITTER_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->config.ORIENTATION_JITTER_DEGREES*2) - agentObject->config.ORIENTATION_JITTER_DEGREES : 0;
+    double agentPersonalOrientationNoise = agentObject->config.ORIENTATION_JITTER_DEGREES != 0 ? mirrored_mod((agentIdVal + int((position.GetX() + position.GetY())*100)), int(agentObject->config.ORIENTATION_JITTER_DEGREES*2)) - agentObject->config.ORIENTATION_JITTER_DEGREES : 0;
+//    argos::LOG << "Agent personal orientation noise: " << agentPersonalOrientationNoise << std::endl;
     argos::CRadians agentPersonalOrientationNoiseRad = ToRadians(CDegrees(agentPersonalOrientationNoise));
 
     // Orientation jitter
@@ -138,7 +153,8 @@ void PiPuckHugo::ControlStep() {
 
     //Position noise
     //Agent-dependent noise
-    double agentPersonalPositionNoise =  agentObject->config.POSITION_JITTER_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->config.POSITION_JITTER_CM*2) - agentObject->config.POSITION_JITTER_CM) / 100.0 : 0;
+    double agentPersonalPositionNoise =  agentObject->config.POSITION_JITTER_CM != 0 ? (mirrored_mod((agentIdVal + int((position.GetX() - position.GetY())*100)), int(agentObject->config.POSITION_JITTER_CM*2)) - agentObject->config.POSITION_JITTER_CM) / 100.0 : 0;
+//    argos::LOG << "Agent personal position noise: " << agentPersonalPositionNoise << std::endl;
     //Position jitter
     double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
     double positionJitter = (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
@@ -154,8 +170,9 @@ void PiPuckHugo::ControlStep() {
     CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
     //Magnitude, including jitter and agent-dependent noise
     double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX] * agentObject->config.POSITION_NOISE_CM / 100.0;
+    argos::LOG << this->error_mean_heatmap[heatmapY][heatmapX] << " * " << agentObject->config.POSITION_NOISE_CM << " / 100.0" << std::endl;
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
-
+    argos::LOG << error_mean_heatmap_value << " + " << positionJitter << " + " << agentPersonalPositionNoise << std::endl;
     CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
     agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
 
