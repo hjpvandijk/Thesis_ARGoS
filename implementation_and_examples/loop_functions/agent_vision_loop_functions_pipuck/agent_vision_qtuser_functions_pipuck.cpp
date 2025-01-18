@@ -8,12 +8,6 @@ CAgentVisionQTUserFunctions::CAgentVisionQTUserFunctions() :
         m_cAgVisLF(dynamic_cast<CAgentVisionLoopFunctions &>(CSimulator::GetInstance().GetLoopFunctions())) {
 }
 
-Coordinate getRealCoordinateFromIndex(int x, int y) {
-    //Get the real world coordinates from the matrix coordinates
-    double x_real = -5 + x * 0.2;
-    double y_real = -5 + y * 0.2;
-    return {x_real + 0.2/2, y_real + 0.2/2};
-}
 
 /**
  * Draw the explored boxes of the quadtree in the world
@@ -25,25 +19,25 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     /* Go through all the robot waypoints and draw them */
 
 
-    for (auto it  : m_cAgVisLF.m_tAgentFreeAngles) {
-        for (argos::CDegrees angle: it.second) {
-//            CVector3 pos = it->first->GetEmbodiedEntity().GetOriginAnchor().Position;
-//            CQuaternion orientation = it->first->GetEmbodiedEntity().GetOriginAnchor().Orientation;
-
-            //Get start of the ray
-            CVector3 agent_pos = m_cAgVisLF.GetAgentCoordinates().at(it.first);
-
-            //Get the angle of the ray
-            argos::CRadians angle_rad = ToRadians(angle);
-
-            //Get the end of the ray
-            CVector3 ray_end = CVector3(agent_pos.GetX() + cos(angle_rad.GetValue()),
-                                        agent_pos.GetY() + sin(angle_rad.GetValue()), 0.06f);
-
-            CRay3 ray = CRay3(agent_pos, ray_end);
-            DrawRay(ray, CColor::BLUE);
-        }
-    }
+//    for (auto it  : m_cAgVisLF.m_tAgentFreeAngles) {
+//        for (argos::CDegrees angle: it.second) {
+////            CVector3 pos = it->first->GetEmbodiedEntity().GetOriginAnchor().Position;
+////            CQuaternion orientation = it->first->GetEmbodiedEntity().GetOriginAnchor().Orientation;
+//
+//            //Get start of the ray
+//            CVector3 agent_pos = m_cAgVisLF.GetAgentCoordinates().at(it.first);
+//
+//            //Get the angle of the ray
+//            argos::CRadians angle_rad = ToRadians(angle);
+//
+//            //Get the end of the ray
+//            CVector3 ray_end = CVector3(agent_pos.GetX() + 0.48*cos(angle_rad.GetValue()),
+//                                        agent_pos.GetY() + 0.48*sin(angle_rad.GetValue()), 0.02f);
+//
+//            CRay3 ray = CRay3(agent_pos, ray_end);
+//            DrawRay(ray, CColor::BLUE);
+//        }
+//    }
 
 
 
@@ -51,15 +45,13 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     for (int i = 0; i < m_cAgVisLF.coverageMatrixWidth; i++) {
         for (int j = 0; j < m_cAgVisLF.coverageMatrixHeight; j++) {
-//            argos::LOG << "i: " << i << " j: " << j << std::endl;
             double visitedTimeS = m_cAgVisLF.coverageMatrix[i][j];
             double currentTimeS = m_cAgVisLF.globalElapsedTicks;
             double pheromone = visitedTimeS == -1 ? 0 : 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
             if (pheromone == 0) continue;
-//            argos::LOG << "visitedTimeS: " << visitedTimeS << " currentTimeS: " << currentTimeS << " pheromone: " << pheromone << std::endl;
 
 //            Coordinate cellCoordinate = m_cAgVisLF.combinedCoverageMatrix.getRealCoordinateFromIndex(i, j).FromOwnToArgos();
-            Coordinate cellCoordinate = getRealCoordinateFromIndex(i, j);
+            Coordinate cellCoordinate = m_cAgVisLF.getRealCoordinateFromIndex(i, j, m_cAgVisLF.coverageMatrixResolution);
 //            argos::LOG << "cellCoordinate: " << cellCoordinate.x << " " << cellCoordinate.y << std::endl;
 //
 //            CVector3 pos = CVector3(i, j, 0.02f);
@@ -105,7 +97,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //            argos::LOG << "visitedTimeS: " << visitedTimeS << " currentTimeS: " << currentTimeS << " pheromone: " << pheromone << std::endl;
 
 //            Coordinate cellCoordinate = m_cAgVisLF.combinedCoverageMatrix.getRealCoordinateFromIndex(i, j).FromOwnToArgos();
-            Coordinate cellCoordinate = getRealCoordinateFromIndex(i, j);
+            Coordinate cellCoordinate = m_cAgVisLF.getRealCoordinateFromIndex(i, j, m_cAgVisLF.obstacleMatrixResolution);
 //
 //            CVector3 pos = CVector3(i, j, 0.02f);
 //            CColor color = CColor::GREEN;
@@ -162,6 +154,15 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         }
     }
 
+    for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
+        CRadians heading = m_cAgVisLF.m_tAgentHeadings[agentheading.first];
+        CVector3 pos = m_cAgVisLF.m_tAgentCoordinates[agentheading.first];
+        CVector3 ray_end = CVector3(pos.GetX() + cos(heading.GetValue()),
+                                    pos.GetY() + sin(heading.GetValue()), 0.02f);
+        CRay3 ray = CRay3(pos, ray_end);
+        DrawRay(ray, CColor::RED, 10.0f);
+    }
+
 
 
     for (auto & it : m_cAgVisLF.m_tAgentBestFrontierCoordinate) {
@@ -177,7 +178,11 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         //Draw IDs
         DrawText(it.second,
                  it.first->GetId()); // text
+
+        float batteryLevel = m_cAgVisLF.m_tAgentBatteryLevels.at(it.first);
+        DrawText(it.second + CVector3(0.1,0.1,0.1), std::to_string(batteryLevel) + '%', CColor::BLACK);
     }
+
 
 
 

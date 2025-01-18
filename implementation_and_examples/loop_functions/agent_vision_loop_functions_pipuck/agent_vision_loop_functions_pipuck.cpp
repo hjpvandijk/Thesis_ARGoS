@@ -49,7 +49,7 @@ std::chrono::time_point end = std::chrono::system_clock::now();
  */
 void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     for (auto & it : agent->agentLocations) {
-        Coordinate agentLocation = (it.second);
+        Coordinate agentLocation = it.second.first;
         Coordinate agentLocationToArgos = agentLocation.FromOwnToArgos();
         CVector3 pos = CVector3(agentLocationToArgos.x, agentLocationToArgos.y, 0.02f);
         m_tOtherAgentCoordinates[pcFB].push_back(pos);
@@ -62,7 +62,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param pcFB
  * @param agent
  */
-void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+void CAgentVisionLoopFunctions::pushMatrices(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
     auto agentCoverageMatrix = agent->coverageMatrix->getMatrix();
@@ -127,11 +127,11 @@ void CAgentVisionLoopFunctions::PreStep() {
 
 }
 
-Coordinate getRealCoordinateFromIndex1(int x, int y) {
+Coordinate CAgentVisionLoopFunctions::getRealCoordinateFromIndex(int x, int y, double resolution) const {
     //Get the real world coordinates from the matrix coordinates
-    double x_real = -5 + x * 0.2;
-    double y_real = -5 + y * 0.2;
-    return {x_real + 0.2/2, y_real + 0.2/2};
+    double x_real = this->real_x_min + x * resolution;
+    double y_real = this->real_y_min + y * resolution;
+    return {x_real + resolution/2, y_real + resolution/2};
 }
 
 
@@ -189,13 +189,15 @@ void CAgentVisionLoopFunctions::PostStep() {
         Coordinate pos = agent->position.FromOwnToArgos();
         CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
         m_tAgentCoordinates[pcFB] = agentPos;
-        pushQuadTree(pcFB, agent);
+        m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
+        pushMatrices(pcFB, agent);
 
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
         for (auto regioncenter : agent->current_frontier_regions){
             std::vector<Coordinate> regionCoordinates;
             for (auto cellIndex: regioncenter) {
-                auto realCellCoordinate = getRealCoordinateFromIndex1(cellIndex.first, cellIndex.second);
+                auto realCellCoordinate = getRealCoordinateFromIndex(cellIndex.first, cellIndex.second,
+                                                                     agent->coverageMatrix->getResolution());
                 regionCoordinates.push_back(realCellCoordinate);
             }
             m_tAgentFrontierRegions[pcFB].push_back(regionCoordinates);
@@ -204,6 +206,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         for(auto angle: agent->freeAnglesVisualization) {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
+
+        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
 
     }
 
@@ -243,7 +247,9 @@ void CAgentVisionLoopFunctions::PostStep() {
             coverageMatrix = it.second;
             coverageMatrixWidth = coverageMatrix.size();
             coverageMatrixHeight = coverageMatrix[0].size(); // columns;
-            coverageMatrixResolution = 0.2;
+            coverageMatrixResolution = -(real_x_min * 2) / coverageMatrixWidth;
+            argos::LOG << "setting" << std::endl;
+
         }
     }
 
@@ -262,7 +268,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             obstacleMatrix = it.second;
             obstacleMatrixWidth = obstacleMatrix.size();
             obstacleMatrixHeight = obstacleMatrix[0].size(); // columns;
-            obstacleMatrixResolution = 0.2;
+            obstacleMatrixResolution = -(real_x_min * 2) / obstacleMatrixWidth;
         }
     }
 

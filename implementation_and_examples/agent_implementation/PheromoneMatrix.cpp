@@ -1,16 +1,24 @@
 #include "PheromoneMatrix.h"
 #include <algorithm>
+#include <argos3/core/utility/logging/argos_log.h>
 
-PheromoneMatrix::PheromoneMatrix(double real_width, double real_height, double resolution) {
+PheromoneMatrix::PheromoneMatrix(double real_width, double real_height, double resolution, double evaporationTime) {
     this->x_min = 0- real_width / 2;
     this->x_max = real_width / 2;
     this->y_min = 0 - real_height / 2;
     this->y_max = real_height / 2;
 
+    //Calculate the actual resolution, like we would have in a quadtree.
+    int v_depth = 1;
+    while (real_width / pow(2, v_depth) > resolution) {
+        v_depth++;
+    }
+    this->resolution = real_width / pow(2, v_depth);
+
     //Calculate the width and height of the matrix, and set the variables
-    this->width = int(real_width / resolution) +1;
-    this->height = int(real_height / resolution)+1;
-    this->resolution = resolution;
+    this->width = int(real_width / this->resolution);
+    this->height = int(real_height / this->resolution);
+    this->EvaporationTime = evaporationTime;
     //Create the matrix and set all values to 0
     this->matrix = std::vector<std::vector<double>>(this->width, std::vector<double>(this->height, -1));
 }

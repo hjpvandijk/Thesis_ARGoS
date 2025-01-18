@@ -6,8 +6,10 @@
 
 class PheromoneMatrix {
 public:
+    int nodesPerMessage = 50;
+
     PheromoneMatrix() = default;
-    PheromoneMatrix(double real_width, double real_height, double resolution);
+    PheromoneMatrix(double real_width, double real_height, double resolution, double evaporationTime);
     ~PheromoneMatrix();
     void update(double x, double y, double visitedTimeS);
     void update(Coordinate coordinate, double visitedTimeS);
@@ -48,7 +50,7 @@ private:
     int height;
 
     double resolution;
-    static constexpr double EvaporationTime = 100.0;
+    double EvaporationTime;
 
 //    void update(double x, double y, double value);
 //    void update(Coordinate coordinate, double value);

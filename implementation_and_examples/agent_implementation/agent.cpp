@@ -11,8 +11,10 @@
 #include <unordered_map>
 #include <queue>
 #include <array>
+#include <yaml-cpp/yaml.h>
 
 Agent::Agent(std::string id) {
+    loadConfig();
     this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
@@ -23,8 +25,17 @@ Agent::Agent(std::string id) {
     this->messages = std::vector<std::string>(0);
 //    auto box = quadtree::Box(-5, 5, 10);
 //    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
-    this->coverageMatrix = std::make_unique<PheromoneMatrix>(10, 10, COVERAGE_MATRIX_RESOLUTION);
-    this->obstacleMatrix = std::make_unique<PheromoneMatrix>(10, 10, OBSTACLE_MATRIX_RESOLUTION);
+    this->coverageMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.COVERAGE_MATRIX_RESOLUTION, this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S);
+    this->obstacleMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.OBSTACLE_MATRIX_RESOLUTION, this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S);
+    //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
+    //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
+    this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS, this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE, this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT, this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE, this->config.BATTERY_CAPACITY);
+    //Set the speed to the maximum achievable speed, based on the the motor specs. TODO: Put that info in differential drive instead
+    auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
+    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->config.TURNING_SPEED_RATIO));
+    this->speed = this->differential_drive.max_speed_straight;
+    //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
+    this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
 }
 
 
@@ -41,9 +52,9 @@ void Agent::setHeading(argos::CRadians new_heading) {
     this->heading = Coordinate::ArgosHeadingToOwn(new_heading).SignedNormalize();
 }
 
-void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive) {
-    this->diffdrive = newDiffdrive;
-}
+//void Agent::setDiffDrive(argos::CCI_PiPuckDifferentialDriveActuator *newDiffdrive) {
+//    this->diffdrive = newDiffdrive;
+//}
 
 
 Coordinate Agent::getPosition() const {
@@ -140,7 +151,7 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) const {
 void Agent::checkForObstacles() {
     for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
-        if (this->lastRangeReadings[sensor_index] < PROXIMITY_RANGE) {
+        if (this->lastRangeReadings[sensor_index] < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
             double opposite = argos::Sin(sensor_rotation) * this->lastRangeReadings[sensor_index];
             double adjacent = argos::Cos(sensor_rotation) * this->lastRangeReadings[sensor_index];
@@ -153,7 +164,7 @@ void Agent::checkForObstacles() {
             bool close_to_other_agent = false;
             for (const auto &agentLocation: this->agentLocations) {
                 argos::CVector2 objectToAgent =
-                        argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                        argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
@@ -166,8 +177,8 @@ void Agent::checkForObstacles() {
 
 
         } else {
-            double opposite = argos::Sin(sensor_rotation) * PROXIMITY_RANGE;
-            double adjacent = argos::Cos(sensor_rotation) * PROXIMITY_RANGE;
+            double opposite = argos::Sin(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+            double adjacent = argos::Cos(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
 
 
             Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
@@ -194,16 +205,16 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
 
     std::set<argos::CDegrees> freeAngles = {};
-    double angleInterval = argos::CDegrees(360 / ANGLE_INTERVAL_STEPS).GetValue();
+    double angleInterval = argos::CDegrees(360 / this->config.STEPS_360_DEGREES).GetValue();
 
 //Add free angles from -180 to 170 degrees
-    for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
-        auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
+    for (int a = 0; a < this->config.STEPS_360_DEGREES; a++) {
+        auto angle = argos::CDegrees(a * 360 / this->config.STEPS_360_DEGREES - 180);
         freeAngles.insert(angle);
     }
 
-    Coordinate min_real = Coordinate{this->position.x - OBJECT_AVOIDANCE_RADIUS, this->position.y - OBJECT_AVOIDANCE_RADIUS};
-    Coordinate max_real = Coordinate{this->position.x + OBJECT_AVOIDANCE_RADIUS, this->position.y + OBJECT_AVOIDANCE_RADIUS};
+    Coordinate min_real = Coordinate{this->position.x - this->config.OBJECT_AVOIDANCE_RADIUS, this->position.y - this->config.OBJECT_AVOIDANCE_RADIUS};
+    Coordinate max_real = Coordinate{this->position.x + this->config.OBJECT_AVOIDANCE_RADIUS, this->position.y + this->config.OBJECT_AVOIDANCE_RADIUS};
 //    int max_x_real = this->position.x + OBJECT_AVOIDANCE_RADIUS;
 //    int min_y_real = this->position.y - OBJECT_AVOIDANCE_RADIUS;
 //    int max_y_real = this->position.y + OBJECT_AVOIDANCE_RADIUS;
@@ -213,13 +224,13 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
 
     //For each occupied box, find the angles that are blocked relative to the agent
     //We only have to look in the area of the object avoidance radius
-    for (int x =min_x_index; x< std::min(this->obstacleMatrix->getWidth(), max_x_index); x++){
-        for (int y = min_y_index; y<std::min(this->obstacleMatrix->getHeight(), max_y_index); y++) {
+    for (int x =std::max(0, min_x_index); x< std::min(this->obstacleMatrix->getWidth(), max_x_index); x++){
+        for (int y = std::max(0, min_y_index); y<std::min(this->obstacleMatrix->getHeight(), max_y_index); y++) {
 
             Coordinate cellCenter = this->obstacleMatrix->getRealCoordinateFromIndex(x, y);
             //If this cell is not within the object avoidance radius, skip it
             if (std::sqrt(std::pow(cellCenter.x - this->position.x, 2) +
-                          std::pow(cellCenter.y - this->position.y, 2)) > OBJECT_AVOIDANCE_RADIUS) {
+                          std::pow(cellCenter.y - this->position.y, 2)) > this->config.OBJECT_AVOIDANCE_RADIUS) {
                 continue;
             }
 
@@ -231,11 +242,11 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
             argos::CVector2 OC = argos::CVector2(cellCenter.x - this->position.x,
                                                  cellCenter.y - this->position.y);
             argos::CRadians Bq = argos::ASin(
-                    std::min(AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
+                    std::min(this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
             argos::CRadians Eta_q = OC.Angle();
-            if (AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS > OC.Length())
-                argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << AGENT_SAFETY_RADIUS
-                               << " + " << OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+            if (this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS > OC.Length())
+                argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << this->config.AGENT_SAFETY_RADIUS
+                               << " + " << this->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
 
             argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
             argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());
@@ -247,7 +258,7 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
             }
 
 
-            //Round to multiples of 360/ANGLE_INTERVAL_STEPS
+            //Round to multiples of 360/this->config.STEPS_360_DEGREES
             double minAngleVal = minAngle.GetValue();
             double intervalDirectionMin = (minAngleVal < 0) ? -angleInterval : angleInterval;
             //
@@ -269,8 +280,8 @@ bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidan
                                                                                                  : maxRoundedAngle1);
 
             //Block all angles within range
-            for (int a = 0; a < ANGLE_INTERVAL_STEPS; a++) {
-                auto angle = argos::CDegrees(a * 360 / ANGLE_INTERVAL_STEPS - 180);
+            for (int a = 0; a < this->config.STEPS_360_DEGREES; a++) {
+                auto angle = argos::CDegrees(a * 360 / this->config.STEPS_360_DEGREES - 180);
 
                 if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) &&
                     NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
@@ -352,12 +363,12 @@ bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, doub
     int nAgentsWithinRange = 0;
     for (const auto &agentLocation: this->agentLocations) {
         argos::CVector2 vectorToOtherAgent =
-                argos::CVector2(agentLocation.second.x, agentLocation.second.y)
+                argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
                 - argos::CVector2(this->position.x, this->position.y);
 
-        if (vectorToOtherAgent.Length() < range) { //TODO: make different for cohesion and separation
-            averageNeighborLocation->x += agentLocation.second.x;
-            averageNeighborLocation->y += agentLocation.second.y;
+        if (vectorToOtherAgent.Length() < range) {
+            averageNeighborLocation->x += agentLocation.second.first.x;
+            averageNeighborLocation->y += agentLocation.second.first.y;
             nAgentsWithinRange++;
         }
     }
@@ -375,7 +386,7 @@ bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, doub
 argos::CVector2 Agent::calculateAgentCohesionVector() {
     Coordinate averageNeighborLocation = {0, 0};
 
-    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, AGENT_COHESION_RADIUS);
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, this->config.AGENT_COHESION_RADIUS);
     if (!neighborsWithinRange) {
         return {0, 0};
     }
@@ -399,7 +410,7 @@ argos::CVector2 Agent::calculateAgentAvoidanceVector() {
 
     Coordinate averageNeighborLocation = {0, 0};
 
-    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, AGENT_AVOIDANCE_RADIUS);
+    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, this->config.AGENT_AVOIDANCE_RADIUS);
     if (!neighborsWithinRange) {
         return {0, 0};
     }
@@ -426,12 +437,12 @@ argos::CVector2 Agent::calculateAgentAlignmentVector() {
     //Get the velocities of the agents within range
     for (const auto &agentVelocity: agentVelocities) {
         std::string agentID = agentVelocity.first;
-        Coordinate otherAgentLocation = agentLocations[agentID];
+        Coordinate otherAgentLocation = agentLocations[agentID].first;
         argos::CVector2 agentVector = agentVelocity.second.first;
         double agentSpeed = agentVelocity.second.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
                                              - argos::CVector2(this->position.x, this->position.y);
-        if (vectorToOtherAgent.Length() < AGENT_ALIGNMENT_RADIUS) {
+        if (vectorToOtherAgent.Length() < this->config.AGENT_ALIGNMENT_RADIUS) {
             alignmentVector += agentVector * agentSpeed;
             nAgentsWithinRange++;
         }
@@ -509,11 +520,18 @@ public:
 //1. Occupancy  == 1
 //2. There is a 8 Moore neighbor, of which occupancy == 0
 
-std::vector<std::pair<int, int>> Agent::getFrontierCells(double currentTimeS){
+std::vector<std::pair<int, int>> Agent::getFrontierCells(double currentTimeS, double searchRadius) {
     std::vector<std::pair<int, int>> frontierCells;
 
-    for (int i = 0; i < this->coverageMatrix->getWidth(); i++) {
-        for (int j = 0; j < this->coverageMatrix->getHeight(); j++) {
+    //Search within the search radius
+    auto i_min = std::max(0, this->coverageMatrix->getIndexFromRealCoordinate({this->position.x - searchRadius, 0}).first);
+    auto i_max = std::min(this->coverageMatrix->getWidth(), this->coverageMatrix->getIndexFromRealCoordinate({this->position.x + searchRadius, 0}).first);
+    auto j_min = std::max(0, this->coverageMatrix->getIndexFromRealCoordinate({0, this->position.y - searchRadius}).second);
+    auto j_max = std::min(this->coverageMatrix->getHeight(), this->coverageMatrix->getIndexFromRealCoordinate({0, this->position.y + searchRadius}).second);
+
+
+    for (int i = i_min; i < i_max; i++) {
+        for (int j = j_min; j < j_max; j++) {
             if(this->coverageMatrix->getByIndex(i, j, currentTimeS) > 0){ //Check if the cell is explored
                 Coordinate realCoordinate = this->coverageMatrix->getRealCoordinateFromIndex(i, j);
                 auto [i_obstacle, j_obstacle] = this->obstacleMatrix->getIndexFromRealCoordinate(realCoordinate);
@@ -554,10 +572,10 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
     //Coverage status: 0 for unexplored, 1 for explored, and 2 for obstacle, respectively.
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-//    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_DIAMETER,
+//    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_RADIUS,
 //                                                                              this->elapsed_ticks /
 //                                                                              this->ticks_per_second);
-    const std::vector<std::pair<int, int>> frontiers = getFrontierCells(elapsed_ticks / ticks_per_second);
+    const std::vector<std::pair<int, int>> frontiers = getFrontierCells(elapsed_ticks / ticks_per_second, this->config.FRONTIER_SEARCH_RADIUS);
 //    current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
@@ -609,7 +627,7 @@ argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 //        }
 
         //Calculate the fitness of the frontier region
-        double fitness = -FRONTIER_DISTANCE_WEIGHT * distance + FRONTIER_SIZE_WEIGHT * region.size();
+        double fitness = -this->config.FRONTIER_DISTANCE_WEIGHT * distance + this->config.FRONTIER_SIZE_WEIGHT * region.size();
 
         //If the fitness is lower than the best fitness, update the best fitness and best frontier region
         if (fitness > highestFrontierFitness) {
@@ -664,11 +682,11 @@ void Agent::calculateNextPosition() {
     if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
     if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
 
-    virtualWallAvoidanceVector = VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
-    agentCohesionVector = AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
-    agentAvoidanceVector = AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
-    agentAlignmentVector = AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
+    virtualWallAvoidanceVector = this->config.VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
+    agentCohesionVector = this->config.AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
+    agentAvoidanceVector = this->config.AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+    agentAlignmentVector = this->config.AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
+    unexploredFrontierVector = this->config.UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
@@ -736,7 +754,7 @@ void Agent::doStep() {
     calculateNextPosition();
 
     //If there is no force vector, do not move
-    if (this->force_vector == argos::CVector2{0, 0}) this->diffdrive->SetLinearVelocity(0, 0);
+    if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
     else {
 
         argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
@@ -744,22 +762,20 @@ void Agent::doStep() {
         argos::CDegrees diffDeg = ToDegrees(diff);
 
 
-        if (diffDeg > argos::CDegrees(-TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(TURN_THRESHOLD_DEGREES)) {
+        if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
             //Go straight
-            this->diffdrive->SetLinearVelocity(this->speed, this->speed);
+            this->differential_drive.forward();
         } else if (diffDeg > argos::CDegrees(0)) {
             //turn right
-            this->diffdrive->SetLinearVelocity(this->speed * TURNING_SPEED_RATIO, 0);
-
+            this->differential_drive.turnRight();
         } else {
             //turn left
-            this->diffdrive->SetLinearVelocity(0, this->speed * TURNING_SPEED_RATIO);
-
+            this->differential_drive.turnLeft();
         }
     }
 
 
-    elapsed_ticks++;
+    this->elapsed_ticks++;
 }
 
 
@@ -769,10 +785,19 @@ void Agent::doStep() {
  */
 void Agent::broadcastMessage(const std::string &message) const {
     std::string messagePrependedWithId = "[" + getId() + "]" + message;
-    auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
-    argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
-    this->wifi.broadcast_message(cMessage);
+    this->wifi.broadcast_message(messagePrependedWithId);
 }
+
+/**
+ * Sends a message to an agents
+ * @param message
+ */
+void Agent::sendMessage(const std::string &message, const std::string& targetId) {
+    std::string messagePrependedWithId = "[" + getId() + "]" + message;
+    this->wifi.send_message(messagePrependedWithId, targetId);
+}
+
+
 
 /**
  * Check for messages from other agents
@@ -780,8 +805,18 @@ void Agent::broadcastMessage(const std::string &message) const {
  */
 void Agent::checkMessages() {
     //Read messages from other agents
-    this->wifi.receive_messages(this->messages);
+    this->wifi.receive_messages(this->messages, this->elapsed_ticks/this->ticks_per_second);
     if (!this->messages.empty()) parseMessages();
+
+}
+
+/**
+ * Get the target id from a message
+ * @param message
+ * @return
+ */
+std::string getTargetIdFromMessage(const std::string &message) {
+    return message.substr(message.find('<')+1, message.find('>') - 1 - message.find('<'));
 
 }
 
@@ -791,7 +826,7 @@ void Agent::checkMessages() {
  * @return
  */
 std::string getIdFromMessage(const std::string &message) {
-    return message.substr(1, message.find(']') - 1);
+    return message.substr(message.find('[')+1, message.find(']') - 1 - message.find('['));
 
 }
 
@@ -866,7 +901,7 @@ void Agent::parseMessages() {
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
-            this->agentLocations[senderId] = receivedPosition;
+            this->agentLocations[senderId] = {receivedPosition, this->elapsed_ticks};
         } else if (messageContent.at(0) == 'M') {
             auto substring = messageContent.substr(1);
             auto coverage = substring.at(0) == 'C';
@@ -913,15 +948,96 @@ void Agent::parseMessages() {
 
 }
 
+
 Radio Agent::getWifi() const {
     return this->wifi;
 }
 
 void Agent::setWifi(Radio newWifi) {
     this->wifi = newWifi;
+    this->wifi.config(this->config.WIFI_SPEED_MBPS, this->config.MAX_JITTER_MS, this->config.MESSAGE_LOSS_PROBABILITY);
 
 }
 
 std::vector<std::string> Agent::getMessages() {
     return this->messages;
+}
+
+void Agent::loadConfig() {
+    YAML::Node config_yaml = YAML::LoadFile(config_file);
+
+    this->config.ROBOT_WEIGHT = config_yaml["physical"]["robot_weight"].as<float>();
+    this->config.ROBOT_WHEEL_RADIUS = config_yaml["physical"]["robot_wheel_radius"].as<float>();
+    this->config.ROBOT_INTER_WHEEL_DISTANCE = config_yaml["physical"]["robot_inter_wheel_distance"].as<float>();
+//
+    this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
+    this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
+    this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
+    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
+    this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
+//    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
+//#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+//    this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
+//    this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();
+//#endif
+//#ifdef SEPARATE_FRONTIERS
+//    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
+//#endif
+//    this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
+    this->config.MATRIX_EXCHANGE_INTERVAL_S = config_yaml["communication"]["matrix_exchange_interval"].as<double>();
+//    this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
+//
+    this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();
+    this->config.ORIENTATION_JITTER_DEGREES = config_yaml["sensors"]["orientation_jitter"].as<double>();
+    this->config.DISTANCE_SENSOR_NOISE_CM = config_yaml["sensors"]["distance_sensor_noise"].as<double>();
+    this->config.POSITION_NOISE_CM = config_yaml["sensors"]["position_noise"].as<double>();
+    this->config.POSITION_JITTER_CM = config_yaml["sensors"]["position_jitter"].as<double>();
+    this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
+////
+    this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
+//    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
+//    this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
+    this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
+    this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();
+    this->config.AGENT_ALIGNMENT_RADIUS = config_yaml["forces"]["agent_alignment_radius"].as<double>();
+    this->config.OBJECT_AVOIDANCE_RADIUS = this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS + config_yaml["forces"]["object_avoidance_radius_margin"].as<double>();
+//
+    this->config.VIRTUAL_WALL_AVOIDANCE_WEIGHT = config_yaml["forces"]["virtual_wall_avoidance_weight"].as<double>();
+    this->config.AGENT_COHESION_WEIGHT = config_yaml["forces"]["agent_cohesion_weight"].as<double>();
+    this->config.AGENT_AVOIDANCE_WEIGHT = config_yaml["forces"]["agent_avoidance_weight"].as<double>();
+    this->config.AGENT_ALIGNMENT_WEIGHT = config_yaml["forces"]["agent_alignment_weight"].as<double>();
+    this->config.UNEXPLORED_FRONTIER_WEIGHT = config_yaml["forces"]["unexplored_frontier_weight"].as<double>();
+//
+    this->config.FRONTIER_DISTANCE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["distance_weight"].as<double>();
+    this->config.FRONTIER_SIZE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["size_weight"].as<double>();
+//    this->config.FRONTIER_REACH_BATTERY_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_battery_weight"].as<double>();
+//    this->config.FRONTIER_REACH_DURATION_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_duration_weight"].as<double>();
+//    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
+//
+//    this->config.P_FREE = config_yaml["confidence"]["p_free"].as<double>();
+//    this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
+//    this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
+//    this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+//    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+//
+    this->config.COVERAGE_MATRIX_RESOLUTION = config_yaml["map"]["coverage_resolution"].as<double>();
+    this->config.OBSTACLE_MATRIX_RESOLUTION = config_yaml["map"]["obstacle_resolution"].as<double>();
+    this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S = config_yaml["map"]["coverage_evaporation_time"].as<double>();
+    this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S = config_yaml["map"]["obstacle_evaporation_time"].as<double>();
+//    this->config.QUADTREE_EVAPORATION_TIME_S = config_yaml["quadtree"]["evaporation_time"].as<double>();
+//    this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
+//    this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();
+//    this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
+//
+    this->config.BATTERY_CAPACITY = config_yaml["battery"]["capacity"].as<double>();
+    this->config.BATTERY_VOLTAGE = config_yaml["battery"]["voltage"].as<double>();
+//
+    this->config.MOTOR_STALL_CURRENT = config_yaml["motor"]["stall_current"].as<double>();
+    this->config.MOTOR_STALL_TORQUE = config_yaml["motor"]["stall_torque"].as<double>();
+    this->config.MOTOR_NO_LOAD_RPM = config_yaml["motor"]["no_load_rpm"].as<double>();
+    this->config.MOTOR_NO_LOAD_CURRENT = config_yaml["motor"]["no_load_current"].as<double>();
+//
+    this->config.WIFI_SPEED_MBPS = config_yaml["communication"]["wifi_speed"].as<double>();
+    this->config.MAX_JITTER_MS = config_yaml["communication"]["max_jitter"].as<double>();
+    this->config.MESSAGE_LOSS_PROBABILITY = config_yaml["communication"]["message_loss_probability"].as<double>();
 }

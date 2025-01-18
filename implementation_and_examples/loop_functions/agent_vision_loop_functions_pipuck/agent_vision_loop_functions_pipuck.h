@@ -18,6 +18,7 @@ public:
     TCoordinateMap m_tObjectCoordinates;
     TCoordinateMap m_tOtherAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
+    std::map<CPiPuckEntity*, CRadians> m_tAgentHeadings;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
 //    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, std::vector<std::vector<double>>> m_tCoverageMatrix;
@@ -30,15 +31,17 @@ public:
 //    PheromoneMatrix combinedCoverageMatrix;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
     std::vector<std::vector<double>> coverageMatrix;
-    int coverageMatrixWidth;
-    int coverageMatrixHeight;
+    int coverageMatrixWidth = 0;
+    int coverageMatrixHeight = 0;
     double coverageMatrixResolution;
 //    PheromoneMatrix combinedObstacleMatrix;
     std::vector<std::vector<double>> obstacleMatrix;
-    int obstacleMatrixWidth;
-    int obstacleMatrixHeight;
+    int obstacleMatrixWidth = 0;
+    int obstacleMatrixHeight = 0;
     double obstacleMatrixResolution;
-
+    std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
+    double real_x_min = -5.5;
+    double real_y_min = -5.5;
 public:
 
     virtual ~CAgentVisionLoopFunctions() {}
@@ -69,6 +72,9 @@ public:
     inline const std::map<CPiPuckEntity*, double>& GetAgentElapsedTicks() const {
         return m_tAgentElapsedTicks;
     }
+
+    Coordinate getRealCoordinateFromIndex(int x, int y, double resolution) const;
+
 
 //    CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
 
@@ -109,7 +115,7 @@ private:
 
 //    void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
-    void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+    void pushMatrices(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
 
 };
 
