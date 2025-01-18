@@ -6,14 +6,19 @@ include_directories(${CMAKE_SOURCE_DIR}/libraries)  # Parent directory of cereal
 add_library(agent_implementation SHARED
         agent.h
         agent.cpp
+        config.yaml
         utils/coordinate.h
         utils/coordinate.cpp
+        utils/Quadtree.h
+        utils/Box.h
+        utils/CustomComparator.h
+        utils/Algorithms.h
+        utils/Algorithms.cpp
         agent_control/communication/simulation/radio.h
         agent_control/communication/simulation/radio.cpp
         agent_control/communication/TimeSynchronizer.h
         agent_control/communication/TimeSynchronizer.cpp
-        utils/Quadtree.h
-        utils/Box.h
+
         agent_control/sensing/simulation/distance_sensor/hc_sr04.h
         agent_control/sensing/simulation/distance_sensor/hc_sr04.cpp
         agent_control/motion/simulation/DifferentialDrive.h
@@ -24,7 +29,6 @@ add_library(agent_implementation SHARED
         agent_control/path_planning/SimplePathPlanner.cpp
         agent_control/path_planning/PathFollower.h
         agent_control/path_planning/PathFollower.cpp
-        utils/CustomComparator.h
         agent_control/path_planning/FrontierEvaluator.h
         agent_control/path_planning/FrontierEvaluator.cpp
         agent_control/path_planning/ForceVectorCalculator.h
@@ -38,4 +42,13 @@ add_library(agent_implementation SHARED
 )
 
 # Link directories (if you have specific libraries to link against)
-link_directories(${CMAKE_BINARY_DIR}/libraries/cereal)
+include(FetchContent)
+
+FetchContent_Declare(
+        yaml-cpp
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+        GIT_TAG master# Can be a tag (yaml-cpp-x.x.x), a commit hash, or a branch name (master)
+)
+FetchContent_MakeAvailable(yaml-cpp)
+
+target_link_libraries(agent_implementation PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library

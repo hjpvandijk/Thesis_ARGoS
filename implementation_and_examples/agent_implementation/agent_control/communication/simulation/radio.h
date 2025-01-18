@@ -19,15 +19,18 @@ public:
 
     Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor);
 
+    void config(float wifiTransferSpeed_Mbps, float maxJitter_ms, float message_loss_probability);
+
     void broadcast_message(std::string &messagePrependedWithId) const;
     void send_message(std::string &messagePrependedWithId, const std::string& id);
 
     void receive_messages(std::vector<std::string> &messages, double current_time_s);
 
+
 private:
-    float wifiTransferSpeed_Mbps = 10; //Speed of the wifi transfer in Mbps
-    float maxJitter_ms = 10; //Max jitter in ms
-    float message_drop_probability = 0.05; //Probability of a message being dropped
+    float wifiTransferSpeed_Mbps; //Speed of the wifi transfer in Mbps
+    float maxJitter_ms; //Max jitter in ms
+    float message_loss_probability; //Probability of a message being lost
 
     struct MessageInTransit {
         argos::CByteArray cMessage;

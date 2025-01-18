@@ -38,8 +38,8 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
 
     //Check if we have sent a message to this agent recently
 
-    int nExchangeIntervalsInPeriod = std::floor( seconds/agent->QUADTREE_EXCHANGE_INTERVAL_S); //How many full exchange periods fit into the period
-    double remaining = seconds - nExchangeIntervalsInPeriod * agent->QUADTREE_EXCHANGE_INTERVAL_S;
+    int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.QUADTREE_EXCHANGE_INTERVAL_S); //How many full exchange periods fit into the period
+    double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.QUADTREE_EXCHANGE_INTERVAL_S;
 
     //If the agent has sent a message to this agent recently, we will probably send a message soon
     //Else we will probably not send a message soon
@@ -47,10 +47,10 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
     int amountOfTransmits = 0;
 
     for (auto &agentQuadtree : agent->agentQuadtreeSent) {
-        if(agentQuadtree.second - agent->elapsed_ticks <= agent->QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have sent a message recently
+        if(agentQuadtree.second - agent->elapsed_ticks <= agent->config.QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have sent a message recently
             amountOfTransmits += nExchangeIntervalsInPeriod; //We will exchange nExchangeIntervalsInPeriod times with this agent
             if (agentQuadtree.second - agent->elapsed_ticks +
-                agent->QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will exchange soon
+                agent->config.QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will exchange soon
                 amountOfTransmits++; //We are actually exchanging once more.
             }
         }
@@ -88,14 +88,14 @@ std::pair<float, float> MicroControllerBatteryManager::estimateReceiveConsumptio
     float totalReceiveTimeS = 0;
 
     for (auto &agentQuadtree : agent->agentLocations) { // We assume agent location is received in (roughly) the same tick as the quadtree messages
-        int nExchangeIntervalsInPeriod = std::floor( seconds/agent->QUADTREE_EXCHANGE_INTERVAL_S);
-        double remaining = seconds - nExchangeIntervalsInPeriod * agent->QUADTREE_EXCHANGE_INTERVAL_S;
+        int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.QUADTREE_EXCHANGE_INTERVAL_S);
+        double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.QUADTREE_EXCHANGE_INTERVAL_S;
 
         int amountOfReceives = 0;
-        if(std::get<2>(agentQuadtree.second) - agent->elapsed_ticks <= agent->QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
+        if(std::get<2>(agentQuadtree.second) - agent->elapsed_ticks <= agent->config.QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
             amountOfReceives += nExchangeIntervalsInPeriod; //We will exchange nExchangeIntervalsInPeriod times with this agent
             if (std::get<2>(agentQuadtree.second) - agent->elapsed_ticks +
-                agent->QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will (probably) receive soon
+                agent->config.QUADTREE_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will (probably) receive soon
                 amountOfReceives++; //We are actually exchanging once more.
             }
         }

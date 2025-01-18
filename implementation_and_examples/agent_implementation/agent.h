@@ -29,7 +29,7 @@
 //#define WALL_FOLLOWING_ENABLED
 #define BATTERY_MANAGEMENT_ENABLED
 #define PATH_PLANNING_ENABLED
-#define AVOID_UNREACHABLE_FRONTIERS
+//#define AVOID_UNREACHABLE_FRONTIERS
 #ifdef AVOID_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
@@ -72,23 +72,98 @@ public:
     SimplePathPlanner pathPlanner;
     PathFollower pathFollower;
 #endif
+    struct Config {
+//        double ROBOT_DIAMETER;
+        float ROBOT_WEIGHT;
+        float ROBOT_WHEEL_RADIUS;
+        float ROBOT_INTER_WHEEL_DISTANCE;
+
+        double OBJECT_SAFETY_RADIUS;
+        double AGENT_SAFETY_RADIUS;
+
+        double TURN_THRESHOLD_DEGREES;
+        float TURNING_SPEED_RATIO;
+        double STEPS_360_DEGREES;
+
+        double AGENT_LOCATION_RELEVANT_S;
+        double QUADTREE_EXCHANGE_INTERVAL_S;
+        double TIME_SYNC_INTERVAL_S;
+
+        double DISTANCE_SENSOR_NOISE_CM;
+        double ORIENTATION_NOISE_DEGREES;
+        double POSITION_NOISE_CM;
+        double DISTANCE_SENSOR_PROXIMITY_RANGE;
+
+        double VIRTUAL_WALL_AVOIDANCE_WEIGHT;
+        double AGENT_COHESION_WEIGHT;
+        double AGENT_AVOIDANCE_WEIGHT;
+        double AGENT_ALIGNMENT_WEIGHT;
+        double TARGET_WEIGHT;
+
+        double FRONTIER_DISTANCE_WEIGHT;
+        double FRONTIER_SIZE_WEIGHT;
+        double FRONTIER_REACH_BATTERY_WEIGHT;
+        double FRONTIER_REACH_DURATION_WEIGHT;
+        double FRONTIER_PHEROMONE_WEIGHT;
+
+        double FRONTIER_SEARCH_RADIUS;
+        int MAX_FRONTIER_CELLS;
+        int MAX_FRONTIER_REGIONS;
+        double AGENT_COHESION_RADIUS;
+        double AGENT_AVOIDANCE_RADIUS;
+        double AGENT_ALIGNMENT_RADIUS ;
+        double OBJECT_AVOIDANCE_RADIUS;
+        double FRONTIER_DIST_UNTIL_REACHED;
+
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+        float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
+        bool FEASIBILITY_CHECK_ONLY_ROUTE;
+#endif
+
+#ifdef SEPARATE_FRONTIERS
+        double FRONTIER_SEPARATION_THRESHOLD;
+#endif
+
+        double P_FREE ;
+        double P_OCCUPIED;
+        float ALPHA_RECEIVE;
+        float P_FREE_THRESHOLD;
+        float P_OCCUPIED_THRESHOLD;
+
+        double QUADTREE_RESOLUTION;
+        double QUADTREE_EVAPORATION_TIME_S;
+        double QUADTREE_EVAPORATED_PHEROMONE_FACTOR;
+        double QUADTREE_MERGE_MAX_VISITED_TIME_DIFF;
+        double QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF;
+
+        double BATTERY_CAPACITY;
+        double BATTERY_VOLTAGE;
+        double MOTOR_STALL_CURRENT;
+        double MOTOR_STALL_TORQUE;
+        double MOTOR_NO_LOAD_RPM;
+        double MOTOR_NO_LOAD_CURRENT;
+
+        double WIFI_SPEED_MBPS;
+        double MAX_JITTER_MS;
+        double MESSAGE_LOSS_PROBABILITY;
+
+    };
+    Config config;
 
 
-    double DISTANCE_SENSOR_NOISE_CM = 5.0;
-    double ORIENTATION_NOISE_DEGREES = 15.0; //Maximum noise in degrees
-    double ORIENTATION_JITTER_DEGREES = 5.0;
-    double POSITION_NOISE_CM = 20.0;
-    double POSITION_JITTER_CM = 10.0;
+//    double DISTANCE_SENSOR_NOISE_CM = 5.0;
+//    double ORIENTATION_NOISE_DEGREES = 5.0;
+//    double POSITION_NOISE_CM = 5.0;
 
 
     std::map<std::string, std::tuple<Coordinate, Coordinate, double>> agentLocations; //id: (location, frontier, timestamp)
-    double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
-    double QUADTREE_EXCHANGE_INTERVAL_S = 5.0;
+//    double AGENT_LOCATION_RELEVANT_DURATION_S = 10.0;
+//    double QUADTREE_EXCHANGE_INTERVAL_S = 5.0;
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
     std::map<std::string, int> agentQuadtreeBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
 
-    double TIME_SYNC_INTERVAL_S = 10.0;
+//    double TIME_SYNC_INTERVAL_S = 10.0;
     int last_time_sync_tick = 0;
 
     //Vector affected by swarm
@@ -157,67 +232,66 @@ public:
 
 
 
-    double PROXIMITY_RANGE = 2.0;
+//    double DISTANCE_SENSOR_PROXIMITY_RANGE = 2.0;
 
-    double TURN_THRESHOLD_DEGREES = 8.0;
+//    double TURN_THRESHOLD_DEGREES = 8.0;
 
-    double AGENT_ROBOT_DIAMETER = 0.08;
+//    double AGENT_ROBOT_DIAMETER = 0.08;
 
-    double OBJECT_SAFETY_RADIUS = 0.1;
-    double AGENT_SAFETY_RADIUS = AGENT_ROBOT_DIAMETER + 0.1;
+//    double OBJECT_SAFETY_RADIUS = 0.1;
+//    double AGENT_SAFETY_RADIUS = AGENT_ROBOT_DIAMETER + 0.1;
 
-    double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
-    double AGENT_COHESION_WEIGHT = 0;//0.23;
-    double AGENT_AVOIDANCE_WEIGHT = 1.15;
-    double AGENT_ALIGNMENT_WEIGHT = 0;//0.5;//0.5;
-    double UNEXPLORED_FRONTIER_WEIGHT = 0.3;
+//    double VIRTUAL_WALL_AVOIDANCE_WEIGHT = 1.1;
+//    double AGENT_COHESION_WEIGHT = 0;//0.23;
+//    double AGENT_AVOIDANCE_WEIGHT = 1.15;
+//    double AGENT_ALIGNMENT_WEIGHT = 0;//0.5;//0.5;
+//    double TARGET_WEIGHT = 0.3;
+//
+//    double FRONTIER_DISTANCE_WEIGHT = 0.0;//0.001;
+//    double FRONTIER_SIZE_WEIGHT = 1.0;
+//    double FRONTIER_REACH_BATTERY_WEIGHT = 8.0;
+//    double FRONTIER_REACH_DURATION_WEIGHT = 1.0;
+//    double FRONTIER_PHEROMONE_WEIGHT = 500.0;
 
-    double FRONTIER_DISTANCE_WEIGHT = 0.0;//0.001;
-    double FRONTIER_SIZE_WEIGHT = 1.0;
-    double FRONTIER_REACH_BATTERY_WEIGHT = 8.0;
-    double FRONTIER_REACH_DURATION_WEIGHT = 1.0;
-    double FRONTIER_PHEROMONE_WEIGHT = 500.0;
+//    double FRONTIER_SEARCH_RADIUS = 4.0;
 
-    double FRONTIER_SEARCH_DIAMETER = 8.0;
-
-    double AGENT_COHESION_RADIUS = 1.5;
-    double AGENT_AVOIDANCE_RADIUS = 0.68;
-    double AGENT_ALIGNMENT_RADIUS = 1.5;
-    double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
+//    double AGENT_COHESION_RADIUS = 1.5;
+//    double AGENT_AVOIDANCE_RADIUS = 0.68;
+//    double AGENT_ALIGNMENT_RADIUS = 1.5;
+//    double OBJECT_AVOIDANCE_RADIUS = AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIUS + 0.2;
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
-    float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = 5.0;
+//    double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
+//    float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = 5.0;
     int last_feasibility_check_tick = 0;
 #endif
 
 #ifdef SEPARATE_FRONTIERS
-    double FRONTIER_CLOSE_DISTANCE = 1.0;
+//    double FRONTIER_CLOSE_DISTANCE = 1.0;
 #endif
 
 
     Coordinate left_right_borders = {-10, 10};
     Coordinate upper_lower_borders = {10, -10};
 
-    float TURNING_SPEED_RATIO = 0.1;
+//    float TURNING_SPEED_RATIO = 0.1;
 
-    double ANGLE_INTERVAL_STEPS = 360;
+//    double ANGLE_INTERVAL_STEPS = 360;
 
 
 #ifdef AVOID_UNREACHABLE_FRONTIERS
     int CLOSEST_COORDINATE_HIT_COUNT_BEFORE_DECREASING_CONFIDENCE = 3;
     int MAX_TICKS_IN_HITPOINT = int(ticks_per_second) * 5; //5 seconds
+    double P_AVOIDANCE = 0.3; // 30% probability for avoidance to be correct
 #endif
 
-    double P_AVOIDANCE = 0.3; // 10% probability for avoidance to be correct
-    double P_POSITION = 0.9; // 90% probability for position to be correct
-    double P_FREE = 0.6; // 70% probability for free to be correct
-    double P_OCCUPIED = 0.4; // 30% probability for occupied to be correct
-    float ALPHA_RECEIVE = 0.1; // Factor with which a received value's probability is pulled towards 0.5
-    double MIN_ALLOWED_DIST_BETWEEN_FRONTIERS = 1.0;
-
-    float P_FREE_THRESHOLD = 0.6; //P > 0.6 means it is definitely free
-    float P_OCCUPIED_THRESHOLD = 0.4; //P < 0.3 means it is definitely occupied
+//    double P_POSITION = 0.9; // 90% probability for position to be correct
+//    double P_FREE = 0.6; // 60% probability for free to be correct
+//    double P_OCCUPIED = 0.4; // 40% probability for occupied to be correct
+//    float ALPHA_RECEIVE = 0.1; // Factor with which a received value's probability is pulled towards 0.5
+//
+//    float P_FREE_THRESHOLD = 0.6; //P > 0.6 means it is definitely free
+//    float P_OCCUPIED_THRESHOLD = 0.4; //P < 0.3 means it is definitely occupied
 
 
     Coordinate currentBestFrontier = {MAXFLOAT, MAXFLOAT};
@@ -238,6 +312,10 @@ public:
 
 
 private:
+    std::string config_file = "agent_implementation/config.yaml";
+    void loadConfig();
+
+
     void checkForObstacles();
 
     void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;

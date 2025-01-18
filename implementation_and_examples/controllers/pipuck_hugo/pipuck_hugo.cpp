@@ -94,9 +94,9 @@ void PiPuckHugo::ControlStep() {
     for(int i = 0; i < num_sensors; i++){
         auto sensorReading = proxReadings[i];
         double sensorNoiseM = 0.0;
-        double sensorNoiseRange = agentObject->DISTANCE_SENSOR_NOISE_CM * 100;
+        double sensorNoiseRange = agentObject->config.DISTANCE_SENSOR_NOISE_CM * 100;
         // Add noise to the sensor reading, if it is not the maximum range (nothing hit)
-        if(sensorReading != agentObject->PROXIMITY_RANGE) sensorNoiseM = (sensorNoiseRange-(rand()%2*sensorNoiseRange)) *0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
+        if(sensorReading != agentObject->config.DISTANCE_SENSOR_PROXIMITY_RANGE) sensorNoiseM = (sensorNoiseRange - (rand() % 2 * sensorNoiseRange)) * 0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
         agentObject->setLastRangeReadings(i, sensorReading + sensorNoiseM);
     }
 
@@ -105,17 +105,22 @@ void PiPuckHugo::ControlStep() {
 
 //    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
 
-
-
-
-
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
+
+    // Add noise to the sensor reading
+    double positionNoiseRange = agentObject->config.POSITION_NOISE_CM / 100.0;
+    double positionNoiseX = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+    double positionNoiseY = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
+
+    agentObject->setPosition(-position.GetY() + positionNoiseX, position.GetX() + positionNoiseY); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
 
     double agentPersonalOrientationNoise = agentObject->ORIENTATION_NOISE_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->ORIENTATION_NOISE_DEGREES/5*2) - agentObject->ORIENTATION_NOISE_DEGREES/5 : 0;
     double agentPersonalPositionNoise =  agentObject->POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->POSITION_NOISE_CM/5*2) - agentObject->POSITION_NOISE_CM/5) / 100.0 : 0;
 
     const auto orientation = positionSensorReading.Orientation;
+    argos::CRadians orientationNoiseRange = ToRadians(argos::CDegrees(agentObject->config.ORIENTATION_NOISE_DEGREES));
+    argos::CRadians orientationNoise = (orientationNoiseRange-(rand()%2*orientationNoiseRange)); ; // Random number between -orientationNoiseRange and orientationNoiseRange rad, to simulate sensor noise
     double orientationJitterRange = agentObject->ORIENTATION_JITTER_DEGREES;
     argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
     argos::CRadians agentPersonalOrientationNoiseRad = ToRadians(CDegrees(agentPersonalOrientationNoise));

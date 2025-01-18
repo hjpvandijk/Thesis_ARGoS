@@ -92,6 +92,7 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
 
 
 
+
 //    for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();
 //         it != m_cAgVisLF.GetAgentFreeAngles().end();
 //         ++it) {
@@ -106,9 +107,9 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
 //            argos::CRadians angle_rad = ToRadians(angle);
 //
 //            //Get the end of the ray
-//            CVector3 ray_end = CVector3(agent_pos.GetX() + cos(angle_rad.GetValue()),
-//                                        agent_pos.GetY() + sin(angle_rad.GetValue()), 0.02f);
-//
+//            CVector3 ray_end = CVector3(agent_pos.GetX() + 0.48*cos(angle_rad.GetValue()),
+//                                        agent_pos.GetY() + 0.48*sin(angle_rad.GetValue()), 0.02f);
+
 //            CRay3 ray = CRay3(agent_pos, ray_end);
 //            DrawRay(ray, CColor::BLUE);
 //        }

@@ -24,8 +24,8 @@ bool FrontierEvaluator::skipFrontier(Agent* agent, double frontierRegionX, doubl
     float Pconfidence = std::exp(Lconfidence) / (1 + std::exp(Lconfidence)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
     int randomChance = rand() % 100;
     //P < 0.5 = occupied, P > 0.5 = free
-    if (Pconfidence < agent->P_FREE_THRESHOLD) { //If the frontier might be occupied
-        float Pfree = (Pconfidence - agent->P_OCCUPIED_THRESHOLD)  / (1-agent->P_OCCUPIED_THRESHOLD); // Rescale to 0-1
+    if (Pconfidence < agent->config.P_FREE_THRESHOLD) { //If the frontier might be occupied
+        float Pfree = (Pconfidence - agent->config.P_OCCUPIED_THRESHOLD)  / (1-agent->config.P_OCCUPIED_THRESHOLD); // Rescale to 0-1
 
         if (randomChance > Pfree * 100.0) { //The higher the confidence, the lower the chance to skip
             this->avoidingFrontiers.push_back({frontierRegionX, frontierRegionY}); //Currently avoiding said frontier
@@ -44,7 +44,7 @@ bool FrontierEvaluator::skipFrontier(Agent* agent, double frontierRegionX, doubl
 void FrontierEvaluator::resetFrontierAvoidance(Agent* agent, argos::CVector2 unexploredFrontierVector) {
     //If the agent is close to the frontier, reset all frontiers avoiding flags (we're giving them another chance)
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-    if (unexploredFrontierVector.Length() <= agent->FRONTIER_DIST_UNTIL_REACHED) {
+    if (unexploredFrontierVector.Length() <= agent->config.FRONTIER_DIST_UNTIL_REACHED) {
         this->avoidingFrontiers.clear();
     }
 #endif
@@ -59,13 +59,14 @@ bool FrontierEvaluator::frontierHasLowConfidenceOrAvoiding(Agent* agent){
     if(std::find(this->avoidingFrontiers.begin(), this->avoidingFrontiers.end(), agent->currentBestFrontier) != this->avoidingFrontiers.end()) return true;
     float LConfidence = agent->quadtree->getConfidenceFromCoordinate(agent->currentBestFrontier);
     float PConfidence = std::exp(LConfidence) / (1 + std::exp(LConfidence)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
-    if (PConfidence >= agent->P_FREE_THRESHOLD) {
+    if (PConfidence >= agent->config.P_FREE_THRESHOLD) {
         return false;
     }
 
     return true;
 }
 
+#ifdef AVOID_UNREACHABLE_FRONTIERS
 /**
  * Update the confidence of cells if they are around a currently unreachable frontier.
  * If the agent is hitting the same hitpoint multiple times, decrease the frontier confidence.
@@ -99,13 +100,13 @@ void FrontierEvaluator::updateConfidenceIfFrontierUnreachable(Agent* agent) {
             this->lastTickInFrontierHitPoint = false;
             this->ticksInHitpoint = 0;
         } else if (distanceToClosestPoint <=
-                   0.5*agent->OBJECT_AVOIDANCE_RADIUS) { //If we are again on the closest point to the frontier
+                   0.5*agent->config.OBJECT_AVOIDANCE_RADIUS) { //If we are again on the closest point to the frontier
             this->ticksInHitpoint++;
             if (!this->lastTickInFrontierHitPoint || this->ticksInHitpoint >= this->max_ticks_in_hitpoint) {
                 this->closestCoordinateCounter++; //Increase the counter
                 if (this->closestCoordinateCounter >= this->closest_coordinate_hit_count_before_decreasing_confidence || this->ticksInHitpoint >= this->max_ticks_in_hitpoint) { //If we have hit closest point  too often (we are in a loop)
                     //Decrease the confidence of all cells closeby
-                    agent->quadtree->updateConfidence(target, agent->MIN_ALLOWED_DIST_BETWEEN_FRONTIERS,
+                    agent->quadtree->updateConfidence(target, agent->config.FRONTIER_SEPARATION_THRESHOLD,
                                                       agent->P_AVOIDANCE, agent->elapsed_ticks / agent->ticks_per_second);
                     this->avoidingFrontiers.push_back(target);
                     this->closestCoordinateCounter = 0; // Reset counter
@@ -130,3 +131,4 @@ void FrontierEvaluator::updateConfidenceIfFrontierUnreachable(Agent* agent) {
 //        this->timeFrontierDistDecreased = this->elapsed_ticks / this->ticks_per_second;
     }
 }
+#endif
