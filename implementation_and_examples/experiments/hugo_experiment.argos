@@ -270,9 +270,28 @@
         <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
             <body position="-1,2,0" orientation="85,0,0"/>
             <controller config="ppc"/>
-
         </pipuck>
 
+
+
+        <pipuck id="pipuck3" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-2,2,0" orientation="85,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+
+        <pipuck id="pipuck4" wifi_medium="wifi" wifi_range="4.0">
+            <body position="4,3,0" orientation="85,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+
+        <pipuck id="pipuck5" wifi_medium="wifi" wifi_range="4.0">
+            <body position="4.5,-1,0" orientation="85,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck6" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-3,1,0" orientation="85,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
     </arena>
 

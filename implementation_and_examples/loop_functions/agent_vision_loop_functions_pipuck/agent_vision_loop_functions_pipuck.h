@@ -17,6 +17,7 @@ public:
     TCoordinateMap m_tObjectCoordinates;
     TCoordinateMap m_tOtherAgentCoordinates;
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
+    std::map<CPiPuckEntity*, CRadians> m_tAgentHeadings;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
     std::map<CPiPuckEntity*, CVector3> m_tAgentSubTargetCoordinate;
     std::map<CPiPuckEntity*, CVector3> m_tAgentWallFollowingSubTargetCoordinate;

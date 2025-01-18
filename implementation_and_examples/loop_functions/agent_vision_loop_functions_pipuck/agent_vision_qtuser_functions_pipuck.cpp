@@ -81,6 +81,16 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //        }
 //    }
 
+for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
+    CRadians heading = m_cAgVisLF.m_tAgentHeadings[agentheading.first];
+    CVector3 pos = m_cAgVisLF.m_tAgentCoordinates[agentheading.first];
+    CVector3 ray_end = CVector3(pos.GetX() + cos(heading.GetValue()),
+                                pos.GetY() + sin(heading.GetValue()), 0.02f);
+    CRay3 ray = CRay3(pos, ray_end);
+    DrawRay(ray, CColor::RED, 10.0f);
+}
+
+
 
 
     for (std::map<CPiPuckEntity *, std::set<argos::CDegrees>>::const_iterator it = m_cAgVisLF.GetAgentFreeAngles().begin();

@@ -84,6 +84,13 @@ void PiPuckHugo::ControlStep() {
                 proxReadings[sensor.Label] = sensor.Proximity;
             };
     m_pcRangeFindersSensor->Visit(visitFn);
+
+    int agentIdVal = 0;
+    for (char c : agentObject->id) {
+        agentIdVal += static_cast<int>(c);
+    }
+    agentIdVal *= 1234; //Multiply with some number to offset the differences between agents.
+
     for(int i = 0; i < num_sensors; i++){
         auto sensorReading = proxReadings[i];
         double sensorNoiseM = 0.0;
@@ -94,27 +101,53 @@ void PiPuckHugo::ControlStep() {
     }
 
 
-//    RLOG << "Proximity readings: " << proxReadings[0] << std::endl;
-
-//    m_pcWheels->SetLinearVelocity(0.1f, 0.1f);
-
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
 
-    // Add noise to the sensor reading
-    double positionNoiseRange = agentObject->config.POSITION_NOISE_CM / 100.0;
-    double positionNoiseX = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
-    double positionNoiseY = (positionNoiseRange-(rand()%2*positionNoiseRange)); // Random number between -positionNoiseRange and positionNoiseRange m, to simulate sensor noise
-
-    agentObject->setPosition(-position.GetY() + positionNoiseX, position.GetX() + positionNoiseY); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+    // Simulate sensor readings with noise
 
 
-    const auto orientation = positionSensorReading.Orientation;
-    argos::CRadians orientationNoiseRange = ToRadians(argos::CDegrees(agentObject->config.ORIENTATION_NOISE_DEGREES));
-    argos::CRadians orientationNoise = (orientationNoiseRange-(rand()%2*orientationNoiseRange)); ; // Random number between -orientationNoiseRange and orientationNoiseRange rad, to simulate sensor noise
+    //Orientation noise
+    //Agent-dependent noise
+    double agentPersonalOrientationNoise = agentObject->config.ORIENTATION_NOISE_DEGREES != 0 ? (agentIdVal + int((position.GetX() + position.GetY())*100)) % int(agentObject->config.ORIENTATION_NOISE_DEGREES/5*2) - agentObject->config.ORIENTATION_NOISE_DEGREES/5 : 0;
+    argos::CRadians agentPersonalOrientationNoiseRad = ToRadians(CDegrees(agentPersonalOrientationNoise));
+
+    // Orientation jitter
+    double orientationJitterRange = agentObject->config.ORIENTATION_JITTER_DEGREES;
+    argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
+
+    //Position noise
+    //Agent-dependent noise
+    double agentPersonalPositionNoise =  agentObject->config.POSITION_NOISE_CM != 0 ? ((agentIdVal + int((position.GetX() - position.GetY())*100)) % int(agentObject->config.POSITION_NOISE_CM/5*2) - agentObject->config.POSITION_NOISE_CM/5) / 100.0 : 0;
+    //Position jitter
+    double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
+    double positionJitter = (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
+
+    //Get values from heatmap, and convert them into the correct range
+    int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
+    int heatmapX = std::floor((-position.GetY() + this->map_size/2)/(this->map_size/heatmap_size));
+    int heatmapY = std::floor((position.GetX() + this->map_size/2)/(this->map_size/heatmap_size));
+
+    //Simulate position estimation offset
+    //Direction, including jitter and agent-dependent noise
+    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX];
+    CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
+    //Magnitude, including jitter and agent-dependent noise
+    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX] * agentObject->config.POSITION_NOISE_CM / 100.0;
+    double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
+
+    CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
+    agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+
+    //Simulate orientation (IMU) estimation offset
+    double orientation_offset_heatmap_value = this->orientation_offset_heatmap[heatmapY][heatmapX]*agentObject->config.ORIENTATION_NOISE_DEGREES;
+
     CRadians zAngle, yAngle, xAngle;
+    const auto orientation = positionSensorReading.Orientation;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
-    agentObject->setHeading(zAngle + orientationNoise);
+    CRadians orientationOffset = ToRadians(CDegrees(orientation_offset_heatmap_value));
+    agentObject->setHeading(zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad);
+
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level
@@ -128,7 +161,7 @@ void PiPuckHugo::ControlStep() {
         auto [usedPower, duration] = agentObject->batteryManager.estimateTotalPowerUsage(agentObject.get(),
                                                                                          {traveledVector});
         agentObject->batteryManager.battery.charge -= usedPower;
-        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
+//        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
 
         previousAgentPosition = {-position.GetY(), position.GetX()};
         previousAgentOrientation = zAngle;
