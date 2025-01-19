@@ -158,7 +158,7 @@ def generate_error_heatmap(size):
 
 # Read the directions heatmap from a file
 errors = []
-with open('/home/hugo/Documents/Thesis_ARGoS/error_heatmap.txt', 'r') as f:
+with open('/home/hugo/Documents/Thesis_ARGoS/implementation_and_examples/controllers/pipuck_hugo/error_heatmap.txt', 'r') as f:
     lines = f.readlines()
     for line in lines:
         if line.strip().startswith('{') and line.strip().endswith('},'):
@@ -171,7 +171,7 @@ angle_colors = (errors / (max_error-min_error))  # Normalize angles to [0, 1] fo
 plt.figure(figsize=(8, 8))
 plt.imshow(angle_colors, cmap='Spectral', origin='lower', extent=[0, heatmap_size[0], 0, heatmap_size[1]])
 plt.colorbar(label='Error (normalized)')
-plt.title('Directional Heatmap (Color-encoded)')
+plt.title('Error Magnitude Heatmap (Color-encoded)')
 plt.xlabel('X Direction')
 plt.ylabel('Y Direction')
 plt.grid(False)

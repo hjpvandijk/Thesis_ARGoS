@@ -67,7 +67,7 @@ directions = generate_heatmap(heatmap_size)
 
 # # Read the directions heatmap from a file
 directions = []
-with open('/home/hugo/Documents/Thesis_ARGoS/orientation_offset.txt', 'r') as f:
+with open('/home/hugo/Documents/Thesis_ARGoS/implementation_and_examples/controllers/pipuck_hugo/orientation_offset.txt', 'r') as f:
     lines = f.readlines()
     for line in lines:
         if line.strip().startswith('{') and line.strip().endswith('},'):

@@ -67,7 +67,7 @@ def drift_step_with_heatmap(current_position, directions, grid_size):
 
 # # Read the directions heatmap from a file
 directions = []
-with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'r') as f:
+with open('/home/hugo/Documents/Thesis_ARGoS/implementation_and_examples/controllers/pipuck_hugo/position_direction_offset.txt', 'r') as f:
     lines = f.readlines()
     for line in lines:
         if line.strip().startswith('{') and line.strip().endswith('},'):
@@ -79,7 +79,7 @@ directions = np.array(directions)
 angle_colors = (directions)  # Normalize angles to [0, 1] for coloring
 plt.figure(figsize=(8, 8))
 plt.imshow(angle_colors, cmap='twilight', origin='lower', extent=[0, heatmap_size[0], 0, heatmap_size[1]])
-plt.colorbar(label='Angle (normalized)')
+plt.colorbar(label='Angle (rad)')
 plt.title('Directional Heatmap (Color-encoded)')
 plt.xlabel('X Direction')
 plt.ylabel('Y Direction')
