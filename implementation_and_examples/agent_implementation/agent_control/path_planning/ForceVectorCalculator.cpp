@@ -642,20 +642,16 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
     }
 
     agent->freeAnglesVisualization.clear();
+    auto closestFreeAngle = *freeAngles.begin();
+    CustomComparator customComparator(0, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue());
     for (auto freeAngle: freeAngles) {
         agent->freeAnglesVisualization.insert(freeAngle);
-    }
-    if (freeAngles.empty()) return false;
-
-
-    //Get free angle closest to heading
-    auto closestFreeAngle = *freeAngles.begin();
-
-    for (auto freeAngle: freeAngles) {
-        if (abs(freeAngle.GetValue() - ToDegrees(targetAngle).GetValue()) < abs(closestFreeAngle.GetValue() - ToDegrees(targetAngle).GetValue())) {
+        if (customComparator(freeAngle, closestFreeAngle)) {
             closestFreeAngle = freeAngle;
         }
     }
+    if (freeAngles.empty()) return false;
+
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
