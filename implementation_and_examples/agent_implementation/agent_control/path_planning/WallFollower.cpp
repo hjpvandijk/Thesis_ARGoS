@@ -137,11 +137,11 @@ void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors ve
 //            this->wallFollowingSubTarget = {agent->position.x + subtargetVector.GetX(),
 //                                            agent->position.y + subtargetVector.GetY()};        }
     } else {
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
         if (!(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) { // If we have a frontier to go to, so not in the walking state
 #endif
             this->wallFollowingSubTarget = {MAXFLOAT, MAXFLOAT}; //Rest subtarget
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
         }
 #endif
     }

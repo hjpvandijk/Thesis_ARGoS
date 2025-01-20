@@ -634,9 +634,9 @@ void Agent::calculateNextPosition() {
         targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 #endif
 #endif
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) {
-        enterWalkingState(targetVector);
+        randomWalk(targetVector);
     } else {
         this->subTarget = {MAXFLOAT, MAXFLOAT};
     }
@@ -702,13 +702,13 @@ void Agent::calculateNextPosition() {
     this->swarm_vector = total_vector;
 }
 
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
 
 /**
  * When there is no target to be found within the search range, select a random location on the edge of the root box.
  * @param targetVector
  */
-void Agent::enterWalkingState(argos::CVector2 &targetVector) {
+void Agent::randomWalk(argos::CVector2 &targetVector) {
     argos::CVector2 agentToSubtarget = argos::CVector2(this->subTarget.x - this->position.x,
                                                        this->subTarget.y - this->position.y);;
     if (this->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}
@@ -786,6 +786,8 @@ void Agent::startMission() {
 
 void Agent::doStep() {
     if (this->state == State::NO_MISSION) {
+        //Do nothing
+        this->differential_drive.stop();
     } else { //Exploring or returning
         broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
         sendQuadtreeToCloseAgents();
@@ -1055,7 +1057,7 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
-    if (this->state == State::RETURNING) return;
+    if (this->state == State::RETURNING || this->state == State::NO_MISSION) return;
     auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
     if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
         this->state = State::RETURNING;

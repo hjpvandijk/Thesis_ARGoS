@@ -151,6 +151,8 @@ private:
 
     void readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]);
 
+    bool mission_start = false;
+
 
 };
 

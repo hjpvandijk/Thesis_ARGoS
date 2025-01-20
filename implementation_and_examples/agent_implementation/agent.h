@@ -35,7 +35,7 @@
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #endif
 #endif
-#define WALKING_STATE_WHEN_NO_FRONTIERS
+#define RANDOM_WALK_WHEN_NO_FRONTIERS
 
 class Agent {
 public:
@@ -352,8 +352,8 @@ private:
 
     void syncMissionTime(double received_time);
 
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
-    void enterWalkingState(argos::CVector2 & targetVector);
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    void randomWalk(argos::CVector2 & targetVector);
 #endif
 
 

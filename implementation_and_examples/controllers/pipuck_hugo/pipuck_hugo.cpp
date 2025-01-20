@@ -74,8 +74,6 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/orientation_offset.txt", this->orientation_offset_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/error_heatmap.txt", this->error_mean_heatmap);
-
-    agentObject->startMission();
 }
 
 void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]) {
@@ -207,9 +205,10 @@ void PiPuckHugo::ControlStep() {
     batteryMeasureTicks++;
 #endif
 
-
-//    RLOG << "Position: " << agentObject->position.x << std::endl;
-//    RLOG << "Orientation: " << agentObject->heading << std::endl;
+    if (!this->mission_start){
+        agentObject->startMission();
+        this->mission_start = true;
+    }
     agentObject->doStep();
 
 
