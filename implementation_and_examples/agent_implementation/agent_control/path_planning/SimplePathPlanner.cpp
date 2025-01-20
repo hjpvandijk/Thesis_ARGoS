@@ -483,10 +483,12 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlan
                 else if (std::abs(intersection.y - box.top)<0.00001) edge_index = 1;
                 else if (std::abs(intersection.x - box.getRight())<0.00001) edge_index = 2;
                 else if (std::abs(intersection.y - box.getBottom())<0.00001) edge_index = 3;
+                if (edge_index != -1) { //If the intersection is not on an edge, it is not a valid intersection
+                    auto dist_to_intersection = sqrt(
+                            pow(intersection.x - start.x, 2) + pow(intersection.y - start.y, 2));
 
-                auto dist_to_intersection = sqrt(pow(intersection.x - start.x, 2) + pow(intersection.y - start.y, 2));
-
-                return {cell, box, edge_index, dist_to_intersection};
+                    return {cell, box, edge_index, dist_to_intersection};
+                }
             }
         }
     }
