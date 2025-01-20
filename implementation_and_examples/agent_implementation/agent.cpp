@@ -527,8 +527,9 @@ void Agent::calculateNextPosition() {
                            this->config.TURN_THRESHOLD_DEGREES * 2 ||
                            targetVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
 
+#ifdef PATH_PLANNING_ENABLED
     bool periodic_check_required = (this->elapsed_ticks - this->last_feasibility_check_tick) > this->ticks_per_second * this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
-
+#endif
     //If the current best frontier is not set, or the agent is close to a blacklisted frontier, or the agent is close to the frontier (reached).
     if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
         #ifdef SKIP_UNREACHABLE_FRONTIERS
@@ -539,7 +540,9 @@ void Agent::calculateNextPosition() {
     frontierReached //|| //Or the agent is close to the frontier
 //    //Or if the pheromone of cell the frontier is in has evaporated --> frontier has moved
 //    frontierPheromoneEvaporated() //It can be that the frontier is not in an explored cell due to being the average location of the region
+#ifdef PATH_PLANNING_ENABLED
     || (periodic_check_required && !this->config.FEASIBILITY_CHECK_ONLY_ROUTE) //Or if it is time for a periodic check, and we are not only checking the route
+#endif
     ) {
 #ifdef WALL_FOLLOWING_ENABLED
         //If we are not currently wall following
@@ -552,7 +555,9 @@ void Agent::calculateNextPosition() {
         targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
         this->last_feasibility_check_tick = this->elapsed_ticks;
 #endif
-    } else if (periodic_check_required && this->config.FEASIBILITY_CHECK_ONLY_ROUTE){
+    }
+#ifdef PATH_PLANNING_ENABLED
+    else if (periodic_check_required && this->config.FEASIBILITY_CHECK_ONLY_ROUTE){
         this->route_to_best_frontier.clear();
         this->pathPlanner.getRoute(this, this->position, this->currentBestFrontier, this->route_to_best_frontier);
         if (this->route_to_best_frontier.empty()) { //If there is no route to the frontier, find a new frontier
@@ -561,6 +566,7 @@ void Agent::calculateNextPosition() {
         this->last_feasibility_check_tick = this->elapsed_ticks;
 
     }
+#endif
 
 
 #else

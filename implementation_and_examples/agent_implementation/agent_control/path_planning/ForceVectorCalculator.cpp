@@ -404,7 +404,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //        }
 #else
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
-        std::vector<argos::CVector2> relativeRoute = {vectorToFrontier.Rotate(-agent->heading)};
+        std::vector<argos::CVector2> relative_route = {vectorToFrontier.Rotate(-agent->heading)};
 #endif
         //Relative vector to heading
 
@@ -500,8 +500,10 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
     double angleInterval = argos::CDegrees(360 / agent->config.STEPS_360_DEGREES).GetValue();
 
     //Create set of free angles ordered to be used for wall following
-    std::set<argos::CDegrees, CustomComparator> freeAngles(
-            CustomComparator(agent->wallFollower.wallFollowingDirection, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue()));
+//    std::set<argos::CDegrees, CustomComparator> freeAngles(
+//            CustomComparator(agent->wallFollower.wallFollowingDirection, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue()));
+
+    std::set<argos::CDegrees> freeAngles;
 
 //Add free angles from -180 to 180 degrees
     for (int a = 0; a < agent->config.STEPS_360_DEGREES; a++) {
@@ -648,6 +650,12 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
     //Get free angle closest to heading
     auto closestFreeAngle = *freeAngles.begin();
+
+    for (auto freeAngle: freeAngles) {
+        if (abs(freeAngle.GetValue() - ToDegrees(targetAngle).GetValue()) < abs(closestFreeAngle.GetValue() - ToDegrees(targetAngle).GetValue())) {
+            closestFreeAngle = freeAngle;
+        }
+    }
 
     argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
     *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);

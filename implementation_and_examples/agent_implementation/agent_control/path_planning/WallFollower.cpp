@@ -17,7 +17,7 @@
  * @param relativeObjectAvoidanceAngle
  * @param targetAngle
  */
-void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors vectors, argos::CVector2 & total_vector, std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle){
+void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors vectors, argos::CVector2 & total_vector, std::set<argos::CDegrees>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle){
     if (!(agent->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ||
         agent->previousBestFrontier == agent->currentBestFrontier) { // If we are still on route to the same frontier
         Coordinate target = !(agent->subTarget == Coordinate{MAXFLOAT, MAXFLOAT}) ? agent->subTarget : agent->currentBestFrontier;
@@ -30,7 +30,7 @@ void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors ve
         if (this->wallFollowingDirection == 0 && std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) > 89) { //The complete forward direction to the target is blocked
 
             if (agentToHitPoint.Length() <=
-                agent->quadtree->getSmallestBoxSize()) { // If we are at the hit point (again).
+                agent->config.OBJECT_AVOIDANCE_RADIUS) { // If we are at the hit point (again).
                 if (this->wallFollowingDirection == 0) {
                     if (this->prevWallFollowingDirection == 0) {
                         this->wallFollowingDirection = rand() % 2 == 0 ? 1 : -1; // Randomly choose a direction
@@ -76,8 +76,14 @@ void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors ve
         //Get the closest free angle to the wall following direction (90 degrees right or left)
         //Create a subtarget in that direction
         argos::CDegrees subtargetAngle = *freeAngles.begin();
+        CustomComparator customComparator = CustomComparator(this->wallFollowingDirection, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue());
+        for (auto freeAngle: freeAngles) {
+            //If the angle is closer to the wall following direction than the current subtarget angle, set the new subtarget angle
+            if (customComparator(freeAngle, subtargetAngle)) {
+                subtargetAngle = freeAngle;
+            }
+        }
         //Create subtarget
-
 
         if (subtargetAngle != *closestFreeAngle) { //If angle is the same, the order of the free angles set isn't according to wall following yet
             //If the difference between the first free angle and the last is less than 90 degrees, agent will spin indefinitely. So go straight

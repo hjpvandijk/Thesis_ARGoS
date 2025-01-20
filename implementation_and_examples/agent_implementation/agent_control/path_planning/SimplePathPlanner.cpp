@@ -4,8 +4,9 @@
 #include "agent_implementation/utils/Algorithms.h"
 #include "agent_implementation/agent.h"
 
+#ifdef PATH_PLANNING_ENABLED
 
- std::tuple<int, std::vector<argos::CVector2>, double> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
+std::tuple<int, std::vector<argos::CVector2>, double> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
     srand(target.x * 100 + target.y * 100);
     int wall_following_direction;
     std::vector<argos::CVector2> relativeRoute;
@@ -562,3 +563,5 @@ std::pair<Coordinate, Coordinate> SimplePathPlanner::getEdgeCoordinates(quadtree
             return {Coordinate{MAXFLOAT, MAXFLOAT}, Coordinate{MAXFLOAT, MAXFLOAT}};
     }
 }
+
+#endif

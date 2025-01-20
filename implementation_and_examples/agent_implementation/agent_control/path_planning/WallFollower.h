@@ -15,7 +15,7 @@ public:
     Coordinate wallFollowingHitPoint = {MAXFLOAT, MAXFLOAT};
 
     WallFollower() = default;
-    void wallFollowing(Agent* agent, ForceVectorCalculator::vectors vectors, argos::CVector2 & total_vector, std::set<argos::CDegrees, CustomComparator>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+    void wallFollowing(Agent* agent, ForceVectorCalculator::vectors vectors, argos::CVector2 & total_vector, std::set<argos::CDegrees>& freeAngles, argos::CDegrees *closestFreeAngle, argos::CRadians *closestFreeAngleRadians, argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
 
 };
 
