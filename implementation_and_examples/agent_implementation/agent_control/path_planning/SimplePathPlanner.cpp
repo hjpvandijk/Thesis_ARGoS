@@ -457,7 +457,8 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlan
         else target_box = target_box.boxFromQuadrant(quadrant);
 
     }
-    std::vector<Coordinate> linePoints = Algorithms::bresenhamLine(agent, start_box.getCenter(), target_box.getCenter());
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent, start_box.getCenter(),
+                                                                                    target_box.getCenter());
     for (const auto& point: linePoints) {
         auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(point);
         auto cell = cell_and_box.first;
