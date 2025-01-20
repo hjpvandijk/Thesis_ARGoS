@@ -30,10 +30,11 @@ std::vector<Coordinate> Algorithms::Amanatides_Woo_Voxel_Traversal(Agent* agent,
 
     int stepX = dx > 0 ? 1 : -1;
     int stepY = dy > 0 ? 1 : -1;
-    double tMaxX = (dx > 0 ? (floor(x1/box_size) + 1) * box_size - x1 : x1 - floor(x1/box_size) * box_size) / abs(dx);
-    double tMaxY = (dy > 0 ? (floor(y1/box_size) + 1) * box_size - y1 : y1 - floor(y1/box_size) * box_size) / abs(dy);
-    double tDeltaX = box_size / abs(dx);
-    double tDeltaY = box_size / abs(dy);
+    //If the line is vertical or horizontal, we can't divide by dx or dy, so we set the tMax to infinity
+    double tMaxX = dx == 0 ? MAXFLOAT : (dx > 0 ? (floor(x1/box_size) + 1) * box_size - x1 : x1 - floor(x1/box_size) * box_size) / abs(dx);
+    double tMaxY = dy == 0 ? MAXFLOAT : (dy > 0 ? (floor(y1/box_size) + 1) * box_size - y1 : y1 - floor(y1/box_size) * box_size) / abs(dy);
+    double tDeltaX = dx == 0 ? MAXFLOAT : box_size / abs(dx);
+    double tDeltaY = dy == 0 ? MAXFLOAT : box_size / abs(dy);
 
     points.push_back(Coordinate{(x+0.5)*box_size, (y+0.5)*box_size});
 
