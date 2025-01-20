@@ -1055,9 +1055,11 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
+    if (this->state == State::RETURNING) return;
+    auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
     if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
         this->state = State::RETURNING;
-    } else if (this->batteryManager.battery.getStateOfCharge() * 100.0 < this->config.MISSION_END_BATTERY_LEVEL) {
+    } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
         this->state = State::RETURNING;
     }
 }

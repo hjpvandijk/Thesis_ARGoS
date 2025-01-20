@@ -7,7 +7,7 @@ physical:
   robot_wheel_radius: 0.0205 # Agent wheel radius in meters
   robot_inter_wheel_distance: 0.0656 # Agent inter-wheel distance in meters
 battery:
-  capacity: 100 # Battery capacity in mAh
+  capacity: 40 # Battery capacity in mAh
   voltage: 7.2 # Battery voltage in volts
 motor:
   stall_current: 1.5 # Motor stall current in A
