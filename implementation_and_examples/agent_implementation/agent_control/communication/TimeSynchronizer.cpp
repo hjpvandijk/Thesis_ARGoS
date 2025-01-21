@@ -112,9 +112,6 @@ std::string TimeSynchronizer::t_RXiMessage(double t_RXi) {
 }
 
 
-//double TimeSynchronizer::getLastSyncAttempt(const std::string &other_agent_id){
-//    return lastSyncAttempts[other_agent_id];
-//}
 double TimeSynchronizer::getLastSyncAttempt(){
     return lastSyncAttemptTick;
 }
