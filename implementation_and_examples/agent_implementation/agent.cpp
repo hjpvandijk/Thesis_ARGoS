@@ -765,15 +765,17 @@ void Agent::sendQuadtreeToCloseAgents() {
 }
 
 void Agent::timeSyncWithCloseAgents() {
-    for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = std::get<2>(agentLocationPair.second);
-        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
-        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
-            this->config.AGENT_LOCATION_RELEVANT_S) {
-            //If we have not time synced with this agent in the past TIME_SYNC_INTERVAL_S seconds, do it
-            if (this->elapsed_ticks - this->timeSynchronizer.getLastSync(agentLocationPair.first) >=
-                this->config.TIME_SYNC_INTERVAL_S * this->ticks_per_second) {
+    if (this->elapsed_ticks - this->timeSynchronizer.getLastSyncAttempt() >=
+        (this->config.TIME_SYNC_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) {
+        for (const auto &agentLocationPair: this->agentLocations) {
+            double lastReceivedTick = std::get<2>(agentLocationPair.second);
+            //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
+            if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+                this->config.AGENT_LOCATION_RELEVANT_S) {
+                //If we have not time synced with this agent in the past TIME_SYNC_INTERVAL_S seconds, do it
+
                 timeSynchronizer.initTimeSync(this); //Broadcasting time sync init
+                break; //Time sync is broadcasted, so we can break
             }
         }
     }

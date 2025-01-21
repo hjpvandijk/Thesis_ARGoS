@@ -25,12 +25,14 @@ public:
 
     void syncMissionTime(const std::string &other_agent_id, Agent *agent);
 
-    double getLastSync(const std::string &other_agent_id);
+//    double getLastSyncAttempt(const std::string &other_agent_id);
+    double getLastSyncAttempt();
 
 private:
     //Make sure i is always own, and j is always other
     std::map<std::string, std::tuple<double, double, double, double>> agentSyncs; //id: ( t_TXi, t_RXj, tTXj, tRXi )
-    std::map<std::string, double> lastSyncs; //id: last sync time
+//    std::map<std::string, double> lastSyncAttempts; //id: last sync time
+    int lastSyncAttemptTick = 0;
 
     std::string t_TXiMessage(double t_TXi);
     std::string t_TXi_t_RXj_t_TXjMessage(double t_TXi, double t_RXj, double t_TXj);
