@@ -581,8 +581,8 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
     //Block angles according to the distance sensors
     for (int i = 0; i < agent->distance_sensors.size(); i++) {
+        argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
         if (agent->distance_sensors[i].getDistance() < agent->config.OBJECT_AVOIDANCE_RADIUS) {
-            argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
             //Erase all angles 90 degrees to the left and right of the sensor
             //12.5% to the left
             argos::CDegrees minAngle = argos::CDegrees(int(ToDegrees(sensor_rotation - argos::CRadians::PI_OVER_SIX).GetValue())).SignedNormalize();
@@ -641,6 +641,8 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
         }
     }
 
+
+
     agent->freeAnglesVisualization.clear();
     auto closestFreeAngle = *freeAngles.begin();
     CustomComparator customComparator(0, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue());
@@ -650,6 +652,43 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
             closestFreeAngle = freeAngle;
         }
     }
+    //If there are no free angles, see if there are any sensors that have no close intersection.
+    if (freeAngles.empty()) {
+        for (int i = 0; i < agent->distance_sensors.size(); i++) {
+            argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
+            if (agent->distance_sensors[i].getDistance() < agent->config.OBJECT_AVOIDANCE_RADIUS) {
+                argos::CDegrees minAngle = argos::CDegrees(
+                        int(ToDegrees(sensor_rotation - argos::CRadians::PI / 18.0).GetValue())).SignedNormalize();
+                argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(
+                        sensor_rotation + argos::CRadians::PI_OVER_SIX / 18.0).GetValue())).SignedNormalize();
+
+                if (maxAngle.GetValue() < minAngle.GetValue()) {
+                    argos::CDegrees temp = minAngle;
+                    minAngle = maxAngle;
+                    maxAngle = temp;
+                }
+
+                auto diffMinSensor = NormalizedDifference(ToRadians(minAngle), sensor_rotation);
+                auto diffMaxSensor = NormalizedDifference(ToRadians(maxAngle), sensor_rotation);
+
+
+                if (diffMinSensor >= argos::CRadians(0) && diffMaxSensor <= argos::CRadians(0)) {
+                    for (int a = 0; a < 10; a++) {
+                        auto angle = (minAngle - argos::CDegrees(a)).SignedNormalize();
+                        freeAngles.insert(argos::CDegrees(angle));
+                    }
+                } else if (diffMinSensor <= argos::CRadians(0) && diffMaxSensor >= argos::CRadians(0)) {
+                    for (int a = 0; a < 10; a++) {
+                        auto angle = (minAngle + argos::CDegrees(a)).SignedNormalize();
+                        freeAngles.insert(argos::CDegrees(angle));
+                    }
+                } else {
+                    assert(0);
+                }
+            }
+        }
+    }
+    //If we still have no free angles, return false
     if (freeAngles.empty()) return false;
 
 
