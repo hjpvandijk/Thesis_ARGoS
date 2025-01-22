@@ -65,13 +65,16 @@ bool FrontierEvaluator::avoidingCoordinate(Agent* agent, Coordinate coordinate){
  * If the agent is hitting the same hitpoint multiple times, decrease the frontier confidence.
  */
 void FrontierEvaluator::skipIfFrontierUnreachable(Agent* agent, argos::CRadians objectAvoidanceAngle, argos::CVector2 total_vector) {
-
     Coordinate target = agent->currentBestFrontier;
 //If we have no frontier (walking state), calculate the distance to the subtarget instead
 #ifdef PATH_PLANNING_ENABLED
     if (!(agent->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) target = agent->subTarget;
 #else
     if (agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) target = agent->subTarget;
+#endif
+    //If we are random walking, use the subtarget (random walk target) as target
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    if (agent->randomWalker.randomWalking) target = agent->subTarget;
 #endif
 
     if (!(target == Coordinate{MAXFLOAT, MAXFLOAT}) &&

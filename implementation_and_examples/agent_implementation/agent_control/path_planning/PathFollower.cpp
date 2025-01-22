@@ -21,8 +21,9 @@ Coordinate PathFollower::followPath(Agent *agent) {
 
     current_route = agent->route_to_best_frontier;
 
+    //If we are past the last section, return the last section
     if (current_path_section >= agent->route_to_best_frontier.size()) {
-        return Coordinate{MAXFLOAT, MAXFLOAT};
+        return agent->route_to_best_frontier.back().second;
     }
 
 //    argos::LOG << "route size: " << agent->route_to_best_frontier.size() << " and current path section: " << current_path_section << std::endl;
@@ -36,15 +37,14 @@ Coordinate PathFollower::followPath(Agent *agent) {
         //Check if direction to the sub_target is also free
         if (!rayTraceQuadtreeOccupiedIntersection(agent, agent->position, sub_target)) {
             current_path_section++;
-            //If we are at the end of the path, return
+            //If we are past the end of the path, return the last section
             if (current_path_section >= agent->route_to_best_frontier.size()) {
-                return Coordinate{MAXFLOAT, MAXFLOAT};
+                return agent->route_to_best_frontier.back().second;
             }
             auto [next_start, next_end] = agent->route_to_best_frontier.at(current_path_section);
             sub_target = next_end;
         }
     }
-
 
 
     return sub_target;

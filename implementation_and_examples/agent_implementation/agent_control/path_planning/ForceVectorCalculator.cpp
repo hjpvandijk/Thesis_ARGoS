@@ -648,21 +648,11 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
     }
 
 
-
-    agent->freeAnglesVisualization.clear();
-    auto closestFreeAngle = *freeAngles.begin();
-    CustomComparator customComparator(0, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue());
-    for (auto freeAngle: freeAngles) {
-        agent->freeAnglesVisualization.insert(freeAngle);
-        if (customComparator(freeAngle, closestFreeAngle)) {
-            closestFreeAngle = freeAngle;
-        }
-    }
     //If there are no free angles, see if there are any sensors that have no close intersection.
     if (freeAngles.empty()) {
         for (int i = 0; i < agent->distance_sensors.size(); i++) {
             argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
-            if (agent->distance_sensors[i].getDistance() < agent->config.OBJECT_AVOIDANCE_RADIUS) {
+            if (agent->distance_sensors[i].getDistance() > agent->config.OBJECT_AVOIDANCE_RADIUS) {
                 argos::CDegrees minAngle = argos::CDegrees(
                         int(ToDegrees(sensor_rotation - argos::CRadians::PI / 18.0).GetValue())).SignedNormalize();
                 argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(
@@ -692,6 +682,15 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
                     assert(0);
                 }
             }
+        }
+    }
+    agent->freeAnglesVisualization.clear();
+    auto closestFreeAngle = *freeAngles.begin();
+    CustomComparator customComparator(0, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue());
+    for (auto freeAngle: freeAngles) {
+        agent->freeAnglesVisualization.insert(freeAngle);
+        if (customComparator(freeAngle, closestFreeAngle)) {
+            closestFreeAngle = freeAngle;
         }
     }
     //If we still have no free angles, return false
