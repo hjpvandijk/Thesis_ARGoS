@@ -561,7 +561,7 @@ void Agent::calculateNextPosition() {
         if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
             #ifdef SKIP_UNREACHABLE_FRONTIERS
             //Or if we are avoiding the frontier
-            frontierEvaluator.avoidingFrontier(this) ||
+            frontierEvaluator.avoidingAgentTarget(this) ||
             #endif
             //Or we have reached the frontier
             frontierReached
@@ -634,21 +634,23 @@ void Agent::calculateNextPosition() {
         targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 #endif
 #endif
+    bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
 #ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
-    if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) {
+    if (noTarget) {
         randomWalk(targetVector);
     } else {
         this->subTarget = {MAXFLOAT, MAXFLOAT};
     }
 #endif
 
-
 #ifdef PATH_PLANNING_ENABLED
-    Coordinate nextPathTarget = this->pathFollower.followPath(this);
-    if (!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT})) {
-        this->subTarget = nextPathTarget;
-        targetVector = argos::CVector2(this->subTarget.x - this->position.x,
-                                       this->subTarget.y - this->position.y);
+    if (!noTarget) { //If there is a target
+        Coordinate nextPathTarget = this->pathFollower.followPath(this);
+        if (!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT})) {
+            this->subTarget = nextPathTarget;
+            targetVector = argos::CVector2(this->subTarget.x - this->position.x,
+                                           this->subTarget.y - this->position.y);
+        }
     }
 #endif
 

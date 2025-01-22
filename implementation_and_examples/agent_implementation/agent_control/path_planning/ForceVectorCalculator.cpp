@@ -385,6 +385,12 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                     }
                 }
             }
+            #ifdef SKIP_UNREACHABLE_FRONTIERS
+            //If we are avoiding the frontier
+            if (agent->frontierEvaluator.avoidingCoordinate(agent, {frontierRegionX, frontierRegionY})) {
+                skipFrontier = true;
+            }
+            #endif
         }
         if (skipFrontier) continue;
 #endif

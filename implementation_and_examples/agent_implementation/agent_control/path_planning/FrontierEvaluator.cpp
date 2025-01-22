@@ -12,23 +12,47 @@ void FrontierEvaluator::resetFrontierAvoidance(Agent* agent, argos::CVector2 une
     //If the agent is close to the frontier, reset all frontiers avoiding flags (we're giving them another chance)
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     if (unexploredFrontierVector.Length() <= agent->config.FRONTIER_DIST_UNTIL_REACHED) {
-        this->avoidingFrontiers.clear();
+        this->avoidingCoordinates.clear();
     }
 #endif
 }
 
 /**
- * Check if the target frontier has low confidence.
+ * Check if the agent's target (frontier) or subtarget is close to a coordinate we are currently avoiding.
+ * If we are avoiding one of them, avoid the other one as well.
  * @return
  */
-bool FrontierEvaluator::avoidingFrontier(Agent* agent){
+bool FrontierEvaluator::avoidingAgentTarget(Agent* agent){
     if(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) return false;
     //If the agent's target is close to a frontier we are currently avoiding
-    for (auto frontier: this->avoidingFrontiers) {
-        if (sqrt(pow(frontier.x - agent->currentBestFrontier.x, 2) + pow(frontier.y - agent->currentBestFrontier.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+    for (auto coord: this->avoidingCoordinates) {
+        if (sqrt(pow(coord.x - agent->currentBestFrontier.x, 2) + pow(coord.y - agent->currentBestFrontier.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+            //Add subtarget so that we temporarily cannot go similar routes
+            if (!(agent->subTarget == Coordinate{MAXFLOAT, MAXFLOAT})) {
+                this->avoidingCoordinates.push_back(agent->subTarget);
+            }
             return true;
         }
-        if (sqrt(pow(frontier.x - agent->subTarget.x, 2) + pow(frontier.y - agent->subTarget.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+        if (sqrt(pow(coord.x - agent->subTarget.x, 2) + pow(coord.y - agent->subTarget.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+            //Add current best frontier so that we temporarily cannot go in that direction
+            if (!(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
+                this->avoidingCoordinates.push_back(agent->currentBestFrontier);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Check if the coordinate is close to a coordinate we are currently avoiding.
+ * @return
+ */
+bool FrontierEvaluator::avoidingCoordinate(Agent* agent, Coordinate coordinate){
+    if(coordinate == Coordinate{MAXFLOAT, MAXFLOAT}) return false;
+    //If the agent's target is close to a frontier we are currently avoiding
+    for (auto coord: this->avoidingCoordinates) {
+        if (sqrt(pow(coord.x - coordinate.x, 2) + pow(coord.y - coordinate.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
             return true;
         }
     }
@@ -55,7 +79,11 @@ void FrontierEvaluator::skipIfFrontierUnreachable(Agent* agent, argos::CRadians 
         if (std::abs(ToDegrees(objectAvoidanceAngle).GetValue()) > 89) { //If we cannot move within 90 degrees towards the target
             this->countNoDirectionToTarget++;
             if (this->countNoDirectionToTarget >= this->MAX_COUNT_NO_DIRECTION) {
-                this->avoidingFrontiers.push_back(target);
+                this->avoidingCoordinates.push_back(target);
+                //Also avoid the current best frontier if we are on route to it
+                if (target == agent->subTarget && !(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
+                    this->avoidingCoordinates.push_back(agent->currentBestFrontier);
+                }
                 this->countNoDirectionToTarget = 0;
             }
         }
