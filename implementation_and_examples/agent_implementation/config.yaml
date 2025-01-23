@@ -26,6 +26,8 @@ control:
     feasibility_check_only_route: true # If true, we only check the feasibility of the route to the target, don't reevaluate the target itself
   separate_frontiers:
     distance_threshold: 1.0 # The distance in meters between two frontiers to consider them separate
+  path_planning:
+    max_route_length: 30 # The maximum length of a route in sections, if exceeded, the route is considered infeasible. This saves computation time.
 communication:
   agent_info_relevant: 10 # The time in seconds received information from another agent is relevant in the agent's decision making
   quadtree_exchange_interval: 5 # The time in seconds between quadtree exchanges

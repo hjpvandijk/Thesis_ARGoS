@@ -345,7 +345,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         bool skipFrontier = false;
 
         //If the frontier is close to our agent, skip it
-        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->config.FRONTIER_DIST_UNTIL_REACHED) {
             skipFrontier = true;
         } else {
             for (auto agentLocationTuple: agent->agentLocations) {
