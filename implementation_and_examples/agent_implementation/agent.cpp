@@ -671,12 +671,13 @@ void Agent::calculateNextPosition() {
 
 #ifdef PATH_PLANNING_ENABLED
     if (!noTarget) { //If there is a target
-        assert(!this->route_to_best_frontier.empty());
-        Coordinate nextPathTarget = this->pathFollower.followPath(this);
-        assert(!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT}));
-        this->subTarget = nextPathTarget;
-        targetVector = argos::CVector2(this->subTarget.x - this->position.x,
-                                       this->subTarget.y - this->position.y);
+        if (!this->route_to_best_frontier.empty()) {
+            Coordinate nextPathTarget = this->pathFollower.followPath(this);
+            assert(!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT}));
+            this->subTarget = nextPathTarget;
+            targetVector = argos::CVector2(this->subTarget.x - this->position.x,
+                                           this->subTarget.y - this->position.y);
+        }
     }
 #endif
 
