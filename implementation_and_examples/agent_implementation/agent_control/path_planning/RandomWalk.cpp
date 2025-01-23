@@ -12,8 +12,13 @@ void RandomWalk::randomWalk(Agent* agent, argos::CVector2 &targetVector) {
                                                        agent->subTarget.y - agent->position.y);;
     if (!this->randomWalking
         #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+        //Or we have reached the subtarget (random walk target)
         || agentToSubtarget.Length() <= agent->config.FRONTIER_DIST_UNTIL_REACHED
-#endif
+        #endif
+        #ifdef SKIP_UNREACHABLE_FRONTIERS
+        //Or we are avoiding the subtarget, so we need to find a new one
+        || agent->frontierEvaluator.avoidingCoordinate(agent, agent->subTarget)
+        #endif
             ) {
         //Find a random direction to walk in, by placing a subtarget on the edge of the root box in the quadtree
         quadtree::Box rootBox = agent->quadtree->getRootBox();
