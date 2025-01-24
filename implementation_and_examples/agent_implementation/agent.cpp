@@ -162,7 +162,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
 //    x += stepX;
 //    y += stepY;
 //
-//    double occ_probability = this->P_OCCUPIED / Psensor;
+//    double occ_probability = this->P_FREE / Psensor;
 //    for(int s = 1; s <= 2; s++){ //Add slight occupied confidence to the two steps after the object
 //        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as more occupied
 //            double p = (0.5-occ_probability) * (double(s)/double(10)) + occ_probability; //Increasingly more uncertain the further away from the agent
