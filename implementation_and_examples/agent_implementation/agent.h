@@ -361,6 +361,9 @@ private:
 
     void syncMissionTime(double received_time);
 
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    void randomWalk(argos::CVector2 & targetVector);
+#endif
 
 
 
