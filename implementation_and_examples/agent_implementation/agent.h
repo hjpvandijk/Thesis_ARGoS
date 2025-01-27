@@ -22,6 +22,7 @@
 #include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
 #include "agent_implementation/agent_control/path_planning/PathFollower.h"
 #include "agent_control/communication/TimeSynchronizer.h"
+#include "agent_implementation/agent_control/path_planning/RandomWalk.h"
 
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
@@ -72,6 +73,10 @@ public:
     SimplePathPlanner pathPlanner;
     PathFollower pathFollower;
 #endif
+
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    RandomWalk randomWalker;
+#endif
     struct Config {
 //        double ROBOT_DIAMETER;
         float ROBOT_WEIGHT;
@@ -120,14 +125,18 @@ public:
         double OBJECT_AVOIDANCE_RADIUS;
         double FRONTIER_DIST_UNTIL_REACHED;
 
-#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+        #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
         bool FEASIBILITY_CHECK_ONLY_ROUTE;
-#endif
+        #endif
 
-#ifdef SEPARATE_FRONTIERS
+        #ifdef SEPARATE_FRONTIERS
         double FRONTIER_SEPARATION_THRESHOLD;
-#endif
+        #endif
+
+        #ifdef PATH_PLANNING_ENABLED
+        double MAX_ROUTE_LENGTH;
+        #endif
 
         double P_FREE ;
         double P_OCCUPIED;
@@ -352,9 +361,6 @@ private:
 
     void syncMissionTime(double received_time);
 
-#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
-    void randomWalk(argos::CVector2 & targetVector);
-#endif
 
 
 

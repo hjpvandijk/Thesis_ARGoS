@@ -140,6 +140,12 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
 }
 
 void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction, bool switched_direction) const {
+    //If the route is longer than allowed, return an empty route.
+    if (route.size() > agent->config.MAX_ROUTE_LENGTH){
+        route.clear();
+        return;
+    }
+
     //If the direction to the target is free from the cell, return
     auto [direction_free, intersection_cell, intersection_edge_index, intersection_edge_coordinate] = directionToTargetFree(agent, cell, box_size, edge_index, target, wall_following_direction, route);
     if (direction_free > 0) { //If the direction is free (to some extent)

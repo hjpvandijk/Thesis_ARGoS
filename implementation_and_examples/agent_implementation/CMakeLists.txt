@@ -33,6 +33,8 @@ add_library(agent_implementation SHARED
         agent_control/path_planning/FrontierEvaluator.cpp
         agent_control/path_planning/ForceVectorCalculator.h
         agent_control/path_planning/ForceVectorCalculator.cpp
+        agent_control/path_planning/RandomWalk.h
+        agent_control/path_planning/RandomWalk.cpp
         agent_control/battery/BatteryManager.h
         agent_control/battery/BatteryManager.cpp
         agent_control/battery/MicroControllerBatteryManager.h
