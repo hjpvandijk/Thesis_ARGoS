@@ -11,6 +11,9 @@ void TimeSynchronizer::initTimeSync(Agent* initiating_agent){
     int t_TXi = initiating_agent->elapsed_ticks;
     //Broadcast t_txi
     initiating_agent->broadcastMessage(t_TXiMessage(t_TXi));
+//    lastSyncAttempts[other_agent_id] = agent->elapsed_ticks; //Store the time we have synced with this agent
+    lastSyncAttemptTick = initiating_agent->elapsed_ticks;
+
 }
 
 
@@ -94,7 +97,6 @@ void TimeSynchronizer::syncMissionTime(const std::string& other_agent_id, Agent*
     agent->elapsed_ticks = synced_ticks;
 
     agentSyncs.erase(other_agent_id); //Remove the active sync, because we have synced the time
-    lastSyncs[other_agent_id] = agent->elapsed_ticks; //Store the time we have synced with this agent
 }
 
 std::string TimeSynchronizer::t_TXiMessage(double t_TXi) {
@@ -110,8 +112,8 @@ std::string TimeSynchronizer::t_RXiMessage(double t_RXi) {
 }
 
 
-double TimeSynchronizer::getLastSync(const std::string &other_agent_id){
-    return lastSyncs[other_agent_id];
+double TimeSynchronizer::getLastSyncAttempt(){
+    return lastSyncAttemptTick;
 }
 
 

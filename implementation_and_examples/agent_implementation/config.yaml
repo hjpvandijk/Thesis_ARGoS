@@ -1,3 +1,6 @@
+mission:
+  end_time: 600 # The time in seconds when the mission ends
+  end_battery_level: 80 # The battery level in percent when the mission ends
 physical:
   robot_diameter: 0.08 # Agent diameter in meters
   robot_weight: 0.4 # Agent weight in kg
@@ -62,9 +65,9 @@ quadtree:
   merge_max_visited_time_difference: 5 # The maximum time difference in seconds between two quadtree nodes to merge them
   merge_max_confidence_diff: 0.05 # The maximum confidence difference between two quadtree nodes to merge them
 sensors:
-  position_noise: 103.3 # Position noise in centimeters (uniform)
-  position_jitter: 10 # Position jitter in centimeters (uniform)
-  orientation_noise: 8 # Orientation sensor noise in degrees (uniform)
-  orientation_jitter: 2 # Orientation sensor jitter in degrees (uniform)
-  distance_sensor_noise: 5 # Distance sensor noise in centimeters (uniform)
+  position_noise: 0 #103.3 # Position noise in centimeters (uniform)
+  position_jitter: 0 #10 # Position jitter in centimeters (uniform)
+  orientation_noise: 0 #8 # Orientation sensor noise in degrees (uniform)
+  orientation_jitter: 0 #2 # Orientation sensor jitter in degrees (uniform)
+  distance_sensor_noise: 0 #5 # Distance sensor noise in centimeters (uniform)
   distance_sensor_range: 2 # Distance sensor range in meters

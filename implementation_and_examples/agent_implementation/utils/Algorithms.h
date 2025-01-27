@@ -13,7 +13,7 @@ class Agent;
 
 class Algorithms {
 public:
-    static std::vector<Coordinate> bresenhamLine(Agent *agent, Coordinate coordinate1, Coordinate coordinate2);
+    static std::vector<Coordinate> Amanatides_Woo_Voxel_Traversal(Agent *agent, Coordinate coordinate1, Coordinate coordinate2);
 
 };
 

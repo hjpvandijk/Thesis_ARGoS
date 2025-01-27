@@ -205,9 +205,10 @@ void PiPuckHugo::ControlStep() {
     batteryMeasureTicks++;
 #endif
 
-
-//    RLOG << "Position: " << agentObject->position.x << std::endl;
-//    RLOG << "Orientation: " << agentObject->heading << std::endl;
+    if (!this->mission_start){
+        agentObject->startMission();
+        this->mission_start = true;
+    }
     agentObject->doStep();
 
 

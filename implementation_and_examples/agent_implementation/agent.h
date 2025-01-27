@@ -26,16 +26,16 @@
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //#define CLOSE_SMALL_AREAS
 #define SEPARATE_FRONTIERS
-#define WALL_FOLLOWING_ENABLED
+//#define WALL_FOLLOWING_ENABLED
 #define BATTERY_MANAGEMENT_ENABLED
-//#define PATH_PLANNING_ENABLED
+#define PATH_PLANNING_ENABLED
 #define SKIP_UNREACHABLE_FRONTIERS
 #ifdef SKIP_UNREACHABLE_FRONTIERS
 #ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 #endif
 #endif
-#define WALKING_STATE_WHEN_NO_FRONTIERS
+#define RANDOM_WALK_WHEN_NO_FRONTIERS
 
 class Agent {
 public:
@@ -77,6 +77,9 @@ public:
         float ROBOT_WEIGHT;
         float ROBOT_WHEEL_RADIUS;
         float ROBOT_INTER_WHEEL_DISTANCE;
+
+        float MISSION_END_TIME_S;
+        float MISSION_END_BATTERY_LEVEL;
 
         double OBJECT_SAFETY_RADIUS;
         double AGENT_SAFETY_RADIUS;
@@ -173,6 +176,8 @@ public:
     //Force vector deciding the next position
     argos::CVector2 force_vector;
 
+    Coordinate deploymentLocation;
+
 
     Agent() {}
 
@@ -212,6 +217,8 @@ public:
 
     void doStep();
 
+    void startMission();
+
     void sendQuadtreeToCloseAgents();
     void timeSyncWithCloseAgents();
     void broadcastMessage(const std::string &message) const;
@@ -230,6 +237,14 @@ public:
 
 
     double ticks_per_second = 30;
+
+    enum class State {
+        NO_MISSION,
+        EXPLORING,
+        RETURNING,
+    };
+
+    State state = State::NO_MISSION;
 
 
 
@@ -324,6 +339,8 @@ private:
 
     std::string GetId() const;
 
+    void checkMissionEnd();
+
 
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
     void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
@@ -335,8 +352,8 @@ private:
 
     void syncMissionTime(double received_time);
 
-#ifdef WALKING_STATE_WHEN_NO_FRONTIERS
-    void enterWalkingState(argos::CVector2 & unexploredFrontierVector);
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    void randomWalk(argos::CVector2 & targetVector);
 #endif
 
 

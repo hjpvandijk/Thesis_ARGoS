@@ -23,9 +23,12 @@ void FrontierEvaluator::resetFrontierAvoidance(Agent* agent, argos::CVector2 une
  */
 bool FrontierEvaluator::avoidingFrontier(Agent* agent){
     if(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) return false;
-    //If the agent is close to a frontier we are currently avoiding
+    //If the agent's target is close to a frontier we are currently avoiding
     for (auto frontier: this->avoidingFrontiers) {
         if (sqrt(pow(frontier.x - agent->currentBestFrontier.x, 2) + pow(frontier.y - agent->currentBestFrontier.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+            return true;
+        }
+        if (sqrt(pow(frontier.x - agent->subTarget.x, 2) + pow(frontier.y - agent->subTarget.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
             return true;
         }
     }

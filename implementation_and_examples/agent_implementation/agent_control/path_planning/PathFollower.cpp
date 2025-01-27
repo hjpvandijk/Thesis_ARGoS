@@ -51,7 +51,7 @@ Coordinate PathFollower::followPath(Agent *agent) {
 
 }
 
-//Need to use this version as with the bresenhamLine we need to use the center of the cells, which can cause the line to miss an occupied cell which would be on the actual line
+//Need to use this version as with the Amanatides_Woo_Voxel_Traversal we need to use the center of the cells, which can cause the line to miss an occupied cell which would be on the actual line
 bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
     auto x = start.x;
     auto y = start.y;
@@ -96,7 +96,7 @@ bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate
 //        else target_box = target_box.boxFromQuadrant(quadrant);
 //
 //    }
-//    std::vector<Coordinate> linePoints = Algorithms::bresenhamLine(agent, start_box.getCenter(), target_box.getCenter());
+//    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent, start_box.getCenter(), target_box.getCenter());
 //    for (const auto& point: linePoints) {
 //        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(point);
 //        auto cell = cell_and_box.first;

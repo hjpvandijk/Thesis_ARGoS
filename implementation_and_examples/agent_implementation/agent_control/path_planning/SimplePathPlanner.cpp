@@ -87,7 +87,12 @@ std::vector<argos::CVector2> SimplePathPlanner::coordinateRouteToRelativeVectors
 }
 
 std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSections(Agent* agent, Coordinate start, Coordinate target, int wall_following_direction, bool switched_direction, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
-    auto [cell, box, edge_index, _] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
+    //Small offset towards the target, so the raytracing method selects the correct cell
+    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
+    //Small offset towards the start, so the raytracing method selects the correct cell
+    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
+
+    auto [cell, box, edge_index, _] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
     if (cell == nullptr) route = {{start, target}};
     else {
         auto [start_edge, end_edge] = getEdgeCoordinates(box, edge_index);
@@ -233,9 +238,10 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
 
     //Because start is on an edge, we will add a small offset to the start, towards the target, so the raytracing method selects the correct cell
     auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
-
+    //In case the target is on the edge, we will add a small offset to the target, away from the start, so the raytracing method selects the correct cell
+    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
 
     if (intersection_cell != nullptr) {
         //If we intersect the same cell, the line is going through the cell, so the direction is not free
@@ -300,9 +306,13 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
 }
 
 int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, double box_size, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const{
+    //Small offset towards the target, so the raytracing method selects the correct cell
+    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
+    //Small offset towards the start, so the raytracing method selects the correct cell
+    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
 
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
 
     if (intersection_cell != nullptr) {
         if (intersection_cell->neighbors[intersection_edge] != nullptr) return 0; //If the intersection edge has a neighbor on it, it is a raytracing accuracy mistake, so the direction is not free
@@ -444,27 +454,28 @@ int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, dou
  * @return
  */
 std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlanner::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
-    auto [start_cell, start_box] = agent->quadtree->getCellandBoxFromCoordinate(start);
-    while (start_box.size > agent->quadtree->getSmallestBoxSize()) { //Make sure we are in the smallest box
-        int quadrant = start_box.getQuadrant(start);
-        if (quadrant == 4) start_box = start_box.boxFromQuadrant(0); //If the start is in the center, we can't get the quadrant, so we just take the top left
-        else start_box = start_box.boxFromQuadrant(quadrant);
-    }
-    auto [target_cell, target_box] = agent->quadtree->getCellandBoxFromCoordinate(target);
-    while (target_box.size > agent->quadtree->getSmallestBoxSize()) {
-        int quadrant = target_box.getQuadrant(target);
-        if (quadrant == 4) target_box = target_box.boxFromQuadrant(0); //If the target is in the center, we can't get the quadrant, so we just take the top left
-        else target_box = target_box.boxFromQuadrant(quadrant);
-
-    }
-    std::vector<Coordinate> linePoints = Algorithms::bresenhamLine(agent, start_box.getCenter(), target_box.getCenter());
+//    auto [start_cell, start_box] = agent->quadtree->getCellandBoxFromCoordinate(start);
+//    while (start_box.size > agent->quadtree->getSmallestBoxSize()) { //Make sure we are in the smallest box
+//        int quadrant = start_box.getQuadrant(start);
+//        if (quadrant == 4) start_box = start_box.boxFromQuadrant(0); //If the start is in the center, we can't get the quadrant, so we just take the top left
+//        else start_box = start_box.boxFromQuadrant(quadrant);
+//    }
+//    auto [target_cell, target_box] = agent->quadtree->getCellandBoxFromCoordinate(target);
+//    while (target_box.size > agent->quadtree->getSmallestBoxSize()) {
+//        int quadrant = target_box.getQuadrant(target);
+//        if (quadrant == 4) target_box = target_box.boxFromQuadrant(0); //If the target is in the center, we can't get the quadrant, so we just take the top left
+//        else target_box = target_box.boxFromQuadrant(quadrant);
+//
+//    }
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent, start,
+                                                                                    target);
     for (const auto& point: linePoints) {
         auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(point);
         auto cell = cell_and_box.first;
         auto box = cell_and_box.second;
         if (cell != nullptr) {
             if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
-                Coordinate intersection = liang_barsky(start_box.getCenter(), target_box.getCenter(), box);
+                Coordinate intersection = liang_barsky(start, target, box);
                 //Get the edge that the intersection is on (with small margin)
                 //left = 0, top = 1, right = 2, bottom = 3
                 auto edge_index = -1;
@@ -472,10 +483,12 @@ std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlan
                 else if (std::abs(intersection.y - box.top)<0.00001) edge_index = 1;
                 else if (std::abs(intersection.x - box.getRight())<0.00001) edge_index = 2;
                 else if (std::abs(intersection.y - box.getBottom())<0.00001) edge_index = 3;
+                if (edge_index != -1) { //If the intersection is not on an edge, it is not a valid intersection
+                    auto dist_to_intersection = sqrt(
+                            pow(intersection.x - start.x, 2) + pow(intersection.y - start.y, 2));
 
-                auto dist_to_intersection = sqrt(pow(intersection.x - start.x, 2) + pow(intersection.y - start.y, 2));
-
-                return {cell, box, edge_index, dist_to_intersection};
+                    return {cell, box, edge_index, dist_to_intersection};
+                }
             }
         }
     }
