@@ -36,6 +36,7 @@
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_positioning_sensor.h>
 #include "agent_implementation/agent.h"
+#include "agent_implementation/NN.h"
 
 
 /*
@@ -92,6 +93,7 @@ public:
 //    static const int nAgents = 2;
 //    agent agents[nAgents];
     std::shared_ptr<Agent> agentObject;
+    std::unique_ptr<DQNAgent> dqnAgent;
 
 
 private:
@@ -153,6 +155,19 @@ private:
 
     bool mission_start = false;
 
+
+    void dqnControlStep();
+    void execute_action(int action);
+    float calculate_reward();
+    void train_agent();
+
+    // Replay buffer
+    ReplayBuffer replay_buffer;
+
+    // Training parameters
+    size_t ticks = 0;
+    size_t train_interval = 100; // Train every 100 steps
+    size_t batch_size = 32
 
 };
 

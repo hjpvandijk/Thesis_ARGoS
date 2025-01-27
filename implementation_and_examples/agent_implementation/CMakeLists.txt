@@ -7,6 +7,8 @@ add_library(agent_implementation SHARED
         agent.h
         agent.cpp
         config.yaml
+        NN.h
+        NN.cpp
         utils/coordinate.h
         utils/coordinate.cpp
         utils/Quadtree.h
@@ -54,3 +56,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(yaml-cpp)
 
 target_link_libraries(agent_implementation PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
+
+# Fetch TinyDNN
+FetchContent_Declare(
+        tiny-dnn
+        GIT_REPOSITORY https://github.com/tiny-dnn/tiny-dnn.git
+        GIT_TAG master
+)
+FetchContent_MakeAvailable(tiny-dnn)
+# Link TinyDNN to your project
+target_link_libraries(agent_implementation PUBLIC tiny_dnn)

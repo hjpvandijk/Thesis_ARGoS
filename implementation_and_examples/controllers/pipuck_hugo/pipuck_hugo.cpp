@@ -71,6 +71,8 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 
     agentObject->differential_drive.setActuator(m_pcWheels);
 
+    dqnAgent = std::make_unique<DQNAgent>();
+
     readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/orientation_offset.txt", this->orientation_offset_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/error_heatmap.txt", this->error_mean_heatmap);
@@ -209,9 +211,74 @@ void PiPuckHugo::ControlStep() {
         agentObject->startMission();
         this->mission_start = true;
     }
-    agentObject->doStep();
+//    agentObject->doStep();
+    dqnControlStep();
 
 
+}
+
+void PiPuckHugo::dqnControlStep() {
+    // 2. Construct the state vector
+    vec_t state;
+//    for (const auto& reading : proximity_readings) {
+//        state.push_back(reading.Value);
+//    }
+//    for (const auto& reading : rab_readings) {
+//        state.push_back(reading.Range);
+//        state.push_back(reading.Bearing.Angle().GetValue());
+//    }
+
+    // 3. Get action from the MARL agent
+    int action = dqnAgent->get_action(state);
+
+    // 4. Execute the action
+    execute_action(action);
+
+    // 5. Observe the next state and reward
+    vec_t next_state = {/* Construct next state */};
+    float reward = calculate_reward();
+
+    // 6. Store experience in the replay buffer
+    replay_buffer.add({state, action, reward, next_state});
+
+    // 7. Periodically train the agent
+    if (ticks++ % train_interval == 0) {
+        train_agent();
+    }
+
+}
+
+void PiPuckHugo::execute_action(int action) {
+    switch (action) {
+//        case 0: base_actuator->SetLinearVelocity(5.0, 5.0); break; // Move forward
+//        case 1: base_actuator->SetLinearVelocity(-5.0, -5.0); break; // Move backward
+//        case 2: base_actuator->SetLinearVelocity(-5.0, 5.0); break; // Turn left
+//        case 3: base_actuator->SetLinearVelocity(5.0, -5.0); break; // Turn right
+    }
+}
+
+float PiPuckHugo::calculate_reward() {
+    // Calculate reward based on the map and agent's performance
+    //Get map, calculate certainty for each cell. Reward is absolute difference between certainty and 0.5 (ambiguous)
+    //Get battery level, reward is battery level, so that the agent learns to conserve energy
+    //Get mission duration, reward is duration, so that the agent learns to complete the mission quickly
+    return 0.0f; // Replace with actual reward calculation
+}
+
+void PiPuckHugo::train_agent() {
+    auto batch = replay_buffer.sample(batch_size);
+    std::vector<vec_t> states, next_states;
+    std::vector<int> actions;
+    std::vector<float> rewards;
+
+    for (const auto& exp : batch) {
+        states.push_back(exp.state);
+        actions.push_back(exp.action);
+        rewards.push_back(exp.reward);
+        next_states.push_back(exp.next_state);
+    }
+
+    dqnAgent->train(states, actions, rewards, next_states);
 }
 
 /****************************************/
