@@ -125,14 +125,18 @@ public:
         double OBJECT_AVOIDANCE_RADIUS;
         double FRONTIER_DIST_UNTIL_REACHED;
 
-#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+        #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
         bool FEASIBILITY_CHECK_ONLY_ROUTE;
-#endif
+        #endif
 
-#ifdef SEPARATE_FRONTIERS
+        #ifdef SEPARATE_FRONTIERS
         double FRONTIER_SEPARATION_THRESHOLD;
-#endif
+        #endif
+
+        #ifdef PATH_PLANNING_ENABLED
+        double MAX_ROUTE_LENGTH;
+        #endif
 
         double P_FREE ;
         double P_OCCUPIED;

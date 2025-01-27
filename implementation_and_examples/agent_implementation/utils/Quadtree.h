@@ -136,9 +136,9 @@ namespace quadtree {
         };
 
         Quadtree(const Box &box, float P_FREE, float P_OCCUPIED, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
-                mBox(box), mRoot(std::make_unique<Cell>()), P_FREE(P_FREE), P_OCCUPIED(P_OCCUPIED), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
+                mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE), P_OCCUPIED_THRESHOLD(P_OCCUPIED), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
-            L_FREE = L(P_FREE);
+            L_FREE_THRESHOLD = L(P_FREE);
         }
 
         /**
@@ -150,9 +150,9 @@ namespace quadtree {
             auto LConfidence = L(Pn_zt);
             double pheromone = calculatePheromone(visitedAtS, Pn_zt, currentTimeS);
             Occupancy occ = AMBIGUOUS;
-            if (pheromone >= P_FREE){
+            if (pheromone >= P_FREE_THRESHOLD){
                 occ = FREE;
-            } else if (pheromone <= P_OCCUPIED){
+            } else if (pheromone <= P_OCCUPIED_THRESHOLD){
                 occ = OCCUPIED;
             }
             auto node = QuadNode{coordinate, occ, visitedAtS, LConfidence};
@@ -179,9 +179,9 @@ namespace quadtree {
             if (value.visitedAtS != currentTimeS) //If the node was visited at the current time, the time factor will be 1.
                 pheromone = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
             Occupancy occ = AMBIGUOUS;
-            if (pheromone >= P_FREE){
+            if (pheromone >= P_FREE_THRESHOLD){
                 occ = FREE;
-            } else if (pheromone <= P_OCCUPIED){
+            } else if (pheromone <= P_OCCUPIED_THRESHOLD){
                 occ = OCCUPIED;
             }
             value.occupancy = occ;
@@ -734,10 +734,10 @@ namespace quadtree {
         double MERGE_MAX_P_CONFIDENCE_DIFF;
         float l_min = -3.5;
         float l_max = 2;
-        float L_FREE;
-        float P_FREE;
+        float L_FREE_THRESHOLD;
+        float P_FREE_THRESHOLD;
 //        float l_occupied = -0.41; //P=0.4
-        float P_OCCUPIED;
+        float P_OCCUPIED_THRESHOLD;
 
 
 
@@ -927,9 +927,9 @@ namespace quadtree {
                             double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
                                                                   currentTimeS);
                             Occupancy occ = AMBIGUOUS;
-                            if (pheromone >= P_FREE) {
+                            if (pheromone >= P_FREE_THRESHOLD) {
                                 occ = FREE;
-                            } else if (pheromone <= P_OCCUPIED) { //Most probably occupied
+                            } else if (pheromone <= P_OCCUPIED_THRESHOLD) { //Most probably occupied
                                 occ = OCCUPIED;
                             }
                             newNode.occupancy = occ;
@@ -1010,9 +1010,9 @@ namespace quadtree {
                                 double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
                                                                       currentTimeS);
                                 Occupancy occ = AMBIGUOUS;
-                                if (pheromone >= P_FREE) {
+                                if (pheromone >= P_FREE_THRESHOLD) {
                                     occ = FREE;
-                                } else if (pheromone <= P_OCCUPIED) {
+                                } else if (pheromone <= P_OCCUPIED_THRESHOLD) {
                                     occ = OCCUPIED;
                                 }
                                 newNode.occupancy = occ;
@@ -1089,7 +1089,7 @@ namespace quadtree {
                         }
                         //If one of the children is occupied, all children should be kept
                         //If the occupancies are too far apart, the children should be kept
-                        if (minConfidence < L_FREE || P(maxConfidence) - P(minConfidence) > MERGE_MAX_P_CONFIDENCE_DIFF)
+                        if (minConfidence < L_FREE_THRESHOLD || P(maxConfidence) - P(minConfidence) > MERGE_MAX_P_CONFIDENCE_DIFF)
                             confidencesTooFarApart = true;
                         //If the visited times are too far apart, the children should be kept
                         if (maxVisitedTime - minVisitedTime > MERGE_MAX_VISITED_TIME_DIFF)
@@ -1111,9 +1111,9 @@ namespace quadtree {
                         double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                         //If all children have the same occupancy, give the parent that occupancy
                         Occupancy occ = AMBIGUOUS;
-                        if (pheromone >= P_FREE){
+                        if (pheromone >= P_FREE_THRESHOLD){
                             occ = FREE;
-                        } else if (pheromone <= P_OCCUPIED){
+                        } else if (pheromone <= P_OCCUPIED_THRESHOLD){
                             occ = OCCUPIED;
                         }
                         cell->quadNode.occupancy = occ;
@@ -1265,9 +1265,9 @@ namespace quadtree {
             //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
             if (cell->quadNode.occupancy != Occupancy::ANY && cell->quadNode.occupancy != UNKNOWN) {
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                if (pheromone >= P_FREE) {
+                if (pheromone >= P_FREE_THRESHOLD) {
                     cell->quadNode.occupancy = Occupancy::FREE;
-                } else if (pheromone <= P_OCCUPIED) {
+                } else if (pheromone <= P_OCCUPIED_THRESHOLD) {
                     cell->quadNode.occupancy = Occupancy::OCCUPIED;
                 } else {
                     cell->quadNode.occupancy = Occupancy::AMBIGUOUS;
@@ -1314,9 +1314,9 @@ namespace quadtree {
             //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
             if (cell->quadNode.occupancy != Occupancy::ANY && cell->quadNode.occupancy != UNKNOWN) {
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                if (pheromone >= P_FREE) {
+                if (pheromone >= P_FREE_THRESHOLD) {
                     cell->quadNode.occupancy = Occupancy::FREE;
-                } else if (pheromone <= P_OCCUPIED) {
+                } else if (pheromone <= P_OCCUPIED_THRESHOLD) {
                     cell->quadNode.occupancy = Occupancy::OCCUPIED;
                 } else {
                     cell->quadNode.occupancy = Occupancy::AMBIGUOUS;
@@ -1351,7 +1351,7 @@ namespace quadtree {
             double pheromone = timeProbability * (PConfidence - 0.5) + 0.5;
             //This makes sure that a value once set to occupied or free, will not be changed to ambiguous again due to evaporation.
             //So we assume that if a cell is occupied, it will stay that way, albeit with a lower confidence.
-            if (PConfidence <= P_OCCUPIED) pheromone = timeProbability * (PConfidence - P_OCCUPIED) + P_OCCUPIED;
+            if (PConfidence <= P_OCCUPIED_THRESHOLD) pheromone = timeProbability * (PConfidence - P_OCCUPIED_THRESHOLD) + P_OCCUPIED_THRESHOLD;
             //But if a cell is free, it can become ambiguous again, as new obstacles can appear.
 //            if (PConfidence >= P_FREE) pheromone = timeProbability * (PConfidence - P_FREE) + P_FREE;
             return pheromone;
@@ -1379,7 +1379,7 @@ namespace quadtree {
 //                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
                 cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                if (pheromone <= P_OCCUPIED) {
+                if (pheromone <= P_OCCUPIED_THRESHOLD) {
                     cell->quadNode.occupancy = OCCUPIED;
                     if (box.getSize() > Smallest_Box_Size){
                         split(cell, box, currentTimeS);
@@ -1388,7 +1388,7 @@ namespace quadtree {
                         cell->add_occupied_neighbors(box.getSize());
                     }
                 } else {
-                    if (pheromone >= P_FREE) {
+                    if (pheromone >= P_FREE_THRESHOLD) {
                         cell->quadNode.occupancy = FREE;
                     } else {
                         cell->quadNode.occupancy = AMBIGUOUS;

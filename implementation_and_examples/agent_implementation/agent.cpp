@@ -24,7 +24,7 @@ Agent::Agent(std::string id) {
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-5.5, 5.5, 11);
-    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE, this->config.P_OCCUPIED,
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
@@ -162,7 +162,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
 //    x += stepX;
 //    y += stepY;
 //
-//    double occ_probability = this->P_OCCUPIED / Psensor;
+//    double occ_probability = this->P_FREE / Psensor;
 //    for(int s = 1; s <= 2; s++){ //Add slight occupied confidence to the two steps after the object
 //        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as more occupied
 //            double p = (0.5-occ_probability) * (double(s)/double(10)) + occ_probability; //Increasingly more uncertain the further away from the agent
@@ -539,6 +539,7 @@ void Agent::calculateNextPosition() {
                                                    this->currentBestFrontier.y - this->position.y);
 
     #ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    if (randomWalker.randomWalking)
         targetVector = argos::CVector2(this->subTarget.x - this->position.x,
                                        this->subTarget.y - this->position.y);
     #endif
@@ -555,12 +556,17 @@ void Agent::calculateNextPosition() {
 #endif
 
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-        //If the agent is close to the frontier and is heading towards it, or if it is really close to the frontier.
+        //If the agent is close to the frontier and is heading towards it, or if it is within object avoidance radius to the frontier.
         //So we don't 'reach' frontiers through walls.
-        bool frontierReached = targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
-                               NormalizedDifference(this->targetHeading, targetVector.Angle()).GetValue() <
-                               this->config.TURN_THRESHOLD_DEGREES * 2 ||
-                               targetVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
+        bool frontierReached = false;
+        if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
+            argos::CVector2 agentFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
+                                                           this->currentBestFrontier.y - this->position.y);
+            frontierReached = agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
+              NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() <
+              this->config.TURN_THRESHOLD_DEGREES * 2 ||
+                    agentFrontierVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
+        }
 
         //If the current best frontier is not set
         if (
@@ -665,12 +671,13 @@ void Agent::calculateNextPosition() {
 
 #ifdef PATH_PLANNING_ENABLED
     if (!noTarget) { //If there is a target
-        assert(!this->route_to_best_frontier.empty());
-        Coordinate nextPathTarget = this->pathFollower.followPath(this);
-        assert(!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT}));
-        this->subTarget = nextPathTarget;
-        targetVector = argos::CVector2(this->subTarget.x - this->position.x,
-                                       this->subTarget.y - this->position.y);
+        if (!this->route_to_best_frontier.empty()) {
+            Coordinate nextPathTarget = this->pathFollower.followPath(this);
+            assert(!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT}));
+            this->subTarget = nextPathTarget;
+            targetVector = argos::CVector2(this->subTarget.x - this->position.x,
+                                           this->subTarget.y - this->position.y);
+        }
     }
 #endif
 
@@ -1079,6 +1086,9 @@ void Agent::loadConfig() {
 #endif
 #ifdef SEPARATE_FRONTIERS
     this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
+#endif
+#ifdef PATH_PLANNING_ENABLED
+    this->config.MAX_ROUTE_LENGTH = config_yaml["control"]["path_planning"]["max_route_length"].as<int>();
 #endif
     this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
     this->config.QUADTREE_EXCHANGE_INTERVAL_S = config_yaml["communication"]["quadtree_exchange_interval"].as<double>();

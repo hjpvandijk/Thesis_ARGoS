@@ -345,7 +345,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         bool skipFrontier = false;
 
         //If the frontier is close to our agent, skip it
-        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->config.FRONTIER_DIST_UNTIL_REACHED) {
             skipFrontier = true;
         } else {
             for (auto agentLocationTuple: agent->agentLocations) {
@@ -361,7 +361,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                         pow(frontierRegionX - std::get<0>(agentLocationTuple.second).x, 2) +
                         pow(frontierRegionY - std::get<0>(agentLocationTuple.second).y, 2));
 
-                if (distanceFromOtherAgentsFrontier <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+                if (distanceFromOtherAgentsFrontier <= agent->config.FRONTIER_DIST_UNTIL_REACHED) {
                     //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
                     if (agentLocationTuple.first > agent->id) {
                         //If the other agent has a higher ID, so we can't select this frontier
