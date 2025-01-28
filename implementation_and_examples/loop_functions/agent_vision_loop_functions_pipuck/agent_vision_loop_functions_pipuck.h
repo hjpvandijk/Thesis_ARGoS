@@ -13,6 +13,20 @@ class CAgentVisionLoopFunctions : public CLoopFunctions {
 
 public:
 
+    struct metrics {
+        double total_mission_time_s;
+        std::map<std::string, std::vector<double>> coverage_over_time; //Per agent
+        std::map<std::string, double> total_traveled_path; //Per agent
+        std::map<std::string, double> total_battery_usage; //Per agent
+        int n_returned_agents;
+        int n_agent_agent_collisions; //Make sure to divide by 2
+        int n_agent_obstacle_collisions;
+    };
+
+    std::map<CPiPuckEntity*, bool> currently_colliding;
+
+    metrics m_metrics;
+
    typedef std::map<CPiPuckEntity*, std::vector<CVector3>> TCoordinateMap;
     TCoordinateMap m_tObjectCoordinates;
     TCoordinateMap m_tOtherAgentCoordinates;
@@ -122,6 +136,8 @@ private:
     void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+
+    void updateCollisions(CPiPuckEntity *pcFB);
 
 };
 

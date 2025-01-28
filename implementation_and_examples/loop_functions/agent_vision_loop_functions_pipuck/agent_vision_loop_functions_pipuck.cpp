@@ -1,4 +1,5 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_rangefinders_sensor.h>
+#include <argos3/plugins/simulator/physics_engines/dynamics2d/dynamics2d_model.h> // Include the correct header
 #include <set>
 #include "agent_vision_loop_functions_pipuck.h"
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
@@ -89,7 +90,11 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         std::shared_ptr<Agent> agent = cController.agentObject;
 
         agent->ticks_per_second = ticksPerSecond;
+
+        currently_colliding[pcFB] = false;
     }
+
+    this->m_metrics = metrics();
 }
 
 /**
@@ -206,6 +211,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
 
+        updateCollisions(pcFB);
     }
 
     auto mBox = quadtree::Box(-5.5, 5.5, 11);
@@ -251,8 +257,34 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        }
 //    }
 //
+
+
     loop_function_steps++;
 }
+
+void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
+    argos::LOG << "agent-agent collisions: " << m_metrics.n_agent_agent_collisions << std::endl;
+    argos::LOG << "agent-obstacle collisions: " << m_metrics.n_agent_obstacle_collisions << std::endl;
+//Get collisions
+    auto collisions = pcFB->GetEmbodiedEntity().IsCollidingWithWhat();
+    if (collisions != nullptr) {
+        if (currently_colliding[pcFB]) return; //Only count once per collision
+        auto collisionVec =  static_cast<std::vector<void*>*>(collisions);
+        for (auto collision: *collisionVec) {
+            auto collisionType = static_cast<std::string*>(collision);
+            if (*collisionType == "pipuck") {
+                    m_metrics.n_agent_agent_collisions++;
+            } else { //We consider all other collisions as obstacle collisions
+                m_metrics.n_agent_obstacle_collisions++;
+            }
+        }
+        currently_colliding[pcFB] = true;
+    } else {
+        currently_colliding[pcFB] = false;
+    }
+
+}
+
 
 /****************************************/
 /****************************************/
