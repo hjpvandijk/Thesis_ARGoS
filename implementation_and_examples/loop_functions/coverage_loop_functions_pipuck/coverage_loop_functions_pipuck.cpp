@@ -1,7 +1,7 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_rangefinders_sensor.h>
 #include <set>
 #include "coverage_loop_functions_pipuck.h"
-#include "controllers/pipuck_hugo/pipuck_hugo.h"
+//#include "controllers/pipuck_hugo/pipuck_hugo.h"
 
 /****************************************/
 /****************************************/

@@ -167,7 +167,7 @@ private:
     // Training parameters
     size_t ticks = 0;
     size_t train_interval = 100; // Train every 100 steps
-    size_t batch_size = 32
+    size_t batch_size = 32;
 
 };
 
