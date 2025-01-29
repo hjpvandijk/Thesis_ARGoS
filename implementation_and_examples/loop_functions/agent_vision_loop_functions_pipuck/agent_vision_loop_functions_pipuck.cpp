@@ -238,7 +238,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            node.visitedAtS = visitedTimeS;
 //            combinedTree->add(node);
 //        }
-
+        updateCoverage(it.first, it.second);
         if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
@@ -263,8 +263,6 @@ void CAgentVisionLoopFunctions::PostStep() {
 }
 
 void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
-    argos::LOG << "agent-agent collisions: " << m_metrics.n_agent_agent_collisions << std::endl;
-    argos::LOG << "agent-obstacle collisions: " << m_metrics.n_agent_obstacle_collisions << std::endl;
 //Get collisions
     auto collisions = pcFB->GetEmbodiedEntity().IsCollidingWithWhat();
     if (collisions != nullptr) {
@@ -283,6 +281,27 @@ void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
         currently_colliding[pcFB] = false;
     }
 
+}
+
+void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, float, double >>& tree) {
+    //Get controller
+    auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+
+    double covered_area = 0;
+
+    for (auto & it : tree) {
+        quadtree::Box box = std::get<0>(it);
+
+        double box_size = box.getSize();
+        covered_area += box_size*box_size;
+    }
+
+    double coverage = covered_area / (cController.map_width*cController.map_height);
+    argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
+
+    //Update coverage over time at every interval, if mission has started
+    if (cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0)
+        m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
 }
 
 

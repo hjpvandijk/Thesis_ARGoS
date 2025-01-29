@@ -13,7 +13,7 @@
 #include <yaml-cpp/yaml.h>
 
 
-Agent::Agent(std::string id) {
+Agent::Agent(std::string id, double rootbox_size) {
     loadConfig();
     this->id = std::move(id);
     this->position = {0.0, 0.0};
@@ -23,7 +23,7 @@ Agent::Agent(std::string id) {
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
-    auto box = quadtree::Box(-5.5, 5.5, 11);
+    auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,

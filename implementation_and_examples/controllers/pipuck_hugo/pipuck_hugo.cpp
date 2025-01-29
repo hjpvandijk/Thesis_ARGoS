@@ -14,14 +14,10 @@ PiPuckHugo::PiPuckHugo() :
         m_pcRangeFindersSensor(nullptr),
         m_pcRadiosActuator(nullptr),
         m_pcRadiosSensor(nullptr),
-        agentObject(nullptr),
+        agentObject(nullptr)
 //   m_pcRangeAndBearingActuator(NULL),
 //   m_pcRangeAndBearingSensor(NULL),
-        m_cAlpha(10.0f),
-        m_fDelta(0.5f),
-        m_fWheelVelocity(2.5f),
-        m_cGoStraightAngleRange(-ToRadians(m_cAlpha),
-                                ToRadians(m_cAlpha)) {}
+   {}
 
 /****************************************/
 /****************************************/
@@ -61,10 +57,11 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
      * parameters and it's nice to put them in the config file so we don't
      * have to recompile if we want to try other settings.
      */
-    GetNodeAttributeOrDefault(t_node, "alpha", m_cAlpha, m_cAlpha);
-    m_cGoStraightAngleRange.Set(-ToRadians(m_cAlpha), ToRadians(m_cAlpha));
-    GetNodeAttributeOrDefault(t_node, "delta", m_fDelta, m_fDelta);
-    GetNodeAttributeOrDefault(t_node, "velocity", m_fWheelVelocity, m_fWheelVelocity);
+    GetNodeAttributeOrDefault(t_node, "map_width", map_width, map_width);
+    GetNodeAttributeOrDefault(t_node, "map_height", map_height, map_height);
+    map_height_with_noise_room = map_height + 1.0; //Room for noise
+    map_width_with_noise_room = map_width + 1.0; //Room for noise
+
 
     agentObject = std::make_shared<Agent>(Agent(this->m_strId));
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
@@ -161,8 +158,8 @@ void PiPuckHugo::ControlStep() {
 
     //Get values from heatmap, and convert them into the correct range
     int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
-    int heatmapX = std::floor((-position.GetY() + this->map_size/2)/(this->map_size/heatmap_size));
-    int heatmapY = std::floor((position.GetX() + this->map_size/2)/(this->map_size/heatmap_size));
+    int heatmapX = std::floor((-position.GetY() + this->map_width_with_noise_room/2)/(this->map_width_with_noise_room/heatmap_size));
+    int heatmapY = std::floor((position.GetX() + this->map_height_with_noise_room/2)/(this->map_height_with_noise_room/heatmap_size));
 
     //Simulate position estimation offset
     //Direction, including jitter and agent-dependent noise

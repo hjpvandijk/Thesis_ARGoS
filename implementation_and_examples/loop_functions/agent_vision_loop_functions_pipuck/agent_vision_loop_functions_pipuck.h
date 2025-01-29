@@ -24,6 +24,7 @@ public:
     };
 
     std::map<CPiPuckEntity*, bool> currently_colliding;
+    int coverage_update_tick_interval = 300; //at 30 ticks/second, this is every 10 seconds
 
     metrics m_metrics;
 
@@ -138,6 +139,7 @@ private:
     void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
 
     void updateCollisions(CPiPuckEntity *pcFB);
+    void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, float, double >>& tree);
 
 };
 
