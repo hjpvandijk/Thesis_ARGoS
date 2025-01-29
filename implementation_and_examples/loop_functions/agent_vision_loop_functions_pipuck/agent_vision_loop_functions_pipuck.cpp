@@ -215,6 +215,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);
+        updateBatteryUsage(pcFB, agent);
 
     }
 
@@ -261,7 +262,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        }
 //    }
 //
-    if (allAgentsDone(tFBMap)) {
+    if (newAgentDone(tFBMap)) {
         m_metrics.total_mission_time_s = globalElapsedTicks;
         exportMetricsAndMaps();
     }
@@ -296,6 +297,8 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
 
     double covered_area = 0;
 
+
+    //TODO: Consider irreachible area
     for (auto & it : tree) {
         quadtree::Box box = std::get<0>(it);
 
@@ -372,6 +375,15 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     traveledPathFile.close();
 
+    //Export battery usage
+    std::ofstream batteryUsageFile;
+    batteryUsageFile.open("experiment_results/battery_usage.csv");
+    batteryUsageFile << "agent_id,battery_usage\n";
+    for (auto & it : m_metrics.total_battery_usage) {
+        batteryUsageFile << it.first << "," << it.second << "\n";
+    }
+    batteryUsageFile.close();
+
     //Export quadtree of each agent
     std::ofstream quadTreeFile;
     quadTreeFile.open("experiment_results/quadtree.csv");
@@ -389,16 +401,33 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
 }
 
-bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
+/**
+ * Check if a new agent has finished its mission
+ * @param tFBMap
+ * @return
+ */
+bool CAgentVisionLoopFunctions::newAgentDone(CSpace::TMapPerType &tFBMap){
+    int agentsDone = 0;
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
-        if (agent->state != Agent::State::FINISHED) return false;
+        if (agent->state == Agent::State::FINISHED){
+            agentsDone++;
+        }
     }
-    return true;
+    if (agentsDone > nAgentsDone){
+        nAgentsDone = agentsDone;
+        return true;
+    }
+    return false;
+}
+
+void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
+    double batteryUsage = agent->batteryManager.battery.getStateOfCharge();
+    m_metrics.total_battery_usage[pcFB->GetId()] = (1.0-batteryUsage)*100.0;
 }
 
 
