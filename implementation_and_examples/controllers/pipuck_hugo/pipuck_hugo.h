@@ -96,6 +96,8 @@ public:
     double map_width = 10.0;
     double map_height = 10.0;
 
+    Coordinate getActualAgentPosition();
+
 
 
 private:

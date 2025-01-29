@@ -314,14 +314,15 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
 }
 
 void CAgentVisionLoopFunctions::updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
-    if (previous_positions[pcFB].x != MAXFLOAT) {
-
-        double distance = sqrt(pow(agent->position.x - previous_positions[pcFB].x, 2) + pow(agent->position.y - previous_positions[pcFB].y, 2));
-        m_metrics.total_traveled_path[pcFB->GetId()] += distance;
-    }
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
 
-    previous_positions[pcFB] = agent->position;
+    if (previous_positions[pcFB].x != MAXFLOAT) {
+
+        double distance = sqrt(pow(cController.getActualAgentPosition().x - previous_positions[pcFB].x, 2) + pow(cController.getActualAgentPosition().y - previous_positions[pcFB].y, 2));
+        m_metrics.total_traveled_path[pcFB->GetId()] += distance;
+    }
+
+    previous_positions[pcFB] = cController.getActualAgentPosition();
     argos::LOG << "[" << pcFB->GetId() << "] Traveled path: " << m_metrics.total_traveled_path[pcFB->GetId()] << std::endl;
 }
 

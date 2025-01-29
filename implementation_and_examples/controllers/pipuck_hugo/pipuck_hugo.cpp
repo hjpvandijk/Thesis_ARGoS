@@ -211,6 +211,12 @@ void PiPuckHugo::ControlStep() {
 
 }
 
+Coordinate PiPuckHugo::getActualAgentPosition() {
+    auto positionSensorReading = m_pcPositioningSensor->GetReading();
+    const auto position = positionSensorReading.Position;
+    return Coordinate{-position.GetY(), position.GetX()}; // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+}
+
 /****************************************/
 /****************************************/
 
