@@ -92,6 +92,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         agent->ticks_per_second = ticksPerSecond;
 
         currently_colliding[pcFB] = false;
+        previous_positions[pcFB] = Coordinate{MAXFLOAT, MAXFLOAT};
     }
 
     this->m_metrics = metrics();
@@ -212,6 +213,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
 
         updateCollisions(pcFB);
+        updateTraveledPathLength(pcFB, agent);
     }
 
     auto mBox = quadtree::Box(-5.5, 5.5, 11);
@@ -302,6 +304,16 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
     //Update coverage over time at every interval, if mission has started
     if (cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0)
         m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
+}
+
+void CAgentVisionLoopFunctions::updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
+    if (previous_positions[pcFB].x != MAXFLOAT) {
+
+        double distance = sqrt(pow(agent->position.x - previous_positions[pcFB].x, 2) + pow(agent->position.y - previous_positions[pcFB].y, 2));
+        m_metrics.total_traveled_path[pcFB->GetId()] += distance;
+    }
+    previous_positions[pcFB] = agent->position;
+    argos::LOG << "[" << pcFB->GetId() << "] Traveled path: " << m_metrics.total_traveled_path[pcFB->GetId()] << std::endl;
 }
 
 
