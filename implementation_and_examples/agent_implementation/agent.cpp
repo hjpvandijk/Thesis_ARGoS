@@ -625,7 +625,7 @@ void Agent::calculateNextPosition() {
 
         //If we are close to the deployment location, we have returned, we can stop
         if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->state = State::NO_MISSION;
+            this->state = State::FINISHED;
         } else {
 
             //Set our current best 'frontier' to the deployment location
@@ -782,7 +782,7 @@ void Agent::startMission() {
 }
 
 void Agent::doStep() {
-    if (this->state == State::NO_MISSION) {
+    if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
         //Do nothing
         this->differential_drive.stop();
     } else { //Exploring or returning
@@ -1054,7 +1054,7 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
-    if (this->state == State::RETURNING || this->state == State::NO_MISSION) return;
+    if (this->state == State::RETURNING || this->state == State::NO_MISSION || this->state == State::FINISHED) return;
     auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
     if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
         this->state = State::RETURNING;

@@ -42,14 +42,14 @@ public:
 
 
 
-    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, float, double >>> m_tQuadTree;
+    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, std::vector<std::tuple<Coordinate, Coordinate>>> m_tNeighborPairs;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTicks;
     std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
     std::map<CPiPuckEntity*, std::vector<std::vector<std::pair<quadtree::Box, double>>>> m_tAgentFrontierRegions;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
-    std::vector<std::tuple<quadtree::Box, float, double >> combinedQuadTree;
+    std::vector<std::tuple<quadtree::Box, double>> combinedQuadTree;
     std::map<CPiPuckEntity*, std::vector<std::pair<Coordinate, Coordinate>>> m_tAgentRoute;
     std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
 
@@ -78,7 +78,7 @@ public:
         return m_tAgentCoordinates;
     }
 
-    inline const std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, float, double >>>& GetQuadTree() const {
+    inline const std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, double >>>& GetQuadTree() const {
         return m_tQuadTree;
     }
 
@@ -140,8 +140,10 @@ private:
     void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
 
     void updateCollisions(CPiPuckEntity *pcFB);
-    void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, float, double >>& tree);
+    void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    bool allAgentsDone(CSpace::TMapPerType &tFBMap);
+    void exportMetricsAndMaps();
 };
 
 #endif

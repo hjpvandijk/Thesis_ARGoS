@@ -636,11 +636,11 @@ namespace quadtree {
          * Get all the boxes in the quadtree
          * @return
          */
-        std::vector<std::tuple<Box, float, double>> getAllBoxes() {
-            std::vector<std::tuple<Box, float, double>> boxesAndConfidenceAndTicks = {};
-            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, float, double>> *)> traverse;
+        std::vector<std::tuple<Box, double>> getAllBoxes(double currentTimeS) {
+            std::vector<std::tuple<Box, double>> boxesAndPheromones = {};
+            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, double>> *)> traverse;
             traverse = [&](const Cell *cell, const Box &box,
-                           std::vector<std::tuple<Box, float, double>> *boxesAndConfidenceAndTicks) {
+                           std::vector<std::tuple<Box, double>> *boxesAndConfidenceAndTicks) {
                 if (cell == nullptr) return;
                 bool allSameOccupancy = false;
 //                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
@@ -648,8 +648,9 @@ namespace quadtree {
                 // If the occupancy is OCCUPIED or FREE or AMBIGUOUS, we want to exchange that information. And we don't have to send any children as they will be all the same.
                 if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) {
                     allSameOccupancy = true;
+                    auto pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                     boxesAndConfidenceAndTicks->emplace_back(
-                            box, cell->quadNode.LConfidence, cell->quadNode.visitedAtS);
+                            box, pheromone);
                 }
 
                 // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
@@ -662,9 +663,9 @@ namespace quadtree {
                 }
             };
 
-            traverse(mRoot.get(), mBox, &boxesAndConfidenceAndTicks);
+            traverse(mRoot.get(), mBox, &boxesAndPheromones);
 
-            return boxesAndConfidenceAndTicks;
+            return boxesAndPheromones;
 
         }
 

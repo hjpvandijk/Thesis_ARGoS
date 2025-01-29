@@ -4,6 +4,7 @@
 #include "agent_vision_loop_functions_pipuck.h"
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
 #include <chrono>
+#include <sys/stat.h>
 
 /****************************************/
 /****************************************/
@@ -64,10 +65,10 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param agent
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
-    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = agent->quadtree->getAllBoxes();
+    std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTicks);
     m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
-    m_tQuadTree[pcFB] = boxesAndConfidenceAndTicks;
+    m_tQuadTree[pcFB] = boxesAndPheromones;
 }
 
 /****************************************/
@@ -214,6 +215,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);
+
     }
 
     auto mBox = quadtree::Box(-5.5, 5.5, 11);
@@ -259,7 +261,10 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        }
 //    }
 //
-
+    if (allAgentsDone(tFBMap)) {
+        m_metrics.total_mission_time_s = globalElapsedTicks;
+        exportMetricsAndMaps();
+    }
 
     loop_function_steps++;
 }
@@ -285,7 +290,7 @@ void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
 
 }
 
-void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, float, double >>& tree) {
+void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
 
@@ -301,8 +306,10 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
     double coverage = covered_area / (cController.map_width*cController.map_height);
     argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
 
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
+
     //Update coverage over time at every interval, if mission has started
-    if (cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0)
+    if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0)
         m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
 }
 
@@ -312,8 +319,85 @@ void CAgentVisionLoopFunctions::updateTraveledPathLength(CPiPuckEntity *pcFB, co
         double distance = sqrt(pow(agent->position.x - previous_positions[pcFB].x, 2) + pow(agent->position.y - previous_positions[pcFB].y, 2));
         m_metrics.total_traveled_path[pcFB->GetId()] += distance;
     }
+    auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+
     previous_positions[pcFB] = agent->position;
     argos::LOG << "[" << pcFB->GetId() << "] Traveled path: " << m_metrics.total_traveled_path[pcFB->GetId()] << std::endl;
+}
+
+void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
+    //Create directory 'experiment_results' if it does not exist
+    std::string dir = "experiment_results";
+    if (mkdir(dir.c_str(), 0777) == -1) {
+        std::cerr << "Error :  " << strerror(errno) << std::endl;
+    }
+
+    //Export metrics
+    std::ofstream metricsFile;
+    metricsFile.open("experiment_results/metrics.csv");
+    metricsFile << "total_mission_time_s,";
+    metricsFile << "n_returned_agents,";
+    metricsFile << "n_agent_agent_collisions,";
+    metricsFile << "n_agent_obstacle_collisions\n";
+    metricsFile << m_metrics.total_mission_time_s << ",";
+    metricsFile << m_metrics.n_returned_agents << ",";
+    metricsFile << m_metrics.n_agent_agent_collisions << ",";
+    metricsFile << m_metrics.n_agent_obstacle_collisions << "\n";
+    metricsFile.close();
+
+    //Export coverage over time
+    std::ofstream coverageFile;
+    coverageFile.open("experiment_results/coverage.csv");
+    coverageFile << "time_s,";
+    for (auto & it : m_metrics.coverage_over_time) {
+        coverageFile << it.first << ",";
+    }
+    coverageFile << "\n";
+    for (int i = 0; i < m_metrics.coverage_over_time.begin()->second.size(); i++) {
+        coverageFile << i*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.coverage_over_time) {
+            coverageFile << it.second[i] << ",";
+        }
+        coverageFile << "\n";
+    }
+    coverageFile.close();
+
+    //Export traveled path length
+    std::ofstream traveledPathFile;
+    traveledPathFile.open("experiment_results/traveled_path.csv");
+    traveledPathFile << "agent_id,traveled_path\n";
+    for (auto & it : m_metrics.total_traveled_path) {
+        traveledPathFile << it.first << "," << it.second << "\n";
+    }
+    traveledPathFile.close();
+
+    //Export quadtree of each agent
+    std::ofstream quadTreeFile;
+    quadTreeFile.open("experiment_results/quadtree.csv");
+    quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
+    for (auto & it : m_tQuadTree) {
+        for (auto & box: it.second) {
+            quadTreeFile << it.first->GetId() << ",";
+            quadTreeFile << std::get<0>(box).getCenter().x << ",";
+            quadTreeFile << std::get<0>(box).getCenter().y << ",";
+            quadTreeFile << std::get<0>(box).getSize() << ",";
+            quadTreeFile << std::get<1>(box) << ",";
+            quadTreeFile << "\n";
+        }
+    }
+
+}
+
+bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
+    for (auto & it : tFBMap) {
+        /* Create a pointer to the current pi-puck */
+        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+        auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+        std::shared_ptr<Agent> agent = cController.agentObject;
+
+        if (agent->state != Agent::State::FINISHED) return false;
+    }
+    return true;
 }
 
 

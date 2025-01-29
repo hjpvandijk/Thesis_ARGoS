@@ -122,15 +122,12 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
 
     argos::LOG << "combined tree size: " << m_cAgVisLF.combinedQuadTree.size() << std::endl;
 
-    for (std::tuple<quadtree::Box, float, double> boxesAndConfidenceAndTicks: m_cAgVisLF.combinedQuadTree) {
-        quadtree::Box box = std::get<0>(boxesAndConfidenceAndTicks);
-        float LConfidence = std::get<1>(boxesAndConfidenceAndTicks);
-        float PConfidence = std::exp(LConfidence) / (1 + std::exp(LConfidence));
-        double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
+    for (std::tuple<quadtree::Box, double> boxesAndPheromone: m_cAgVisLF.combinedQuadTree) {
+        quadtree::Box box = std::get<0>(boxesAndPheromone);
+        float pheromone = std::get<1>(boxesAndPheromone);
 
         double currentTimeS = m_cAgVisLF.globalElapsedTicks;
 
-        double pheromone = calculatePheromone(visitedTimeS, PConfidence, currentTimeS);
 
         Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
         CVector3 pos = CVector3(boxCenterArgos.x, boxCenterArgos.y, 0.02f);

@@ -251,6 +251,7 @@ public:
         NO_MISSION,
         EXPLORING,
         RETURNING,
+        FINISHED
     };
 
     State state = State::NO_MISSION;
