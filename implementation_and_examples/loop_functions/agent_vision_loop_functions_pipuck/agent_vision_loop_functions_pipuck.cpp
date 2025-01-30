@@ -244,6 +244,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            combinedTree->add(node);
 //        }
         updateCoverage(it.first, it.second);
+        updateCertainty(it.first, it.second);
         if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
@@ -294,26 +295,71 @@ void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
 void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-
-    double covered_area = 0;
-
-
-    //TODO: Consider irreachible area
-    for (auto & it : tree) {
-        quadtree::Box box = std::get<0>(it);
-
-        double box_size = box.getSize();
-        covered_area += box_size*box_size;
-    }
-
-    double coverage = covered_area / (cController.map_width*cController.map_height);
-    argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
-
     auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
 
     //Update coverage over time at every interval, if mission has started
-    if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0)
+    if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
+
+        double covered_area = 0;
+
+
+        //TODO: Consider irreachible area
+        for (auto &it: tree) {
+            quadtree::Box box = std::get<0>(it);
+
+            double box_size = box.getSize();
+            covered_area += box_size * box_size;
+        }
+
+        double coverage = covered_area / (cController.map_width * cController.map_height);
+        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
+
+
         m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
+    }
+}
+
+void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double>> &tree) {
+    //Get controller
+    auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
+
+        //Update certainty over time at every interval, if mission has started
+        if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
+        double total_certainty = 0;
+        int total_boxes = 0;
+        double free_certainty = 0;
+        int free_boxes = 0;
+        double occupied_certainty = 0;
+        int occupied_boxes = 0;
+
+
+        for (auto & it : tree) {
+            auto pheromone = std::get<1>(it);
+            total_certainty += std::abs(pheromone-0.5);
+            total_boxes++;
+            if (pheromone > 0.5) {
+                free_certainty += pheromone;
+                free_boxes++;
+            } else if (pheromone <= 0.5) {
+                occupied_certainty += pheromone;
+                occupied_boxes++;
+            }
+        }
+
+        double average_total_certainty = total_certainty / total_boxes;
+        double average_free_certainty = free_certainty / free_boxes;
+        double average_occupied_certainty = occupied_certainty / occupied_boxes;
+        argos::LOG << "[" << pcFB->GetId() << "] Average total certainty: " << average_total_certainty << std::endl;
+        argos::LOG << "[" << pcFB->GetId() << "] Average free certainty: " << average_free_certainty << std::endl;
+        argos::LOG << "[" << pcFB->GetId() << "] Average occupied certainty: " << average_occupied_certainty << std::endl;
+
+
+        m_metrics.average_total_certainty_over_time[pcFB->GetId()].push_back(average_total_certainty);
+        m_metrics.average_free_pheromone_over_time[pcFB->GetId()].push_back(average_free_certainty);
+        m_metrics.average_occupied_pheromone_over_time[pcFB->GetId()].push_back(average_occupied_certainty);
+    }
+
 }
 
 void CAgentVisionLoopFunctions::updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
