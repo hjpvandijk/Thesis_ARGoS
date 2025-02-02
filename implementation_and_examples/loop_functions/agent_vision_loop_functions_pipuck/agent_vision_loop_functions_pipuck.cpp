@@ -65,7 +65,7 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param agent
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
-    std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTicks);
+    std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTime);
     m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
     m_tQuadTree[pcFB] = boxesAndPheromones;
@@ -171,7 +171,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         std::shared_ptr<Agent> agent = cController.agentObject;
 
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
-        globalElapsedTicks = agent->elapsed_ticks/agent->ticks_per_second;
+        globalElapsedTime = agent->elapsed_ticks / agent->ticks_per_second;
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
@@ -269,7 +269,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //    }
 //
     if (newAgentDone(tFBMap)) {
-        m_metrics.total_mission_time_s = globalElapsedTicks;
+        updateAgentsFinishedTime(tFBMap);
         exportMetricsAndMaps();
     }
 
@@ -389,11 +389,9 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     //Export metrics
     std::ofstream metricsFile;
     metricsFile.open("experiment_results/metrics.csv");
-    metricsFile << "total_mission_time_s,";
     metricsFile << "n_returned_agents,";
     metricsFile << "n_agent_agent_collisions,";
     metricsFile << "n_agent_obstacle_collisions\n";
-    metricsFile << m_metrics.total_mission_time_s << ",";
     metricsFile << m_metrics.n_returned_agents << ",";
     metricsFile << m_metrics.n_agent_agent_collisions << ",";
     metricsFile << m_metrics.n_agent_obstacle_collisions << "\n";
@@ -465,6 +463,15 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     mapObservationCountFile.close();
 
+    //Export mission time
+    std::ofstream missionTimeFile;
+    missionTimeFile.open("experiment_results/mission_time.csv");
+    missionTimeFile << "agent_id,mission_time\n";
+    for (auto & it : m_metrics.mission_time) {
+        missionTimeFile << it.first << "," << it.second << "\n";
+    }
+    missionTimeFile.close();
+
 }
 
 /**
@@ -490,6 +497,25 @@ bool CAgentVisionLoopFunctions::newAgentDone(CSpace::TMapPerType &tFBMap){
     }
     return false;
 }
+
+
+void CAgentVisionLoopFunctions::updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap) {
+    for (auto & it : tFBMap) {
+        /* Create a pointer to the current pi-puck */
+        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+        auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+        std::shared_ptr<Agent> agent = cController.agentObject;
+        if (agent->state == Agent::State::FINISHED){
+            //If no value yet
+            if (m_metrics.mission_time.find(pcFB->GetId()) == m_metrics.mission_time.end()){
+                m_metrics.mission_time[pcFB->GetId()] = agent->elapsed_ticks / agent->ticks_per_second;
+            }
+        }
+
+    }
+
+}
+
 
 void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     double batteryUsage = agent->batteryManager.battery.getStateOfCharge();

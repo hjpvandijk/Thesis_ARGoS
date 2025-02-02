@@ -14,7 +14,7 @@ class CAgentVisionLoopFunctions : public CLoopFunctions {
 public:
 
     struct metrics {
-        double total_mission_time_s;
+        std::map<std::string, double> mission_time; //Per agent
         std::map<std::string, std::vector<double>> coverage_over_time; //Per agent
         std::map<std::string, std::vector<double>> average_total_certainty_over_time; //Per agent, total certainty
         std::map<std::string, std::vector<double>> average_free_pheromone_over_time; //Per agent, certainty of presumed free space
@@ -50,7 +50,7 @@ public:
     std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, double >>> m_tQuadTree;
     std::map<CPiPuckEntity*, std::vector<std::tuple<Coordinate, Coordinate>>> m_tNeighborPairs;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
-    double globalElapsedTicks;
+    double globalElapsedTime;
     std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
     std::map<CPiPuckEntity*, std::vector<std::vector<std::pair<quadtree::Box, double>>>> m_tAgentFrontierRegions;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
@@ -150,11 +150,11 @@ private:
     void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     bool newAgentDone(CSpace::TMapPerType &tFBMap);
+    void updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap);
     void exportMetricsAndMaps();
     void updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     std::pair<int, int> coordinateToMapIndex(Coordinate coordinate, const std::shared_ptr<Agent> &agent);
     void observeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, const std::shared_ptr<Agent> &agent);
-
     };
 
 #endif

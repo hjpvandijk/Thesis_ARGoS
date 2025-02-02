@@ -126,7 +126,7 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
         quadtree::Box box = std::get<0>(boxesAndPheromone);
         float pheromone = std::get<1>(boxesAndPheromone);
 
-        double currentTimeS = m_cAgVisLF.globalElapsedTicks;
+        double currentTimeS = m_cAgVisLF.globalElapsedTime;
 
 
         Coordinate boxCenterArgos = Coordinate{box.getCenter().x, box.getCenter().y}.FromOwnToArgos();
