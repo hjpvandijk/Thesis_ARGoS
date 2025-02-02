@@ -84,6 +84,8 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     //Get ticks per second
     Real ticksPerSecond = argos::CPhysicsEngine::GetInverseSimulationClockTick();
     /* Go through them */
+    int map_cols = 0;
+    int map_rows = 0;
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
@@ -94,9 +96,12 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
 
         currently_colliding[pcFB] = false;
         previous_positions[pcFB] = Coordinate{MAXFLOAT, MAXFLOAT};
+        map_cols = std::max(map_cols, int(agent->quadtree->getRootBox().getSize()/agent->quadtree->getResolution()));
+        map_rows = std::max(map_rows, int(agent->quadtree->getRootBox().getSize()/agent->quadtree->getResolution()));
     }
 
     this->m_metrics = metrics();
+    this->m_metrics.map_observation_count.resize(map_cols, std::vector<int>(map_rows, 0));
 }
 
 /**
@@ -216,7 +221,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);
         updateBatteryUsage(pcFB, agent);
-
+        updateCellObservationCount(pcFB, agent);
     }
 
     auto mBox = quadtree::Box(-5.5, 5.5, 11);
@@ -444,6 +449,20 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
             quadTreeFile << "\n";
         }
     }
+    quadTreeFile.close();
+
+    //Export map observation count
+    std::ofstream mapObservationCountFile;
+    mapObservationCountFile.open("experiment_results/map_observation_count.csv");
+    mapObservationCountFile << "x,y,observation_count\n";
+    for (int i = 0; i < m_metrics.map_observation_count.size(); i++) {
+        for (int j = 0; j < m_metrics.map_observation_count[0].size(); j++) {
+            mapObservationCountFile << i << ",";
+            mapObservationCountFile << j << ",";
+            mapObservationCountFile << m_metrics.map_observation_count[i][j] << "\n";
+        }
+    }
+    mapObservationCountFile.close();
 
 }
 
@@ -474,6 +493,96 @@ bool CAgentVisionLoopFunctions::newAgentDone(CSpace::TMapPerType &tFBMap){
 void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     double batteryUsage = agent->batteryManager.battery.getStateOfCharge();
     m_metrics.total_battery_usage[pcFB->GetId()] = (1.0-batteryUsage)*100.0;
+}
+
+void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
+    //Only update if agent is in mission or returning from mission
+    if (agent->state == Agent::State::NO_MISSION || agent->state == Agent::State::FINISHED) return;
+    auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+
+    Coordinate agentRealPosition = cController.getActualAgentPosition();
+    bool addedObjectAtAgentLocation = false;
+    for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
+        argos::CRadians sensor_rotation = agent->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
+        if (agent->distance_sensors[sensor_index].getDistance() < agent->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
+
+            float sensor_probability = HC_SR04::getProbability(agent->distance_sensors[sensor_index].getDistance());
+
+            double opposite = argos::Sin(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
+            double adjacent = argos::Cos(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
+
+
+            Coordinate object = {agentRealPosition.x + adjacent, agentRealPosition.y + opposite};
+            //If the detected object is actually another agent, add it as a free area
+            //So check if the object coordinate is close to another agent
+            bool close_to_other_agent = false;
+            for (const auto &agentLocation: agent->agentLocations) {
+                if ((std::get<2>(agentLocation.second) - agent->elapsed_ticks) / agent->ticks_per_second >
+                        agent->config.AGENT_LOCATION_RELEVANT_S)
+                    continue;
+                argos::CVector2 objectToAgent =
+                        argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
+                        - argos::CVector2(object.x, object.y);
+
+                //If detected object and another agent are not close, add the object as an obstacle
+                if (objectToAgent.Length() <= agent->quadtree->getResolution()) {
+                    close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
+                }
+            }
+            //Only add the object as an obstacle if it is not close to another agent
+            if (!close_to_other_agent) {
+                if (sqrt(pow(agentRealPosition.x - object.x, 2) + pow(agentRealPosition.y - object.y, 2)) <
+                        agent->quadtree->getResolution()) {
+                    addedObjectAtAgentLocation = true;
+                }
+//                quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
+                std::pair<int, int> mapIndex = coordinateToMapIndex(object, agent);
+                m_metrics.map_observation_count[mapIndex.first][mapIndex.second]++;
+
+                if (!addedObjectAtAgentLocation) {
+                    observeAreaBetween(agentRealPosition, object, agent);
+                }
+            } else {
+                if (!addedObjectAtAgentLocation) observeAreaBetween(agentRealPosition, object, agent);
+            }
+
+
+        } else {
+            double opposite = argos::Sin(sensor_rotation) * agent->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+            double adjacent = argos::Cos(sensor_rotation) * agent->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+
+
+            Coordinate end_of_ray = {agentRealPosition.x + adjacent, agentRealPosition.y + opposite};
+            if (!addedObjectAtAgentLocation) observeAreaBetween(agentRealPosition, end_of_ray, agent);
+        }
+    }
+
+}
+
+std::pair<int, int> CAgentVisionLoopFunctions::coordinateToMapIndex(Coordinate coordinate, const std::shared_ptr<Agent> &agent) {
+    double rootboxSize = agent->quadtree->getRootBox().getSize();
+    int x = std::floor((coordinate.x + rootboxSize/2.0) / rootboxSize * this->m_metrics.map_observation_count.size());
+    int y = std::floor((coordinate.y + rootboxSize/2.0) / rootboxSize * this->m_metrics.map_observation_count[0].size());
+    return std::make_pair(x, y);
+}
+
+void CAgentVisionLoopFunctions::observeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, const std::shared_ptr<Agent> &agent) {
+    double x = coordinate1.x;
+    double y = coordinate1.y;
+    double dx = coordinate2.x - coordinate1.x;
+    double dy = coordinate2.y - coordinate1.y;
+    double distance = sqrt(dx * dx + dy * dy);
+    double stepSize = agent->quadtree->getResolution();
+    int nSteps = std::ceil(distance / stepSize);
+    double stepX = dx / nSteps;
+    double stepY = dy / nSteps;
+
+    for (int s = 0; s < nSteps; s++) {
+        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+        this->m_metrics.map_observation_count[coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).first][coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).second]++;
+        x += stepX;
+        y += stepY;
+    }
 }
 
 

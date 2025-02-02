@@ -58,7 +58,7 @@ bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate
     auto dx = target.x - start.x;
     auto dy = target.y - start.y;
     auto distance = sqrt(dx * dx + dy * dy);
-    auto stepSize = agent->quadtree->getSmallestBoxSize()/4;
+    auto stepSize = agent->quadtree->getResolution()/4;
     auto nSteps = std::ceil(distance / stepSize);
     auto stepX = dx / nSteps;
     auto stepY = dy / nSteps;
@@ -84,13 +84,13 @@ bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate
 }
 //bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
 //    auto [start_cell, start_box] = agent->quadtree->getCellandBoxFromCoordinate(start);
-//    while (start_box.size > agent->quadtree->getSmallestBoxSize()) { //Make sure we are in the smallest box
+//    while (start_box.size > agent->quadtree->getResolution()) { //Make sure we are in the smallest box
 //        int quadrant = start_box.getQuadrant(start);
 //        if (quadrant == 4) start_box = start_box.boxFromQuadrant(0); //If the start is in the center, we can't get the quadrant, so we just take the top left
 //        else start_box = start_box.boxFromQuadrant(quadrant);
 //    }
 //    auto [target_cell, target_box] = agent->quadtree->getCellandBoxFromCoordinate(target);
-//    while (target_box.size > agent->quadtree->getSmallestBoxSize()) {
+//    while (target_box.size > agent->quadtree->getResolution()) {
 //        int quadrant = target_box.getQuadrant(target);
 //        if (quadrant == 4) target_box = target_box.boxFromQuadrant(0); //If the target is in the center, we can't get the quadrant, so we just take the top left
 //        else target_box = target_box.boxFromQuadrant(quadrant);

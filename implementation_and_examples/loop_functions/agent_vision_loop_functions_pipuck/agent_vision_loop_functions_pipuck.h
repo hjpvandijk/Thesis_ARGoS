@@ -24,6 +24,7 @@ public:
         int n_returned_agents;
         int n_agent_agent_collisions; //Make sure to divide by 2
         int n_agent_obstacle_collisions;
+        std::vector<std::vector<int>> map_observation_count;
     };
 
     std::map<CPiPuckEntity*, bool> currently_colliding;
@@ -150,6 +151,10 @@ private:
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     bool newAgentDone(CSpace::TMapPerType &tFBMap);
     void exportMetricsAndMaps();
-};
+    void updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    std::pair<int, int> coordinateToMapIndex(Coordinate coordinate, const std::shared_ptr<Agent> &agent);
+    void observeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, const std::shared_ptr<Agent> &agent);
+
+    };
 
 #endif

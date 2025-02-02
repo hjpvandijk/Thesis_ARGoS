@@ -30,6 +30,12 @@ Agent::Agent(std::string id, double rootbox_size) {
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
                                                           this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF,
                                                           this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF);
+    //Calculate smallest box size
+    double smallestBoxSize = box.size;
+    while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
+        smallestBoxSize /= 2;
+    }
+    this->quadtree->setResolution(smallestBoxSize);
     this->wallFollower = WallFollower();
     this->timeSynchronizer = TimeSynchronizer();
 
@@ -131,7 +137,7 @@ void Agent::readInfraredSensor() {
 void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
                                                float Psensor) const {
     if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
-        this->quadtree->getSmallestBoxSize())
+        this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
 //    if (objectBox.size > 0) return;
 
@@ -140,7 +146,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -182,14 +188,14 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
 void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
                                float Psensor) const {
     if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
-        this->quadtree->getSmallestBoxSize())
+        this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
     double x = coordinate1.x;
     double y = coordinate1.y;
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -222,7 +228,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -247,7 +253,7 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -268,7 +274,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
                 0.02; // Subtract a small margin to detecting boxes the coordinates belong to
     double dy = coordinate2.y - coordinate1.y - 0.02;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -335,14 +341,14 @@ void Agent::checkForObstacles() {
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
-                if (objectToAgent.Length() <= this->quadtree->getSmallestBoxSize()) {
+                if (objectToAgent.Length() <= this->quadtree->getResolution()) {
                     close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
             if (!close_to_other_agent) {
                 if (sqrt(pow(this->position.x - object.x, 2) + pow(this->position.y - object.y, 2)) <
-                    this->quadtree->getSmallestBoxSize()) {
+                    this->quadtree->getResolution()) {
                     addedObjectAtAgentLocation = true;
                 }
                 quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
@@ -513,7 +519,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 
 
 bool Agent::frontierPheromoneEvaporated() {
-    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getSmallestBoxSize() / 2.0,
+    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getResolution() / 2.0,
                                  this->elapsed_ticks / this->ticks_per_second,
                                  this->config.MAX_FRONTIER_CELLS); //Update pheromone of frontier cell
     if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;

@@ -237,7 +237,7 @@ namespace quadtree {
 
 
         void processBox(const Box &box, std::vector<std::pair<Box, double>> &frontierBoxes, int current_quadrant, double currentTimeS) const {
-            if (box.size == getSmallestBoxSize()) {
+            if (box.size == RESOLUTION) {
                 double MooreNeighborPheromone = isMooreNeighbourUnknownOrAmbighous(box, current_quadrant, currentTimeS);
                 if (MooreNeighborPheromone != -1) {
                     frontierBoxes.emplace_back(box, MooreNeighborPheromone);
@@ -708,16 +708,12 @@ namespace quadtree {
 
         }
 
-        double getMinSize() {
+        double getResolution() {
             return this->RESOLUTION;
         }
 
-        void setMinSize(double minSize) {
+        void setResolution(double minSize) {
             this->RESOLUTION = minSize;
-        }
-
-        double getSmallestBoxSize() const {
-            return this->Smallest_Box_Size;
         }
 
         Box getRootBox() const {
@@ -728,7 +724,6 @@ namespace quadtree {
     private:
         static constexpr auto Threshold = std::size_t(16);
         double RESOLUTION;
-        double Smallest_Box_Size = RESOLUTION;
         double EVAPORATION_TIME_S;
         double EVAPORATED_PHEROMONE_FACTOR;
         double MERGE_MAX_VISITED_TIME_DIFF;
@@ -886,8 +881,6 @@ namespace quadtree {
                 //If the box size is the minimum size we allow (corresponding to finest mapping level),
                 // then we only contain a single QuadNode. Update the occupancy of this cell to the most important occupancy.
                 if (box.size <= RESOLUTION) {
-                    if (box.size <= Smallest_Box_Size) Smallest_Box_Size = box.size;
-
                     QuadNode newNode = QuadNode();
 //                    newNode.coordinate = value.coordinate;
                     newNode.coordinate = box.getCenter();
@@ -1382,7 +1375,7 @@ namespace quadtree {
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                 if (pheromone <= P_OCCUPIED_THRESHOLD) {
                     cell->quadNode.occupancy = OCCUPIED;
-                    if (box.getSize() > Smallest_Box_Size){
+                    if (box.getSize() > RESOLUTION){
                         split(cell, box, currentTimeS);
                     } else {
                         //Set neighbors
