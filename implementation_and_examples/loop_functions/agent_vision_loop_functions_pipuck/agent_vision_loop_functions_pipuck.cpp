@@ -301,7 +301,6 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
     auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
-
     //Update coverage over time at every interval, if mission has started
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
 
@@ -377,7 +376,7 @@ void CAgentVisionLoopFunctions::updateTraveledPathLength(CPiPuckEntity *pcFB, co
     }
 
     previous_positions[pcFB] = cController.getActualAgentPosition();
-    argos::LOG << "[" << pcFB->GetId() << "] Traveled path: " << m_metrics.total_traveled_path[pcFB->GetId()] << std::endl;
+//    argos::LOG << "[" << pcFB->GetId() << "] Traveled path: " << m_metrics.total_traveled_path[pcFB->GetId()] << std::endl;
 }
 
 void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
@@ -411,7 +410,9 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     for (int i = 0; i < m_metrics.coverage_over_time.begin()->second.size(); i++) {
         coverageFile << i*coverage_update_tick_interval << ",";
         for (auto & it : m_metrics.coverage_over_time) {
-            coverageFile << it.second[i] << ",";
+            if (i < it.second.size())
+                coverageFile << it.second[i] << ",";
+            else coverageFile << ",";
         }
         coverageFile << "\n";
     }
