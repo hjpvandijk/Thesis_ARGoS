@@ -37,7 +37,7 @@ visit_counts_grouped = visit_counts.groupby(pd.cut(visit_counts.index, intervals
 # Plot the line graph
 plt.figure(figsize=(10, 6))
 plt.plot(visit_counts_grouped.index.astype(str), visit_counts_grouped.values, marker='o')
-plt.title('Number of Cells Visited')
+plt.title('Number of Cells Observed')
 plt.xticks(rotation=45, ha='right')  # Rotate x-axis labels for better readability
 plt.xlabel('Number of Visits')
 plt.ylabel('Number of Cells')
