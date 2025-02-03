@@ -97,6 +97,7 @@ public:
     double map_height = 10.0;
 
     Coordinate getActualAgentPosition();
+    CRadians getActualAgentOrientation();
 
 
 
@@ -116,9 +117,10 @@ private:
 
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
-    CVector2 previousAgentPosition;
+    Coordinate previousAgentPosition;
     CRadians previousAgentOrientation;
     int batteryMeasureTicks = 0;
+    argos::CVector2 previousMovement = {0, 0};
 #endif
 
 

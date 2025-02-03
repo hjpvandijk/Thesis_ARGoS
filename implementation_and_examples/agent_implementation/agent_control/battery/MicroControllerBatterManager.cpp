@@ -110,4 +110,3 @@ std::pair<float, float> MicroControllerBatteryManager::estimateReceiveConsumptio
     return {totalReceivePowerUsage_mAh, totalReceiveTimeS};
 
 }
-
