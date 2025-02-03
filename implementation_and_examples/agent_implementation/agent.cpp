@@ -788,18 +788,18 @@ void Agent::startMission() {
 }
 
 void Agent::doStep() {
+    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
+    sendQuadtreeToCloseAgents();
+    broadcastMessage(
+            "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
+            ":" + std::to_string(this->speed));
+    timeSyncWithCloseAgents();
+
+    checkMessages();
     if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
         //Do nothing
         this->differential_drive.stop();
     } else { //Exploring or returning
-        broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
-        sendQuadtreeToCloseAgents();
-        broadcastMessage(
-                "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
-                ":" + std::to_string(this->speed));
-        timeSyncWithCloseAgents();
-
-        checkMessages();
 
         checkForObstacles();
 
