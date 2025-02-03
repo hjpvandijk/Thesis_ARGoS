@@ -13,7 +13,7 @@
 #include <yaml-cpp/yaml.h>
 
 
-Agent::Agent(std::string id) {
+Agent::Agent(std::string id, double rootbox_size) {
     loadConfig();
     this->id = std::move(id);
     this->position = {0.0, 0.0};
@@ -23,13 +23,19 @@ Agent::Agent(std::string id) {
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
-    auto box = quadtree::Box(-5.5, 5.5, 11);
+    auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
                                                           this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF,
                                                           this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF);
+    //Calculate smallest box size
+    double smallestBoxSize = box.size;
+    while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
+        smallestBoxSize /= 2;
+    }
+    this->quadtree->setResolution(smallestBoxSize);
     this->wallFollower = WallFollower();
     this->timeSynchronizer = TimeSynchronizer();
 
@@ -131,7 +137,7 @@ void Agent::readInfraredSensor() {
 void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
                                                float Psensor) const {
     if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
-        this->quadtree->getSmallestBoxSize())
+        this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
 //    if (objectBox.size > 0) return;
 
@@ -140,7 +146,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -162,7 +168,7 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
 //    x += stepX;
 //    y += stepY;
 //
-//    double occ_probability = this->P_FREE / Psensor;
+//    double occ_probability = this->P_OCCUPIED / Psensor;
 //    for(int s = 1; s <= 2; s++){ //Add slight occupied confidence to the two steps after the object
 //        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as more occupied
 //            double p = (0.5-occ_probability) * (double(s)/double(10)) + occ_probability; //Increasingly more uncertain the further away from the agent
@@ -182,14 +188,14 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
 void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
                                float Psensor) const {
     if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
-        this->quadtree->getSmallestBoxSize())
+        this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
     double x = coordinate1.x;
     double y = coordinate1.y;
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -222,7 +228,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -247,7 +253,7 @@ void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate
     double dx = coordinate2.x - coordinate1.x;
     double dy = coordinate2.y - coordinate1.y;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -268,7 +274,7 @@ bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) co
                 0.02; // Subtract a small margin to detecting boxes the coordinates belong to
     double dy = coordinate2.y - coordinate1.y - 0.02;
     double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getSmallestBoxSize();
+    double stepSize = this->quadtree->getResolution();
     int nSteps = std::ceil(distance / stepSize);
     double stepX = dx / nSteps;
     double stepY = dy / nSteps;
@@ -335,14 +341,14 @@ void Agent::checkForObstacles() {
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
-                if (objectToAgent.Length() <= this->quadtree->getSmallestBoxSize()) {
+                if (objectToAgent.Length() <= this->quadtree->getResolution()) {
                     close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
             if (!close_to_other_agent) {
                 if (sqrt(pow(this->position.x - object.x, 2) + pow(this->position.y - object.y, 2)) <
-                    this->quadtree->getSmallestBoxSize()) {
+                    this->quadtree->getResolution()) {
                     addedObjectAtAgentLocation = true;
                 }
                 quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
@@ -513,7 +519,7 @@ void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
 
 
 bool Agent::frontierPheromoneEvaporated() {
-    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getSmallestBoxSize() / 2.0,
+    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getResolution() / 2.0,
                                  this->elapsed_ticks / this->ticks_per_second,
                                  this->config.MAX_FRONTIER_CELLS); //Update pheromone of frontier cell
     if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
@@ -625,7 +631,7 @@ void Agent::calculateNextPosition() {
 
         //If we are close to the deployment location, we have returned, we can stop
         if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->state = State::NO_MISSION;
+            this->state = State::FINISHED;
         } else {
 
             //Set our current best 'frontier' to the deployment location
@@ -735,6 +741,7 @@ void Agent::calculateNextPosition() {
 void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
     bool sendQuadtree = false;
+    double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
         double lastReceivedTick = std::get<2>(agentLocationPair.second);
@@ -746,13 +753,15 @@ void Agent::sendQuadtreeToCloseAgents() {
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
                 this->config.QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
+                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+                oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
                 this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
             }
         }
     }
 
     if (!sendQuadtree) return; //If we don't need to send the quadtree to any agent, return
-    this->quadtree->toStringVector(&quadTreeToStrings);
+    this->quadtree->toStringVector(&quadTreeToStrings, oldest_exchange/this->ticks_per_second);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
     }
@@ -782,18 +791,18 @@ void Agent::startMission() {
 }
 
 void Agent::doStep() {
-    if (this->state == State::NO_MISSION) {
+    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
+    sendQuadtreeToCloseAgents();
+    broadcastMessage(
+            "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
+            ":" + std::to_string(this->speed));
+    timeSyncWithCloseAgents();
+
+    checkMessages();
+    if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
         //Do nothing
         this->differential_drive.stop();
     } else { //Exploring or returning
-        broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
-        sendQuadtreeToCloseAgents();
-        broadcastMessage(
-                "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
-                ":" + std::to_string(this->speed));
-        timeSyncWithCloseAgents();
-
-        checkMessages();
 
         checkForObstacles();
 
@@ -1054,7 +1063,7 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
-    if (this->state == State::RETURNING || this->state == State::NO_MISSION) return;
+    if (this->state == State::RETURNING || this->state == State::NO_MISSION || this->state == State::FINISHED) return;
     auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
     if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
         this->state = State::RETURNING;

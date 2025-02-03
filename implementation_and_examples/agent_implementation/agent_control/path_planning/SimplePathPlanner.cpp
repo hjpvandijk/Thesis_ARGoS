@@ -141,7 +141,7 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
 
 void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction, bool switched_direction) const {
     //If the route is longer than allowed, return an empty route.
-    if (route.size() > agent->config.MAX_ROUTE_LENGTH){
+    if (agent->state != Agent::State::RETURNING && route.size() > agent->config.MAX_ROUTE_LENGTH){
         route.clear();
         return;
     }
@@ -415,7 +415,7 @@ int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, dou
 //    auto dx = target.x - start.x;
 //    auto dy = target.y - start.y;
 //    auto distance = sqrt(dx * dx + dy * dy);
-//    auto stepSize = agent->quadtree->getSmallestBoxSize()/4;
+//    auto stepSize = agent->quadtree->getResolution()/4;
 //    auto nSteps = std::ceil(distance / stepSize);
 //    auto stepX = dx / nSteps;
 //    auto stepY = dy / nSteps;
@@ -461,13 +461,13 @@ int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, dou
  */
 std::tuple<quadtree::Quadtree::Cell*, quadtree::Box, int, double> SimplePathPlanner::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
 //    auto [start_cell, start_box] = agent->quadtree->getCellandBoxFromCoordinate(start);
-//    while (start_box.size > agent->quadtree->getSmallestBoxSize()) { //Make sure we are in the smallest box
+//    while (start_box.size > agent->quadtree->getResolution()) { //Make sure we are in the smallest box
 //        int quadrant = start_box.getQuadrant(start);
 //        if (quadrant == 4) start_box = start_box.boxFromQuadrant(0); //If the start is in the center, we can't get the quadrant, so we just take the top left
 //        else start_box = start_box.boxFromQuadrant(quadrant);
 //    }
 //    auto [target_cell, target_box] = agent->quadtree->getCellandBoxFromCoordinate(target);
-//    while (target_box.size > agent->quadtree->getSmallestBoxSize()) {
+//    while (target_box.size > agent->quadtree->getResolution()) {
 //        int quadrant = target_box.getQuadrant(target);
 //        if (quadrant == 4) target_box = target_box.boxFromQuadrant(0); //If the target is in the center, we can't get the quadrant, so we just take the top left
 //        else target_box = target_box.boxFromQuadrant(quadrant);

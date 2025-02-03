@@ -329,7 +329,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double totalNumberOfCellsInRegion = 0;
         double averagePheromoneCertainty = 0;
         for (auto [box, pheromone]: region) {
-            double cellsInBox = box.getSize() / agent->quadtree->getSmallestBoxSize();
+            double cellsInBox = box.getSize() / agent->quadtree->getResolution();
             assert(cellsInBox == 1);
             sumX += box.getCenter().x *
                     cellsInBox; //Take the box size into account (parent nodes will contain the info about all its children)

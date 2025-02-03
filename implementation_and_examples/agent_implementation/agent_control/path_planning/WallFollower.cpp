@@ -52,7 +52,7 @@ void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors ve
             this->wallFollowingHitPoint = agent->position;
             this->prevWallFollowingDirection = this->wallFollowingDirection;
             //If agent is close to the target, or, we are passing 'behind' the hit point, stop wall following
-        } else if (agentToTarget <= agent->quadtree->getSmallestBoxSize()*2 || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= agent->quadtree->getSmallestBoxSize() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= agent->config.TURN_THRESHOLD_DEGREES)) {
+        } else if (agentToTarget <= agent->quadtree->getResolution()*2 || (this->wallFollowingDirection != 0 && agentToHitPoint.Length()>= agent->quadtree->getResolution() && std::abs(ToDegrees(NormalizedDifference(hitPointToTarget.Angle(), agentToHitPoint.Angle())).GetValue()) <= agent->config.TURN_THRESHOLD_DEGREES)) {
             this->wallFollowingDirection = 0;
         } else if (std::abs(ToDegrees(*relativeObjectAvoidanceAngle).GetValue()) <
                    agent->config.TURN_THRESHOLD_DEGREES) { //Direction to the frontier is free again.

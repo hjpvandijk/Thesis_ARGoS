@@ -1,52 +1,48 @@
 import matplotlib.pyplot as plt
+import csv
 
 def plot_boxes(filename):
     # Read the file
     with open(filename, 'r') as file:
-        lines = file.readlines()
+        reader = csv.DictReader(file)
+        data = [row for row in reader]
 
-    # Extract the data
-    boxes = []
-    for line in lines:
-        parts = line.strip().split()
-        if len(parts) == 3:
-            left_x, top_y, size = map(float, parts)
-            color = None
-        elif len(parts) == 4:
-            left_x, top_y, size, color = map(float, parts)
-        else:
-            continue
+    # Group data by agent_id
+    agents_data = {}
+    for row in data:
+        agent_id = row['agent_id']
+        if agent_id not in agents_data:
+            agents_data[agent_id] = []
+        agents_data[agent_id].append(row)
 
-        boxes.append((left_x, top_y, size, color))
+    for agent_id, agent_data in agents_data.items():
+        fig, ax = plt.subplots()
 
-    # Plot the boxes
-    fig, ax = plt.subplots()
+        for row in agent_data:
+            box_size = float(row['box_size'])
+            box_x = float(row['box_x']) - box_size / 2
+            box_y = float(row['box_y']) - box_size / 2
 
-    for box in boxes:
-        left_x, top_y, size, color = box
-        rect = plt.Rectangle((left_x, top_y), size, size, fill=False, edgecolor='black')
+            pheromone = float(row['pheromone'])
 
-        if color == 1:
-            # rect.set_edgecolor('pink')
-            rect.fill=True
-            rect.set_facecolor('green')
-        elif color == 2:
-            rect.fill=True
-            # rect.set_edgecolor('pink')
-            rect.set_facecolor('red')
+            # Calculate color based on pheromone value
+            color = (1 - pheromone, pheromone, 0)  # Red to Green gradient
 
+            # Draw the rectangle
+            rect = plt.Rectangle((box_x, box_y), box_size, box_size, color=color, alpha=1)
+            ax.add_patch(rect)
 
-        ax.add_patch(rect)
+        ax.set_aspect('equal', 'box')
+        plt.xlim(-5, 5)
+        plt.ylim(-5, 5)
+        plt.xlabel('X-axis')
+        plt.ylabel('Y-axis')
+        plt.title(f'Boxes Plot for Agent {agent_id}')
 
-    ax.set_aspect('equal', 'box')
-    plt.xlim(-5, 5)
-    plt.ylim(-5, 5)
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.title('Boxes Plot')
-
-    plt.grid(True)
-    plt.show()
+        plt.grid(True)
+        plt.show()
+        exit()
 
 # Usage
-plot_boxes('pipuck1.txt')
+plot_boxes('implementation_and_examples/experiment_results/quadtree.csv')
+

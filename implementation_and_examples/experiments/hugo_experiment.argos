@@ -101,7 +101,7 @@
                 controller's header file in
                 controllers/footbot_diffusion/footbot_diffusion.h.
             -->
-            <params alpha="1" delta="0.01" velocity="20"/>
+            <params map_width ="10" map_height ="10"/>
         </pipuck_hugo_controller>
 
     </controllers>
@@ -260,7 +260,7 @@
 
 
         <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">
-            <body position="-4.5,-1,0" orientation="0,0,0"/>
+            <body position="-4.5,-1,0" orientation="90,0,0"/>
             <controller config="ppc"/>
             <devices>
 
@@ -268,7 +268,7 @@
         </pipuck>
 
         <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
-            <body position="-4.5,-0.5,0" orientation="0,0,0"/>
+            <body position="-4.5,-0.5,0" orientation="-90,0,0"/>
             <controller config="ppc"/>
         </pipuck>
 

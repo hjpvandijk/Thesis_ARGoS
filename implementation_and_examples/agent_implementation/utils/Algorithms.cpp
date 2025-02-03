@@ -13,7 +13,7 @@
  * @return
  */
 std::vector<Coordinate> Algorithms::Amanatides_Woo_Voxel_Traversal(Agent* agent, Coordinate coordinate1, Coordinate coordinate2) {
-    double box_size = agent->quadtree->getSmallestBoxSize();
+    double box_size = agent->quadtree->getResolution();
     std::vector<Coordinate> points;
 
     double x1 = coordinate1.x;
