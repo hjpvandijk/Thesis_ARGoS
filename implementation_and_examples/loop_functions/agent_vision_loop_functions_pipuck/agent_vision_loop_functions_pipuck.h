@@ -15,13 +15,13 @@ public:
 
     struct metrics {
         std::map<std::string, double> mission_time; //Per agent
+        std::map<std::string, bool> returned_to_deployment_site;
         std::map<std::string, std::vector<double>> coverage_over_time; //Per agent
         std::map<std::string, std::vector<double>> average_total_certainty_over_time; //Per agent, total certainty
         std::map<std::string, std::vector<double>> average_free_pheromone_over_time; //Per agent, certainty of presumed free space
         std::map<std::string, std::vector<double>> average_occupied_pheromone_over_time; //Per agent, certainty of presumed occupied space
         std::map<std::string, double> total_traveled_path; //Per agent
         std::map<std::string, double> total_battery_usage; //Per agent
-        int n_returned_agents;
         int n_agent_agent_collisions; //Make sure to divide by 2
         int n_agent_obstacle_collisions;
         std::vector<std::vector<int>> map_observation_count;
@@ -31,6 +31,7 @@ public:
     int coverage_update_tick_interval = 300; //at 30 ticks/second, this is every 10 seconds
     std::map<CPiPuckEntity*, Coordinate> previous_positions;
     int nAgentsDone = 0;
+    std::map<std::string, Coordinate> deployment_positions;
 
     metrics m_metrics;
 
@@ -151,6 +152,7 @@ private:
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     bool newAgentDone(CSpace::TMapPerType &tFBMap);
     void updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap);
+    void checkReturnToDeploymentSite(CSpace::TMapPerType &tFBMap);
     void exportMetricsAndMaps();
     void updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     std::pair<int, int> coordinateToMapIndex(Coordinate coordinate, const std::shared_ptr<Agent> &agent);

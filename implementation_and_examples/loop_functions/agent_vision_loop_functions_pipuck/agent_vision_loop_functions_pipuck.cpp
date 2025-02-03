@@ -98,6 +98,10 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         previous_positions[pcFB] = Coordinate{MAXFLOAT, MAXFLOAT};
         map_cols = std::max(map_cols, int(agent->quadtree->getRootBox().getSize()/agent->quadtree->getResolution()));
         map_rows = std::max(map_rows, int(agent->quadtree->getRootBox().getSize()/agent->quadtree->getResolution()));
+
+        Coordinate agentRealPosition = cController.getActualAgentPosition();
+        deployment_positions[pcFB->GetId()] = agentRealPosition;
+        argos::LOG << "Deployment position of " << pcFB->GetId() << " is " << deployment_positions[pcFB->GetId()].x << ", " << deployment_positions[pcFB->GetId()].y << std::endl;
     }
 
     this->m_metrics = metrics();
@@ -268,8 +272,11 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        }
 //    }
 //
+
+    //If a new agent is done, update the metrics and maps
     if (newAgentDone(tFBMap)) {
         updateAgentsFinishedTime(tFBMap);
+        checkReturnToDeploymentSite(tFBMap);
         exportMetricsAndMaps();
     }
 
@@ -389,13 +396,20 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     //Export metrics
     std::ofstream metricsFile;
     metricsFile.open("experiment_results/metrics.csv");
-    metricsFile << "n_returned_agents,";
     metricsFile << "n_agent_agent_collisions,";
     metricsFile << "n_agent_obstacle_collisions\n";
-    metricsFile << m_metrics.n_returned_agents << ",";
     metricsFile << m_metrics.n_agent_agent_collisions << ",";
     metricsFile << m_metrics.n_agent_obstacle_collisions << "\n";
     metricsFile.close();
+
+    //Export agent returned to deployment site
+    std::ofstream returnedToDeploymentSiteFile;
+    returnedToDeploymentSiteFile.open("experiment_results/returned_to_deployment_site.csv");
+    returnedToDeploymentSiteFile << "agent_id,returned_to_deployment_site\n";
+    for (auto & it : m_metrics.returned_to_deployment_site) {
+        returnedToDeploymentSiteFile << it.first << "," << it.second << "\n";
+    }
+    returnedToDeploymentSiteFile.close();
 
     //Export coverage over time
     std::ofstream coverageFile;
@@ -609,6 +623,22 @@ void CAgentVisionLoopFunctions::observeAreaBetween(Coordinate coordinate1, Coord
         this->m_metrics.map_observation_count[coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).first][coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).second]++;
         x += stepX;
         y += stepY;
+    }
+}
+
+void CAgentVisionLoopFunctions::checkReturnToDeploymentSite(CSpace::TMapPerType &tFBMap) {
+    for (auto & it : tFBMap) {
+        /* Create a pointer to the current pi-puck */
+        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+        auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+        Coordinate agentRealPosition = cController.getActualAgentPosition();
+        //Check if agent is within 1m from deployment position
+        if (sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
+                 pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2)) <= 1.0) {
+            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = true;
+        } else {
+            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = false;
+        }
     }
 }
 
