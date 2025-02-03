@@ -237,7 +237,7 @@ namespace quadtree {
 
 
         void processBox(const Box &box, std::vector<std::pair<Box, double>> &frontierBoxes, int current_quadrant, double currentTimeS) const {
-            if (box.size == getSmallestBoxSize()) {
+            if (box.size == RESOLUTION) {
                 double MooreNeighborPheromone = isMooreNeighbourUnknownOrAmbighous(box, current_quadrant, currentTimeS);
                 if (MooreNeighborPheromone != -1) {
                     frontierBoxes.emplace_back(box, MooreNeighborPheromone);
@@ -637,11 +637,11 @@ namespace quadtree {
          * Get all the boxes in the quadtree
          * @return
          */
-        std::vector<std::tuple<Box, float, double>> getAllBoxes() {
-            std::vector<std::tuple<Box, float, double>> boxesAndConfidenceAndTicks = {};
-            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, float, double>> *)> traverse;
+        std::vector<std::tuple<Box, double>> getAllBoxes(double currentTimeS) {
+            std::vector<std::tuple<Box, double>> boxesAndPheromones = {};
+            std::function<void(const Cell *, const Box &, std::vector<std::tuple<Box, double>> *)> traverse;
             traverse = [&](const Cell *cell, const Box &box,
-                           std::vector<std::tuple<Box, float, double>> *boxesAndConfidenceAndTicks) {
+                           std::vector<std::tuple<Box, double>> *boxesAndConfidenceAndTicks) {
                 if (cell == nullptr) return;
                 bool allSameOccupancy = false;
 //                    if (value.occupancy == ANY || value.occupancy == UNKNOWN)
@@ -649,8 +649,9 @@ namespace quadtree {
                 // If the occupancy is OCCUPIED or FREE or AMBIGUOUS, we want to exchange that information. And we don't have to send any children as they will be all the same.
                 if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) {
                     allSameOccupancy = true;
+                    auto pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                     boxesAndConfidenceAndTicks->emplace_back(
-                            box, cell->quadNode.LConfidence, cell->quadNode.visitedAtS);
+                            box, pheromone);
                 }
 
                 // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
@@ -663,9 +664,9 @@ namespace quadtree {
                 }
             };
 
-            traverse(mRoot.get(), mBox, &boxesAndConfidenceAndTicks);
+            traverse(mRoot.get(), mBox, &boxesAndPheromones);
 
-            return boxesAndConfidenceAndTicks;
+            return boxesAndPheromones;
 
         }
 
@@ -708,16 +709,12 @@ namespace quadtree {
 
         }
 
-        double getMinSize() {
+        double getResolution() {
             return this->RESOLUTION;
         }
 
-        void setMinSize(double minSize) {
+        void setResolution(double minSize) {
             this->RESOLUTION = minSize;
-        }
-
-        double getSmallestBoxSize() const {
-            return this->Smallest_Box_Size;
         }
 
         Box getRootBox() const {
@@ -728,7 +725,6 @@ namespace quadtree {
     private:
         static constexpr auto Threshold = std::size_t(16);
         double RESOLUTION;
-        double Smallest_Box_Size = RESOLUTION;
         double EVAPORATION_TIME_S;
         double EVAPORATED_PHEROMONE_FACTOR;
         double MERGE_MAX_VISITED_TIME_DIFF;
@@ -886,8 +882,6 @@ namespace quadtree {
                 //If the box size is the minimum size we allow (corresponding to finest mapping level),
                 // then we only contain a single QuadNode. Update the occupancy of this cell to the most important occupancy.
                 if (box.size <= RESOLUTION) {
-                    if (box.size <= Smallest_Box_Size) Smallest_Box_Size = box.size;
-
                     QuadNode newNode = QuadNode();
 //                    newNode.coordinate = value.coordinate;
                     newNode.coordinate = box.getCenter();
@@ -1382,7 +1376,7 @@ namespace quadtree {
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                 if (pheromone <= P_OCCUPIED_THRESHOLD) {
                     cell->quadNode.occupancy = OCCUPIED;
-                    if (box.getSize() > Smallest_Box_Size){
+                    if (box.getSize() > RESOLUTION){
                         split(cell, box, currentTimeS);
                     } else {
                         //Set neighbors

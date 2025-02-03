@@ -190,7 +190,7 @@ public:
 
     Agent() {}
 
-    explicit Agent(std::string id);
+    explicit Agent(std::string id, double rootbox_size);
 
     void setPosition(double new_x, double new_y);
 
@@ -251,6 +251,7 @@ public:
         NO_MISSION,
         EXPLORING,
         RETURNING,
+        FINISHED
     };
 
     State state = State::NO_MISSION;

@@ -93,6 +93,12 @@ public:
 //    agent agents[nAgents];
     std::shared_ptr<Agent> agentObject;
 
+    double map_width = 10.0;
+    double map_height = 10.0;
+
+    Coordinate getActualAgentPosition();
+
+
 
 private:
 
@@ -123,26 +129,11 @@ private:
      * <controllers><footbot_diffusion_controller> section.
      */
 
-    /* Maximum tolerance for the angle between
-     * the robot heading direction and
-     * the closest obstacle detected. */
-    CDegrees m_cAlpha;
-    /* Maximum tolerance for the proximity reading between
-     * the robot and the closest obstacle.
-     * The proximity reading is 0 when nothing is detected
-     * and grows exponentially to 1 when the obstacle is
-     * touching the robot.
-     */
-    Real m_fDelta;
-    /* Wheel speed. */
-    Real m_fWheelVelocity;
-    /* Angle tolerance range to go straight.
-     * It is set to [-alpha,alpha]. */
-    CRange<CRadians> m_cGoStraightAngleRange;
+    double map_width_with_noise_room = 11.0;
+    double map_height_with_noise_room = 11.0;
 
     lua_State *L;
 
-    double map_size = 11.0; // Height and Width (square)
 
     double directions_heatmap[512][512];
     double error_mean_heatmap[512][512];
@@ -152,7 +143,6 @@ private:
     void readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]);
 
     bool mission_start = false;
-
 
 };
 
