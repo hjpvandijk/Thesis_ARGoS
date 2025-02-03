@@ -735,6 +735,7 @@ void Agent::calculateNextPosition() {
 void Agent::sendQuadtreeToCloseAgents() {
     std::vector<std::string> quadTreeToStrings = {};
     bool sendQuadtree = false;
+    double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
         double lastReceivedTick = std::get<2>(agentLocationPair.second);
@@ -746,13 +747,15 @@ void Agent::sendQuadtreeToCloseAgents() {
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
                 this->config.QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
+                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+                oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
                 this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
             }
         }
     }
 
     if (!sendQuadtree) return; //If we don't need to send the quadtree to any agent, return
-    this->quadtree->toStringVector(&quadTreeToStrings);
+    this->quadtree->toStringVector(&quadTreeToStrings, oldest_exchange/this->ticks_per_second);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
     }
