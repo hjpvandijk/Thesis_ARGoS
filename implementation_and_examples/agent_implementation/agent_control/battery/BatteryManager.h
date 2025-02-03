@@ -75,7 +75,8 @@ public:
     std::tuple<float, float> estimateTotalPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath);
 
     std::tuple<float,float> estimateMotionPowerUsage(Agent* agent, std::vector<argos::CVector2> relativePath);
-private:
+    std::tuple<float, float> calculateTotalPowerUsageFromMovement(Agent* agent, argos::CVector2 prevMovement, argos::CVector2 movement);
+        private:
 
 };
 

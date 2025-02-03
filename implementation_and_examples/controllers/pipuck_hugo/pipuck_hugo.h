@@ -99,10 +99,11 @@ public:
     double map_height = 10.0;
 
     Coordinate getActualAgentPosition();
+    CRadians getActualAgentOrientation();
 
 
 
-private:
+    private:
 
     /* Pointer to the differential steering actuator */
     CCI_PiPuckDifferentialDriveActuator* m_pcWheels;
@@ -118,9 +119,10 @@ private:
 
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
-    CVector2 previousAgentPosition;
+    Coordinate previousAgentPosition;
     CRadians previousAgentOrientation;
     int batteryMeasureTicks = 0;
+    argos::CVector2 previousMovement = {0, 0};
 #endif
 
 
@@ -147,18 +149,21 @@ private:
     bool mission_start = false;
 
 
-    void dqnControlStep();
+    void dqnControlStep(Agent* agent);
     void execute_action(int action);
-    float calculate_reward();
+    float calculate_reward(Agent* agent);
     void train_agent();
+    vec_t getLocalMapForNN(const Agent *agent);
+    vec_t construct_state(Agent * agent);
 
-    // Replay buffer
+        // Replay buffer
     ReplayBuffer replay_buffer;
 
     // Training parameters
     size_t ticks = 0;
     size_t train_interval = 100; // Train every 100 steps
     size_t batch_size = 32;
+
 
 };
 

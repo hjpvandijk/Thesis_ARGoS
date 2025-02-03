@@ -13,8 +13,9 @@ public:
     MotionSystemBatteryManager() = default;
 
     float EstimateMotorPowerUsage(Agent *agent, float forces[], float forceDurations[]);
+    std::tuple<float, float> estimateMotorPowerUsageAndDurationFromPastMovement(Agent *agent, argos::CVector2 prevMovement, argos::CVector2 movement, float time);
 
-    std::tuple<float, float> estimateMotorPowerUsageAndDuration(Agent* agent, std::vector<argos::CVector2> relativePath);
+        std::tuple<float, float> estimateMotorPowerUsageAndDuration(Agent* agent, std::vector<argos::CVector2> relativePath);
 
     float getMaxAchievableSpeed() const;
 
@@ -65,6 +66,7 @@ public:
 //    float turnDeceleration = 1.0;//Get turn deceleration from motor; //In rad/s^2
 
     void calculateForces(float (& forces)[6],Agent* agent) const;
+    void calculateForcesPastMovement(float acceleration, float deceleration, float turnAcceleration, float turnDeceleration, float (& forces)[6], Agent* agent) const;
 
 };
 

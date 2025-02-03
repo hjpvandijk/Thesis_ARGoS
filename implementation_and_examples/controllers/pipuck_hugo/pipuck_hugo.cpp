@@ -68,11 +68,14 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 
     agentObject->differential_drive.setActuator(m_pcWheels);
 
-    dqnAgent = std::make_unique<DQNAgent>();
+//    dqnAgent = std::make_unique<DQNAgent>();
 
     readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/orientation_offset.txt", this->orientation_offset_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/error_heatmap.txt", this->error_mean_heatmap);
+
+    previousAgentPosition = getActualAgentPosition();
+    previousAgentOrientation = getActualAgentOrientation();
 }
 
 void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]) {
@@ -185,55 +188,74 @@ void PiPuckHugo::ControlStep() {
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level
-    if (batteryMeasureTicks % 15 == 0) {
+//    if (batteryMeasureTicks % 1 == 0) {
 
         //Get relative vector
-        float traveledPathLength = sqrt(pow(agentObject->position.x - previousAgentPosition.GetX(), 2) +
-                                        pow(agentObject->position.y - previousAgentPosition.GetY(), 2));
+        float traveledPathLength = sqrt(pow(this->getActualAgentPosition().x - previousAgentPosition.x, 2) +
+                                        pow(this->getActualAgentPosition().y - previousAgentPosition.y, 2));
         CRadians traveledAngle = zAngle - previousAgentOrientation;
         CVector2 traveledVector = CVector2(traveledPathLength, 0).Rotate(traveledAngle);
-        auto [usedPower, duration] = agentObject->batteryManager.estimateTotalPowerUsage(agentObject.get(),
-                                                                                         {traveledVector});
+
+
+        auto [usedPower, duration] = agentObject->batteryManager.calculateTotalPowerUsageFromMovement(agentObject.get(), previousMovement, traveledVector);
         agentObject->batteryManager.battery.charge -= usedPower;
 //        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
 
-        previousAgentPosition = {-position.GetY(), position.GetX()};
+        previousAgentPosition = getActualAgentPosition();
         previousAgentOrientation = zAngle;
-        batteryMeasureTicks = 0;
-    }
-    batteryMeasureTicks++;
+//        batteryMeasureTicks = 0;
+//    }
+//    batteryMeasureTicks++;
 #endif
 
     if (!this->mission_start){
         agentObject->startMission();
         this->mission_start = true;
     }
-//    agentObject->doStep();
-    dqnControlStep();
+    agentObject->doStep();
+//    dqnControlStep(agentObject.get());
 
 
 }
 
-void PiPuckHugo::dqnControlStep() {
-    // 2. Construct the state vector
+vec_t PiPuckHugo::construct_state(Agent * agent) {
+    // 1. Get local map (10x10 grid centered on the robot)
+
+    vec_t local_map = getLocalMapForNN(agent);
+
+    // 2. Get proximity sensor readings
+    vec_t proximity_data;
+    for (const auto& sensor : agent->distance_sensors) {
+        proximity_data.push_back(sensor.getDistance());
+    }
+
+    //3. Get position and orientation
+    vec_t position = {float(agent->position.x), float(agent->position.y)};
+    float orientation = agent->heading.GetValue(); // In Radians
+
+    // 4. Combine all into the state vector
     vec_t state;
-//    for (const auto& reading : proximity_readings) {
-//        state.push_back(reading.Value);
-//    }
-//    for (const auto& reading : rab_readings) {
-//        state.push_back(reading.Range);
-//        state.push_back(reading.Bearing.Angle().GetValue());
-//    }
+    state.insert(state.end(), local_map.begin(), local_map.end()); // Local map
+    state.insert(state.end(), proximity_data.begin(), proximity_data.end()); // Proximity data
+    state.insert(state.end(), position.begin(), position.end()); // Position
+    state.push_back(orientation); // Orientation
+
+    return state;
+}
+
+void PiPuckHugo::dqnControlStep(Agent* agent) {
+    // 2. Construct the state vector
+    vec_t state = construct_state(agent);
 
     // 3. Get action from the MARL agent
     int action = dqnAgent->get_action(state);
 
-    // 4. Execute the action
+    // 4. Execute the action, and run the simulation for one step
     execute_action(action);
 
     // 5. Observe the next state and reward
-    vec_t next_state = {/* Construct next state */};
-    float reward = calculate_reward();
+    vec_t next_state = construct_state(agent);
+    float reward = calculate_reward(agent);
 
     // 6. Store experience in the replay buffer
     replay_buffer.add({state, action, reward, next_state});
@@ -254,11 +276,24 @@ void PiPuckHugo::execute_action(int action) {
     }
 }
 
-float PiPuckHugo::calculate_reward() {
+float PiPuckHugo::calculate_reward(Agent* agent) {
     // Calculate reward based on the map and agent's performance
+
     //Get map, calculate certainty for each cell. Reward is absolute difference between certainty and 0.5 (ambiguous)
+    //Get entire map
+    auto boxesAndPheromones = agent->quadtree->getAllBoxes(agent->elapsed_ticks / agent->ticks_per_second);
+    //Calculate certainty for each cell: abs(pheromone - 0.5). Combine them using a squared weighted root function.
+    //We do this so exploring new cells is highly rewarded, but increasing certainty by a lot is also rewarded.
+    float total_certainty = 0.0f;
+    for (const auto& [box, pheromone] : boxesAndPheromones) {
+        total_certainty += std::sqrt(0.1f*std::abs(pheromone - 0.5));
+    }
+
+
     //Get battery level, reward is battery level, so that the agent learns to conserve energy
+
     //Get mission duration, reward is duration, so that the agent learns to complete the mission quickly
+
     return 0.0f; // Replace with actual reward calculation
 }
 
@@ -282,6 +317,52 @@ Coordinate PiPuckHugo::getActualAgentPosition() {
     auto positionSensorReading = m_pcPositioningSensor->GetReading();
     const auto position = positionSensorReading.Position;
     return Coordinate{-position.GetY(), position.GetX()}; // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+}
+
+CRadians PiPuckHugo::getActualAgentOrientation(){
+    auto positionSensorReading = m_pcPositioningSensor->GetReading();
+    CRadians zAngle, yAngle, xAngle;
+    const auto orientation = positionSensorReading.Orientation;
+    orientation.ToEulerAngles(zAngle, yAngle, xAngle);
+    return zAngle;
+}
+
+vec_t PiPuckHugo::getLocalMapForNN(const Agent*agent) {
+    auto cell_size = agent->quadtree->getResolution();
+    auto local_size = agent->config.FRONTIER_SEARCH_RADIUS;
+    vec_t local_map(local_size * local_size, 0.5f); // Initialize with default value (unexplored)
+
+    // Define the bounding box for the local map
+    float half_size = (local_size * cell_size) / 2.0f;
+    float x_min = agent->position.x - half_size;
+    float y_min = agent->position.y - half_size;
+//    float x_max = agent.position.x + half_size;
+//    float y_max = agent.position.y + half_size;
+
+    // Query the quadtree for cells within the bounding box
+//        auto cells = query_quadtree(agenbt->quadtree, x_min, y_min, x_max, y_max);
+    auto boxesAndPheromones = agent->quadtree->queryBoxesAndPheromones(agent->position, local_size, agent->elapsed_ticks / agent->ticks_per_second);
+
+    // Fill the local map with confidence values
+    for (const auto& [box, pheromone] : boxesAndPheromones) {
+        auto boxCenter = box.getCenter();
+        // Calculate the grid indices for the cell
+        int x_start = static_cast<int>((boxCenter.x - x_min) / cell_size);
+        int y_start = static_cast<int>((boxCenter.y - y_min) / cell_size);
+        int x_end = static_cast<int>((boxCenter.x + box.size - x_min) / cell_size);
+        int y_end = static_cast<int>((boxCenter.y + box.size - y_min) / cell_size);
+
+        // Fill the local map with the cell's confidence value
+        for (int i = x_start; i < x_end; ++i) {
+            for (int j = y_start; j < y_end; ++j) {
+                if (i >= 0 && i < local_size && j >= 0 && j < local_size) {
+                    local_map[i * local_size + j] = pheromone;
+                }
+            }
+        }
+    }
+
+    return local_map;
 }
 
 /****************************************/
