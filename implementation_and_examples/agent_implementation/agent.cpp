@@ -13,8 +13,8 @@
 #include <yaml-cpp/yaml.h>
 
 
-Agent::Agent(std::string id, double rootbox_size) {
-    loadConfig();
+Agent::Agent(std::string id, double rootbox_size, const std::string& config_file) {
+    loadConfig(config_file);
     this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
@@ -638,7 +638,8 @@ void Agent::calculateNextPosition() {
             if (!(this->currentBestFrontier == this->deploymentLocation)) {
                 this->currentBestFrontier = this->deploymentLocation;
                 this->last_feasibility_check_tick = this->elapsed_ticks;
-                //Find the route to the deployment location
+                //We need to find the route, so we set the periodic check required.
+                periodic_check_required = true;
             }
 
             if (periodic_check_required) {
@@ -1063,16 +1064,23 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
-    if (this->state == State::RETURNING || this->state == State::NO_MISSION || this->state == State::FINISHED) return;
-    auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
-    if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
-        this->state = State::RETURNING;
-    } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
-        this->state = State::RETURNING;
+    if (this->state == State::RETURNING) {
+        //If we have are returning to the deployment location, but we are taking over double the time at which we return, we have failed (finished).
+        if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S * 2.0f) {
+            this->state = State::FINISHED;
+        }
+    } else if (this->state == State::NO_MISSION || this->state == State::FINISHED) return;
+    else {
+        auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
+        if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
+            this->state = State::RETURNING;
+        } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
+            this->state = State::RETURNING;
+        }
     }
 }
 
-void Agent::loadConfig() {
+void Agent::loadConfig(const std::string& config_file) {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
     this->config.MISSION_END_TIME_S = config_yaml["mission"]["end_time"].as<float>();

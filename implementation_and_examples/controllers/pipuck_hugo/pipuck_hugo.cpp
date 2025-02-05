@@ -61,9 +61,10 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     GetNodeAttributeOrDefault(t_node, "map_height", map_height, map_height);
     map_height_with_noise_room = map_height + 1.0; //Room for noise
     map_width_with_noise_room = map_width + 1.0; //Room for noise
+    GetNodeAttributeOrDefault(t_node, "config", config_file, config_file);
 
 
-    agentObject = std::make_shared<Agent>(Agent(this->m_strId, std::max(map_width_with_noise_room, map_height_with_noise_room)));
+    agentObject = std::make_shared<Agent>(Agent(this->m_strId, std::max(map_width_with_noise_room, map_height_with_noise_room), config_file));
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
     agentObject->differential_drive.setActuator(m_pcWheels);

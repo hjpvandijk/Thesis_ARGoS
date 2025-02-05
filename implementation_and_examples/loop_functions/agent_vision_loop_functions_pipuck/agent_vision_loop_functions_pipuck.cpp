@@ -5,6 +5,7 @@
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
 #include <chrono>
 #include <sys/stat.h>
+#include <cstdlib>  // for getenv()
 
 /****************************************/
 /****************************************/
@@ -101,7 +102,8 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
 
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         deployment_positions[pcFB->GetId()] = agentRealPosition;
-        argos::LOG << "Deployment position of " << pcFB->GetId() << " is " << deployment_positions[pcFB->GetId()].x << ", " << deployment_positions[pcFB->GetId()].y << std::endl;
+
+        longest_mission_time_s = std::max(longest_mission_time_s, agent->config.MISSION_END_TIME_S);
     }
 
     this->m_metrics = metrics();
@@ -274,7 +276,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //
 
     //If a new agent is done, update the metrics and maps
-    if (newAgentDone(tFBMap)) {
+    if (allAgentsDone(tFBMap)) {
         updateAgentsFinishedTime(tFBMap);
         checkReturnToDeploymentSite(tFBMap);
         exportMetricsAndMaps();
@@ -393,9 +395,22 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
     }
 
+    std::string experiment_name_str = "experiment";
+    const char* experiment_name = std::getenv("EXPERIMENT");
+    if (experiment_name) {
+        //Remove ".argos"
+        experiment_name_str = experiment_name;
+        experiment_name_str = experiment_name_str.substr(0, experiment_name_str.find_last_of('.'));
+    }
+
+    if (mkdir(("experiment_results/" + experiment_name_str).c_str(), 0777) == -1) {
+        std::cerr << "Error :  " << strerror(errno) << std::endl;
+    }
+
+
     //Export metrics
     std::ofstream metricsFile;
-    metricsFile.open("experiment_results/metrics.csv");
+    metricsFile.open("experiment_results/" + experiment_name_str + "/metrics.csv");
     metricsFile << "n_agent_agent_collisions,";
     metricsFile << "n_agent_obstacle_collisions\n";
     metricsFile << m_metrics.n_agent_agent_collisions << ",";
@@ -404,7 +419,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export agent returned to deployment site
     std::ofstream returnedToDeploymentSiteFile;
-    returnedToDeploymentSiteFile.open("experiment_results/returned_to_deployment_site.csv");
+    returnedToDeploymentSiteFile.open("experiment_results/" + experiment_name_str + "/returned_to_deployment_site.csv");
     returnedToDeploymentSiteFile << "agent_id,returned_to_deployment_site\n";
     for (auto & it : m_metrics.returned_to_deployment_site) {
         returnedToDeploymentSiteFile << it.first << "," << it.second << "\n";
@@ -413,7 +428,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export coverage over time
     std::ofstream coverageFile;
-    coverageFile.open("experiment_results/coverage.csv");
+    coverageFile.open("experiment_results/" + experiment_name_str + "/coverage.csv");
     coverageFile << "time_s,";
     for (auto & it : m_metrics.coverage_over_time) {
         coverageFile << it.first << ",";
@@ -432,7 +447,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export traveled path length
     std::ofstream traveledPathFile;
-    traveledPathFile.open("experiment_results/traveled_path.csv");
+    traveledPathFile.open("experiment_results/" + experiment_name_str + "/traveled_path.csv");
     traveledPathFile << "agent_id,traveled_path\n";
     for (auto & it : m_metrics.total_traveled_path) {
         traveledPathFile << it.first << "," << it.second << "\n";
@@ -441,7 +456,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export battery usage
     std::ofstream batteryUsageFile;
-    batteryUsageFile.open("experiment_results/battery_usage.csv");
+    batteryUsageFile.open("experiment_results/" + experiment_name_str + "/battery_usage.csv");
     batteryUsageFile << "agent_id,battery_usage\n";
     for (auto & it : m_metrics.total_battery_usage) {
         batteryUsageFile << it.first << "," << it.second << "\n";
@@ -450,7 +465,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export quadtree of each agent
     std::ofstream quadTreeFile;
-    quadTreeFile.open("experiment_results/quadtree.csv");
+    quadTreeFile.open("experiment_results/" + experiment_name_str + "/quadtree.csv");
     quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
     for (auto & it : m_tQuadTree) {
         for (auto & box: it.second) {
@@ -466,7 +481,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export map observation count
     std::ofstream mapObservationCountFile;
-    mapObservationCountFile.open("experiment_results/map_observation_count.csv");
+    mapObservationCountFile.open("experiment_results/" + experiment_name_str + "/map_observation_count.csv");
     mapObservationCountFile << "x,y,observation_count\n";
     for (int i = 0; i < m_metrics.map_observation_count.size(); i++) {
         for (int j = 0; j < m_metrics.map_observation_count[0].size(); j++) {
@@ -479,7 +494,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export mission time
     std::ofstream missionTimeFile;
-    missionTimeFile.open("experiment_results/mission_time.csv");
+    missionTimeFile.open("experiment_results/" + experiment_name_str + "/mission_time.csv");
     missionTimeFile << "agent_id,mission_time\n";
     for (auto & it : m_metrics.mission_time) {
         missionTimeFile << it.first << "," << it.second << "\n";
@@ -493,23 +508,20 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
  * @param tFBMap
  * @return
  */
-bool CAgentVisionLoopFunctions::newAgentDone(CSpace::TMapPerType &tFBMap){
-    int agentsDone = 0;
+bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
+    bool allAgentsDone = true;
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
-        if (agent->state == Agent::State::FINISHED){
-            agentsDone++;
+        if (agent->state != Agent::State::FINISHED){
+            allAgentsDone = false;
         }
     }
-    if (agentsDone > nAgentsDone){
-        nAgentsDone = agentsDone;
-        return true;
-    }
-    return false;
+    experimentFinished = allAgentsDone; //If all agents are done, the experiment is finished
+    return experimentFinished;
 }
 
 
@@ -640,6 +652,14 @@ void CAgentVisionLoopFunctions::checkReturnToDeploymentSite(CSpace::TMapPerType 
             this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = false;
         }
     }
+}
+
+bool CAgentVisionLoopFunctions::IsExperimentFinished() {
+    return experimentFinished;
+}
+
+void CAgentVisionLoopFunctions::PostExperiment() {
+    exit(0);
 }
 
 
