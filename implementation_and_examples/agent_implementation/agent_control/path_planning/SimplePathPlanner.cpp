@@ -141,7 +141,7 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
 
 void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction, bool switched_direction) const {
     //If the route is longer than allowed, return an empty route.
-    if (route.size() > agent->config.MAX_ROUTE_LENGTH){
+    if (agent->state != Agent::State::RETURNING && route.size() > agent->config.MAX_ROUTE_LENGTH){
         route.clear();
         return;
     }

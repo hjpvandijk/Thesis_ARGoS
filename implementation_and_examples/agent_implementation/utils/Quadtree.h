@@ -575,7 +575,7 @@ namespace quadtree {
         /**
          * @brief Create a vector of strings from the quadtree
          */
-        void toStringVector(std::vector<std::string> *strings) {
+        void toStringVector(std::vector<std::string> *strings, double after_time_s) {
             std::function<void(const Cell *, const Box &, int &, std::string &)> traverse;
             std::string grouped_message = "";
             grouped_message.clear();
@@ -594,23 +594,24 @@ namespace quadtree {
                 // If the occupancy is OCCUPIED or FREE or AMBIGUOUS, we want to exchange that information. And we don't have to send any children as they will be all the same.
                 if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN) {
                     allSameOccupancy = true;
+                    if (cell->quadNode.visitedAtS > after_time_s) { //Only send nodes that are updated after the given time
+                        std::string str =
+                                std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
+                                std::to_string(cell->quadNode.LConfidence) + '@' +
+                                std::to_string(cell->quadNode.visitedAtS);
 
-                    std::string str =
-                            std::to_string(box.getCenter().x) + ';' + std::to_string(box.getCenter().y) + ':' +
-                            std::to_string(cell->quadNode.LConfidence) + '@' + std::to_string(cell->quadNode.visitedAtS);
+                        //Group every numberOfNodesPerMessage nodes
+                        grouped_message.append(str);
 
-                    //Group every numberOfNodesPerMessage nodes
-                    grouped_message.append(str);
-
-                    if (counter == this->numberOfNodesPerMessage - 1) {
-                        strings->emplace_back(grouped_message);
-                        grouped_message.clear();
-                        counter = 0;
-                    } else {
-                        grouped_message.append("|");
-                        counter++;
+                        if (counter == this->numberOfNodesPerMessage - 1) {
+                            strings->emplace_back(grouped_message);
+                            grouped_message.clear();
+                            counter = 0;
+                        } else {
+                            grouped_message.append("|");
+                            counter++;
+                        }
                     }
-
                 }
 
                 // If all children have the same occupancy, we don't need to send the children, as they will all have the same occupancy.
