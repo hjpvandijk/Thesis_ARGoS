@@ -7,13 +7,16 @@
 #include <memory>
 #include <unordered_map>
 
+class Agent;
+
 using namespace tiny_dnn;
 using namespace tiny_dnn::activation;
 using namespace tiny_dnn::layers;
+
 // Define the DQN agent
 class DQNAgent {
 public:
-    DQNAgent();
+    DQNAgent(Agent* agent);
 
     int get_action(const vec_t& state);
 
@@ -21,7 +24,7 @@ public:
                const std::vector<float>& rewards, const std::vector<vec_t>& next_states);
 
 private:
-    network<sequential> create_q_network();
+    network<sequential> create_q_network(Agent* agent);
 
     network<sequential> net;
     adam optimizer;

@@ -836,6 +836,40 @@ void Agent::doStep() {
     }
 }
 
+void Agent::doStepAndAction(int action) {
+    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
+    sendQuadtreeToCloseAgents();
+    broadcastMessage(
+            "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
+            ":" + std::to_string(this->speed));
+    timeSyncWithCloseAgents();
+
+    checkMessages();
+    if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
+        //Do nothing
+        this->differential_drive.stop();
+    } else { //Exploring or returning
+        switch(action){
+            case 0:
+                this->differential_drive.forward();
+                break;
+            case 1:
+                this->differential_drive.turnLeft();
+                break;
+            case 2:
+                this->differential_drive.turnRight();
+                break;
+            default:
+                this->differential_drive.stop();
+                break;
+        }
+
+        this->elapsed_ticks++;
+        //Check if the mission has ended, and if so, we will return to the deployment location
+        checkMissionEnd();
+    }
+}
+
 
 /**
  * Broadcast a message to all agents

@@ -225,6 +225,7 @@ public:
     void calculateNextPosition();
 
     void doStep();
+    void doStepAndAction(int action);
 
     void startMission();
 

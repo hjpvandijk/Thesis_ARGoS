@@ -164,6 +164,9 @@ public:
     size_t train_interval = 100; // Train every 100 steps
     size_t batch_size = 32;
 
+    //Previous state reward
+    float previous_certainty_score = 0;
+    float previous_battery_level = 100;
 
 };
 

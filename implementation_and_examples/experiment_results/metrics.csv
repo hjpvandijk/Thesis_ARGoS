@@ -1,2 +1,2 @@
-total_mission_time_s,n_returned_agents,n_agent_agent_collisions,n_agent_obstacle_collisions
-228.867,0,0,0
+n_agent_agent_collisions,n_agent_obstacle_collisions
+0,0

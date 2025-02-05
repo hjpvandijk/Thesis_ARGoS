@@ -34,6 +34,10 @@ void DifferentialDrive::forward() {
     this->setSpeed(this->max_speed_straight, this->max_speed_straight);
 }
 
+void DifferentialDrive::backward() {
+    this->setSpeed(-this->max_speed_straight, -this->max_speed_straight);
+}
+
 void DifferentialDrive::stop() {
     this->setSpeed(0, 0);
 }

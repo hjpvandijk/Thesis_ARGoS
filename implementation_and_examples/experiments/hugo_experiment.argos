@@ -13,7 +13,7 @@
               the computation is not parallelized: the main thread does
               everything.
         -->
-        <system threads="6"/>
+        <system threads="0"/>
         <!--
             Experiment configuration:
             - length: total experiment time in seconds (0 means the experiment

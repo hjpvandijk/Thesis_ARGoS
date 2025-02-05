@@ -26,6 +26,7 @@ public:
     void setActuator(argos::CCI_PiPuckDifferentialDriveActuator *differentialDriveActuator);
     void setSpeed(float speed_right, float speed_left);
     void forward();
+    void backward();
     void stop();
     void turnLeft();
     void turnRight();

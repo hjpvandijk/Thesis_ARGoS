@@ -1,6 +1,8 @@
 #include "NN.h"
+#include "agent.h"
+
 // Define the DQN agent
-    DQNAgent::DQNAgent() : net(create_q_network()), optimizer() {
+    DQNAgent::DQNAgent(Agent* agent) : net(create_q_network(agent)), optimizer() {
         net.weight_init(weight_init::xavier());
         net.bias_init(weight_init::xavier());
         net.init_weight();
@@ -23,8 +25,9 @@
             }
             q_values[actions[i]] = target_q;
             targets.push_back(q_values);
+            argos::LOG << "State size: " << states[i].size() << " and target size: " << q_values.size() << std::endl;
         }
-        net.fit<mse>(optimizer, states, targets, 1, 1);
+//        net.fit<mse>(optimizer, states, targets, 1, 1);
     }
 
 /**
@@ -38,10 +41,16 @@
  * By stacking multiple conv and max_pool layers, the network can learn hierarchical feature representations, which are crucial for tasks like image recognition and classification.
  * @return
  */
-    network<sequential> DQNAgent::create_q_network() {
+    network<sequential> DQNAgent::create_q_network(Agent* agent) {
     network<sequential> net;
-    const int input_width = 64; // Width of the input image
-    const int input_height = 64; // Height of the input image
+
+    //Calculate width based on agent search radius and quadtree resolution
+    const int input_width = std::min(2 * agent->config.FRONTIER_SEARCH_RADIUS / agent->quadtree->getResolution(), agent->quadtree->getRootBox().size / agent->quadtree->getResolution());
+    const int input_height = std::min(2 * agent->config.FRONTIER_SEARCH_RADIUS / agent->quadtree->getResolution(), agent->quadtree->getRootBox().size / agent->quadtree->getResolution());
+    argos::LOG << "Input width: " << input_width << " and height: " << input_height << std::endl;
+
+//    const int input_width = 64; // Width of the input image
+//    const int input_height = 64; // Height of the input image
     const int input_channels = 1; // Number of input channels (e.g., 1 for grayscale)
 
     //Increase: Adding more filters can help the network capture more detailed and diverse features, potentially improving performance on complex tasks.
@@ -83,14 +92,65 @@
     //Increase: More units can increase the computational cost and memory usage.
     //Decrease: Fewer units can decrease the computational cost and memory usage, which might be necessary for resource-constrained environments.
     const int fc1_units = 128; // Number of units in the first fully connected layer
+    const int fc2_units = 64; // Number of units in the second fully connected layer
     const int output_units = 4; // Number of output units (e.g., number of actions)
 
-    net << conv(input_width, input_height, conv1_kernel_size, input_channels, conv1_filters) << relu() // First convolutional layer with ReLU activation
-        << max_pool(input_width - conv1_kernel_size + 1, input_height - conv1_kernel_size + 1, conv1_filters, pool1_size) // First max pooling layer
-        << conv((input_width - conv1_kernel_size + 1) / pool1_size, (input_height - conv1_kernel_size + 1) / pool1_size, conv2_kernel_size, conv1_filters, conv2_filters) << relu() // Second convolutional layer with ReLU activation
-        << max_pool((input_width - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1, (input_height - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1, conv2_filters, pool2_size) // Second max pooling layer
-        << fc(1 * 1 * conv2_filters, fc1_units) << relu() // First fully connected layer with ReLU activation
-        << fc(fc1_units, output_units); // Output layer
+    const int non_spatial_data_size = 4 + 2 + 1; // Proximity (4) + Position (2) + Orientation (1)
+
+
+//    net << conv(input_width, input_height, conv1_kernel_size, input_channels, conv1_filters) << relu() // First convolutional layer with ReLU activation
+//        << max_pool(input_width - conv1_kernel_size + 1, input_height - conv1_kernel_size + 1, conv1_filters, pool1_size) // First max pooling layer
+//        << conv((input_width - conv1_kernel_size + 1) / pool1_size, (input_height - conv1_kernel_size + 1) / pool1_size, conv2_kernel_size, conv1_filters, conv2_filters) << relu() // Second convolutional layer with ReLU activation
+//        << max_pool((input_width - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1, (input_height - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1, conv2_filters, pool2_size);// Second max pooling layer
+//
+//    net << fc(14 * 14 * conv2_filters, fc1_units) << relu(); // First fully connected layer with ReLU activation
+////        << fc(((input_width - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1) / pool2_size * ((input_height - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1) / pool2_size * conv2_filters, fc1_units + non_spatial_data_size) << relu() // First fully connected layer with ReLU activation
+//        //        << fc(fc1_units, output_units); // Output layer
+//        // Add non-spatial data (proximity, position, orientation) to the state
+//    net << fc(fc1_units + non_spatial_data_size, fc2_units) << relu(); // Second fully connected layer
+//
+//        // Output layer
+//    net << fc(fc2_units, output_units);
+
+
+
+// Convolutional layers for processing the local map
+//    net << conv(input_width, input_height, conv1_kernel_size, input_channels, conv1_filters) << relu() // First convolutional layer
+//        << max_pool(input_width - conv1_kernel_size + 1, input_height - conv1_kernel_size + 1, conv1_filters, pool1_size) // First max pooling layer
+//        << conv((input_width - conv1_kernel_size + 1) / pool1_size, (input_height - conv1_kernel_size + 1) / pool1_size, conv2_kernel_size, conv1_filters, conv2_filters) << relu() // Second convolutional layer
+//        << max_pool((input_width - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1, (input_height - conv1_kernel_size + 1) / pool1_size - conv2_kernel_size + 1, conv2_filters, pool2_size); // Second max pooling layer
+//
+//    // Flatten the output of the convolutional layers
+//    const int conv_output_size = 14 * 14 * conv2_filters; // Flattened size of the convolutional output
+//    net << fc(conv_output_size, fc1_units) << relu(); // First fully connected layer
+//
+//    // Combine the convolutional output with the non-spatial data
+//    net << concat(fc1_units, non_spatial_data_size); // Concatenate spatial and non-spatial data
+//
+//    // Second fully connected layer
+//    net << fc(fc1_units + non_spatial_data_size, fc2_units) << relu();
+//
+//    // Output layer
+//    net << fc(fc2_units, output_units);
+
+// Convolutional layers for spatial data (64x64 map)
+    net << conv(64, 64, 3, 1, 32) << relu()
+        << max_pool(62, 62, 32, 2)
+        << conv(31, 31, 3, 32, 64) << relu()
+        << max_pool(29, 29, 64, 2)
+        << fc(14 * 14 * 64, 256) << relu();
+
+// Fully connected layers for non-spatial data
+    net << fc(7, 64) << relu();
+
+// Merge spatial and non-spatial branches
+    net << concat(256, 64)
+        << fc(320, 128) << relu()
+        << fc(128, 64) << relu()
+        << fc(64, 4);
+
+
+
     return net;
 }
 

@@ -68,7 +68,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 
     agentObject->differential_drive.setActuator(m_pcWheels);
 
-//    dqnAgent = std::make_unique<DQNAgent>();
+    dqnAgent = std::make_unique<DQNAgent>(agentObject.get());
 
     readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/orientation_offset.txt", this->orientation_offset_heatmap);
@@ -212,8 +212,8 @@ void PiPuckHugo::ControlStep() {
         agentObject->startMission();
         this->mission_start = true;
     }
-    agentObject->doStep();
-//    dqnControlStep(agentObject.get());
+//    agentObject->doStep();
+    dqnControlStep(agentObject.get());
 
 
 }
@@ -248,10 +248,13 @@ void PiPuckHugo::dqnControlStep(Agent* agent) {
     vec_t state = construct_state(agent);
 
     // 3. Get action from the MARL agent
+    argos::LOG << "Getting action" << std::endl;
+    argos::LOG << "state size: " << state.size() << std::endl;
     int action = dqnAgent->get_action(state);
 
     // 4. Execute the action, and run the simulation for one step
-    execute_action(action);
+    //Action: 0: Forward, 1: Left, 2: Right, 3: Stop
+   agent->doStepAndAction(action);
 
     // 5. Observe the next state and reward
     vec_t next_state = construct_state(agent);
@@ -267,14 +270,6 @@ void PiPuckHugo::dqnControlStep(Agent* agent) {
 
 }
 
-void PiPuckHugo::execute_action(int action) {
-    switch (action) {
-//        case 0: base_actuator->SetLinearVelocity(5.0, 5.0); break; // Move forward
-//        case 1: base_actuator->SetLinearVelocity(-5.0, -5.0); break; // Move backward
-//        case 2: base_actuator->SetLinearVelocity(-5.0, 5.0); break; // Turn left
-//        case 3: base_actuator->SetLinearVelocity(5.0, -5.0); break; // Turn right
-    }
-}
 
 float PiPuckHugo::calculate_reward(Agent* agent) {
     // Calculate reward based on the map and agent's performance
@@ -284,17 +279,28 @@ float PiPuckHugo::calculate_reward(Agent* agent) {
     auto boxesAndPheromones = agent->quadtree->getAllBoxes(agent->elapsed_ticks / agent->ticks_per_second);
     //Calculate certainty for each cell: abs(pheromone - 0.5). Combine them using a squared weighted root function.
     //We do this so exploring new cells is highly rewarded, but increasing certainty by a lot is also rewarded.
-    float total_certainty = 0.0f;
+    float certainty_score = 0.0f;
     for (const auto& [box, pheromone] : boxesAndPheromones) {
-        total_certainty += std::sqrt(0.1f*std::abs(pheromone - 0.5));
+        certainty_score += std::sqrt(0.1f * std::abs(pheromone - 0.5));
     }
+
+    float certainty_score_reward = certainty_score - this->previous_certainty_score;
 
 
     //Get battery level, reward is battery level, so that the agent learns to conserve energy
+    float battery_level = agent->batteryManager.battery.charge;
+    float battery_score_reward = this->previous_battery_level - battery_level;
+
+    //Reward is the certainty score minus the battery used
+    float reward = certainty_score_reward - battery_score_reward * 10;
+
+    this->previous_certainty_score = certainty_score;
+    this->previous_battery_level = battery_level;
 
     //Get mission duration, reward is duration, so that the agent learns to complete the mission quickly
+    //This is implicitly done by the agent, as it will get a higher reward when it explores new areas
 
-    return 0.0f; // Replace with actual reward calculation
+    return reward;
 }
 
 void PiPuckHugo::train_agent() {
@@ -329,11 +335,11 @@ CRadians PiPuckHugo::getActualAgentOrientation(){
 
 vec_t PiPuckHugo::getLocalMapForNN(const Agent*agent) {
     auto cell_size = agent->quadtree->getResolution();
-    auto local_size = agent->config.FRONTIER_SEARCH_RADIUS;
-    vec_t local_map(local_size * local_size, 0.5f); // Initialize with default value (unexplored)
+    auto local_size = std::min(2 * agent->config.FRONTIER_SEARCH_RADIUS / agent->quadtree->getResolution(), agent->quadtree->getRootBox().size / agent->quadtree->getResolution());
+    vec_t local_map(local_size*local_size, 0.5f); // Initialize with default value (unexplored)
 
     // Define the bounding box for the local map
-    float half_size = (local_size * cell_size) / 2.0f;
+    float half_size = local_size / 2.0f;
     float x_min = agent->position.x - half_size;
     float y_min = agent->position.y - half_size;
 //    float x_max = agent.position.x + half_size;
