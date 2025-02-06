@@ -301,6 +301,7 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
             }
             return {1, intersection_cell, intersection_edge, mid_edge_intersection}; //The intersection is far enough away to go to the edge
         }
+        return {0, nullptr, -1, Coordinate{0,0}};
     }
     auto [begin_last_edge, end_last_edge] = *route.rbegin();
     auto edge_middle = Coordinate{(begin_last_edge.x + end_last_edge.x) / 2, (begin_last_edge.y + end_last_edge.y) / 2};
@@ -335,6 +336,8 @@ int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, dou
             return 0;
         }
         if (distance_to_intersection > box_size / 2) return 1;
+        
+        return 0;
     }
     return 2; //No intersection, so the direction is free
 
