@@ -990,7 +990,7 @@ void Agent::parseMessages() {
             }
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
-                quadtree::Box addedBox = this->quadtree->add(newQuadNode, config.ALPHA_RECEIVE,
+                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode, config.ALPHA_RECEIVE,
                                                              elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
                 if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)

@@ -164,14 +164,15 @@ namespace quadtree {
          * @param value
          */
         Box add(const QuadNode &value, double currentTimeS) {
-            return add(mRoot.get(), mBox, value, currentTimeS);
+            //Adding from own observation
+            return add(mRoot.get(), mBox, value, currentTimeS, true);
         }
 
         /**
          * @brief Add a QuadNode to the quadtree with a given a factor. Which decides how much the value is pulled towards 0.5P = ambiguous..
          * @param value
          */
-        Box add(QuadNode &value, float a, double currentTimeS) {
+        Box addFromOther(QuadNode &value, float a, double currentTimeS) {
             float PConfidence = P(value.LConfidence);
             float PNew = (1.0-a) * PConfidence + a * 0.5; //Make more ambiguous as we have some uncertainty
             value.LConfidence = L(PNew);
@@ -185,7 +186,8 @@ namespace quadtree {
                 occ = OCCUPIED;
             }
             value.occupancy = occ;
-            return add(mRoot.get(), mBox, value, currentTimeS);
+            //Adding from other agent's belief
+            return add(mRoot.get(), mBox, value, currentTimeS, false);
         }
 
 
@@ -866,7 +868,7 @@ namespace quadtree {
          * @param box
          * @param value
          */
-        Box add(Cell *cell, const Box &box, const QuadNode &value, double currentTimeS) {
+        Box add(Cell *cell, const Box &box, const QuadNode &value, double currentTimeS, bool ownObservation) {
             assert(cell != nullptr);
             if (!box.contains(value.coordinate)) { //Temporary fix. TODO: If value added outside box, expand box.
                 return Box();
@@ -958,7 +960,7 @@ namespace quadtree {
                                                              value.visitedAtS - cell->quadNode.visitedAtS <=
                                                              MERGE_MAX_VISITED_TIME_DIFF)) {
                         split(cell, box, currentTimeS);
-                        returnBox = add(cell, box, value, currentTimeS);
+                        returnBox = add(cell, box, value, currentTimeS, ownObservation);
                     }
                 }
             } else {
@@ -966,7 +968,9 @@ namespace quadtree {
                 // And if the box center is the same as the value coordinate (meaning this value information is the same for all children of this cell),
                 // then we only contain a single QuadNode. Update the occupancy of this cell to the most important occupancy.
                 // This should only happen when adding nodes received from other agents.
-                if (box.getCenter() == value.coordinate) {
+                //Round to 5 decimals to counter precision lost in messages
+                double roundFactor = 100000.0; //Round to 5 decimals, should be enough for realistic resolution values
+                if (std::round(box.getCenter().x*roundFactor) == std::round(value.coordinate.x* roundFactor) && std::round(box.getCenter().y*roundFactor) == std::round(value.coordinate.y* roundFactor) && !ownObservation) {
 
                     QuadNode newNode = QuadNode();
                     newNode.coordinate = value.coordinate;
@@ -1032,7 +1036,7 @@ namespace quadtree {
                                 newChildNode.LConfidence = value.LConfidence;
 
                                 //Add to current cell, so that it will be placed in the proper child and checked for optimization later.
-                                returnBox = add(cell, box, newChildNode, currentTimeS);
+                                returnBox = add(cell, box, newChildNode, currentTimeS, ownObservation);
 
                             }
                         }
@@ -1045,7 +1049,7 @@ namespace quadtree {
                     // Add the value in a child if the value is entirely contained in it
                     assert(i != -1 && "A value should be contained in a quadrant");
                     assert(i != 4 && "A value should not be the same as the center of the box");
-                    returnBox = add(cell->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value, currentTimeS);
+                    returnBox = add(cell->children.at(static_cast<std::size_t>(i)).get(), computeBox(box, i), value, currentTimeS, ownObservation);
 //                Check if all children have the same occupancy
 //                    Occupancy firstOccupancy = UNKNOWN;
                     bool confidencesTooFarApart = false;
@@ -1156,7 +1160,7 @@ namespace quadtree {
 
                     auto quadNode = QuadNode{childBoxCenter, cell->quadNode.occupancy,
                                              cell->quadNode.visitedAtS, cell->quadNode.LConfidence};
-                    add(cell->children.at(static_cast<std::size_t>(i)).get(), childBox, quadNode, currentTimeS);
+                    add(cell->children.at(static_cast<std::size_t>(i)).get(), childBox, quadNode, currentTimeS, false);
                 }
                 this->numberOfLeafNodes--;
             }
