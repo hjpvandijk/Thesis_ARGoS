@@ -13,7 +13,7 @@
               the computation is not parallelized: the main thread does
               everything.
         -->
-        <system threads="6"/>
+        <system threads="0"/>
         <!--
             Experiment configuration:
             - length: total experiment time in seconds (0 means the experiment
@@ -26,6 +26,9 @@
         <experiment length="0"
                     ticks_per_second="30"
                     random_seed="124"/>
+
+        <log file="output.log" />
+        <logerr file="error.log" />
     </framework>
 
     <!-- *************** -->
@@ -93,15 +96,8 @@
                 <!--                <range_and_bearing implementation="default" medium="rab"/>-->
                 <positioning implementation="default"/>
             </sensors>
-            <!--
-                The <params> section is passed as-is to the controller's Init()
-                function.
-                The user, writing the controller, defines how it is organized.
-                To understand what these parameters are for, check the
-                controller's header file in
-                controllers/footbot_diffusion/footbot_diffusion.h.
-            -->
-            <params map_width ="10" map_height ="10"/>
+            <!--     actual map width in m, actual mad height in m      -->
+            <params map_width ="10" map_height ="10" config="agent_implementation/config.yaml"/>
         </pipuck_hugo_controller>
 
     </controllers>
@@ -116,6 +112,7 @@
     <loop_functions
             library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
             label="agent_vision_loop_functions_pipuck"/>
+
     <!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
     <!--                        label="radios_loop_functions" />-->
     <!--    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"-->
@@ -345,7 +342,7 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-        <qt-opengl>
+        <qt-opengl autoplay="true">
             <user_functions
                     library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
                     label="agent_vision_qtuser_functions_pipuck"/>

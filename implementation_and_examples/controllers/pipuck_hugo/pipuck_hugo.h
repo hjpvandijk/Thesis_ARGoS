@@ -134,6 +134,8 @@ private:
     double map_width_with_noise_room = 11.0;
     double map_height_with_noise_room = 11.0;
 
+    std::string config_file = "";
+
     lua_State *L;
 
 
@@ -145,6 +147,7 @@ private:
     void readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]);
 
     bool mission_start = false;
+
 
 };
 

@@ -35,6 +35,9 @@ public:
 
     metrics m_metrics;
 
+    bool experimentFinished = false;
+    float longest_mission_time_s = 0;
+
    typedef std::map<CPiPuckEntity*, std::vector<CVector3>> TCoordinateMap;
     TCoordinateMap m_tObjectCoordinates;
     TCoordinateMap m_tOtherAgentCoordinates;
@@ -69,8 +72,11 @@ public:
 
     virtual void PreStep();
 
-
     virtual void PostStep();
+
+    virtual bool IsExperimentFinished();
+
+    virtual void PostExperiment();
 
    inline const TCoordinateMap& GetObjectCoordinates() const {
       return m_tObjectCoordinates;
@@ -150,7 +156,7 @@ private:
     void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
-    bool newAgentDone(CSpace::TMapPerType &tFBMap);
+    bool allAgentsDone(CSpace::TMapPerType &tFBMap);
     void updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap);
     void checkReturnToDeploymentSite(CSpace::TMapPerType &tFBMap);
     void exportMetricsAndMaps();

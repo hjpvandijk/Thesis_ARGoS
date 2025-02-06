@@ -190,7 +190,7 @@ public:
 
     Agent() {}
 
-    explicit Agent(std::string id, double rootbox_size);
+    explicit Agent(std::string id, double rootbox_size, const std::string& config_file);
 
     void setPosition(double new_x, double new_y);
 
@@ -334,8 +334,7 @@ public:
 
 
 private:
-    std::string config_file = "agent_implementation/config.yaml";
-    void loadConfig();
+    void loadConfig(const std::string& config_file);
 
 
     void checkForObstacles();
