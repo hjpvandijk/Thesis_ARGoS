@@ -3,9 +3,9 @@ from tkinter import simpledialog, filedialog
 from PIL import Image, ImageTk
 import math
 
-canvas_width = 1934
-canvas_height = 1064
-meter_pixels = 100
+canvas_width = 2000*2
+canvas_height = 1020*2
+meter_pixels = 100*2
 
 class DrawApp:
     def __init__(self, root):
@@ -30,6 +30,8 @@ class DrawApp:
         self.box_counter = 0
         self.circle_counter = 0
         self.shapes = []
+        self.lines = []
+        self.shape_ids = []
 
         self.scale_factor = 1.0
 
@@ -70,6 +72,9 @@ class DrawApp:
         self.draw_circle_button = tk.Button(root, text="Draw Circle", command=self.set_draw_circle)
         self.draw_circle_button.pack(side=tk.LEFT)
 
+        self.undo_button = tk.Button(root, text="Undo", command=self.undo_last_shape)
+        self.undo_button.pack(side=tk.LEFT)
+
     def draw_grid(self):
         for i in range(0, canvas_width, meter_pixels):
             self.canvas.create_line(i, 0, i, canvas_width, fill="lightgray")
@@ -79,7 +84,7 @@ class DrawApp:
         self.canvas.create_line(0, canvas_height/2, canvas_height, canvas_height/2, fill="black")
 
     def load_image(self):
-        file_path = "floorplan.jpg"
+        file_path = "office.jpg"
         if file_path:
             self.original_image = Image.open(file_path)
             self.display_image(1.0)
@@ -139,7 +144,16 @@ class DrawApp:
 
     def on_mouse_drag(self, event):
         if self.is_drawing_line:
-            self.canvas.coords(self.line, self.start_x, self.start_y, event.x, event.y)
+            #only do vertical or horizontal lines
+            if abs(event.x - self.start_x) > abs(event.y - self.start_y):
+                end_x = event.x
+                end_y = self.start_y
+            else:
+                end_x = self.start_x
+                end_y = event.y
+            self.canvas.coords(self.line, self.start_x, self.start_y, end_x, end_y)
+
+            #self.canvas.coords(self.line, self.start_x, self.start_y, event.x, event.y)
         elif self.circle:
             diff_x = event.x - self.start_x
             diff_y = event.y - self.start_y
@@ -156,8 +170,14 @@ class DrawApp:
 
     def on_button_release(self, event):
         if self.is_drawing_line:
-            self.end_x = event.x
-            self.end_y = event.y
+            if abs(event.x - self.start_x) > abs(event.y - self.start_y):
+                self.end_x = event.x
+                self.end_y = self.start_y
+            else:
+                self.end_x = self.start_x
+                self.end_y = event.y
+            #self.end_x = event.x
+            #self.end_y = event.y
             if (self.start_x, self.start_y) != (self.end_x, self.end_y):
                 self.is_drawing_line = False
                 self.is_drawing_box = True
@@ -197,12 +217,13 @@ class DrawApp:
             y4 = self.start_y - perp_dy * 2
 
             self.rect = self.canvas.create_polygon(x1, y1, x2, y2, x3, y3, x4, y4, outline="black", fill="")
+            self.shape_ids.append(self.rect)
 
             center_x = (x1 + x2 + x3 + x4) / 4
             center_y = (y1 + y2 + y3 + y4) / 4
 
             arena_x = (center_x - canvas_width/2) / meter_pixels
-            arena_y = -(center_y - canvas_height/2)
+            arena_y = -(center_y - canvas_height/2) / meter_pixels
 
             box_id = f"box_{self.box_counter}"
             xml_size = f"{width/meter_pixels},{length/meter_pixels},0.5"
@@ -220,33 +241,49 @@ class DrawApp:
 
             self.box_counter += 1
 
+        self.lines.append(self.line)
         self.line = None
         # self.set_box = False
 
     def create_circle(self):
         if self.circle:
-            radius = ((self.end_x - self.start_x)**2 + (self.end_y - self.start_y)**2)**0.5 / 2
-            center_x = (self.start_x + self.end_x) / 2
-            center_y = (self.start_y + self.end_y) / 2
+            radius = ((self.end_x - self.start_x)**2 + (self.end_y - self.start_y)**2)**0.5
+            center_x = self.start_x 
+            center_y = self.start_y
 
             arena_x = (center_x - canvas_width/2) / meter_pixels
-            arena_y = -(center_y - canvas_height/2)
+            arena_y = -(center_y - canvas_height/2) / meter_pixels
 
             circle_id = f"circle_{self.circle_counter}"
             xml_radius = f"{radius/meter_pixels}"
             xml_position = f"{arena_y},{-arena_x},0"
 
-            xml = f'''<circle id="{circle_id}" radius="{xml_radius}" movable="false">
+            xml = f'''<cylinder id="{circle_id}" radius="{xml_radius}" height="0.5" temperature="0" movable="false">
     <body position="{xml_position}" orientation="0,0,0"/>
-</circle>'''
+</cylinder>'''
 
             self.shapes.append(xml)
+            self.shape_ids.append(self.circle)
             print(xml)
 
             self.circle_counter += 1
 
         self.circle = None
         # self.set_circle = False
+
+    def undo_last_shape(self):
+        if self.shapes and self.shape_ids:
+            last_shape_id = self.shape_ids.pop()
+            self.canvas.delete(last_shape_id)
+            last_shape_xml = self.shapes.pop()
+            if "<box" in last_shape_xml:
+                self.box_counter -= 1
+                line = self.lines.pop()
+                self.canvas.delete(line)
+            elif "<circle" in last_shape_xml:
+                self.circle_counter -= 1
+            
+
 
     def get_xml(self):
         return "\n".join(self.shapes)
