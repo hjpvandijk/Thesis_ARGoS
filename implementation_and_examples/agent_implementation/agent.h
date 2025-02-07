@@ -143,6 +143,7 @@ public:
         float ALPHA_RECEIVE;
         float P_FREE_THRESHOLD;
         float P_OCCUPIED_THRESHOLD;
+        float P_AT_MAX_SENSOR_RANGE;
 
         double QUADTREE_RESOLUTION;
         double QUADTREE_EVAPORATION_TIME_S;
@@ -332,6 +333,7 @@ public:
     std::vector<std::pair<quadtree::Box, double>> bestFrontierRegionBoxes = {};
 
 
+    double sensor_reading_distance_probability;
 
 private:
     void loadConfig(const std::string& config_file);
@@ -352,9 +354,9 @@ private:
 
 
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor) const;
-    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor);
+    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();

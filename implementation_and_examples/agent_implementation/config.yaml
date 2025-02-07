@@ -1,5 +1,5 @@
 mission:
-  end_time: 5 # The time in seconds when the mission ends
+  end_time: 600 # The time in seconds when the mission ends
   end_battery_level: 0 # The battery level in percent when the mission ends
 physical:
   robot_diameter: 0.08 # Agent diameter in meters
@@ -7,7 +7,7 @@ physical:
   robot_wheel_radius: 0.0205 # Agent wheel radius in meters
   robot_inter_wheel_distance: 0.0656 # Agent inter-wheel distance in meters
 battery:
-  capacity: 200 # Battery capacity in mAh
+  capacity: 600 # Battery capacity in mAh
   voltage: 7.2 # Battery voltage in volts
 motor:
   stall_current: 1.5 # Motor stall current in A
@@ -19,7 +19,7 @@ control:
   turn_speed_ratio: 0.1 # The ratio of the maximum speed of the motors to use when turning
   360_degrees_steps: 360 # The number of steps we divide the 360 degrees in when deciding the free directions
   object_safety_radius: 0.1 # The safety radius around an object in meters
-  agent_safety_radius_margin: 0.1 # The margin around the agent's safety radius in meters
+  agent_safety_radius_margin: 0.0 # The margin around the agent's safety radius in meters
   disallow_frontier_switching:
     frontier_reach_distance: 0.5 # The distance in meters when we consider a frontier reached
     target_feasibility_check_interval: 5 # The time in seconds between target feasibility checks
@@ -27,14 +27,14 @@ control:
   separate_frontiers:
     distance_threshold: 1.0 # The distance in meters between two frontiers to consider them separate
   path_planning:
-    max_route_length: 30 # The maximum length of a route in sections, if exceeded, the route is considered infeasible. This saves computation time.
+    max_route_length: 9999 # The maximum length of a route in sections, if exceeded, the route is considered infeasible. This saves computation time.
 communication:
   agent_info_relevant: 10 # The time in seconds received information from another agent is relevant in the agent's decision making
   quadtree_exchange_interval: 5 # The time in seconds between quadtree exchanges
   time_sync_interval: 10 # The time in seconds between time synchronization
   wifi_speed: 10 # The wifi speed in Mbps
   max_jitter: 10 # The maximum jitter in milliseconds
-  message_loss_probability: 0.05 # The probability of a message being lost
+  message_loss_probability: 0 # 0.05 # The probability of a message being lost
 forces:
   frontier_search_radius: 10.0 # The radius in meters around the agent to search for frontiers
   max_frontier_cells: 200 # The maximum number of queried frontier cells
@@ -42,7 +42,7 @@ forces:
   agent_avoidance_radius: 0.2 # The radius in meters around the agent to avoid other agents
   agent_cohesion_radius: 1.5 # The radius in meters around the agent to align with other agents
   agent_alignment_radius: 1.5 # The radius in meters around the agent to align with other agents
-  object_avoidance_radius_margin: 0.2 # The margin around the object's safety radius in meters (to be added to agent_safety_radius + object_safety_radius))
+  object_avoidance_radius_margin: 0.0 # The margin around the object's safety radius in meters (to be added to agent_safety_radius + object_safety_radius))
   virtual_wall_avoidance_weight: 1.1 # The weight of the virtual wall avoidance force
   agent_cohesion_weight: 0 # The weight of the agent cohesion force
   agent_avoidance_weight: 1.15 # The weight of the agent avoidance force
@@ -53,13 +53,14 @@ forces:
     size_weight: 1 # The weight of the size of the frontier in the fitness function
     reach_battery_weight: 8 # The weight of battery usage to reach the frontier in the fitness function
     reach_duration_weight: 1 # The weight of the time to reach the frontier in the fitness function
-    pheromone_weight: 500 # The weight of the pheromone value in the fitness function
+    pheromone_weight: 0.1 # The weight of the pheromone value in the fitness function
 confidence:
   p_free: 0.51 # The probability of an observed free cell being free
   p_occupied: 0.46 # The probability of an observed occupied cell being not free
   alpha_receive: 0.1 # The factor with which we doubt a received confidence value
   p_free_threshold: 0.6 # The threshold for a cell to be considered free
   p_occupied_threshold: 0.4 # The threshold for a cell to be considered occupied
+  p_at_max_sensor_range: 0.5 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
 quadtree:
   resolution: 0.2 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size
   evaporation_time: 100 # The time in seconds it takes for a pheromone value to evaporate

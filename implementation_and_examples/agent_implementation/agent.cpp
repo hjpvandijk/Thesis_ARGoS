@@ -10,6 +10,7 @@
 #include <random>
 #include <utility>
 #include "utils/CustomComparator.h"
+#include "utils/Algorithms.h"
 #include <yaml-cpp/yaml.h>
 
 
@@ -66,6 +67,7 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
 #ifdef SKIP_UNREACHABLE_FRONTIERS
     this->frontierEvaluator = FrontierEvaluator();
 #endif
+    this->sensor_reading_distance_probability = (1-this->config.P_AT_MAX_SENSOR_RANGE) / this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
 }
 
 
@@ -135,7 +137,7 @@ void Agent::readInfraredSensor() {
  * @param coordinate2
  */
 void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
-                                               float Psensor) const {
+                                               float Psensor) {
     if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
         this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
@@ -186,34 +188,52 @@ void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinat
  * @param coordinate2
  */
 void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
-                               float Psensor) const {
-    if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
-        this->quadtree->getResolution())
+                               float Psensor) {
+    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
+    if (dist < this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
-    double x = coordinate1.x;
-    double y = coordinate1.y;
-    double dx = coordinate2.x - coordinate1.x;
-    double dy = coordinate2.y - coordinate1.y;
-    double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getResolution();
-    int nSteps = std::ceil(distance / stepSize);
-    double stepX = dx / nSteps;
-    double stepY = dy / nSteps;
+//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x;
+//    double dy = coordinate2.y - coordinate1.y;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->quadtree->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    for (int s = 0; s < nSteps; s++) {
+//        if (objectBox.size > 0) {
+//            if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
+//                double p = (this->config.P_FREE - 0.5) * (1 - double(s) / double(nSteps)) +
+//                           0.5; //Increasingly more uncertain the further away from the agent
+//                //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+//                this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, p * Psensor,
+//                                    elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+//            } else {
+//                break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
+//            }
+//        }
+//        x += stepX;
+//        y += stepY;
+//    }
 
-    for (int s = 0; s < nSteps; s++) {
-        if (objectBox.size > 0) {
-            if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
-                double p = (this->config.P_FREE - 0.5) * (1 - double(s) / double(nSteps)) +
-                           0.5; //Increasingly more uncertain the further away from the agent
-                //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-                this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, p * Psensor,
-                                    elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
-            } else {
-                break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
-            }
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
+                                                                                    coordinate2);
+    double step_size_avg = dist / linePoints.size();
+    for (int i=0; i<linePoints.size(); i++){
+        auto point = linePoints[i];
+        if (!objectBox.contains(Coordinate{point.x, point.y})) { //Don't add a coordinate in the objectBox as free
+            double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
+            double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
+                       0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+//            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+                       //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+            this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+                                elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+        } else {
+            break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
         }
-        x += stepX;
-        y += stepY;
     }
 }
 
@@ -222,23 +242,38 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor) const {
-    double x = coordinate1.x;
-    double y = coordinate1.y;
-    double dx = coordinate2.x - coordinate1.x;
-    double dy = coordinate2.y - coordinate1.y;
-    double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getResolution();
-    int nSteps = std::ceil(distance / stepSize);
-    double stepX = dx / nSteps;
-    double stepY = dy / nSteps;
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor) {
+//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x;
+//    double dy = coordinate2.y - coordinate1.y;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->quadtree->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    for (int s = 0; s < nSteps; s++) {
+//        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+//        this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, this->config.P_FREE * Psensor,
+//                            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+//        x += stepX;
+//        y += stepY;
+//    }
+    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
 
-    for (int s = 0; s < nSteps; s++) {
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
+                                                                                    coordinate2);
+    double step_size_avg = dist / linePoints.size();
+    for (int i=0; i<linePoints.size(); i++){
+        auto point = linePoints[i];
+        double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
+        double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
+                   0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+//        argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
         //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-        this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, this->config.P_FREE * Psensor,
+        this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
                             elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
-        x += stepX;
-        y += stepY;
     }
 }
 
@@ -354,7 +389,7 @@ void Agent::checkForObstacles() {
                 quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
                 if (objectBox.size != 0) {
                     if (!addedObjectAtAgentLocation)
-                        addFreeAreaBetweenAndOccupiedAfter(this->position, object, objectBox, sensor_probability);
+                        addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
                 } else {
                     if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
                 }
@@ -1144,6 +1179,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
     this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
     this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_AT_MAX_SENSOR_RANGE = config_yaml["confidence"]["p_at_max_sensor_range"].as<float>();
 
     this->config.QUADTREE_RESOLUTION = config_yaml["quadtree"]["resolution"].as<double>();
     this->config.QUADTREE_EVAPORATION_TIME_S = config_yaml["quadtree"]["evaporation_time"].as<double>();
