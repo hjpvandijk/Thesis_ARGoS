@@ -328,6 +328,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double sumY = 0;
         double totalNumberOfCellsInRegion = 0;
         double averagePheromoneCertainty = 0;
+        double pheromoneCurve = 0;
         for (auto [box, pheromone]: region) {
             double cellsInBox = box.getSize() / agent->quadtree->getResolution();
             assert(cellsInBox == 1);
@@ -336,6 +337,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             sumY += box.getCenter().y * cellsInBox;
             totalNumberOfCellsInRegion += cellsInBox;
             averagePheromoneCertainty += std::abs(pheromone - 0.5);
+            pheromoneCurve += std::sqrt(std::abs(pheromone - 0.5));
         }
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
@@ -425,11 +427,14 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 
         //Calculate the fitness of the frontier region
-        double fitness =
-                -agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
-                agent->config.FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->config.FRONTIER_REACH_DURATION_WEIGHT * duration -
-                agent->config.FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
+//        double fitness =
+//                -agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+//                agent->config.FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->config.FRONTIER_REACH_DURATION_WEIGHT * duration -
+//                agent->config.FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 
+        double fitness =
+                -agent->config.FRONTIER_DISTANCE_WEIGHT * distance - agent->config.FRONTIER_PHEROMONE_WEIGHT * pheromoneCurve -
+                agent->config.FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->config.FRONTIER_REACH_DURATION_WEIGHT * duration;
 //        if (agent->id == "pipuck1") {
 //            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
 //                       << std::endl;
