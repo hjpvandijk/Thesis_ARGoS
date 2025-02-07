@@ -363,20 +363,20 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                         pow(frontierRegionX - std::get<0>(agentLocationTuple.second).x, 2) +
                         pow(frontierRegionY - std::get<0>(agentLocationTuple.second).y, 2));
 
-                if (distanceFromOtherAgentsFrontier <= agent->config.FRONTIER_DIST_UNTIL_REACHED) {
+                if (distanceFromOtherAgentsFrontier <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
                     //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
-                    if (agentLocationTuple.first > agent->id) {
+//                    if (agentLocationTuple.first > agent->id) {
                         //If the other agent has a higher ID, so we can't select this frontier
                         skipFrontier = true;
 //                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
 //                               << " because it is close to another agent's frontier" << std::endl;
 //                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
                         break;
-                    }
+//                    }
                 }
-                if (distanceFromOtherAgentsPosition <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+                if (distanceFromOtherAgentsPosition <= agent->config.FRONTIER_DIST_UNTIL_REACHED) {
                     //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
-                    if (agentLocationTuple.first > agent->id) {
+//                    if (agentLocationTuple.first > agent->id) {
                         //If the other agent has a higher ID, so we can't select this frontier
                         skipFrontier = true;
 //                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
@@ -385,7 +385,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                               << std::endl;
                         break;
                     }
-                }
+//                }
             }
             #ifdef SKIP_UNREACHABLE_FRONTIERS
             //If we are avoiding the frontier
