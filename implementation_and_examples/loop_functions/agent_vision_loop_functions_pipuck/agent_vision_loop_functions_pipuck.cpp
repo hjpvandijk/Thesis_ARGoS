@@ -217,9 +217,9 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 
-#ifdef BATTERY_MANAGEMENT_ENABLED
+//#ifdef BATTERY_MANAGEMENT_ENABLED
         m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
-#endif
+//#endif
 
 
         m_tAgentRoute[pcFB] = agent->route_to_best_frontier;

@@ -1,7 +1,7 @@
 #ifndef IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
 #define IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
 
-
+#include "agent_implementation/feature_config.h"
 #include <argos3/core/utility/math/vector2.h>
 #include "agent_implementation/utils/coordinate.h"
 class Agent;

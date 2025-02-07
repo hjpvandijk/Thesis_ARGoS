@@ -216,10 +216,10 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
         //Draw IDs
         DrawText(it.second,
                  it.first->GetId()); // text
-#ifdef BATTERY_MANAGEMENT_ENABLED
+//#ifdef BATTERY_MANAGEMENT_ENABLED
         float batteryLevel = m_cAgVisLF.m_tAgentBatteryLevels.at(it.first);
         DrawText(it.second + CVector3(0.1,0.1,0.1), std::to_string(batteryLevel) + '%', CColor::BLACK);
-#endif
+//#endif
     }
 
 

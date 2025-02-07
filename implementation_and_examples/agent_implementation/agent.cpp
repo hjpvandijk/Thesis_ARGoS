@@ -6,7 +6,6 @@
 #include <argos3/core/utility/logging/argos_log.h>
 #include <set>
 #include "agent.h"
-#include "agent_control/path_planning/WallFollower.h"
 #include <random>
 #include <utility>
 #include "utils/CustomComparator.h"
@@ -37,10 +36,12 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
         smallestBoxSize /= 2;
     }
     this->quadtree->setResolution(smallestBoxSize);
+    #ifdef WALL_FOLLOWING_ENABLED
     this->wallFollower = WallFollower();
+    #endif
     this->timeSynchronizer = TimeSynchronizer();
 
-#ifdef BATTERY_MANAGEMENT_ENABLED
+//#ifdef BATTERY_MANAGEMENT_ENABLED
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
     //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
     this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS,
@@ -56,9 +57,9 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->speed = this->differential_drive.max_speed_straight;
     //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
-#else
-    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->TURNING_SPEED_RATIO);
-#endif
+//#else
+//    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->config.TURNING_SPEED_RATIO);
+//#endif
 
 #ifdef PATH_PLANNING_ENABLED
     this->pathPlanner = SimplePathPlanner();
@@ -674,9 +675,11 @@ void Agent::calculateNextPosition() {
                 this->currentBestFrontier = this->deploymentLocation;
                 this->last_feasibility_check_tick = this->elapsed_ticks;
                 //We need to find the route, so we set the periodic check required.
+#ifdef PATH_PLANNING_ENABLED
                 periodic_check_required = true;
+#endif
             }
-
+#ifdef PATH_PLANNING_ENABLED
             if (periodic_check_required) {
                 this->route_to_best_frontier.clear();
                 this->pathPlanner.getRoute(this, this->position, deploymentLocation, this->route_to_best_frontier);
@@ -685,6 +688,7 @@ void Agent::calculateNextPosition() {
                 }
                 this->last_feasibility_check_tick = this->elapsed_ticks;
             }
+#endif
         }
     }
 
@@ -700,7 +704,17 @@ void Agent::calculateNextPosition() {
     //Find new frontier
         targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 #endif
+    } else if (this->state == State::RETURNING) {
+        targetVector = argos::CVector2(this->deploymentLocation.x - this->position.x,
+                                       this->deploymentLocation.y - this->position.y);
+
+        //If we are close to the deployment location, we have returned, we can stop
+        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
+            this->state = State::FINISHED;
+        }
+    }
 #endif
+#if defined(RANDOM_WALK_WHEN_NO_FRONTIERS) || defined(PATH_PLANNING_ENABLED)
     bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
 #ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
     if (noTarget) {
@@ -721,6 +735,7 @@ void Agent::calculateNextPosition() {
                                            this->subTarget.y - this->position.y);
         }
     }
+#endif
 #endif
 
 
@@ -1136,7 +1151,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
     this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();
 #endif
-#ifdef SEPARATE_FRONTIERS
+#if defined(SEPARATE_FRONTIERS) || defined(SKIP_UNREACHABLE_FRONTIERS)
     this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
 #endif
 #ifdef PATH_PLANNING_ENABLED

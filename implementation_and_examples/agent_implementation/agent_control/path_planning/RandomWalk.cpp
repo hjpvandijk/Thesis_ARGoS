@@ -2,6 +2,7 @@
 #include "RandomWalk.h"
 #include "agent.h"
 
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
 
 /**
  * When there is no target to be found within the search range, select a random location on the edge of the root box.
@@ -38,11 +39,11 @@ void RandomWalk::randomWalk(Agent* agent, argos::CVector2 &targetVector) {
         } while (
                 #ifdef SKIP_UNREACHABLE_FRONTIERS
                 //If the subtarget is close to a frontier we are currently avoiding, try again
-                agent->frontierEvaluator.avoidingCoordinate(agent, agent->subTarget
+                agent->frontierEvaluator.avoidingCoordinate(agent, agent->subTarget)
                 #else
                 false
                 #endif
-                ));
+                );
         this->randomWalking = true;
 
 
@@ -59,3 +60,4 @@ bool RandomWalk::randomWalkedFarEnough(Agent *agent) {
     return false;
 }
 
+#endif

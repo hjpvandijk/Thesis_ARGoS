@@ -5,6 +5,8 @@
 #include "utils/coordinate.h"
 #include "agent.h"
 
+#ifdef WALL_FOLLOWING_ENABLED
+
 /**
  * When the free direction to the target > 89 degrees:
  * Save agent location as the hit point
@@ -146,5 +148,7 @@ void WallFollower::wallFollowing(Agent* agent, ForceVectorCalculator::vectors ve
 #endif
     }
 }
+
+#endif
 
 

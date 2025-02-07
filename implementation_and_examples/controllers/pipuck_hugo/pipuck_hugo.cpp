@@ -185,7 +185,7 @@ void PiPuckHugo::ControlStep() {
     agentObject->setHeading(zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad);
 
 
-#ifdef BATTERY_MANAGEMENT_ENABLED
+//#ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level
 //    if (batteryMeasureTicks % 1 == 0) {
 
@@ -205,7 +205,7 @@ void PiPuckHugo::ControlStep() {
 //        batteryMeasureTicks = 0;
 //    }
 //    batteryMeasureTicks++;
-#endif
+//#endif
 
     if (!this->mission_start){
         agentObject->startMission();

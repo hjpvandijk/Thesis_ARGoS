@@ -1,6 +1,7 @@
 #include "FrontierEvaluator.h"
 #include "agent.h"
 
+#ifdef SKIP_UNREACHABLE_FRONTIERS
 
 
 /**
@@ -59,7 +60,6 @@ bool FrontierEvaluator::avoidingCoordinate(Agent* agent, Coordinate coordinate){
     return false;
 }
 
-#ifdef SKIP_UNREACHABLE_FRONTIERS
 /**
  * Update the confidence of cells if they are around a currently unreachable frontier.
  * If the agent is hitting the same hitpoint multiple times, decrease the frontier confidence.
@@ -99,4 +99,5 @@ void FrontierEvaluator::skipIfFrontierUnreachable(Agent* agent, argos::CRadians 
     previousTarget = target;
 
 }
+
 #endif

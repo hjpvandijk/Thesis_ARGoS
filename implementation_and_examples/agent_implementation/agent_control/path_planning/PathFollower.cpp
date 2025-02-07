@@ -6,6 +6,7 @@
 #include "agent_implementation/agent.h"
 #include "utils/Algorithms.h"
 
+#ifdef PATH_PLANNING_ENABLED
 Coordinate PathFollower::followPath(Agent *agent) {
     if (agent->route_to_best_frontier.empty()) return Coordinate{MAXFLOAT, MAXFLOAT};
 
@@ -110,3 +111,5 @@ bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate
 //    return false;
 //
 //}
+
+#endif

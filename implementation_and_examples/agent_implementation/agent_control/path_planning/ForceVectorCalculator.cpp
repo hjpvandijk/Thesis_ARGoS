@@ -1,5 +1,6 @@
 #include "ForceVectorCalculator.h"
 #include "agent.h"
+#include "utils/CustomComparator.h"
 
 
 /** Calculate the vector to avoid the virtual walls
@@ -452,8 +453,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //        }
 #else
         //Calculate the cost of the frontier region
-        double fitness = -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
-                       agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
+        double fitness = -agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+                       agent->config.FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
 #endif
 
 

@@ -36,7 +36,7 @@
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_positioning_sensor.h>
 #include "agent_implementation/agent.h"
-
+#include "agent_implementation/feature_config.h"
 
 /*
  * All the ARGoS stuff in the 'argos' namespace.
@@ -116,12 +116,12 @@ private:
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
 
 
-#ifdef BATTERY_MANAGEMENT_ENABLED
+//#ifdef BATTERY_MANAGEMENT_ENABLED
     Coordinate previousAgentPosition;
     CRadians previousAgentOrientation;
     int batteryMeasureTicks = 0;
     argos::CVector2 previousMovement = {0, 0};
-#endif
+//#endif
 
 
     /*

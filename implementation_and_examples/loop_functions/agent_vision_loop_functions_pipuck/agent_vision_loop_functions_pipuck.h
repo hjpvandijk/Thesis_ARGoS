@@ -4,7 +4,7 @@
 #include <argos3/core/simulator/loop_functions.h>
 #include <argos3/plugins/robots/pi-puck/simulator/pipuck_entity.h>
 #include <argos3/plugins/simulator/entities/box_entity.h>
-
+#include "agent_implementation/feature_config.h"
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
 #include "agent_implementation/utils/Quadtree.h"
 using namespace argos;

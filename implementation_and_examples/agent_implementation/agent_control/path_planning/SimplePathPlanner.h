@@ -1,6 +1,7 @@
 #ifndef IMPLEMENTATION_AND_EXAMPLES_SIMPLEPATHPLANNER_H
 #define IMPLEMENTATION_AND_EXAMPLES_SIMPLEPATHPLANNER_H
 
+#include "agent_implementation/feature_config.h"
 #include <vector>
 #include "agent_implementation/utils/coordinate.h"
 #include "agent_implementation/utils/Quadtree.h"

@@ -5,6 +5,7 @@
 #ifndef THESIS_ARGOS_AGENT_H
 #define THESIS_ARGOS_AGENT_H
 
+#include "agent_implementation/feature_config.h"
 #include "utils/coordinate.h"
 #include "agent_control/communication/simulation/radio.h"
 #include "agent_control/motion/simulation/DifferentialDrive.h"
@@ -15,28 +16,24 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_differential_drive_actuator.h>
 #include <set>
 #include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
+#ifdef WALL_FOLLOWING_ENABLED
 #include "agent_implementation/agent_control/path_planning/WallFollower.h"
+#endif
+#ifdef SKIP_UNREACHABLE_FRONTIERS
 #include "agent_implementation/agent_control/path_planning/FrontierEvaluator.h"
+#endif
 #include "agent_implementation/agent_control/path_planning/ForceVectorCalculator.h"
 #include "agent_control/battery/BatteryManager.h"
+#ifdef PATH_PLANNING_ENABLED
 #include "agent_implementation/agent_control/path_planning/SimplePathPlanner.h"
 #include "agent_implementation/agent_control/path_planning/PathFollower.h"
+#endif
 #include "agent_control/communication/TimeSynchronizer.h"
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
 #include "agent_implementation/agent_control/path_planning/RandomWalk.h"
+#endif
 
-#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-//#define CLOSE_SMALL_AREAS
-#define SEPARATE_FRONTIERS
-//#define WALL_FOLLOWING_ENABLED
-#define BATTERY_MANAGEMENT_ENABLED
-#define PATH_PLANNING_ENABLED
-#define SKIP_UNREACHABLE_FRONTIERS
-#ifdef SKIP_UNREACHABLE_FRONTIERS
-#ifndef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-#define DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
-#endif
-#endif
-#define RANDOM_WALK_WHEN_NO_FRONTIERS
+
 
 class Agent {
 public:
@@ -59,13 +56,15 @@ public:
     //Time synchronizer between agents
     TimeSynchronizer timeSynchronizer;
 
-#ifdef BATTERY_MANAGEMENT_ENABLED
+    //Always need this one for performance measure
+//#ifdef BATTERY_MANAGEMENT_ENABLED
     //Battery manager
     BatteryManager batteryManager;
-#endif
-
+//#endif
+#ifdef WALL_FOLLOWING_ENABLED
     //Path planning engines
     WallFollower wallFollower;
+#endif
 #ifdef SKIP_UNREACHABLE_FRONTIERS
     FrontierEvaluator frontierEvaluator;
 #endif
@@ -130,7 +129,7 @@ public:
         bool FEASIBILITY_CHECK_ONLY_ROUTE;
         #endif
 
-        #ifdef SEPARATE_FRONTIERS
+        #if defined(SEPARATE_FRONTIERS) || defined(SKIP_UNREACHABLE_FRONTIERS)
         double FRONTIER_SEPARATION_THRESHOLD;
         #endif
 
