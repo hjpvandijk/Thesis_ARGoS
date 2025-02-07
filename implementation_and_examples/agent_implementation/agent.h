@@ -5,9 +5,13 @@
 #ifndef THESIS_ARGOS_AGENT_H
 #define THESIS_ARGOS_AGENT_H
 
-#include "coordinate.h"
-#include "PheromoneMatrix.h"
-//#include "Quadtree.h"
+#define USING_CONFIDENCE_TREE
+
+#ifdef USING_CONFIDENCE_TREE
+#include "utils/Quadtree.h"
+#else
+#include "utils/PheromoneMatrix.h"
+#endif
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
@@ -17,6 +21,13 @@
 #include "agent_control/motion/simulation/DifferentialDrive.h"
 #include "agent_control/communication/simulation/Radio.h"
 #include "agent_control/communication/TimeSynchronizer.h"
+#include "utils/coordinate.h"
+#include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
+#ifdef USING_CONFIDENCE_TREE
+#include "agent_control/path_planning/ForceVectorCalculatorQuadtree.h"
+#else
+#include "agent_control/path_planning/ForceVectorCalculatorMatrix.h"
+#endif
 
 
 class Agent {
@@ -26,8 +37,9 @@ public:
     argos::CRadians heading;
     argos::CRadians targetHeading;
     float speed{};
+    //Distance sensors
     static constexpr double num_sensors = 4;
-    std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
+    std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
     struct Config {
         float ROBOT_WEIGHT;
@@ -43,7 +55,7 @@ public:
 
         double AGENT_LOCATION_RELEVANT_S;
         double TIME_SYNC_INTERVAL_S;
-        double MATRIX_EXCHANGE_INTERVAL_S;
+        double MAP_EXCHANGE_INTERVAL_S;
 
         double DISTANCE_SENSOR_NOISE_CM;
         double ORIENTATION_NOISE_DEGREES;
@@ -56,24 +68,43 @@ public:
         double AGENT_COHESION_WEIGHT;
         double AGENT_AVOIDANCE_WEIGHT;
         double AGENT_ALIGNMENT_WEIGHT;
-        double UNEXPLORED_FRONTIER_WEIGHT;
+        double TARGET_WEIGHT;
 
         double FRONTIER_DISTANCE_WEIGHT;
         double FRONTIER_SIZE_WEIGHT;
 
 
         double FRONTIER_SEARCH_RADIUS;
-//        int MAX_FRONTIER_CELLS;
-//        int MAX_FRONTIER_REGIONS;
+        int MAX_FRONTIER_CELLS;
+        int MAX_FRONTIER_REGIONS;
         double AGENT_COHESION_RADIUS;
         double AGENT_AVOIDANCE_RADIUS;
         double AGENT_ALIGNMENT_RADIUS ;
         double OBJECT_AVOIDANCE_RADIUS;
 
+
+
+        #ifdef USING_CONFIDENCE_TREE
+        double P_FREE;
+        double P_OCCUPIED;
+        float ALPHA_RECEIVE;
+        float P_FREE_THRESHOLD;
+        float P_OCCUPIED_THRESHOLD;
+        float P_AT_MAX_SENSOR_RANGE;
+
+        double QUADTREE_RESOLUTION;
+        double QUADTREE_EVAPORATION_TIME_S;
+        double QUADTREE_EVAPORATED_PHEROMONE_FACTOR;
+        double QUADTREE_MERGE_MAX_VISITED_TIME_DIFF;
+        double QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF;
+
+        double FRONTIER_DIST_UNTIL_REACHED;
+        #else
         double COVERAGE_MATRIX_RESOLUTION;
         double COVERAGE_MATRIX_EVAPORATION_TIME_S;
         double OBSTACLE_MATRIX_RESOLUTION;
         double OBSTACLE_MATRIX_EVAPORATION_TIME_S;
+        #endif
 
 
         double BATTERY_CAPACITY;
@@ -91,8 +122,8 @@ public:
     Config config;
 
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
-     std::map<std::string, double> agentMatrixSent; //id: sent timestamp
-    std::map<std::string, int> agentMatrixBytesReceived; //id: bytes received
+    std::map<std::string, double> agentMapSent; //id: sent timestamp
+    std::map<std::string, int> agentMapBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
 
 //    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
@@ -173,10 +204,12 @@ public:
 
     std::vector<std::string> getMessages();
 
-
+    #ifdef USING_CONFIDENCE_TREE
+    std::unique_ptr<quadtree::Quadtree> quadtree;
+    #else
     std::unique_ptr<PheromoneMatrix> coverageMatrix; //Cells that contain pheromone > 0, are covered and obstacle free
     std::unique_ptr<PheromoneMatrix> obstacleMatrix; //Cells that contain pheromone > 0, are covered and contain an obstacle
-
+    #endif
     Coordinate left_right_borders = {-10,10};
     Coordinate upper_lower_borders = {10,-10};
 
@@ -185,24 +218,34 @@ public:
     double ticks_per_second = 30;
     uint32_t elapsed_ticks = 0;
 
+    #ifdef USING_CONFIDENCE_TREE
+    std::vector<std::pair<quadtree::Box, double>> current_frontiers;
+    std::vector<std::vector<std::pair<quadtree::Box, double>>> current_frontier_regions;
+    std::vector<std::pair<quadtree::Box, double>> bestFrontierRegionBoxes = {};
+    #else
     std::vector<Coordinate> current_frontiers;
     std::vector<std::vector<std::pair<int,int>>> current_frontier_regions;
+    #endif
 
     std::set<argos::CDegrees> freeAnglesVisualization;
+
+    double sensor_reading_distance_probability;
 
 private:
     std::string config_file = "agent_implementation/config.yaml";
     void loadConfig();
     void checkForObstacles();
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-    argos::CVector2 getVirtualWallAvoidanceVector() const;
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
-    argos::CVector2 calculateAgentCohesionVector();
-    argos::CVector2 calculateAgentAvoidanceVector();
-    argos::CVector2 calculateAgentAlignmentVector();
-    argos::CVector2 calculateUnexploredFrontierVector();
+//    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
+//    argos::CVector2 getVirtualWallAvoidanceVector() const;
+//    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
+//    argos::CVector2 calculateAgentCohesionVector();
+//    argos::CVector2 calculateAgentAvoidanceVector();
+//    argos::CVector2 calculateAgentAlignmentVector();
+//    argos::CVector2 calculateUnexploredFrontierVector();
+    #ifndef USING_CONFIDENCE_TREE
     std::vector<std::pair<int, int>> getFrontierCells(double currentTimeS, double searchRadius);
+    #endif
 
     std::vector<std::string> messages;
 
@@ -214,9 +257,13 @@ private:
 
     std::string GetId() const;
 
-
-    void addObjectLocation(Coordinate objectCoordinate) const;
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
+    #ifdef USING_CONFIDENCE_TREE
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor);
+    void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
+    void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor);
+    #else
+    void addObjectLocation(Coordinate objectCoordinate);
+    #endif
 
 
 

@@ -6,6 +6,8 @@
 #include <argos3/core/utility/logging/argos_log.h>
 #include <set>
 #include "agent.h"
+#include "utils/coordinate.h"
+#include "utils/Algorithms.h"
 #include <random>
 #include <utility>
 #include <unordered_map>
@@ -25,8 +27,11 @@ Agent::Agent(std::string id) {
     this->messages = std::vector<std::string>(0);
 //    auto box = quadtree::Box(-5, 5, 10);
 //    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
+    #ifdef USING_CONFIDENCE_TREE
+    #else
     this->coverageMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.COVERAGE_MATRIX_RESOLUTION, this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S);
     this->obstacleMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.OBSTACLE_MATRIX_RESOLUTION, this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S);
+    #endif
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
     //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
     this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS, this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE, this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT, this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE, this->config.BATTERY_CAPACITY);
@@ -37,6 +42,7 @@ Agent::Agent(std::string id) {
     //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
     this->timeSynchronizer = TimeSynchronizer();
+    this->sensor_reading_distance_probability = (1-this->config.P_AT_MAX_SENSOR_RANGE) / this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
 }
 
 
@@ -93,7 +99,7 @@ void Agent::updateMap() {
 }
 
 void Agent::setLastRangeReadings(int index, double new_range) {
-    this->lastRangeReadings.at(index) = new_range;
+    this->distance_sensors.at(index).setDistance(new_range);
 }
 
 void Agent::readDistanceSensor() {
@@ -104,45 +110,200 @@ void Agent::readInfraredSensor() {
 
 }
 
+#ifdef USING_CONFIDENCE_TREE
 /**
  * Add free (unoccupied) coordinates between two coordinates
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) const {
-    double x = coordinate1.x;
-    double y = coordinate1.y;
-    double dx = coordinate2.x - coordinate1.x;
-    double dy = coordinate2.y - coordinate1.y;
-    double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->coverageMatrix->getResolution();
-    int nSteps = std::ceil(distance / stepSize);
-    double stepX = dx / nSteps;
-    double stepY = dy / nSteps;
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
+                               float Psensor) {//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x;
+//    double dy = coordinate2.y - coordinate1.y;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->coverageMatrix->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    for (int s = 0; s < nSteps; s++) {
+////        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
+//        //If the cell is occupied, don't set area as free
+//        if (this->obstacleMatrix->get(x, y, elapsed_ticks/ticks_per_second) > 0) {
+//            continue;
+//        }
+//        this->coverageMatrix->update(x, y, elapsed_ticks/ticks_per_second);
+//
+//        x += stepX;
+//        y += stepY;
+//    }
 
-    for (int s = 0; s < nSteps; s++) {
-//        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
-        //If the cell is occupied, don't set area as free
-        if (this->obstacleMatrix->get(x, y, elapsed_ticks/ticks_per_second) > 0) {
-            continue;
+    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
+    #ifdef USING_CONFIDENCE_TREE
+    if (dist < this->quadtree->getResolution())
+        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
+    #else
+    if (dist < this->coverageMatrix->getResolution())
+        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
+    #endif
+
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
+                                                                                    coordinate2);
+    double step_size_avg = dist / linePoints.size();
+    for (int i=0; i<linePoints.size(); i++){
+        auto point = linePoints[i];
+        if (!objectBox.contains(Coordinate{point.x, point.y})) { //Don't add a coordinate in the objectBox as free
+            double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
+            double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
+                       0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+//            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+            #ifdef USING_CONFIDENCE_TREE
+            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+            this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+                                elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+            #else
+            if (this->obstacleMatrix->get(point.x, point.y, elapsed_ticks/ticks_per_second) > 0) {
+                continue;
+            }
+            this->coverageMatrix->update(point.x, point.y, elapsed_ticks/ticks_per_second);
+            #endif
+
+        } else {
+            break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
         }
-        this->coverageMatrix->update(x, y, elapsed_ticks/ticks_per_second);
-
-        x += stepX;
-        y += stepY;
     }
 }
 
 /**
+ * Add free (unoccupied) coordinates between two coordinates
+ * @param coordinate1
+ * @param coordinate2
+ */
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor) {
+//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x;
+//    double dy = coordinate2.y - coordinate1.y;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->quadtree->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    for (int s = 0; s < nSteps; s++) {
+//        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+//        this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, this->config.P_FREE * Psensor,
+//                            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+//        x += stepX;
+//        y += stepY;
+//    }
+    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
+
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
+                                                                                    coordinate2);
+    double step_size_avg = dist / linePoints.size();
+    for (int i=0; i<linePoints.size(); i++){
+        auto point = linePoints[i];
+        double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
+        double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
+                   0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+//        argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+        this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+                            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+    }
+}
+#else
+/**
+ * Add free (unoccupied) coordinates between two coordinates
+ * @param coordinate1
+ * @param coordinate2
+ */
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2,
+                               float Psensor) {//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x;
+//    double dy = coordinate2.y - coordinate1.y;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->coverageMatrix->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    for (int s = 0; s < nSteps; s++) {
+////        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
+//        //If the cell is occupied, don't set area as free
+//        if (this->obstacleMatrix->get(x, y, elapsed_ticks/ticks_per_second) > 0) {
+//            continue;
+//        }
+//        this->coverageMatrix->update(x, y, elapsed_ticks/ticks_per_second);
+//
+//        x += stepX;
+//        y += stepY;
+//    }
+
+    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
+    #ifdef USING_CONFIDENCE_TREE
+    if (dist < this->quadtree->getResolution())
+        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
+    #else
+    if (dist < this->coverageMatrix->getResolution())
+        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
+    #endif
+
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
+                                                                                    coordinate2);
+    double step_size_avg = dist / linePoints.size();
+    for (int i=0; i<linePoints.size(); i++){
+        auto point = linePoints[i];
+        if (!objectBox.contains(Coordinate{point.x, point.y})) { //Don't add a coordinate in the objectBox as free
+            double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
+            double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
+                       0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+//            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+            #ifdef USING_CONFIDENCE_TREE
+            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+            this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+                                elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+            #else
+            if (this->obstacleMatrix->get(point.x, point.y, elapsed_ticks/ticks_per_second) > 0) {
+                continue;
+            }
+            this->coverageMatrix->update(point.x, point.y, elapsed_ticks/ticks_per_second);
+            #endif
+
+        } else {
+            break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
+        }
+    }
+}
+#endif
+
+#ifdef USING_CONFIDENCE_TREE
+/**
  * Add occupied object location to the quadtree
  * @param objectCoordinate
  */
-void Agent::addObjectLocation(Coordinate objectCoordinate) const {
-//    this->quadtree->add(objectCoordinate, quadtree::Occupancy::OCCUPIED, elapsed_ticks / ticks_per_second);
+quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) {
+    //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+    quadtree::Box objectBox = this->quadtree->add(
+            Coordinate{objectCoordinate.x + 0.0000000001, objectCoordinate.y + 0.0000000001}, this->config.P_OCCUPIED /
+                                                                                              Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
+            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+    return objectBox;
+}
+#else
+/**
+ * Add occupied object location to the quadtree
+ * @param objectCoordinate
+ */
+void Agent::addObjectLocation(Coordinate objectCoordinate) {
     this->obstacleMatrix->update(objectCoordinate, elapsed_ticks/ticks_per_second);
     //Then set the same cell in the coverage matrix to -1
     this->coverageMatrix->reset(objectCoordinate);
 }
+#endif
 
 /**
  * Check for obstacles in front of the agent
@@ -150,31 +311,102 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) const {
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
  */
 void Agent::checkForObstacles() {
+//    for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
+//        argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
+//        if (this->lastRangeReadings[sensor_index] < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
+//
+//            double opposite = argos::Sin(sensor_rotation) * this->lastRangeReadings[sensor_index];
+//            double adjacent = argos::Cos(sensor_rotation) * this->lastRangeReadings[sensor_index];
+//
+//
+//            Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
+//            addFreeAreaBetween(this->position, object);
+//            //If the detected object is actually another agent, add it as a free area
+//            //So check if the object coordinate is close to another agent
+//            bool close_to_other_agent = false;
+//            for (const auto &agentLocation: this->agentLocations) {
+//                argos::CVector2 objectToAgent =
+//                        argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
+//                        - argos::CVector2(object.x, object.y);
+//
+//                //If detected object and another agent are not close, add the object as an obstacle
+//                if (objectToAgent.Length() <= this->coverageMatrix->getResolution()) {
+//                    close_to_other_agent = true;
+//                }
+//            }
+//            //Only add the object as an obstacle if it is not close to another agent
+//            if (!close_to_other_agent) addObjectLocation(object);
+//
+//
+//        } else {
+//            double opposite = argos::Sin(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+//            double adjacent = argos::Cos(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+//
+//
+//            Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
+//            addFreeAreaBetween(this->position, end_of_ray);
+//        }
+//    }
+
+    bool addedObjectAtAgentLocation = false;
     for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
-        if (this->lastRangeReadings[sensor_index] < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
+        if (this->distance_sensors[sensor_index].getDistance() < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
-            double opposite = argos::Sin(sensor_rotation) * this->lastRangeReadings[sensor_index];
-            double adjacent = argos::Cos(sensor_rotation) * this->lastRangeReadings[sensor_index];
+            float sensor_probability = HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
+
+            double opposite = argos::Sin(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
+            double adjacent = argos::Cos(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
 
 
             Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
-            addFreeAreaBetween(this->position, object);
             //If the detected object is actually another agent, add it as a free area
             //So check if the object coordinate is close to another agent
             bool close_to_other_agent = false;
             for (const auto &agentLocation: this->agentLocations) {
+                if ((std::get<1>(agentLocation.second) - this->elapsed_ticks) / this->ticks_per_second >
+                    this->config.AGENT_LOCATION_RELEVANT_S)
+                    continue;
                 argos::CVector2 objectToAgent =
-                        argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
+                        argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
                         - argos::CVector2(object.x, object.y);
 
                 //If detected object and another agent are not close, add the object as an obstacle
-                if (objectToAgent.Length() <= this->coverageMatrix->getResolution()) {
-                    close_to_other_agent = true;
+                if (objectToAgent.Length() <=
+                        #ifdef USING_CONFIDENCE_TREE
+                this->quadtree->getResolution()
+                        #else
+                this->coverageMatrix->getResolution()
+                        #endif
+                ) {
+                    close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
-            if (!close_to_other_agent) addObjectLocation(object);
+            if (!close_to_other_agent) {
+                if (sqrt(pow(this->position.x - object.x, 2) + pow(this->position.y - object.y, 2)) <
+                    this->quadtree->getResolution()) {
+                    addedObjectAtAgentLocation = true;
+                }
+                #ifdef USING_CONFIDENCE_TREE
+                quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
+                if (objectBox.size != 0) {
+                    if (!addedObjectAtAgentLocation)
+                        addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
+                } else {
+                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
+                }
+                #else
+                addObjectLocation(object);
+                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
+                #endif
+            } else {
+                #ifdef USING_CONFIDENCE_TREE
+                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
+                #else
+                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
+                #endif
+            }
 
 
         } else {
@@ -183,150 +415,16 @@ void Agent::checkForObstacles() {
 
 
             Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
+            #ifdef USING_CONFIDENCE_TREE
+            if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, end_of_ray, 1.0);
+            #else
             addFreeAreaBetween(this->position, end_of_ray);
+            #endif
         }
     }
 }
 
-/**
- * Calculate the vector to avoid objects:
- * Find the closest relative angle that is free of objects within a certain range.
- * According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
- * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
- * @return The vector towards the free direction
- */
-bool Agent::calculateObjectAvoidanceAngle(argos::CRadians *relativeObjectAvoidanceAngle, argos::CRadians targetAngle) {
 
-    //Get occupied boxes within range
-//    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(this->position,
-//                                                                                  OBJECT_AVOIDANCE_RADIUS * 2,
-//                                                                                  this->elapsed_ticks /
-//                                                                                  this->ticks_per_second);
-
-
-
-    std::set<argos::CDegrees> freeAngles = {};
-    double angleInterval = argos::CDegrees(360 / this->config.STEPS_360_DEGREES).GetValue();
-
-//Add free angles from -180 to 170 degrees
-    for (int a = 0; a < this->config.STEPS_360_DEGREES; a++) {
-        auto angle = argos::CDegrees(a * 360 / this->config.STEPS_360_DEGREES - 180);
-        freeAngles.insert(angle);
-    }
-
-    Coordinate min_real = Coordinate{this->position.x - this->config.OBJECT_AVOIDANCE_RADIUS, this->position.y - this->config.OBJECT_AVOIDANCE_RADIUS};
-    Coordinate max_real = Coordinate{this->position.x + this->config.OBJECT_AVOIDANCE_RADIUS, this->position.y + this->config.OBJECT_AVOIDANCE_RADIUS};
-//    int max_x_real = this->position.x + OBJECT_AVOIDANCE_RADIUS;
-//    int min_y_real = this->position.y - OBJECT_AVOIDANCE_RADIUS;
-//    int max_y_real = this->position.y + OBJECT_AVOIDANCE_RADIUS;
-
-    auto[min_x_index, min_y_index] = this->obstacleMatrix->getIndexFromRealCoordinate(min_real);
-    auto[max_x_index, max_y_index] = this->obstacleMatrix->getIndexFromRealCoordinate(max_real);
-
-    //For each occupied box, find the angles that are blocked relative to the agent
-    //We only have to look in the area of the object avoidance radius
-    for (int x =std::max(0, min_x_index); x< std::min(this->obstacleMatrix->getWidth(), max_x_index); x++){
-        for (int y = std::max(0, min_y_index); y<std::min(this->obstacleMatrix->getHeight(), max_y_index); y++) {
-
-            Coordinate cellCenter = this->obstacleMatrix->getRealCoordinateFromIndex(x, y);
-            //If this cell is not within the object avoidance radius, skip it
-            if (std::sqrt(std::pow(cellCenter.x - this->position.x, 2) +
-                          std::pow(cellCenter.y - this->position.y, 2)) > this->config.OBJECT_AVOIDANCE_RADIUS) {
-                continue;
-            }
-
-            auto cellValue = this->obstacleMatrix->getByIndex(x, y, elapsed_ticks / ticks_per_second);
-
-            if (cellValue == 0) continue;
-
-
-            argos::CVector2 OC = argos::CVector2(cellCenter.x - this->position.x,
-                                                 cellCenter.y - this->position.y);
-            argos::CRadians Bq = argos::ASin(
-                    std::min(this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
-            argos::CRadians Eta_q = OC.Angle();
-            if (this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS > OC.Length())
-                argos::RLOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << this->config.AGENT_SAFETY_RADIUS
-                               << " + " << this->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
-
-            argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
-            argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());
-
-            if (maxAngle < minAngle) {
-                argos::CDegrees temp = minAngle;
-                minAngle = maxAngle;
-                maxAngle = temp;
-            }
-
-
-            //Round to multiples of 360/this->config.STEPS_360_DEGREES
-            double minAngleVal = minAngle.GetValue();
-            double intervalDirectionMin = (minAngleVal < 0) ? -angleInterval : angleInterval;
-            //
-            auto minRoundedAngle1 = (int) (minAngleVal / angleInterval) * angleInterval;
-            auto minRoundedAngle2 = minRoundedAngle1 + intervalDirectionMin;
-
-            auto roundedMinAngle = argos::CDegrees(
-                    (abs(minAngleVal - minRoundedAngle1) >= abs(minRoundedAngle2 - minAngleVal)) ? minRoundedAngle2
-                                                                                                 : minRoundedAngle1);
-
-            double maxAngleVal = maxAngle.GetValue();
-            double intervalDirectionMax = (maxAngleVal < 0) ? -angleInterval : angleInterval;
-
-            auto maxRoundedAngle1 = (int) (maxAngleVal / angleInterval) * angleInterval;
-            auto maxRoundedAngle2 = maxRoundedAngle1 + intervalDirectionMax;
-
-            auto roundedMaxAngle = argos::CDegrees(
-                    (abs(maxAngleVal - maxRoundedAngle1) >= abs(maxRoundedAngle2 - maxAngleVal)) ? maxRoundedAngle2
-                                                                                                 : maxRoundedAngle1);
-
-            //Block all angles within range
-            for (int a = 0; a < this->config.STEPS_360_DEGREES; a++) {
-                auto angle = argos::CDegrees(a * 360 / this->config.STEPS_360_DEGREES - 180);
-
-                if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) <= argos::CRadians(0) &&
-                    NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) >= argos::CRadians(0)) {
-                    if (angle >= roundedMinAngle && angle <= roundedMaxAngle) {
-                        freeAngles.erase(angle);
-                    }
-
-                } else if (NormalizedDifference(ToRadians(roundedMinAngle), Eta_q) >= argos::CRadians(0) &&
-                           NormalizedDifference(ToRadians(roundedMaxAngle), Eta_q) <= argos::CRadians(0)) {
-
-                    if (angle <= roundedMinAngle || angle >= roundedMaxAngle) {
-                        freeAngles.erase(angle);
-                    }
-                } else {
-                    argos::LOGERR << "Error: Eta_q not within range" << std::endl;
-                }
-            }
-        }
-
-    }
-
-    this->freeAnglesVisualization.clear();
-    for (auto freeAngle: freeAngles) {
-        this->freeAnglesVisualization.insert(freeAngle);
-    }
-
-    if (freeAngles.empty()) return false;
-
-
-    //Get free angle closest to heading
-    auto closestFreeAngle = *freeAngles.begin();
-    for (auto freeAngle: freeAngles) {
-        if (std::abs((freeAngle - ToDegrees(targetAngle)).GetValue()) <
-            abs((closestFreeAngle - ToDegrees(targetAngle)).GetValue())) {
-            closestFreeAngle = freeAngle;
-        }
-    }
-
-
-    argos::CRadians closestFreeAngleRadians = ToRadians(closestFreeAngle);
-    *relativeObjectAvoidanceAngle = NormalizedDifference(closestFreeAngleRadians, targetAngle);
-    return true;
-
-}
 
 /** Calculate the vector to avoid the virtual walls
  * If the agent is close to the border, create a vector pointing away from the border
@@ -506,6 +604,8 @@ public:
     }
 };
 
+#ifndef USING_CONFIDENCE_TREE
+
 //ONLY FOR COVERAGE MATRIX
 //A cell is a frontier iff:
 //1. Occupancy = explored, i.e. pheromone > 0
@@ -554,106 +654,107 @@ std::vector<std::pair<int, int>> Agent::getFrontierCells(double currentTimeS, do
 
     return frontierCells;
 }
+#endif
 
-argos::CVector2 Agent::calculateUnexploredFrontierVector() {
-    //According to Dynamic frontier-led swarming:
-    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    //F* = arg min (Ψ_D||p-G^f||_2 - Ψ_S * J^f) for all frontiers F^f in F
-    //F^f is a frontier, a segment that separates explored cells from unexplored cells.
-
-    //Where Ψ_D is the frontier distance weight
-    //p is the agent position
-    //G^f is the frontier position defined as G^f = (Sum(F_j^f))/J^f So the sum of the cell locations divided by the amount of cells
-    //Ψ_S is the frontier size weight
-    //J^f is the number of cells in the frontier F^f
-
-    //A cell is a frontier iff:
-    //1. Occupancy = explored (and free)
-    //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
-    //Coverage status: 0 for unexplored, 1 for explored, and 2 for obstacle, respectively.
-
-    //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
-//    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_RADIUS,
-//                                                                              this->elapsed_ticks /
-//                                                                              this->ticks_per_second);
-    const std::vector<std::pair<int, int>> frontiers = getFrontierCells(elapsed_ticks / ticks_per_second, this->config.FRONTIER_SEARCH_RADIUS);
-//    current_frontiers = frontiers;
-
-    // Initialize an empty vector of vectors to store frontier regions
-//    std::vector<std::vector<Coordinate>> frontierRegions = {};
-
-    std::vector<std::vector<std::pair<int, int>>> frontierRegions = {};
-    std::set<std::pair<int, int>> visited = {};
-
-    std::set<std::pair<int, int>> frontierset(frontiers.begin(), frontiers.end());
-
-    FrontierMerger frontierMerger;
-    for (const auto& cell : frontiers) {
-        if (!visited.count(cell)) {
-            // Start BFS for this cell
-            std::vector<std::pair<int, int>> group = frontierMerger.bfs_group(cell.first, cell.second, this->coverageMatrix->getWidth(), this->coverageMatrix->getHeight(), frontierset, visited);
-            frontierRegions.push_back(group);
-        }
-    }
-
-    current_frontier_regions = frontierRegions;
-
-    //Now we have all frontier cells merged into frontier regions
-    //Find F* by using the formula above
-    //Ψ_D = FRONTIER_DISTANCE_WEIGHT
-    //Ψ_S = FRONTIER_SIZE_WEIGHT
-
-    //Initialize variables to store the best frontier region and its score
-    Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
-    double highestFrontierFitness = -std::numeric_limits<double>::max();
-
-    //Iterate over all frontier regions to find the best one
-    for (const auto &region: frontierRegions) {
-        //Calculate the average position of the frontier region
-        double sumX = 0;
-        double sumY = 0;
-        for (auto cellIndex: region) {
-            auto realCellCoordinate = this->coverageMatrix->getRealCoordinateFromIndex(cellIndex.first, cellIndex.second);
-            sumX += realCellCoordinate.x;
-            sumY += realCellCoordinate.y;
-        }
-        double frontierRegionX = sumX / region.size();
-        double frontierRegionY = sumY / region.size();
-
-        //Calculate the distance between the agent and the frontier region
-        double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
-        //If the frontier location is too close to the current position, disregard it as that area is explored already.
-//        if(distance < 0.5){
-//            continue;
+//argos::CVector2 Agent::calculateUnexploredFrontierVector() {
+//    //According to Dynamic frontier-led swarming:
+//    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+//    //F* = arg min (Ψ_D||p-G^f||_2 - Ψ_S * J^f) for all frontiers F^f in F
+//    //F^f is a frontier, a segment that separates explored cells from unexplored cells.
+//
+//    //Where Ψ_D is the frontier distance weight
+//    //p is the agent position
+//    //G^f is the frontier position defined as G^f = (Sum(F_j^f))/J^f So the sum of the cell locations divided by the amount of cells
+//    //Ψ_S is the frontier size weight
+//    //J^f is the number of cells in the frontier F^f
+//
+//    //A cell is a frontier iff:
+//    //1. Occupancy = explored (and free)
+//    //2. At least one neighbor is unexplored using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
+//    //Coverage status: 0 for unexplored, 1 for explored, and 2 for obstacle, respectively.
+//
+//    //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
+////    std::vector<quadtree::Box> frontiers = this->quadtree->queryFrontierBoxes(this->position, FRONTIER_SEARCH_RADIUS,
+////                                                                              this->elapsed_ticks /
+////                                                                              this->ticks_per_second);
+//    const std::vector<std::pair<int, int>> frontiers = getFrontierCells(elapsed_ticks / ticks_per_second, this->config.FRONTIER_SEARCH_RADIUS);
+////    current_frontiers = frontiers;
+//
+//    // Initialize an empty vector of vectors to store frontier regions
+////    std::vector<std::vector<Coordinate>> frontierRegions = {};
+//
+//    std::vector<std::vector<std::pair<int, int>>> frontierRegions = {};
+//    std::set<std::pair<int, int>> visited = {};
+//
+//    std::set<std::pair<int, int>> frontierset(frontiers.begin(), frontiers.end());
+//
+//    FrontierMerger frontierMerger;
+//    for (const auto& cell : frontiers) {
+//        if (!visited.count(cell)) {
+//            // Start BFS for this cell
+//            std::vector<std::pair<int, int>> group = frontierMerger.bfs_group(cell.first, cell.second, this->coverageMatrix->getWidth(), this->coverageMatrix->getHeight(), frontierset, visited);
+//            frontierRegions.push_back(group);
 //        }
-
-        //Calculate the fitness of the frontier region
-        double fitness = -this->config.FRONTIER_DISTANCE_WEIGHT * distance + this->config.FRONTIER_SIZE_WEIGHT * region.size();
-
-        //If the fitness is lower than the best fitness, update the best fitness and best frontier region
-        if (fitness > highestFrontierFitness) {
-            highestFrontierFitness = fitness;
-            bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
-        }
-    }
-
-    this->currentBestFrontier = bestFrontierRegionCenter;
-
-    //Own fix:
-    //If there is no best frontier region, return a zero vector
-    if (bestFrontierRegionCenter.x == MAXFLOAT) {
-        return {0, 0};
-    }
-
-
-
-
-    //Calculate the vector to the best frontier region
-    argos::CVector2 vectorToBestFrontier = argos::CVector2(bestFrontierRegionCenter.x, bestFrontierRegionCenter.y)
-                                           - argos::CVector2(this->position.x, this->position.y);
-
-    return vectorToBestFrontier;
-}
+//    }
+//
+//    current_frontier_regions = frontierRegions;
+//
+//    //Now we have all frontier cells merged into frontier regions
+//    //Find F* by using the formula above
+//    //Ψ_D = FRONTIER_DISTANCE_WEIGHT
+//    //Ψ_S = FRONTIER_SIZE_WEIGHT
+//
+//    //Initialize variables to store the best frontier region and its score
+//    Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
+//    double highestFrontierFitness = -std::numeric_limits<double>::max();
+//
+//    //Iterate over all frontier regions to find the best one
+//    for (const auto &region: frontierRegions) {
+//        //Calculate the average position of the frontier region
+//        double sumX = 0;
+//        double sumY = 0;
+//        for (auto cellIndex: region) {
+//            auto realCellCoordinate = this->coverageMatrix->getRealCoordinateFromIndex(cellIndex.first, cellIndex.second);
+//            sumX += realCellCoordinate.x;
+//            sumY += realCellCoordinate.y;
+//        }
+//        double frontierRegionX = sumX / region.size();
+//        double frontierRegionY = sumY / region.size();
+//
+//        //Calculate the distance between the agent and the frontier region
+//        double distance = sqrt(pow(frontierRegionX - this->position.x, 2) + pow(frontierRegionY - this->position.y, 2));
+//        //If the frontier location is too close to the current position, disregard it as that area is explored already.
+////        if(distance < 0.5){
+////            continue;
+////        }
+//
+//        //Calculate the fitness of the frontier region
+//        double fitness = -this->config.FRONTIER_DISTANCE_WEIGHT * distance + this->config.FRONTIER_SIZE_WEIGHT * region.size();
+//
+//        //If the fitness is lower than the best fitness, update the best fitness and best frontier region
+//        if (fitness > highestFrontierFitness) {
+//            highestFrontierFitness = fitness;
+//            bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
+//        }
+//    }
+//
+//    this->currentBestFrontier = bestFrontierRegionCenter;
+//
+//    //Own fix:
+//    //If there is no best frontier region, return a zero vector
+//    if (bestFrontierRegionCenter.x == MAXFLOAT) {
+//        return {0, 0};
+//    }
+//
+//
+//
+//
+//    //Calculate the vector to the best frontier region
+//    argos::CVector2 vectorToBestFrontier = argos::CVector2(bestFrontierRegionCenter.x, bestFrontierRegionCenter.y)
+//                                           - argos::CVector2(this->position.x, this->position.y);
+//
+//    return vectorToBestFrontier;
+//}
 
 void Agent::calculateNextPosition() {
     //Inspired by boids algorithm:
@@ -665,12 +766,12 @@ void Agent::calculateNextPosition() {
     //4. Repulsion from objects/walls (done)
 
 
-    argos::CVector2 virtualWallAvoidanceVector = getVirtualWallAvoidanceVector();
-    argos::CVector2 agentCohesionVector = calculateAgentCohesionVector();
-    argos::CVector2 agentAvoidanceVector = calculateAgentAvoidanceVector();
-    argos::CVector2 agentAlignmentVector = calculateAgentAlignmentVector();
+    argos::CVector2 virtualWallAvoidanceVector = ForceVectorCalculator::getVirtualWallAvoidanceVector(this);
+    argos::CVector2 agentCohesionVector = ForceVectorCalculator::calculateAgentCohesionVector(this);
+    argos::CVector2 agentAvoidanceVector = ForceVectorCalculator::calculateAgentAvoidanceVector(this);
+    argos::CVector2 agentAlignmentVector = ForceVectorCalculator::calculateAgentAlignmentVector(this);
 
-    argos::CVector2 unexploredFrontierVector = calculateUnexploredFrontierVector();
+    argos::CVector2 unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
 
     //If there are agents to avoid, do not explore
     if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
@@ -687,7 +788,7 @@ void Agent::calculateNextPosition() {
     agentCohesionVector = this->config.AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
     agentAvoidanceVector = this->config.AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
     agentAlignmentVector = this->config.AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = this->config.UNEXPLORED_FRONTIER_WEIGHT * unexploredFrontierVector;
+    unexploredFrontierVector = this->config.TARGET_WEIGHT * unexploredFrontierVector;
 
     //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
     //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
@@ -702,7 +803,7 @@ void Agent::calculateNextPosition() {
 
     this->swarm_vector = total_vector;
     argos::CRadians objectAvoidanceAngle;
-    bool isThereAFreeAngle = calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
+    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
     //If there is not a free angle to move to, do not move
     if (!isThereAFreeAngle) {
         this->force_vector = {0, 0};
@@ -733,6 +834,81 @@ void Agent::calculateNextPosition() {
 
         argos::CRadians angle = this->force_vector.Angle();
         this->targetHeading = angle;
+    }
+}
+
+void Agent::calculateNextPosition() {
+    //Inspired by boids algorithm:
+    //Vector determining heading
+    //Vector is composed of:
+    //1. Attraction to unexplored frontier
+    //2. Repulsion from other agents (done)
+    //3. Attraction to found target
+    //4. Repulsion from objects/walls (done)
+
+
+    argos::CVector2 virtualWallAvoidanceVector = ForceVectorCalculator::getVirtualWallAvoidanceVector(this);
+    argos::CVector2 agentCohesionVector = ForceVectorCalculator::calculateAgentCohesionVector(this);
+    argos::CVector2 agentAvoidanceVector = ForceVectorCalculator::calculateAgentAvoidanceVector(this);
+    argos::CVector2 agentAlignmentVector = ForceVectorCalculator::calculateAgentAlignmentVector(this);
+
+    argos::CVector2 targetVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
+                                                   this->currentBestFrontier.y - this->position.y);
+
+
+    if (this->state == State::EXPLORING) {
+
+
+
+
+
+        //Find new frontier
+        targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+        bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
+
+        ForceVectorCalculator::vectors vectors{this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
+                                               agentAvoidanceVector, agentAlignmentVector, targetVector};
+
+        ForceVectorCalculator::checkAvoidAndNormalizeVectors(vectors);
+
+        argos::CVector2 total_vector;
+        argos::CRadians objectAvoidanceAngle;
+        bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle,
+                                                                                      vectors,
+                                                                                      total_vector,
+                                                                                      false);//targetVector.Length() == 0);
+        //If there is not a free angle to move to, do not move
+        if (!isThereAFreeAngle) {
+            this->force_vector = {0, 0};
+        } else {
+
+
+// According to the paper, the formula should be:
+//        this->force_vector = {(this->previous_total_vector.GetX()) *
+//                              argos::Cos(objectAvoidanceAngle) -
+//                              (this->previous_total_vector.GetX()) *
+//                              argos::Sin(objectAvoidanceAngle),
+//                              (this->previous_total_vector.GetY()) *
+//                              argos::Sin(objectAvoidanceAngle) +
+//                              (this->previous_total_vector.GetY()) *
+//                              argos::Cos(objectAvoidanceAngle)};
+
+// However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
+// This also seems to give better performance.
+// Edit: contacted the writer, he said below is correct
+            this->force_vector = {(total_vector.GetX()) *
+                                  argos::Cos(objectAvoidanceAngle) -
+                                  (total_vector.GetY()) *
+                                  argos::Sin(objectAvoidanceAngle),
+                                  (total_vector.GetX()) *
+                                  argos::Sin(objectAvoidanceAngle) +
+                                  (total_vector.GetY()) *
+                                  argos::Cos(objectAvoidanceAngle)};
+
+            argos::CRadians angle = this->force_vector.Angle();
+            this->targetHeading = angle;
+        }
+        this->swarm_vector = total_vector;
     }
 }
 
@@ -1038,7 +1214,7 @@ void Agent::loadConfig() {
 //    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
 //#endif
     this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
-    this->config.MATRIX_EXCHANGE_INTERVAL_S = config_yaml["communication"]["matrix_exchange_interval"].as<double>();
+    this->config.MAP_EXCHANGE_INTERVAL_S = config_yaml["communication"]["matrix_exchange_interval"].as<double>();
     this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
 //
     this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();
@@ -1049,8 +1225,8 @@ void Agent::loadConfig() {
     this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
 ////
     this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
-//    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
-//    this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
+    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
+    this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
     this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
     this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();
     this->config.AGENT_ALIGNMENT_RADIUS = config_yaml["forces"]["agent_alignment_radius"].as<double>();
@@ -1060,24 +1236,33 @@ void Agent::loadConfig() {
     this->config.AGENT_COHESION_WEIGHT = config_yaml["forces"]["agent_cohesion_weight"].as<double>();
     this->config.AGENT_AVOIDANCE_WEIGHT = config_yaml["forces"]["agent_avoidance_weight"].as<double>();
     this->config.AGENT_ALIGNMENT_WEIGHT = config_yaml["forces"]["agent_alignment_weight"].as<double>();
-    this->config.UNEXPLORED_FRONTIER_WEIGHT = config_yaml["forces"]["unexplored_frontier_weight"].as<double>();
+    this->config.TARGET_WEIGHT = config_yaml["forces"]["unexplored_frontier_weight"].as<double>();
 //
     this->config.FRONTIER_DISTANCE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["distance_weight"].as<double>();
     this->config.FRONTIER_SIZE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["size_weight"].as<double>();
 //    this->config.FRONTIER_REACH_BATTERY_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_battery_weight"].as<double>();
 //    this->config.FRONTIER_REACH_DURATION_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_duration_weight"].as<double>();
 //    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
-//
-//    this->config.P_FREE = config_yaml["confidence"]["p_free"].as<double>();
-//    this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
-//    this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
-//    this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
-//    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
-//
+
+    #ifdef USING_CONFIDENCE_TREE
+    this->config.P_FREE = config_yaml["confidence"]["p_free"].as<double>();
+    this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
+    this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
+    this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_AT_MAX_SENSOR_RANGE = config_yaml["confidence"]["p_at_max_sensor_range"].as<float>();
+
+    this->config.QUADTREE_RESOLUTION = config_yaml["quadtree"]["resolution"].as<double>();
+    this->config.QUADTREE_EVAPORATION_TIME_S = config_yaml["quadtree"]["evaporation_time"].as<double>();
+    this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
+    this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();
+    this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
+    #else
     this->config.COVERAGE_MATRIX_RESOLUTION = config_yaml["map"]["coverage_resolution"].as<double>();
     this->config.OBSTACLE_MATRIX_RESOLUTION = config_yaml["map"]["obstacle_resolution"].as<double>();
     this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S = config_yaml["map"]["coverage_evaporation_time"].as<double>();
     this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S = config_yaml["map"]["obstacle_evaporation_time"].as<double>();
+    #endif
 //    this->config.QUADTREE_EVAPORATION_TIME_S = config_yaml["quadtree"]["evaporation_time"].as<double>();
 //    this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
 //    this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();

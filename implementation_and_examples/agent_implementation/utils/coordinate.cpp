@@ -53,3 +53,12 @@ bool Coordinate::operator==(const Coordinate &rhs) const  {
            y == rhs.y;
 }
 
+/**
+ * @brief Compares two coordinates
+ * @return
+ */
+bool Coordinate::operator<(const Coordinate &rhs) const  {
+     if (x == rhs.x) return y < rhs.y;
+     return x < rhs.x;
+}
+
