@@ -467,7 +467,7 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-        <qt-opengl autoplay="false">
+        <qt-opengl autoplay="true">
             <user_functions
                     library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
                     label="agent_vision_qtuser_functions_pipuck"/>
@@ -477,6 +477,13 @@
                                up="0.721522,-3.4075e-17,0.692391" lens_focal_length="100"/>
                 </placements>
             </camera>
+            <frame_grabbing directory="experiment_results/office_config"
+                            base_name="frame"
+                            format="png"
+                            quality="100"
+                            headless_grabbing="true"
+                            headless_frame_size="1800x960\"
+                            headless_frame_rate="20"/>
         </qt-opengl>
     </visualization>
 
