@@ -1,5 +1,5 @@
 mission:
-  end_time: 50 # The time in seconds when the mission ends
+  end_time: 5 # The time in seconds when the mission ends
   end_battery_level: 0 # The battery level in percent when the mission ends
 physical:
     robot_diameter: 0.08 # Agent diameter in meters

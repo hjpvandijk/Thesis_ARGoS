@@ -174,8 +174,13 @@ private:
 
     void updateCollisions(CPiPuckEntity *pcFB);
     void updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+
+    #ifdef USING_CONFIDENCE_TREE
     void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
+    #else
+    void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>>& coverageMatrix, bool usingCoverageMatrix);
+    #endif
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     bool allAgentsDone(CSpace::TMapPerType &tFBMap);
     void updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap);

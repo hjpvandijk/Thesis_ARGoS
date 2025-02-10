@@ -124,8 +124,13 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
 
         currently_colliding[pcFB] = false;
         previous_positions[pcFB] = Coordinate{MAXFLOAT, MAXFLOAT};
+        #ifdef USING_CONFIDENCE_TREE
         map_cols = std::max(map_cols, int(agent->quadtree->getRootBox().getSize()/agent->quadtree->getResolution()));
         map_rows = std::max(map_rows, int(agent->quadtree->getRootBox().getSize()/agent->quadtree->getResolution()));
+        #else
+        map_cols = std::max(map_cols, std::max(agent->coverageMatrix->getWidth(), agent->obstacleMatrix->getWidth()));
+        map_rows = std::max(map_rows, std::max(agent->coverageMatrix->getHeight(), agent->obstacleMatrix->getHeight()));
+        #endif
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         deployment_positions[pcFB->GetId()] = agentRealPosition;
 
@@ -319,6 +324,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             argos::LOG << "setting" << std::endl;
 
         }
+        updateCoverage(it.first, it.second, true);
     }
 //    combinedObstacleMatrix = PheromoneMatrix(10, 10, 0.2);
 
@@ -337,7 +343,10 @@ void CAgentVisionLoopFunctions::PostStep() {
             obstacleMatrixHeight = obstacleMatrix[0].size(); // columns;
             obstacleMatrixResolution = -(real_x_min * 2) / obstacleMatrixWidth;
         }
+        updateCoverage(it.first, it.second, false);
     }
+
+
 #endif
 
 
@@ -391,6 +400,7 @@ void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
 
 }
 
+#ifdef USING_CONFIDENCE_TREE
 void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
@@ -459,7 +469,41 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
     }
 
 }
+#else
+void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>> &matrix, bool usingCoverageMatrix) {
+    //Get controller
+    auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
+    //Update coverage over time at every interval, if mission has started
+    if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
 
+        double covered_area = 0;
+
+
+        //TODO: Consider irreachible area
+
+        for (int i = 0; i < matrix.size(); i++) {
+            for (int j = 0; j < matrix[i].size(); j++) {
+                if (matrix[i][j] > 0) {
+                    if (usingCoverageMatrix) {
+                        covered_area += cController.agentObject->coverageMatrix->getResolution() * cController.agentObject->coverageMatrix->getResolution();
+                    } else {
+                        covered_area += cController.agentObject->obstacleMatrix->getResolution() * cController.agentObject->obstacleMatrix->getResolution();
+                    }
+                }
+            }
+        }
+
+
+        double coverage = covered_area / (cController.map_width * cController.map_height);
+        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
+
+
+        m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
+    }
+}
+
+#endif
 void CAgentVisionLoopFunctions::updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
 
@@ -548,6 +592,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     batteryUsageFile.close();
 
+    #ifdef USING_CONFIDENCE_TREE
     //Export quadtree of each agent
     std::ofstream quadTreeFile;
     quadTreeFile.open("experiment_results/" + experiment_name_str + "/quadtree.csv");
@@ -563,6 +608,43 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         }
     }
     quadTreeFile.close();
+    #else
+    //Export coverage matrix of each agent
+    std::ofstream coverageMatrixFile;
+    coverageMatrixFile.open("experiment_results/" + experiment_name_str + "/coverage_matrix.csv");
+    coverageMatrixFile << "agent_id,x,y,coverage,size\n";
+    for (auto & it : m_tCoverageMatrix) {
+        for (int i = 0; i < it.second.size(); i++) {
+            for (int j = 0; j < it.second[0].size(); j++) {
+                coverageMatrixFile << it.first->GetId() << ",";
+                auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
+                coverageMatrixFile << realCoords.x<< ",";
+                coverageMatrixFile << realCoords.y << ",";
+                coverageMatrixFile << it.second[i][j];
+                coverageMatrixFile << "," << coverageMatrixResolution << "\n";
+            }
+        }
+    }
+    coverageMatrixFile.close();
+
+    //Export obstacle matrix of each agent
+    std::ofstream obstacleMatrixFile;
+    obstacleMatrixFile.open("experiment_results/" + experiment_name_str + "/obstacle_matrix.csv");
+    obstacleMatrixFile << "agent_id,x,y,obstacle,size\n";
+    for (auto & it : m_tObstacleMatrix) {
+        for (int i = 0; i < it.second.size(); i++) {
+            for (int j = 0; j < it.second[0].size(); j++) {
+                obstacleMatrixFile << it.first->GetId() << ",";
+                auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
+                obstacleMatrixFile << realCoords.x<< ",";
+                obstacleMatrixFile << realCoords.y << ",";
+                obstacleMatrixFile << it.second[i][j];
+                obstacleMatrixFile << "," << obstacleMatrixResolution << "\n";
+            }
+        }
+    }
+    obstacleMatrixFile.close();
+    #endif
 
     //Export map observation count
     std::ofstream mapObservationCountFile;
