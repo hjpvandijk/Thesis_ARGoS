@@ -15,6 +15,31 @@ class CAgentVisionLoopFunctions : public CLoopFunctions {
 
 public:
 
+    struct metrics {
+        std::map<std::string, double> mission_time; //Per agent
+        std::map<std::string, bool> returned_to_deployment_site;
+        std::map<std::string, std::vector<double>> coverage_over_time; //Per agent
+        std::map<std::string, std::vector<double>> average_total_certainty_over_time; //Per agent, total certainty
+        std::map<std::string, std::vector<double>> average_free_pheromone_over_time; //Per agent, certainty of presumed free space
+        std::map<std::string, std::vector<double>> average_occupied_pheromone_over_time; //Per agent, certainty of presumed occupied space
+        std::map<std::string, double> total_traveled_path; //Per agent
+        std::map<std::string, double> total_battery_usage; //Per agent
+        int n_agent_agent_collisions; //Make sure to divide by 2
+        int n_agent_obstacle_collisions;
+        std::vector<std::vector<int>> map_observation_count;
+    };
+
+    std::map<CPiPuckEntity*, bool> currently_colliding;
+    int coverage_update_tick_interval = 300; //at 30 ticks/second, this is every 10 seconds
+    std::map<CPiPuckEntity*, Coordinate> previous_positions;
+    int nAgentsDone = 0;
+    std::map<std::string, Coordinate> deployment_positions;
+
+    metrics m_metrics;
+
+    bool experimentFinished = false;
+    float longest_mission_time_s = 0;
+
     typedef std::map<CPiPuckEntity*, std::vector<CVector3>> TCoordinateMap;
     TCoordinateMap m_tObjectCoordinates;
     TCoordinateMap m_tOtherAgentCoordinates;
@@ -65,8 +90,11 @@ public:
 
     virtual void PreStep();
 
-
     virtual void PostStep();
+
+    virtual bool IsExperimentFinished();
+
+    virtual void PostExperiment();
 
     inline const TCoordinateMap& GetObjectCoordinates() const {
         return m_tObjectCoordinates;
@@ -143,6 +171,19 @@ private:
     #else
     void pushMatrices(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     #endif
+
+    void updateCollisions(CPiPuckEntity *pcFB);
+    void updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
+    void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
+    void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    bool allAgentsDone(CSpace::TMapPerType &tFBMap);
+    void updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap);
+    void checkReturnToDeploymentSite(CSpace::TMapPerType &tFBMap);
+    void exportMetricsAndMaps();
+    void updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    std::pair<int, int> coordinateToMapIndex(Coordinate coordinate, const std::shared_ptr<Agent> &agent);
+    void observeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, const std::shared_ptr<Agent> &agent);
 };
 
 #endif

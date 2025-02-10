@@ -45,6 +45,9 @@ public:
         float ROBOT_WHEEL_RADIUS;
         float ROBOT_INTER_WHEEL_DISTANCE;
 
+        float MISSION_END_TIME_S;
+        float MISSION_END_BATTERY_LEVEL;
+
         double OBJECT_SAFETY_RADIUS;
         double AGENT_SAFETY_RADIUS;
 
@@ -280,6 +283,8 @@ private:
 
 
     std::string GetId() const;
+
+    void checkMissionEnd();
 
     #ifdef USING_CONFIDENCE_TREE
     quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor);

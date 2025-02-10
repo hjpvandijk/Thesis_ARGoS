@@ -1013,6 +1013,7 @@ void Agent::doStep() {
 
 
     this->elapsed_ticks++;
+    checkMissionEnd();
 }
 
 #ifdef USING_CONFIDENCE_TREE
@@ -1362,12 +1363,36 @@ std::vector<std::string> Agent::getMessages() {
     return this->messages;
 }
 
+/**
+ * Check if the mission needs to end
+ * Either due to time or battery level
+ */
+void Agent::checkMissionEnd() {
+    if (this->state == State::RETURNING) {
+        //If we have are returning to the deployment location, but we are taking over double the time at which we return, we have failed (finished).
+        if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S * 2.0f) {
+            this->state = State::FINISHED;
+        }
+    } else if (this->state == State::NO_MISSION || this->state == State::FINISHED) return;
+    else {
+        auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
+        if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
+            this->state = State::RETURNING;
+        } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
+            this->state = State::RETURNING;
+        }
+    }
+}
+
 void Agent::loadConfig(const std::string& config_file) {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
     this->config.ROBOT_WEIGHT = config_yaml["physical"]["robot_weight"].as<float>();
     this->config.ROBOT_WHEEL_RADIUS = config_yaml["physical"]["robot_wheel_radius"].as<float>();
     this->config.ROBOT_INTER_WHEEL_DISTANCE = config_yaml["physical"]["robot_inter_wheel_distance"].as<float>();
+
+    this->config.MISSION_END_TIME_S = config_yaml["mission"]["end_time"].as<float>();
+    this->config.MISSION_END_BATTERY_LEVEL = config_yaml["mission"]["end_battery_level"].as<float>();
 //
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
