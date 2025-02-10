@@ -1,9 +1,10 @@
-#ifndef IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
-#define IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
+#ifndef IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_QUADTREE_H
+#define IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_QUADTREE_H
 
-
+#include "agent_implementation/feature_config.h"
 #include <argos3/core/utility/math/vector2.h>
 #include "agent_implementation/utils/coordinate.h"
+#ifdef USING_CONFIDENCE_TREE
 class Agent;
 
 class ForceVectorCalculator {
@@ -40,4 +41,5 @@ public:
 
 
 };
+#endif
 #endif //IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H

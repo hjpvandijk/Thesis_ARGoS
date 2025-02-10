@@ -14,14 +14,10 @@ PiPuckHugo::PiPuckHugo() :
         m_pcRangeFindersSensor(nullptr),
         m_pcRadiosActuator(nullptr),
         m_pcRadiosSensor(nullptr),
-        agentObject(nullptr),
+        agentObject(nullptr)
 //   m_pcRangeAndBearingActuator(NULL),
 //   m_pcRangeAndBearingSensor(NULL),
-        m_cAlpha(10.0f),
-        m_fDelta(0.5f),
-        m_fWheelVelocity(2.5f),
-        m_cGoStraightAngleRange(-ToRadians(m_cAlpha),
-                                ToRadians(m_cAlpha)) {}
+{}
 
 /****************************************/
 /****************************************/
@@ -61,12 +57,14 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
      * parameters and it's nice to put them in the config file so we don't
      * have to recompile if we want to try other settings.
      */
-    GetNodeAttributeOrDefault(t_node, "alpha", m_cAlpha, m_cAlpha);
-    m_cGoStraightAngleRange.Set(-ToRadians(m_cAlpha), ToRadians(m_cAlpha));
-    GetNodeAttributeOrDefault(t_node, "delta", m_fDelta, m_fDelta);
-    GetNodeAttributeOrDefault(t_node, "velocity", m_fWheelVelocity, m_fWheelVelocity);
+    GetNodeAttributeOrDefault(t_node, "map_width", map_width, map_width);
+    GetNodeAttributeOrDefault(t_node, "map_height", map_height, map_height);
+    map_height_with_noise_room = map_height + 1.0; //Room for noise
+    map_width_with_noise_room = map_width + 1.0; //Room for noise
+    GetNodeAttributeOrDefault(t_node, "config", config_file, config_file);
 
-    agentObject = std::make_shared<Agent>(Agent(this->m_strId));
+
+    agentObject = std::make_shared<Agent>(Agent(this->m_strId, std::max(map_width_with_noise_room, map_height_with_noise_room), config_file));
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
     agentObject->differential_drive.setActuator(m_pcWheels);
@@ -74,6 +72,9 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/orientation_offset.txt", this->orientation_offset_heatmap);
     readHeatmapFromFile("controllers/pipuck_hugo/error_heatmap.txt", this->error_mean_heatmap);
+
+    previousAgentPosition = getActualAgentPosition();
+    previousAgentOrientation = getActualAgentOrientation();
 }
 
 void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]) {
@@ -161,8 +162,8 @@ void PiPuckHugo::ControlStep() {
 
     //Get values from heatmap, and convert them into the correct range
     int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
-    int heatmapX = std::floor((-position.GetY() + this->map_size/2)/(this->map_size/heatmap_size));
-    int heatmapY = std::floor((position.GetX() + this->map_size/2)/(this->map_size/heatmap_size));
+    int heatmapX = std::floor((-position.GetY() + this->map_width_with_noise_room/2)/(this->map_width_with_noise_room/heatmap_size));
+    int heatmapY = std::floor((position.GetX() + this->map_height_with_noise_room/2)/(this->map_height_with_noise_room/heatmap_size));
 
     //Simulate position estimation offset
     //Direction, including jitter and agent-dependent noise
@@ -170,9 +171,7 @@ void PiPuckHugo::ControlStep() {
     CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
     //Magnitude, including jitter and agent-dependent noise
     double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX] * agentObject->config.POSITION_NOISE_CM / 100.0;
-    argos::LOG << this->error_mean_heatmap[heatmapY][heatmapX] << " * " << agentObject->config.POSITION_NOISE_CM << " / 100.0" << std::endl;
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
-    argos::LOG << error_mean_heatmap_value << " + " << positionJitter << " + " << agentPersonalPositionNoise << std::endl;
     CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
     agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
 
@@ -186,33 +185,49 @@ void PiPuckHugo::ControlStep() {
     agentObject->setHeading(zAngle + orientationOffset + orientationJitter + agentPersonalOrientationNoiseRad);
 
 
-#ifdef BATTERY_MANAGEMENT_ENABLED
+//#ifdef BATTERY_MANAGEMENT_ENABLED
     //Update agent battery level
-    if (batteryMeasureTicks % 15 == 0) {
+//    if (batteryMeasureTicks % 1 == 0) {
 
-        //Get relative vector
-        float traveledPathLength = sqrt(pow(agentObject->position.x - previousAgentPosition.GetX(), 2) +
-                                        pow(agentObject->position.y - previousAgentPosition.GetY(), 2));
-        CRadians traveledAngle = zAngle - previousAgentOrientation;
-        CVector2 traveledVector = CVector2(traveledPathLength, 0).Rotate(traveledAngle);
-        auto [usedPower, duration] = agentObject->batteryManager.estimateTotalPowerUsage(agentObject.get(),
-                                                                                         {traveledVector});
-        agentObject->batteryManager.battery.charge -= usedPower;
+    //Get relative vector
+    float traveledPathLength = sqrt(pow(this->getActualAgentPosition().x - previousAgentPosition.x, 2) +
+                                    pow(this->getActualAgentPosition().y - previousAgentPosition.y, 2));
+    CRadians traveledAngle = zAngle - previousAgentOrientation;
+    CVector2 traveledVector = CVector2(traveledPathLength, 0).Rotate(traveledAngle);
+
+
+    auto [usedPower, duration] = agentObject->batteryManager.calculateTotalPowerUsageFromMovement(agentObject.get(), previousMovement, traveledVector);
+    agentObject->batteryManager.battery.charge -= usedPower;
 //        argos::LOG << "Used power: " << usedPower << "mAh" << std::endl;
 
-        previousAgentPosition = {-position.GetY(), position.GetX()};
-        previousAgentOrientation = zAngle;
-        batteryMeasureTicks = 0;
+    previousAgentPosition = getActualAgentPosition();
+    previousAgentOrientation = zAngle;
+//        batteryMeasureTicks = 0;
+//    }
+//    batteryMeasureTicks++;
+//#endif
+
+    if (!this->mission_start){
+        agentObject->startMission();
+        this->mission_start = true;
     }
-    batteryMeasureTicks++;
-#endif
-
-
-//    RLOG << "Position: " << agentObject->position.x << std::endl;
-//    RLOG << "Orientation: " << agentObject->heading << std::endl;
     agentObject->doStep();
 
 
+}
+
+Coordinate PiPuckHugo::getActualAgentPosition() {
+    auto positionSensorReading = m_pcPositioningSensor->GetReading();
+    const auto position = positionSensorReading.Position;
+    return Coordinate{-position.GetY(), position.GetX()}; // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
+}
+
+CRadians PiPuckHugo::getActualAgentOrientation(){
+    auto positionSensorReading = m_pcPositioningSensor->GetReading();
+    CRadians zAngle, yAngle, xAngle;
+    const auto orientation = positionSensorReading.Orientation;
+    orientation.ToEulerAngles(zAngle, yAngle, xAngle);
+    return zAngle;
 }
 
 /****************************************/

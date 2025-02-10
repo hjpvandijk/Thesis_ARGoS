@@ -57,6 +57,20 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
 
 }
 
+#ifdef USING_CONFIDENCE_TREE
+/**
+ * Get all the boxes and their occupancy from the quadtree of a given agent
+ * @param pcFB
+ * @param agent
+ */
+void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+    std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTime);
+    m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
+
+    m_tQuadTree[pcFB] = boxesAndPheromones;
+}
+#else
+
 /**
  * Get all the boxes and their occupancy from the quadtree of a given agent
  * @param pcFB
@@ -73,6 +87,7 @@ void CAgentVisionLoopFunctions::pushMatrices(CPiPuckEntity *pcFB, const std::sha
 
 //    m_tQuadTree[pcFB] = boxesAndOccupancyAndTicks;
 }
+#endif
 
 /****************************************/
 /****************************************/
@@ -94,6 +109,10 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         std::shared_ptr<Agent> agent = cController.agentObject;
 
         agent->ticks_per_second = ticksPerSecond;
+        #ifndef USING_CONFIDENCE_TREE
+        real_x_min = - agent->coverageMatrix->getRealWidth()/ 2;
+        real_y_min = - agent->coverageMatrix->getRealHeight()/ 2;
+        #endif
     }
 }
 
@@ -106,9 +125,12 @@ void CAgentVisionLoopFunctions::Reset() {
     m_tOtherAgentCoordinates.clear();
     m_tAgentCoordinates.clear();
     m_tAgentBestFrontierCoordinate.clear();
-//    m_tQuadTree.clear();
+    #ifdef USING_CONFIDENCE_TREE
+    m_tQuadTree.clear();
+    #else
     m_tCoverageMatrix.clear();
     m_tObstacleMatrix.clear();
+    #endif
     m_tAgentElapsedTicks.clear();
 //    m_tAgentFrontiers.clear();
     m_tAgentFrontierRegions.clear();
@@ -127,12 +149,14 @@ void CAgentVisionLoopFunctions::PreStep() {
 
 }
 
+#ifndef USING_CONFIDENCE_TREE
 Coordinate CAgentVisionLoopFunctions::getRealCoordinateFromIndex(int x, int y, double resolution) const {
     //Get the real world coordinates from the matrix coordinates
     double x_real = this->real_x_min + x * resolution;
     double y_real = this->real_y_min + y * resolution;
     return {x_real + resolution/2, y_real + resolution/2};
 }
+#endif
 
 
 /**
@@ -161,9 +185,12 @@ void CAgentVisionLoopFunctions::PostStep() {
     m_tOtherAgentCoordinates.clear();
     m_tAgentCoordinates.clear();
     m_tAgentBestFrontierCoordinate.clear();
-//    m_tQuadTree.clear();
+#ifdef USING_CONFIDENCE_TREE
+    m_tQuadTree.clear();
+#else
     m_tCoverageMatrix.clear();
     m_tObstacleMatrix.clear();
+#endif
     m_tAgentElapsedTicks.clear();
 //    m_tAgentFrontiers.clear();
     m_tAgentFrontierRegions.clear();
@@ -175,7 +202,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         std::shared_ptr<Agent> agent = cController.agentObject;
 
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
-        globalElapsedTicks = agent->elapsed_ticks/agent->ticks_per_second;
+        globalElapsedTime = agent->elapsed_ticks / agent->ticks_per_second;
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
@@ -190,6 +217,10 @@ void CAgentVisionLoopFunctions::PostStep() {
         CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
         m_tAgentCoordinates[pcFB] = agentPos;
         m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
+        #ifdef USING_CONFIDENCE_TREE
+        pushQuadTree(pcFB, agent);
+        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
+        #else
         pushMatrices(pcFB, agent);
 
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
@@ -202,6 +233,8 @@ void CAgentVisionLoopFunctions::PostStep() {
             }
             m_tAgentFrontierRegions[pcFB].push_back(regionCoordinates);
         }
+        #endif
+
 
         for(auto angle: agent->freeAnglesVisualization) {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
@@ -214,24 +247,33 @@ void CAgentVisionLoopFunctions::PostStep() {
 //    auto mBox = quadtree::Box(-5, 5, 10);
 //    std::unique_ptr<quadtree::Quadtree> combinedTree = std::make_unique<quadtree::Quadtree>(mBox);
 //
-//    for (const auto & it : GetQuadTree()) {
-//        for (std::tuple<quadtree::Box, int, double> boxAndOccupancyAndTicks: it.second) {
-//            quadtree::Box box = std::get<0>(boxAndOccupancyAndTicks);
-//            int occupancy = std::get<1>(boxAndOccupancyAndTicks);
-//            double visitedTimeS = std::get<2>(boxAndOccupancyAndTicks);
+#ifdef USING_CONFIDENCE_TREE
+    for (const auto & it : GetQuadTree()) {
+//        for (std::tuple<quadtree::Box, float, double> boxesAndConfidenceAndTicks: it.second) {
+//            quadtree::Box box = std::get<0>(boxesAndConfidenceAndTicks);
+//            float LConfidence = std::get<1>(boxesAndConfidenceAndTicks);
+//            double visitedTimeS = std::get<2>(boxesAndConfidenceAndTicks);
 //
 //            quadtree::QuadNode node{};
 //            node.coordinate = box.getCenter();
-//            node.occupancy = static_cast<quadtree::Occupancy>(occupancy);
-//            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
-//                continue;
+//            node.LConfidence = LConfidence;
+//            quadtree::Occupancy occ = quadtree::AMBIGUOUS;
+//            if (node.LConfidence >= 0.4){
+//                occ = quadtree::FREE;
+//            } else if (node.LConfidence <= -0.85){
+//                occ = quadtree::OCCUPIED;
+//            }
+//            node.occupancy = occ;
+////            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
+////                continue;
 //            node.visitedAtS = visitedTimeS;
 //            combinedTree->add(node);
 //        }
-//
-////        if(it->first->GetId()=="pipuck1") combinedQuadTree = it->second;
-//    }
-
+//        updateCoverage(it.first, it.second);
+//        updateCertainty(it.first, it.second);
+        if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
+    }
+#else
 //    combinedCoverageMatrix = PheromoneMatrix(10, 10, 0.2);
 
     for (const auto& it : m_tCoverageMatrix) {
@@ -252,7 +294,6 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         }
     }
-
 //    combinedObstacleMatrix = PheromoneMatrix(10, 10, 0.2);
 
     for (const auto& it : m_tObstacleMatrix) {
@@ -271,6 +312,8 @@ void CAgentVisionLoopFunctions::PostStep() {
             obstacleMatrixResolution = -(real_x_min * 2) / obstacleMatrixWidth;
         }
     }
+#endif
+
 
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
 

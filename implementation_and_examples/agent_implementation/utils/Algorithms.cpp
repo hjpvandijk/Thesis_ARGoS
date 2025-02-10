@@ -2,6 +2,7 @@
 // Created by hugo on 7-1-25.
 //
 
+#include "agent_implementation/feature_config.h"
 #include "Algorithms.h"
 #include "agent_implementation/agent.h"
 
@@ -13,7 +14,11 @@
  * @return
  */
 std::vector<Coordinate> Algorithms::Amanatides_Woo_Voxel_Traversal(Agent* agent, Coordinate coordinate1, Coordinate coordinate2) {
+    #ifdef USING_CONFIDENCE_TREE
     double box_size = agent->quadtree->getResolution();
+    #else
+    double box_size = agent->obstacleMatrix->getResolution();
+    #endif
     std::vector<Coordinate> points;
 
     double x1 = coordinate1.x;

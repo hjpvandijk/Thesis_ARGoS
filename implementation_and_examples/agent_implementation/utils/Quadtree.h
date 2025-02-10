@@ -479,10 +479,10 @@ namespace quadtree {
             return getCellandBoxFromCoordinate(mRoot.get(), mBox, coordinate);
         }
 
-            /**
-             * Returns the Occupancy of the QuadNode containing the coordinate
-             * @param coordinate
-             */
+        /**
+         * Returns the Occupancy of the QuadNode containing the coordinate
+         * @param coordinate
+         */
         Occupancy getOccupancyFromCoordinate(Coordinate coordinate) const {
             QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
             return quadNode.occupancy;
@@ -1307,7 +1307,7 @@ namespace quadtree {
          * @param values_to_be_removed the list of values that need to be removed from the quadtree as they are expired
          */
         void queryBoxesAndPheromones(Cell *cell, const Box &box, const Box &queryBox, std::vector<std::pair<Box, double>> &boxesAndPheromones,
-                        std::vector<Occupancy> occupancies, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
+                                     std::vector<Occupancy> occupancies, double currentTimeS, std::vector<QuadNode> &values_to_be_removed) {
             assert(cell != nullptr);
             assert(queryBox.intersects_or_contains(box));
             //Check if pheromone is expired, if so, set the occupancy to unknown and remove it later
@@ -1370,11 +1370,11 @@ namespace quadtree {
 
             //Only update the confidence if we haven't seen this FREE cell in a while
             if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN &&
-//                    cell->quadNode.occupancy == FREE &&
+                //                    cell->quadNode.occupancy == FREE &&
                 (functionSpace.contains(cell->quadNode.coordinate) || functionSpace.intersects_or_contains(box))
 //                &&
 //                currentTimeS - cell->quadNode.visitedAtS > MERGE_MAX_VISITED_TIME_DIFF
-                ) {
+                    ) {
 //                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
                 cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
                 double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);

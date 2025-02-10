@@ -2,7 +2,7 @@
 #include "agent.h"
 #include "utils/CustomComparator.h"
 
-
+#ifdef USING_CONFIDENCE_TREE
 /** Calculate the vector to avoid the virtual walls
  * If the agent is close to the border, create a vector pointing away from the border
  * Implemented according to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
@@ -262,8 +262,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
     std::vector<std::pair<quadtree::Box, double>> frontiers = agent->quadtree->queryFrontierBoxes(agent->position, agent->config.FRONTIER_SEARCH_RADIUS,
-                                                                              agent->elapsed_ticks /
-                                                                              agent->ticks_per_second, agent->config.MAX_FRONTIER_CELLS);
+                                                                                                  agent->elapsed_ticks /
+                                                                                                  agent->ticks_per_second, agent->config.MAX_FRONTIER_CELLS);
     agent->current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions
@@ -299,9 +299,14 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //            frontierRegions.push_back({{frontierbox, frontierpheromone}});
 //        }
 //    }
+    //Add the frontier region from the last best frontier to the options, if it is now out of range. To prevent unneccesary switching
+    //If we haven't reached the frontier yet, add the region to the list of frontier regions
+    if (sqrt(pow(agent->currentBestFrontier.x - agent->position.x, 2) + pow(agent->currentBestFrontier.y - agent->position.y, 2)) > agent->config.FRONTIER_DIST_UNTIL_REACHED) {
+        if (!agent->bestFrontierRegionBoxes.empty()) frontierRegions.push_back(agent->bestFrontierRegionBoxes);
+    }
 
     agent->current_frontier_regions = frontierRegions;
-    argos::LOG << "[" << agent->id << "] Found " << frontierRegions.size() << " frontier regions" << std::endl;
+//    argos::LOG << "[" << agent->id << "] Found " << frontierRegions.size() << " frontier regions" << std::endl;
 
     //Now we have all frontier cells merged into frontier regions
     //Find F* by using the formula above
@@ -312,7 +317,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     std::vector<quadtree::Box> bestFrontierRegion = {};
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
     double highestFrontierFitness = -std::numeric_limits<double>::max();
-
+    std::vector<std::pair<Coordinate, Coordinate>> bestRoute = {};
+#ifdef PATH_PLANNING_ENABLED
+    int bestFrontierRouteWallFollowingDirection;
+#endif
 
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
@@ -336,20 +344,118 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
         averagePheromoneCertainty /= totalNumberOfCellsInRegion;
 
+#ifdef SEPARATE_FRONTIERS
+        bool skipFrontier = false;
 
+        //If the frontier is close to our agent, skip it
+        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->config.FRONTIER_DIST_UNTIL_REACHED) {
+            skipFrontier = true;
+        } else {
+            for (auto agentLocationTuple: agent->agentLocations) {
+                if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
+                    agent->config.AGENT_LOCATION_RELEVANT_S)
+                    continue;
+
+                double distanceFromOtherAgentsFrontier = sqrt(
+                        pow(frontierRegionX - std::get<1>(agentLocationTuple.second).x, 2) +
+                        pow(frontierRegionY - std::get<1>(agentLocationTuple.second).y, 2));
+
+                double distanceFromOtherAgentsPosition = sqrt(
+                        pow(frontierRegionX - std::get<0>(agentLocationTuple.second).x, 2) +
+                        pow(frontierRegionY - std::get<0>(agentLocationTuple.second).y, 2));
+
+                if (distanceFromOtherAgentsFrontier <= agent->config.FRONTIER_SEPARATION_THRESHOLD) {
+                    //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+//                    if (agentLocationTuple.first > agent->id) {
+                        //If the other agent has a higher ID, so we can't select this frontier
+                        skipFrontier = true;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's frontier" << std::endl;
+//                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
+                        break;
+//                    }
+                }
+                if (distanceFromOtherAgentsPosition <= agent->config.FRONTIER_DIST_UNTIL_REACHED) {
+                    //If the frontier is close to another agent's frontier, the agent with the highest ID has priority
+//                    if (agentLocationTuple.first > agent->id) {
+                        //If the other agent has a higher ID, so we can't select this frontier
+                        skipFrontier = true;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's position" << std::endl;
+//                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
+//                               << std::endl;
+                        break;
+                    }
+//                }
+            }
+            #ifdef SKIP_UNREACHABLE_FRONTIERS
+            //If we are avoiding the frontier
+            if (agent->frontierEvaluator.avoidingCoordinate(agent, {frontierRegionX, frontierRegionY})) {
+                skipFrontier = true;
+            }
+            #endif
+        }
+        if (skipFrontier) continue;
+#endif
 
         argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX - agent->position.x, frontierRegionY - agent->position.y).Rotate(-agent->heading);
-        std::vector<std::pair<Coordinate, Coordinate>> route_to_frontier = {{agent->position, Coordinate{frontierRegionX, frontierRegionY}}};
+//        std::vector<std::pair<Coordinate, Coordinate>> route_to_frontier = {{agent->position, Coordinate{frontierRegionX, frontierRegionY}}};
 
         //Calculate the distance between the agent and the frontier region
-
+#ifdef PATH_PLANNING_ENABLED
+        //Calculate distance of route
+//        double distance = 0;
+        route_to_frontier.clear();
+        auto [wall_following_direction, relative_route, distance] = agent->pathPlanner.getRoute(agent, agent->position, {frontierRegionX, frontierRegionY}, route_to_frontier);
+        if (route_to_frontier.empty()) continue; //If no route is found, skip this frontier
+//        for (auto edge: relative_route) {
+//            distance += edge.Length();
+//        }
+#else
         double distance = sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2));
         std::vector<argos::CVector2> relative_route = {vectorToFrontier.Rotate(-agent->heading)};
+#endif
         //Relative vector to heading
 
+#ifdef BATTERY_MANAGEMENT_ENABLED
+        //Only need to compare the motion power usage of the agent to the frontier region
+        auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, relative_route);
+
+//        //Calculate the cost of the frontier region
+//        double cost =
+//                agent->FRONTIER_DISTANCE_WEIGHT * distance - agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+//                agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->FRONTIER_REACH_DURATION_WEIGHT * duration -
+//                agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
+
+        //Calculate the fitness of the frontier region
+//        double fitness =
+//                -agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+//                agent->config.FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->config.FRONTIER_REACH_DURATION_WEIGHT * duration -
+//                agent->config.FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
+
+        double fitness =
+                -agent->config.FRONTIER_DISTANCE_WEIGHT * distance - agent->config.FRONTIER_PHEROMONE_WEIGHT * pheromoneCurve -
+                agent->config.FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->config.FRONTIER_REACH_DURATION_WEIGHT * duration;
+//        if (agent->id == "pipuck1") {
+//            argos::LOG << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
+//                       << std::endl;
+//            argos::LOG << "Distance * weight = -" << agent->FRONTIER_DISTANCE_WEIGHT << " * " << distance << " = -"
+//                       << agent->FRONTIER_DISTANCE_WEIGHT * distance << std::endl;
+//            argos::LOG << "Size * weight = +" << agent->FRONTIER_SIZE_WEIGHT << " * " << totalNumberOfCellsInRegion
+//                       << " = +" << agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion << std::endl;
+//            argos::LOG << "Reach battery * weight = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT << " * " << powerUsage
+//                       << " = -" << agent->FRONTIER_REACH_BATTERY_WEIGHT * powerUsage << std::endl;
+//            argos::LOG << "Reach duration * weight =-" << agent->FRONTIER_REACH_DURATION_WEIGHT << " * " << duration
+//                       << " = -" << -agent->FRONTIER_REACH_DURATION_WEIGHT * duration << std::endl;
+//            argos::LOG << "Pheromone * weight = -" << agent->FRONTIER_PHEROMONE_WEIGHT << " * "
+//                       << averagePheromoneCertainty << " = "
+//                       << -agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty << std::endl;
+//        }
+#else
         //Calculate the cost of the frontier region
-        double fitness = -agent->FRONTIER_DISTANCE_WEIGHT * distance + agent->FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
-                       agent->FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
+        double fitness = -agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion -
+                         agent->config.FRONTIER_PHEROMONE_WEIGHT * averagePheromoneCertainty;
+#endif
 
 
 
@@ -359,10 +465,21 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             highestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
             agent->bestFrontierRegionBoxes = region;
+//            bestRoute = route_to_frontier;
+#ifdef PATH_PLANNING_ENABLED
+            bestFrontierRouteWallFollowingDirection = wall_following_direction;
+#endif
         }
     }
 
+
     agent->currentBestFrontier = bestFrontierRegionCenter;
+//    agent->route_to_best_frontier = bestRoute;
+#ifdef PATH_PLANNING_ENABLED
+    agent->pathPlanner.setTarget(bestFrontierRegionCenter);
+    agent->pathPlanner.setWallFollowingDirection(bestFrontierRouteWallFollowingDirection);
+#endif
+
 
 
     //Calculate the vector to the best frontier region
@@ -389,8 +506,8 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
     //Get occupied boxes within range
     std::vector<quadtree::Box> occupiedBoxes = agent->quadtree->queryOccupiedBoxes(agent->position,
                                                                                    agent->config.OBJECT_AVOIDANCE_RADIUS * 2.0,
-                                                                                  agent->elapsed_ticks /
-                                                                                  agent->ticks_per_second);
+                                                                                   agent->elapsed_ticks /
+                                                                                   agent->ticks_per_second);
 
     double angleInterval = argos::CDegrees(360 / agent->config.STEPS_360_DEGREES).GetValue();
 
@@ -418,7 +535,7 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
         argos::CRadians Eta_q = OC.Angle();
         if (agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS > OC.Length())
             argos::LOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << agent->config.AGENT_SAFETY_RADIUS
-                           << " + " << agent->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+                          << " + " << agent->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
 
         argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
         argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());
@@ -482,7 +599,7 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
             //12.5% to the left
             argos::CDegrees minAngle = argos::CDegrees(int(ToDegrees(sensor_rotation - argos::CRadians::PI_OVER_SIX).GetValue())).SignedNormalize();
             argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(sensor_rotation + argos::CRadians::PI_OVER_SIX).GetValue())).SignedNormalize();
-            
+
             if (maxAngle.GetValue() < minAngle.GetValue()) {
                 argos::CDegrees temp = minAngle;
                 minAngle = maxAngle;
@@ -591,7 +708,9 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
 
 //    if (frontier_vector_zero) return true; //If the frontier vector is zero, we must follow the force vector, so can't do wall/path following
-
+#ifdef WALL_FOLLOWING_ENABLED//If wall following is enabled
+    agent->wallFollower.wallFollowing(agent, vectors, total_vector, freeAngles, &closestFreeAngle, &closestFreeAngleRadians, relativeObjectAvoidanceAngle, targetAngle);
+#endif
     return true;
 
 }
@@ -614,3 +733,4 @@ void ForceVectorCalculator::checkAvoidAndNormalizeVectors(ForceVectorCalculator:
     if (vectors.targetVector.Length() != 0) vectors.targetVector.Normalize();
 
 }
+#endif

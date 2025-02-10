@@ -15,8 +15,8 @@
 #include <array>
 #include <yaml-cpp/yaml.h>
 
-Agent::Agent(std::string id) {
-    loadConfig();
+Agent::Agent(std::string id, double rootbox_size, const std::string& config_file) {
+    loadConfig(config_file);
     this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
@@ -25,24 +25,71 @@ Agent::Agent(std::string id) {
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
-//    auto box = quadtree::Box(-5, 5, 10);
-//    this->quadtree = std::make_unique<quadtree::Quadtree>(box);
     #ifdef USING_CONFIDENCE_TREE
+
+    auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED,
+                                                          this->config.QUADTREE_RESOLUTION,
+                                                          this->config.QUADTREE_EVAPORATION_TIME_S,
+                                                          this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
+                                                          this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF,
+                                                          this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF);
+    //Calculate smallest box size
+    double smallestBoxSize = box.size;
+    while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
+        smallestBoxSize /= 2;
+    }
+    this->quadtree->setResolution(smallestBoxSize);
     #else
-    this->coverageMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.COVERAGE_MATRIX_RESOLUTION, this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S);
-    this->obstacleMatrix = std::make_unique<PheromoneMatrix>(11, 11, this->config.OBSTACLE_MATRIX_RESOLUTION, this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S);
+    //Calculate smallest box size
+    double smallestBoxSizeCoverage = rootbox_size;
+    while (smallestBoxSizeCoverage > this->config.COVERAGE_MATRIX_RESOLUTION) {
+        smallestBoxSizeCoverage /= 2;
+    }
+    //Calculate smallest box size
+    double smallestBoxSizeObstacle = rootbox_size;
+    while (smallestBoxSizeObstacle > this->config.OBSTACLE_MATRIX_RESOLUTION) {
+        smallestBoxSizeObstacle /= 2;
+    }
+
+    this->coverageMatrix = std::make_unique<PheromoneMatrix>(rootbox_size, rootbox_size, smallestBoxSizeCoverage, this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S);
+    this->obstacleMatrix = std::make_unique<PheromoneMatrix>(rootbox_size, rootbox_size, smallestBoxSizeObstacle, this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S);
     #endif
+    #ifdef WALL_FOLLOWING_ENABLED
+    this->wallFollower = WallFollower();
+    #endif
+    this->timeSynchronizer = TimeSynchronizer();
+
+//#ifdef BATTERY_MANAGEMENT_ENABLED
     //https://e-puck.gctronic.com/index.php?option=com_content&view=article&id=7&Itemid=9
     //Motor stall values based on the tt dc gearbox motor (https://www.sgbotic.com/index.php?dispatch=products.view&product_id=2674)
-    this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS, this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE, this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT, this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE, this->config.BATTERY_CAPACITY);
+    this->batteryManager = BatteryManager(this->config.ROBOT_WEIGHT, this->config.ROBOT_WHEEL_RADIUS,
+                                          this->config.ROBOT_INTER_WHEEL_DISTANCE, this->config.MOTOR_STALL_TORQUE,
+                                          this->config.MOTOR_NO_LOAD_RPM, this->config.MOTOR_STALL_CURRENT,
+                                          this->config.MOTOR_NO_LOAD_CURRENT, this->config.BATTERY_VOLTAGE,
+                                          this->config.BATTERY_CAPACITY);
     //Set the speed to the maximum achievable speed, based on the the motor specs. TODO: Put that info in differential drive instead
     auto max_achievable_speed = this->batteryManager.motionSystemBatteryManager.getMaxAchievableSpeed();
-    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed), std::min(max_achievable_speed, this->speed*this->config.TURNING_SPEED_RATIO));
+    this->differential_drive = DifferentialDrive(std::min(max_achievable_speed, this->speed),
+                                                 std::min(max_achievable_speed,
+                                                          this->speed * this->config.TURNING_SPEED_RATIO));
     this->speed = this->differential_drive.max_speed_straight;
     //Set the voltage to the voltage required for the current speed, and corresponding values, to use in calculations.
     this->batteryManager.motionSystemBatteryManager.calculateVoltageAtSpeed(this->speed);
-    this->timeSynchronizer = TimeSynchronizer();
+//#else
+//    this->differential_drive = DifferentialDrive(this->speed, this->speed*this->config.TURNING_SPEED_RATIO);
+//#endif
+
+#ifdef PATH_PLANNING_ENABLED
+    this->pathPlanner = SimplePathPlanner();
+    this->pathFollower = PathFollower();
+#endif
+#ifdef SKIP_UNREACHABLE_FRONTIERS
+    this->frontierEvaluator = FrontierEvaluator();
+#endif
+    #ifdef USING_CONFIDENCE_TREE
     this->sensor_reading_distance_probability = (1-this->config.P_AT_MAX_SENSOR_RANGE) / this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+    #endif
 }
 
 
@@ -220,8 +267,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2,
-                               float Psensor) {//    double x = coordinate1.x;
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {//    double x = coordinate1.x;
 //    double y = coordinate1.y;
 //    double dx = coordinate2.x - coordinate1.x;
 //    double dy = coordinate2.y - coordinate1.y;
@@ -244,38 +290,16 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2,
 //    }
 
     double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
-    #ifdef USING_CONFIDENCE_TREE
-    if (dist < this->quadtree->getResolution())
-        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
-    #else
     if (dist < this->coverageMatrix->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
-    #endif
-
     std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
                                                                                     coordinate2);
-    double step_size_avg = dist / linePoints.size();
     for (int i=0; i<linePoints.size(); i++){
         auto point = linePoints[i];
-        if (!objectBox.contains(Coordinate{point.x, point.y})) { //Don't add a coordinate in the objectBox as free
-            double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
-            double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
-                       0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
-//            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
-            #ifdef USING_CONFIDENCE_TREE
-            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-            this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
-                                elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
-            #else
-            if (this->obstacleMatrix->get(point.x, point.y, elapsed_ticks/ticks_per_second) > 0) {
-                continue;
-            }
-            this->coverageMatrix->update(point.x, point.y, elapsed_ticks/ticks_per_second);
-            #endif
-
-        } else {
-            break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
+        if (this->obstacleMatrix->get(point.x, point.y, elapsed_ticks/ticks_per_second) > 0) {
+            continue;
         }
+        this->coverageMatrix->update(point.x, point.y, elapsed_ticks/ticks_per_second);
     }
 }
 #endif
@@ -385,7 +409,12 @@ void Agent::checkForObstacles() {
             //Only add the object as an obstacle if it is not close to another agent
             if (!close_to_other_agent) {
                 if (sqrt(pow(this->position.x - object.x, 2) + pow(this->position.y - object.y, 2)) <
-                    this->quadtree->getResolution()) {
+                        #ifdef USING_CONFIDENCE_TREE
+                        this->quadtree->getResolution()
+                        #else
+                        this->coverageMatrix->getResolution()
+                        #endif
+                    ) {
                     addedObjectAtAgentLocation = true;
                 }
                 #ifdef USING_CONFIDENCE_TREE
@@ -426,235 +455,6 @@ void Agent::checkForObstacles() {
 
 
 
-/** Calculate the vector to avoid the virtual walls
- * If the agent is close to the border, create a vector pointing away from the border
- * Implemented according to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
- * https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
- * However, the vector directions are flipped compared to the paper, as the paper uses a different coordinate system
- * @return a vector pointing away from the border
- */
-argos::CVector2 Agent::getVirtualWallAvoidanceVector() const {
-    //If the agent is close to the border, create a vector pointing away from the border
-    argos::CVector2 virtualWallAvoidanceVector = {0, 0};
-
-    if (this->position.x < this->left_right_borders.x) {
-        virtualWallAvoidanceVector.SetX(1);
-    } else if (this->left_right_borders.x <= this->position.x && this->position.x <= this->left_right_borders.y) {
-        virtualWallAvoidanceVector.SetX(0);
-    } else if (this->position.x > this->left_right_borders.y) {
-        virtualWallAvoidanceVector.SetX(-1);
-    }
-
-    if (this->position.y < this->upper_lower_borders.y) {
-        virtualWallAvoidanceVector.SetY(1);
-    } else if (this->upper_lower_borders.y <= this->position.y && this->position.y <= this->upper_lower_borders.x) {
-        virtualWallAvoidanceVector.SetY(0);
-    } else if (this->position.y > this->upper_lower_borders.x) {
-        virtualWallAvoidanceVector.SetY(-1);
-    }
-
-
-    return virtualWallAvoidanceVector;
-
-}
-
-bool Agent::getAverageNeighborLocation(Coordinate *averageNeighborLocation, double range) {
-    int nAgentsWithinRange = 0;
-    for (const auto &agentLocation: this->agentLocations) {
-        argos::CVector2 vectorToOtherAgent =
-                argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
-                - argos::CVector2(this->position.x, this->position.y);
-
-        if (vectorToOtherAgent.Length() < range) {
-            averageNeighborLocation->x += agentLocation.second.first.x;
-            averageNeighborLocation->y += agentLocation.second.first.y;
-            nAgentsWithinRange++;
-        }
-    }
-    //If no agents are within range, there is no average location
-    if (nAgentsWithinRange == 0) {
-        return false;
-    }
-    //Else calculate the average position of the agents within range
-    averageNeighborLocation->x /= nAgentsWithinRange;
-    averageNeighborLocation->y /= nAgentsWithinRange;
-
-    return true;
-}
-
-argos::CVector2 Agent::calculateAgentCohesionVector() {
-    Coordinate averageNeighborLocation = {0, 0};
-
-    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, this->config.AGENT_COHESION_RADIUS);
-    if (!neighborsWithinRange) {
-        return {0, 0};
-    }
-
-    //Create a vector between this agent and the average position of the agents within range
-    argos::CVector2 vectorToOtherAgents =
-            argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
-            - argos::CVector2(this->position.x, this->position.y);
-
-    return vectorToOtherAgents;
-}
-
-
-/**
- * Calculate the vector to avoid other agents:
- * If the distance between other agents is less than a certain threshold,
- * create a vector in the opposite direction of the average location of these agents.
- * @return a vector pointing away from the average location other agents
- */
-argos::CVector2 Agent::calculateAgentAvoidanceVector() {
-
-    Coordinate averageNeighborLocation = {0, 0};
-
-    bool neighborsWithinRange = getAverageNeighborLocation(&averageNeighborLocation, this->config.AGENT_AVOIDANCE_RADIUS);
-    if (!neighborsWithinRange) {
-        return {0, 0};
-    }
-
-    //Create a vector between this agent and the average position of the agents within range
-    argos::CVector2 vectorToOtherAgents =
-            argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
-            - argos::CVector2(this->position.x, this->position.y);
-
-    return vectorToOtherAgents * -1;
-}
-
-/**
- * Calculate the vector to align with other agents:
- * If the distance between other agents is less than a certain threshold,
- * create a vector in the direction of the average vector of these agents, considering speed.
- * @return
- */
-argos::CVector2 Agent::calculateAgentAlignmentVector() {
-    argos::CVector2 alignmentVector = {0, 0};
-    int nAgentsWithinRange = 0;
-
-
-    //Get the velocities of the agents within range
-    for (const auto &agentVelocity: agentVelocities) {
-        std::string agentID = agentVelocity.first;
-        Coordinate otherAgentLocation = agentLocations[agentID].first;
-        argos::CVector2 agentVector = agentVelocity.second.first;
-        double agentSpeed = agentVelocity.second.second;
-        argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
-                                             - argos::CVector2(this->position.x, this->position.y);
-        if (vectorToOtherAgent.Length() < this->config.AGENT_ALIGNMENT_RADIUS) {
-            alignmentVector += agentVector * agentSpeed;
-            nAgentsWithinRange++;
-        }
-    }
-
-    //If no agents are within range, there is no average velocity
-    if (nAgentsWithinRange == 0) {
-        return {0, 0};
-    }
-
-    //Else calculate the average velocity of the agents within range
-    alignmentVector /= nAgentsWithinRange;
-    return alignmentVector;
-}
-
-class FrontierMerger {
-
-private:
-    // Directions for adjacency (up, down, left, right)
-    const std::vector<std::pair<int, int>> directions = {{-1, 0},
-                                                         {1,  0},
-                                                         {0,  -1},
-                                                         {0,  1}};
-
-// Check if a cell is within bounds
-    bool isValid(int x, int y, int X, int Y, const std::set<std::pair<int, int>> &cells,
-                 std::set<std::pair<int, int>> &visited) {
-        return x >= 0 && x < X && y >= 0 && y < Y && cells.count({x, y}) && !visited.count({x, y});
-    }
-
-public:
-// Perform BFS to find a connected group
-    std::vector<std::pair<int, int>> bfs_group(
-            int startX, int startY, int X, int Y,
-            const std::set<std::pair<int, int>> &cells,
-            std::set<std::pair<int, int>> &visited) {
-        std::vector<std::pair<int, int>> group;
-        std::queue<std::pair<int, int>> q;
-
-        q.push({startX, startY});
-        visited.insert({startX, startY});
-
-        while (!q.empty()) {
-            auto [x, y] = q.front();
-            q.pop();
-            group.push_back({x, y});
-
-            for (const auto &dir: directions) {
-                int nx = x + dir.first;
-                int ny = y + dir.second;
-
-                if (isValid(nx, ny, X, Y, cells, visited)) {
-                    q.push({nx, ny});
-                    visited.insert({nx, ny});
-                }
-            }
-        }
-
-        return group;
-    }
-};
-
-#ifndef USING_CONFIDENCE_TREE
-
-//ONLY FOR COVERAGE MATRIX
-//A cell is a frontier iff:
-//1. Occupancy = explored, i.e. pheromone > 0
-//2. At least one neighbor is unexplored (i.e. pheromone == 0) using the 8-connected Moore neighbours. (https://en.wikipedia.org/wiki/Moore_neighborhood)
-
-//Global definition of grid occupancy:
-//0: unexplored
-//1: explored (and free)
-//2: obstacle
-
-//Global definition of frontier cell:
-//A cell is a frontier iff:
-//1. Occupancy  == 1
-//2. There is a 8 Moore neighbor, of which occupancy == 0
-
-std::vector<std::pair<int, int>> Agent::getFrontierCells(double currentTimeS, double searchRadius) {
-    std::vector<std::pair<int, int>> frontierCells;
-
-    //Search within the search radius
-    auto i_min = std::max(0, this->coverageMatrix->getIndexFromRealCoordinate({this->position.x - searchRadius, 0}).first);
-    auto i_max = std::min(this->coverageMatrix->getWidth(), this->coverageMatrix->getIndexFromRealCoordinate({this->position.x + searchRadius, 0}).first);
-    auto j_min = std::max(0, this->coverageMatrix->getIndexFromRealCoordinate({0, this->position.y - searchRadius}).second);
-    auto j_max = std::min(this->coverageMatrix->getHeight(), this->coverageMatrix->getIndexFromRealCoordinate({0, this->position.y + searchRadius}).second);
-
-
-    for (int i = i_min; i < i_max; i++) {
-        for (int j = j_min; j < j_max; j++) {
-            if(this->coverageMatrix->getByIndex(i, j, currentTimeS) > 0){ //Check if the cell is explored
-                Coordinate realCoordinate = this->coverageMatrix->getRealCoordinateFromIndex(i, j);
-                auto [i_obstacle, j_obstacle] = this->obstacleMatrix->getIndexFromRealCoordinate(realCoordinate);
-                //Check if at least one neighbor is unexplored
-
-                std::array<double, 9> coverageMatrixNeighbors = this->coverageMatrix->MooreNeighbors(i, j, currentTimeS);
-                std::array<double, 9> obstacleMatrixNeighbors = this->obstacleMatrix->MooreNeighbors(i_obstacle, j_obstacle, currentTimeS);
-
-                for (int k = 0; k < 9; k++) {
-                    if (k == 4) continue; //Skip the middle cell
-                    if (coverageMatrixNeighbors[k] == 0 && obstacleMatrixNeighbors[k] == 0) {
-                        frontierCells.emplace_back(i, j); //At least one neighbor is unexplored (not free, and not an obstacle)
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    return frontierCells;
-}
-#endif
 
 //argos::CVector2 Agent::calculateUnexploredFrontierVector() {
 //    //According to Dynamic frontier-led swarming:
@@ -756,86 +556,161 @@ std::vector<std::pair<int, int>> Agent::getFrontierCells(double currentTimeS, do
 //    return vectorToBestFrontier;
 //}
 
-void Agent::calculateNextPosition() {
-    //Inspired by boids algorithm:
-    //Vector determining heading
-    //Vector is composed of:
-    //1. Attraction to unexplored frontier
-    //2. Repulsion from other agents (done)
-    //3. Attraction to found target
-    //4. Repulsion from objects/walls (done)
-
-
-    argos::CVector2 virtualWallAvoidanceVector = ForceVectorCalculator::getVirtualWallAvoidanceVector(this);
-    argos::CVector2 agentCohesionVector = ForceVectorCalculator::calculateAgentCohesionVector(this);
-    argos::CVector2 agentAvoidanceVector = ForceVectorCalculator::calculateAgentAvoidanceVector(this);
-    argos::CVector2 agentAlignmentVector = ForceVectorCalculator::calculateAgentAlignmentVector(this);
-
-    argos::CVector2 unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
-
-    //If there are agents to avoid, do not explore
-    if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
-
-
-    //Normalize vectors if they are not zero
-    if (virtualWallAvoidanceVector.Length() != 0) virtualWallAvoidanceVector.Normalize();
-    if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
-    if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
-    if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
-    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
-
-    virtualWallAvoidanceVector = this->config.VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
-    agentCohesionVector = this->config.AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
-    agentAvoidanceVector = this->config.AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
-    agentAlignmentVector = this->config.AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
-    unexploredFrontierVector = this->config.TARGET_WEIGHT * unexploredFrontierVector;
-
-    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
-    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
-    argos::CVector2 total_vector = this->swarm_vector +
-                                   //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
-                                   virtualWallAvoidanceVector +
-                                   agentCohesionVector +
-                                   agentAvoidanceVector +
-                                   agentAlignmentVector +
-                                   unexploredFrontierVector;
-    if (total_vector.Length() != 0) total_vector.Normalize();
-
-    this->swarm_vector = total_vector;
-    argos::CRadians objectAvoidanceAngle;
-    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
-    //If there is not a free angle to move to, do not move
-    if (!isThereAFreeAngle) {
-        this->force_vector = {0, 0};
-    } else {
-
-
-// According to the paper, the formula should be:
+//void Agent::calculateNextPosition() {
+//    //Inspired by boids algorithm:
+//    //Vector determining heading
+//    //Vector is composed of:
+//    //1. Attraction to unexplored frontier
+//    //2. Repulsion from other agents (done)
+//    //3. Attraction to found target
+//    //4. Repulsion from objects/walls (done)
+//
+//
+//    argos::CVector2 virtualWallAvoidanceVector = ForceVectorCalculator::getVirtualWallAvoidanceVector(this);
+//    argos::CVector2 agentCohesionVector = ForceVectorCalculator::calculateAgentCohesionVector(this);
+//    argos::CVector2 agentAvoidanceVector = ForceVectorCalculator::calculateAgentAvoidanceVector(this);
+//    argos::CVector2 agentAlignmentVector = ForceVectorCalculator::calculateAgentAlignmentVector(this);
+//
+//    argos::CVector2 unexploredFrontierVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+//
+//    //If there are agents to avoid, do not explore
+//    if (agentAvoidanceVector.Length() != 0) unexploredFrontierVector = {0, 0};
+//
+//
+//    //Normalize vectors if they are not zero
+//    if (virtualWallAvoidanceVector.Length() != 0) virtualWallAvoidanceVector.Normalize();
+//    if (agentCohesionVector.Length() != 0) agentCohesionVector.Normalize();
+//    if (agentAvoidanceVector.Length() != 0) agentAvoidanceVector.Normalize();
+//    if (agentAlignmentVector.Length() != 0) agentAlignmentVector.Normalize();
+//    if (unexploredFrontierVector.Length() != 0) unexploredFrontierVector.Normalize();
+//
+//    virtualWallAvoidanceVector = this->config.VIRTUAL_WALL_AVOIDANCE_WEIGHT * virtualWallAvoidanceVector;
+//    agentCohesionVector = this->config.AGENT_COHESION_WEIGHT * agentCohesionVector; //Normalize first
+//    agentAvoidanceVector = this->config.AGENT_AVOIDANCE_WEIGHT * agentAvoidanceVector;
+//    agentAlignmentVector = this->config.AGENT_ALIGNMENT_WEIGHT * agentAlignmentVector;
+//    unexploredFrontierVector = this->config.TARGET_WEIGHT * unexploredFrontierVector;
+//
+//    //According to "Dynamic Frontier-Led Swarming: Multi-Robot Repeated Coverage in Dynamic Environments" paper
+//    //https://ieeexplore-ieee-org.tudelft.idm.oclc.org/stamp/stamp.jsp?tp=&arnumber=10057179&tag=1
+//    argos::CVector2 total_vector = this->swarm_vector +
+//                                   //                                   + OBJECT_AVOIDANCE_WEIGHT * objectAvoidanceVector +
+//                                   virtualWallAvoidanceVector +
+//                                   agentCohesionVector +
+//                                   agentAvoidanceVector +
+//                                   agentAlignmentVector +
+//                                   unexploredFrontierVector;
+//    if (total_vector.Length() != 0) total_vector.Normalize();
+//
+//    this->swarm_vector = total_vector;
+//    argos::CRadians objectAvoidanceAngle;
+//    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(&objectAvoidanceAngle, this->swarm_vector.Angle());
+//    //If there is not a free angle to move to, do not move
+//    if (!isThereAFreeAngle) {
+//        this->force_vector = {0, 0};
+//    } else {
+//
+//
+//// According to the paper, the formula should be:
+////        this->force_vector = {(this->swarm_vector.GetX()) *
+////                              argos::Cos(objectAvoidanceAngle) -
+////                              (this->swarm_vector.GetX()) *
+////                              argos::Sin(objectAvoidanceAngle),
+////                              (this->swarm_vector.GetY()) *
+////                              argos::Sin(objectAvoidanceAngle) +
+////                              (this->swarm_vector.GetY()) *
+////                              argos::Cos(objectAvoidanceAngle)};
+//
+//// However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
+//// This also seems to give better performance.
+//// Edit: contacted the writer, he said below is correct
 //        this->force_vector = {(this->swarm_vector.GetX()) *
 //                              argos::Cos(objectAvoidanceAngle) -
-//                              (this->swarm_vector.GetX()) *
-//                              argos::Sin(objectAvoidanceAngle),
 //                              (this->swarm_vector.GetY()) *
+//                              argos::Sin(objectAvoidanceAngle),
+//                              (this->swarm_vector.GetX()) *
 //                              argos::Sin(objectAvoidanceAngle) +
 //                              (this->swarm_vector.GetY()) *
 //                              argos::Cos(objectAvoidanceAngle)};
-
-// However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
-// This also seems to give better performance.
-// Edit: contacted the writer, he said below is correct
-        this->force_vector = {(this->swarm_vector.GetX()) *
-                              argos::Cos(objectAvoidanceAngle) -
-                              (this->swarm_vector.GetY()) *
-                              argos::Sin(objectAvoidanceAngle),
-                              (this->swarm_vector.GetX()) *
-                              argos::Sin(objectAvoidanceAngle) +
-                              (this->swarm_vector.GetY()) *
-                              argos::Cos(objectAvoidanceAngle)};
-
-        argos::CRadians angle = this->force_vector.Angle();
-        this->targetHeading = angle;
-    }
-}
+//
+//        argos::CRadians angle = this->force_vector.Angle();
+//        this->targetHeading = angle;
+//    }
+//}
+//
+//void Agent::calculateNextPosition() {
+//    //Inspired by boids algorithm:
+//    //Vector determining heading
+//    //Vector is composed of:
+//    //1. Attraction to unexplored frontier
+//    //2. Repulsion from other agents (done)
+//    //3. Attraction to found target
+//    //4. Repulsion from objects/walls (done)
+//
+//
+//    argos::CVector2 virtualWallAvoidanceVector = ForceVectorCalculator::getVirtualWallAvoidanceVector(this);
+//    argos::CVector2 agentCohesionVector = ForceVectorCalculator::calculateAgentCohesionVector(this);
+//    argos::CVector2 agentAvoidanceVector = ForceVectorCalculator::calculateAgentAvoidanceVector(this);
+//    argos::CVector2 agentAlignmentVector = ForceVectorCalculator::calculateAgentAlignmentVector(this);
+//
+//    argos::CVector2 targetVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
+//                                                   this->currentBestFrontier.y - this->position.y);
+//
+//
+//    if (this->state == State::EXPLORING) {
+//
+//
+//
+//
+//
+//        //Find new frontier
+//        targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+//        bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
+//
+//        ForceVectorCalculator::vectors vectors{this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
+//                                               agentAvoidanceVector, agentAlignmentVector, targetVector};
+//
+//        ForceVectorCalculator::checkAvoidAndNormalizeVectors(vectors);
+//
+//        argos::CVector2 total_vector;
+//        argos::CRadians objectAvoidanceAngle;
+//        bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle,
+//                                                                                      vectors,
+//                                                                                      total_vector,
+//                                                                                      false);//targetVector.Length() == 0);
+//        //If there is not a free angle to move to, do not move
+//        if (!isThereAFreeAngle) {
+//            this->force_vector = {0, 0};
+//        } else {
+//
+//
+//// According to the paper, the formula should be:
+////        this->force_vector = {(this->previous_total_vector.GetX()) *
+////                              argos::Cos(objectAvoidanceAngle) -
+////                              (this->previous_total_vector.GetX()) *
+////                              argos::Sin(objectAvoidanceAngle),
+////                              (this->previous_total_vector.GetY()) *
+////                              argos::Sin(objectAvoidanceAngle) +
+////                              (this->previous_total_vector.GetY()) *
+////                              argos::Cos(objectAvoidanceAngle)};
+//
+//// However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
+//// This also seems to give better performance.
+//// Edit: contacted the writer, he said below is correct
+//            this->force_vector = {(total_vector.GetX()) *
+//                                  argos::Cos(objectAvoidanceAngle) -
+//                                  (total_vector.GetY()) *
+//                                  argos::Sin(objectAvoidanceAngle),
+//                                  (total_vector.GetX()) *
+//                                  argos::Sin(objectAvoidanceAngle) +
+//                                  (total_vector.GetY()) *
+//                                  argos::Cos(objectAvoidanceAngle)};
+//
+//            argos::CRadians angle = this->force_vector.Angle();
+//            this->targetHeading = angle;
+//        }
+//        this->swarm_vector = total_vector;
+//    }
+//}
 
 void Agent::calculateNextPosition() {
     //Inspired by boids algorithm:
@@ -855,32 +730,183 @@ void Agent::calculateNextPosition() {
     argos::CVector2 targetVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                    this->currentBestFrontier.y - this->position.y);
 
+    #ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    if (randomWalker.randomWalking)
+        targetVector = argos::CVector2(this->subTarget.x - this->position.x,
+                                       this->subTarget.y - this->position.y);
+    #endif
+
+#ifdef PATH_PLANNING_ENABLED
+    bool periodic_check_required = (this->elapsed_ticks - this->last_feasibility_check_tick) >
+                                   this->ticks_per_second * this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
+#endif
 
     if (this->state == State::EXPLORING) {
 
+#ifdef SKIP_UNREACHABLE_FRONTIERS
+        frontierEvaluator.resetFrontierAvoidance(this, targetVector);
+#endif
+
+#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
+        //If the agent is close to the frontier and is heading towards it, or if it is within object avoidance radius to the frontier.
+        //So we don't 'reach' frontiers through walls.
+        bool frontierReached = false;
+        if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
+            argos::CVector2 agentFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
+                                                           this->currentBestFrontier.y - this->position.y);
+            frontierReached = agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
+              NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() <
+              this->config.TURN_THRESHOLD_DEGREES * 2 ||
+                    agentFrontierVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
+        }
+
+        //If the current best frontier is not set
+        if (
+            #ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+            //If we have random walked far enough to try to find a new frontier
+            randomWalker.randomWalking && randomWalker.randomWalkedFarEnough(this) ||
+            #else
+            this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} ||
+            #endif
+            #ifdef SKIP_UNREACHABLE_FRONTIERS
+            //Or if we are avoiding the frontier
+            frontierEvaluator.avoidingAgentTarget(this) ||
+            #endif
+            //Or we have reached the frontier
+            frontierReached
+            #ifdef PATH_PLANNING_ENABLED
+            //Or if it is time for a periodic check, and we are not only checking the route
+            || (periodic_check_required &&
+                !this->config.FEASIBILITY_CHECK_ONLY_ROUTE)
+            #endif
+
+                ) {
+#ifdef WALL_FOLLOWING_ENABLED
+            //If we are not currently wall following
+            if (wallFollower.wallFollowingDirection == 0) {
+                //Find new frontier
+                targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+            }
+#else
+            //Find new frontier
+            targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+            this->last_feasibility_check_tick = this->elapsed_ticks;
+#endif
+        }
+#ifdef PATH_PLANNING_ENABLED
+        else if (periodic_check_required && this->config.FEASIBILITY_CHECK_ONLY_ROUTE) {
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+            //If we are random walking, we don't need to check the route
+            if (!this->randomWalker.randomWalking) {
+#endif
+            this->route_to_best_frontier.clear();
+            this->pathPlanner.getRoute(this, this->position, this->currentBestFrontier, this->route_to_best_frontier);
+            if (this->route_to_best_frontier.empty()) { //If there is no route to the frontier, find a new frontier
+                targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+            }
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+            }
+#endif
+            this->last_feasibility_check_tick = this->elapsed_ticks;
+
+        }
+#endif
+    } else if (this->state == State::RETURNING) {
+        targetVector = argos::CVector2(this->deploymentLocation.x - this->position.x,
+                                       this->deploymentLocation.y - this->position.y);
+
+        //If we are close to the deployment location, we have returned, we can stop
+        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
+            this->state = State::FINISHED;
+        } else {
+
+            //Set our current best 'frontier' to the deployment location
+            if (!(this->currentBestFrontier == this->deploymentLocation)) {
+                this->currentBestFrontier = this->deploymentLocation;
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+                //We need to find the route, so we set the periodic check required.
+#ifdef PATH_PLANNING_ENABLED
+                periodic_check_required = true;
+#endif
+            }
+#ifdef PATH_PLANNING_ENABLED
+            if (periodic_check_required) {
+                this->route_to_best_frontier.clear();
+                this->pathPlanner.getRoute(this, this->position, deploymentLocation, this->route_to_best_frontier);
+                if (this->route_to_best_frontier.empty()) { //If there is no route to the deployment location, we reset the current best frontier
+                    this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+                }
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+            }
+#endif
+        }
+    }
 
 
+#else
 
-
+#ifdef WALL_FOLLOWING_ENABLED
+        if (this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT} || wallFollower.wallFollowingDirection == 0) {
         //Find new frontier
         targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
-        bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
+    }
+#else
+        //Find new frontier
+        targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+#endif
+    } else if (this->state == State::RETURNING) {
+        targetVector = argos::CVector2(this->deploymentLocation.x - this->position.x,
+                                       this->deploymentLocation.y - this->position.y);
 
-        ForceVectorCalculator::vectors vectors{this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
-                                               agentAvoidanceVector, agentAlignmentVector, targetVector};
+        //If we are close to the deployment location, we have returned, we can stop
+        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
+            this->state = State::FINISHED;
+        }
+    }
+#endif
+#if defined(RANDOM_WALK_WHEN_NO_FRONTIERS) || defined(PATH_PLANNING_ENABLED)
+    bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    if (noTarget) {
+        randomWalker.randomWalk(this, targetVector);
+    } else {
+        randomWalker.randomWalking = false;
+        this->subTarget = {MAXFLOAT, MAXFLOAT};
+    }
+#endif
 
-        ForceVectorCalculator::checkAvoidAndNormalizeVectors(vectors);
+#ifdef PATH_PLANNING_ENABLED
+    if (!noTarget) { //If there is a target
+        if (!this->route_to_best_frontier.empty()) {
+            Coordinate nextPathTarget = this->pathFollower.followPath(this);
+            assert(!(nextPathTarget == Coordinate{MAXFLOAT, MAXFLOAT}));
+            this->subTarget = nextPathTarget;
+            targetVector = argos::CVector2(this->subTarget.x - this->position.x,
+                                           this->subTarget.y - this->position.y);
+        }
+    }
+#endif
+#endif
 
-        argos::CVector2 total_vector;
-        argos::CRadians objectAvoidanceAngle;
-        bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle,
-                                                                                      vectors,
-                                                                                      total_vector,
-                                                                                      false);//targetVector.Length() == 0);
-        //If there is not a free angle to move to, do not move
-        if (!isThereAFreeAngle) {
-            this->force_vector = {0, 0};
-        } else {
+
+    ForceVectorCalculator::vectors vectors{this->swarm_vector, virtualWallAvoidanceVector, agentCohesionVector,
+                                           agentAvoidanceVector, agentAlignmentVector, targetVector};
+
+    ForceVectorCalculator::checkAvoidAndNormalizeVectors(vectors);
+
+    argos::CVector2 total_vector;
+    argos::CRadians objectAvoidanceAngle;
+    bool isThereAFreeAngle = ForceVectorCalculator::calculateObjectAvoidanceAngle(this, &objectAvoidanceAngle, vectors,
+                                                                                  total_vector,
+                                                                                  false);//targetVector.Length() == 0);
+#ifdef SKIP_UNREACHABLE_FRONTIERS
+    if (this->state == State::EXPLORING)
+        frontierEvaluator.skipIfFrontierUnreachable(this, objectAvoidanceAngle, total_vector);
+#endif
+    //If there is not a free angle to move to, do not move
+    if (!isThereAFreeAngle) {
+        this->force_vector = {0, 0};
+    } else {
 
 
 // According to the paper, the formula should be:
@@ -896,20 +922,20 @@ void Agent::calculateNextPosition() {
 // However, according to theory (https://en.wikipedia.org/wiki/Rotation_matrix) (https://www.purplemath.com/modules/idents.htm), the formula should be:
 // This also seems to give better performance.
 // Edit: contacted the writer, he said below is correct
-            this->force_vector = {(total_vector.GetX()) *
-                                  argos::Cos(objectAvoidanceAngle) -
-                                  (total_vector.GetY()) *
-                                  argos::Sin(objectAvoidanceAngle),
-                                  (total_vector.GetX()) *
-                                  argos::Sin(objectAvoidanceAngle) +
-                                  (total_vector.GetY()) *
-                                  argos::Cos(objectAvoidanceAngle)};
+        this->force_vector = {(total_vector.GetX()) *
+                              argos::Cos(objectAvoidanceAngle) -
+                              (total_vector.GetY()) *
+                              argos::Sin(objectAvoidanceAngle),
+                              (total_vector.GetX()) *
+                              argos::Sin(objectAvoidanceAngle) +
+                              (total_vector.GetY()) *
+                              argos::Cos(objectAvoidanceAngle)};
 
-            argos::CRadians angle = this->force_vector.Angle();
-            this->targetHeading = angle;
-        }
-        this->swarm_vector = total_vector;
+        argos::CRadians angle = this->force_vector.Angle();
+        this->targetHeading = angle;
     }
+//    this->previousBestFrontier = this->currentBestFrontier;
+    this->swarm_vector = total_vector;
 }
 
 void Agent::timeSyncWithCloseAgents() {
@@ -926,12 +952,21 @@ void Agent::timeSyncWithCloseAgents() {
     }
 }
 
+void Agent::startMission() {
+    this->state = State::EXPLORING;
+    this->deploymentLocation = this->position;
+}
+
+
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString());
-    std::string coverageMatrixString = this->coverageMatrix->matrixToString();
-    broadcastMessage("MC:" + coverageMatrixString);
-    std::string obstacleMatrixString = this->obstacleMatrix->matrixToString();
-    broadcastMessage("MO:" + obstacleMatrixString);
+
+    #ifdef USING_CONFIDENCE_TREE
+    sendQuadtreeToCloseAgents();
+    #else
+    sendMatricesToCloseAgents();
+    #endif
+
     timeSyncWithCloseAgents();
 
     broadcastMessage(
@@ -969,6 +1004,65 @@ void Agent::doStep() {
     this->elapsed_ticks++;
 }
 
+#ifdef USING_CONFIDENCE_TREE
+void Agent::sendQuadtreeToCloseAgents() {
+    std::vector<std::string> quadTreeToStrings = {};
+    bool sendQuadtree = false;
+    double oldest_exchange = MAXFLOAT;
+
+    for (const auto &agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = std::get<1>(agentLocationPair.second);
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            this->config.AGENT_LOCATION_RELEVANT_S) {
+            //If we have not sent the quadtree to this agent yet in the past MAP_EXCHANGE_INTERVAL_S seconds, send it
+            if (!this->agentMapSent.count(agentLocationPair.first) ||
+                this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] >
+                this->config.MAP_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                sendQuadtree = true; //We need to send the quadtree to at least one agent
+                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+                oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
+                this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
+            }
+        }
+    }
+
+    if (!sendQuadtree) return; //If we don't need to send the quadtree to any agent, return
+    this->quadtree->toStringVector(&quadTreeToStrings, oldest_exchange/this->ticks_per_second);
+    for (const std::string &str: quadTreeToStrings) {
+        broadcastMessage("M:" + str);
+    }
+
+}
+#else
+void Agent::sendMatricesToCloseAgents() {
+    bool sendMatrices = false;
+    double oldest_exchange = MAXFLOAT;
+
+    for (const auto &agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = std::get<1>(agentLocationPair.second);
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the maps
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            this->config.AGENT_LOCATION_RELEVANT_S) {
+            //If we have not sent the quadtree to this agent yet in the past MAP_EXCHANGE_INTERVAL_S seconds, send it
+            if (!this->agentMapSent.count(agentLocationPair.first) ||
+                this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] >
+                this->config.MAP_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                sendMatrices = true; //We need to send the quadtree to at least one agent
+                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+                oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
+                this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
+            }
+        }
+    }
+
+    if (!sendMatrices) return; //If we don't need to send the quadtree to any agent, return
+    std::string coverageMatrixString = this->coverageMatrix->matrixToString();
+    broadcastMessage("MC:" + coverageMatrixString);
+    std::string obstacleMatrixString = this->obstacleMatrix->matrixToString();
+    broadcastMessage("MO:" + obstacleMatrixString);
+}
+#endif
 
 /**
  * Broadcast a message to all agents
@@ -1094,11 +1188,45 @@ std::vector<std::string> splitString(const std::string &str, const std::string &
     return strings;
 }
 
+#ifdef USING_CONFIDENCE_TREE
+/**
+ * Get a QuadNode from a string
+ * @param str
+ * @return
+ */
+quadtree::QuadNode quadNodeFromString(std::string str) {
+    std::string visitedDelimiter = "@";
+    std::string occDelimiter = ":";
+    size_t visitedPos = 0;
+    size_t occPos = 0;
+    std::string coordinate;
+    std::string confidence;
+    std::string visited;
+    occPos = str.find(occDelimiter);
+    coordinate = str.substr(0, occPos);
+    quadtree::QuadNode newQuadNode{};
+    newQuadNode.coordinate = coordinateFromString(coordinate);
+    str.erase(0, occPos + occDelimiter.length());
+    //Now we have the occupancy and ticks
+
+    visitedPos = str.find(visitedDelimiter);
+    confidence = str.substr(0, visitedPos);
+    newQuadNode.LConfidence = static_cast<float>(std::stod(confidence));
+    str.erase(0, visitedPos + visitedDelimiter.length());
+    visited = str;
+    newQuadNode.visitedAtS = std::stod(visited);
+    return newQuadNode;
+}
+#endif
+
 
 /**
  * Parse messages from other agents
  */
 void Agent::parseMessages() {
+    #ifdef BATTERY_MANAGEMENT_ENABLED
+    std::map<std::string, int> agentMapBytesReceivedCounter;
+    #endif
     for (const std::string &message: this->messages) {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
@@ -1106,6 +1234,30 @@ void Agent::parseMessages() {
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = {receivedPosition, this->elapsed_ticks};
         } else if (messageContent.at(0) == 'M') {
+            #ifdef USING_CONFIDENCE_TREE
+            std::vector<std::string> chunks;
+            std::stringstream ss(messageContent.substr(2));
+            std::string chunk;
+            #ifdef BATTERY_MANAGEMENT_ENABLED
+            //Keep track of the total amount of bytes received from the sender
+            if (agentMapBytesReceivedCounter.count(senderId) ==
+                0) { //If the sender has not sent any bytes this tick yet
+                agentMapBytesReceivedCounter[senderId] = messageContent.size();
+            } else {
+                agentMapBytesReceivedCounter[senderId] += messageContent.size();
+            }
+            #endif
+            while (std::getline(ss, chunk, '|')) {
+                quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
+                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode, config.ALPHA_RECEIVE,
+                                                                      elapsed_ticks / ticks_per_second);
+        #ifdef CLOSE_SMALL_AREAS
+                        if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)
+                            checkIfAgentFitsBetweenObstacles(addedBox);
+        #endif
+
+                    }
+            #else
             auto substring = messageContent.substr(1);
             auto coverage = substring.at(0) == 'C';
             std::vector<std::string> chunks;
@@ -1134,7 +1286,7 @@ void Agent::parseMessages() {
 
 
             }
-
+            #endif
         } else if (messageContent.at(0) == 'V') {
             std::string vectorString = messageContent.substr(2);
             std::string delimiter = ":";
@@ -1175,7 +1327,6 @@ void Agent::parseMessages() {
 
         }
     }
-
 }
 
 
@@ -1193,7 +1344,7 @@ std::vector<std::string> Agent::getMessages() {
     return this->messages;
 }
 
-void Agent::loadConfig() {
+void Agent::loadConfig(const std::string& config_file) {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
     this->config.ROBOT_WEIGHT = config_yaml["physical"]["robot_weight"].as<float>();
@@ -1205,7 +1356,7 @@ void Agent::loadConfig() {
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
     this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
     this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
-//    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
+    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
 //#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //    this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
 //    this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();

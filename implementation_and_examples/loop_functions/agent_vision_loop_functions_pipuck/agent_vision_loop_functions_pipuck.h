@@ -1,6 +1,7 @@
 #ifndef AGENT_VISION_LOOP_FUNCTIONS_PIPUCK_H
 #define AGENT_VISION_LOOP_FUNCTIONS_PIPUCK_H
 
+#include "agent_implementation/feature_config.h"
 #include <argos3/core/simulator/loop_functions.h>
 #include <argos3/plugins/robots/pi-puck/simulator/pipuck_entity.h>
 #include <argos3/plugins/simulator/entities/box_entity.h>
@@ -20,16 +21,26 @@ public:
     std::map<CPiPuckEntity*, CVector3> m_tAgentCoordinates;
     std::map<CPiPuckEntity*, CRadians> m_tAgentHeadings;
     std::map<CPiPuckEntity*, CVector3> m_tAgentBestFrontierCoordinate;
-//    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, int, double >>> m_tQuadTree;
+    #ifdef USING_CONFIDENCE_TREE
+    std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, double >>> m_tQuadTree;
+    std::map<CPiPuckEntity*, std::vector<std::tuple<Coordinate, Coordinate>>> m_tNeighborPairs;
+    #else
     std::map<CPiPuckEntity*, std::vector<std::vector<double>>> m_tCoverageMatrix;
     std::map<CPiPuckEntity*, std::vector<std::vector<double>>> m_tObstacleMatrix;
+    #endif
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
-    double globalElapsedTicks;
+    double globalElapsedTime;
 //    std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
+#ifdef USING_CONFIDENCE_TREE
+    std::map<CPiPuckEntity*, std::vector<std::vector<std::pair<quadtree::Box, double>>>> m_tAgentFrontierRegions;
+#else
     std::map<CPiPuckEntity*, std::vector<std::vector<Coordinate>>> m_tAgentFrontierRegions;
-//    std::vector<std::tuple<quadtree::Box, int, double >> combinedQuadTree;
+#endif
 //    PheromoneMatrix combinedCoverageMatrix;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
+    #ifdef USING_CONFIDENCE_TREE
+    std::vector<std::tuple<quadtree::Box, double>> combinedQuadTree;
+    #else
     std::vector<std::vector<double>> coverageMatrix;
     int coverageMatrixWidth = 0;
     int coverageMatrixHeight = 0;
@@ -39,9 +50,11 @@ public:
     int obstacleMatrixWidth = 0;
     int obstacleMatrixHeight = 0;
     double obstacleMatrixResolution;
-    std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
     double real_x_min = -5.5;
     double real_y_min = -5.5;
+    #endif
+    std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
+
 public:
 
     virtual ~CAgentVisionLoopFunctions() {}
@@ -67,13 +80,22 @@ public:
         return m_tAgentCoordinates;
     }
 
-
+    #ifdef USING_CONFIDENCE_TREE
+    inline const std::map<CPiPuckEntity*, std::vector<std::tuple<quadtree::Box, double >>>& GetQuadTree() const {
+        return m_tQuadTree;
+    }
+    #endif
 
     inline const std::map<CPiPuckEntity*, double>& GetAgentElapsedTicks() const {
         return m_tAgentElapsedTicks;
     }
 
+    inline const std::map<CPiPuckEntity*, std::set<argos::CDegrees>> & GetAgentFreeAngles() const {
+        return m_tAgentFreeAngles;
+    }
+#ifndef USING_CONFIDENCE_TREE
     Coordinate getRealCoordinateFromIndex(int x, int y, double resolution) const;
+#endif
 
 
 //    CBoxEntity* box = new CBoxEntity("new_box", CVector3(-2, 1, 0), CQuaternion(), false, CVector3(1.0, 1.0, 0.5), 0.0); ////        theMap.insert(std::make_pair("new_box", &box));
@@ -115,8 +137,12 @@ private:
 
 //    void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
-    void pushMatrices(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
 
+    #ifdef USING_CONFIDENCE_TREE
+    void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+    #else
+    void pushMatrices(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+    #endif
 };
 
 #endif

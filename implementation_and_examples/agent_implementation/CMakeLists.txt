@@ -4,6 +4,7 @@ include_directories(${CMAKE_SOURCE_DIR}/libraries)  # Parent directory of cereal
 
 # Define the library
 add_library(agent_implementation SHARED
+        feature_config.h
         agent.h
         agent.cpp
         config.yaml

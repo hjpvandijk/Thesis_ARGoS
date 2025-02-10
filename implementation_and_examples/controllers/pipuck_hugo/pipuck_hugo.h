@@ -36,7 +36,7 @@
 #include <argos3/plugins/robots/generic/control_interface/ci_range_and_bearing_sensor.h>
 #include <argos3/plugins/robots/generic/control_interface/ci_positioning_sensor.h>
 #include "agent_implementation/agent.h"
-
+#include "agent_implementation/feature_config.h"
 
 /*
  * All the ARGoS stuff in the 'argos' namespace.
@@ -93,6 +93,13 @@ public:
 //    agent agents[nAgents];
     std::shared_ptr<Agent> agentObject;
 
+    double map_width = 10.0;
+    double map_height = 10.0;
+
+    Coordinate getActualAgentPosition();
+    CRadians getActualAgentOrientation();
+
+
 
 private:
 
@@ -109,11 +116,12 @@ private:
 //    CCI_RangeAndBearingSensor* m_pcRangeAndBearingSensor;
 
 
-#ifdef BATTERY_MANAGEMENT_ENABLED
-    CVector2 previousAgentPosition;
+//#ifdef BATTERY_MANAGEMENT_ENABLED
+    Coordinate previousAgentPosition;
     CRadians previousAgentOrientation;
     int batteryMeasureTicks = 0;
-#endif
+    argos::CVector2 previousMovement = {0, 0};
+//#endif
 
 
     /*
@@ -123,26 +131,13 @@ private:
      * <controllers><footbot_diffusion_controller> section.
      */
 
-    /* Maximum tolerance for the angle between
-     * the robot heading direction and
-     * the closest obstacle detected. */
-    CDegrees m_cAlpha;
-    /* Maximum tolerance for the proximity reading between
-     * the robot and the closest obstacle.
-     * The proximity reading is 0 when nothing is detected
-     * and grows exponentially to 1 when the obstacle is
-     * touching the robot.
-     */
-    Real m_fDelta;
-    /* Wheel speed. */
-    Real m_fWheelVelocity;
-    /* Angle tolerance range to go straight.
-     * It is set to [-alpha,alpha]. */
-    CRange<CRadians> m_cGoStraightAngleRange;
+    double map_width_with_noise_room = 11.0;
+    double map_height_with_noise_room = 11.0;
+
+    std::string config_file = "";
 
     lua_State *L;
 
-    double map_size = 11.0; // Height and Width (square)
 
     double directions_heatmap[512][512];
     double error_mean_heatmap[512][512];
@@ -150,6 +145,8 @@ private:
 
 
     void readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]);
+
+    bool mission_start = false;
 
 
 };

@@ -5,8 +5,7 @@
 #ifndef THESIS_ARGOS_AGENT_H
 #define THESIS_ARGOS_AGENT_H
 
-#define USING_CONFIDENCE_TREE
-
+#include "agent_implementation/feature_config.h"
 #ifdef USING_CONFIDENCE_TREE
 #include "utils/Quadtree.h"
 #else
@@ -72,7 +71,9 @@ public:
 
         double FRONTIER_DISTANCE_WEIGHT;
         double FRONTIER_SIZE_WEIGHT;
-
+        #ifdef USING_CONFIDENCE_TREE
+        double FRONTIER_PHEROMONE_WEIGHT;
+        #endif
 
         double FRONTIER_SEARCH_RADIUS;
         int MAX_FRONTIER_CELLS;
@@ -82,6 +83,7 @@ public:
         double AGENT_ALIGNMENT_RADIUS ;
         double OBJECT_AVOIDANCE_RADIUS;
 
+        double FRONTIER_DIST_UNTIL_REACHED;
 
 
         #ifdef USING_CONFIDENCE_TREE
@@ -98,7 +100,6 @@ public:
         double QUADTREE_MERGE_MAX_VISITED_TIME_DIFF;
         double QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF;
 
-        double FRONTIER_DIST_UNTIL_REACHED;
         #else
         double COVERAGE_MATRIX_RESOLUTION;
         double COVERAGE_MATRIX_EVAPORATION_TIME_S;
@@ -147,14 +148,14 @@ public:
     //Force vector deciding the next position
     argos::CVector2 force_vector;
 
-    //Some sort of map or grid to keep track of the environment
-    //Some sort of list of agents to keep track of other agents
+    Coordinate deploymentLocation;
+
 
 
 
     Agent() {}
 
-    explicit Agent(std::string id);
+    explicit Agent(std::string id, double rootbox_size, const std::string& config_file);
 
     void setPosition(double new_x, double new_y);
 
@@ -190,6 +191,8 @@ public:
 
     void calculateNextPosition();
 
+    void startMission();
+
     void doStep();
 
     void timeSyncWithCloseAgents();
@@ -206,9 +209,11 @@ public:
 
     #ifdef USING_CONFIDENCE_TREE
     std::unique_ptr<quadtree::Quadtree> quadtree;
+    void sendQuadtreeToCloseAgents();
     #else
     std::unique_ptr<PheromoneMatrix> coverageMatrix; //Cells that contain pheromone > 0, are covered and obstacle free
     std::unique_ptr<PheromoneMatrix> obstacleMatrix; //Cells that contain pheromone > 0, are covered and contain an obstacle
+    void sendMatricesToCloseAgents();
     #endif
     Coordinate left_right_borders = {-10,10};
     Coordinate upper_lower_borders = {10,-10};
@@ -216,6 +221,16 @@ public:
     Coordinate currentBestFrontier = {0,0};
 
     double ticks_per_second = 30;
+
+    enum class State {
+        NO_MISSION,
+        EXPLORING,
+        RETURNING,
+        FINISHED
+    };
+
+    State state = State::NO_MISSION;
+
     uint32_t elapsed_ticks = 0;
 
     #ifdef USING_CONFIDENCE_TREE
@@ -232,8 +247,7 @@ public:
     double sensor_reading_distance_probability;
 
 private:
-    std::string config_file = "agent_implementation/config.yaml";
-    void loadConfig();
+    void loadConfig(const std::string& config_file);
     void checkForObstacles();
 
 //    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
@@ -263,6 +277,8 @@ private:
     void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor);
     #else
     void addObjectLocation(Coordinate objectCoordinate);
+    void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2);
+
     #endif
 
 

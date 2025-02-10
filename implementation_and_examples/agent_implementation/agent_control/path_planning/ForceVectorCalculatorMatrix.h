@@ -1,9 +1,10 @@
-#ifndef IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
-#define IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
+#ifndef IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_MATRICES_H
+#define IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_MATRICES_H
 
-
+#include "agent_implementation/feature_config.h"
 #include <argos3/core/utility/math/vector2.h>
 #include "agent_implementation/utils/coordinate.h"
+#ifndef USING_CONFIDENCE_TREE
 class Agent;
 
 class ForceVectorCalculator {
@@ -38,6 +39,8 @@ public:
 
     static bool calculateObjectAvoidanceAngle(Agent* agent, argos::CRadians *relativeObjectAvoidanceAngle, ForceVectorCalculator::vectors, argos::CVector2 & total_vector, bool frontier_vector_zero);
 
+    static std::vector<std::pair<int, int>> getFrontierCells(Agent* agent, double currentTimeS, double searchRadius);
 
 };
+#endif
 #endif //IMPLEMENTATION_AND_EXAMPLES_FORCEVECTORCALCULATOR_H
