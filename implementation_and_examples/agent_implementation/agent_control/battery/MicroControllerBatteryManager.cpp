@@ -97,20 +97,20 @@ std::pair<float, float> MicroControllerBatteryManager::estimateReceiveConsumptio
     float totalReceivePowerUsage_mAh = 0;
     float totalReceiveTimeS = 0;
 
-    for (auto &agentQuadtree : agent->agentLocations) { // We assume agent location is received in (roughly) the same tick as the quadtree messages
+    for (auto &agentLocation : agent->agentLocations) { // We assume agent location is received in (roughly) the same tick as the quadtree messages
         int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.MAP_EXCHANGE_INTERVAL_S);
         double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.MAP_EXCHANGE_INTERVAL_S;
 
         int amountOfReceives = 0;
-        if(std::get<1>(agentQuadtree.second) - agent->elapsed_ticks <= agent->config.MAP_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
+        if(agent->getTimeFromAgentLocation(agentLocation.first) - agent->elapsed_ticks <= agent->config.MAP_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
             amountOfReceives += nExchangeIntervalsInPeriod; //We will exchange nExchangeIntervalsInPeriod times with this agent
-            if (std::get<1>(agentQuadtree.second) - agent->elapsed_ticks +
+            if (agent->getTimeFromAgentLocation(agentLocation.first) - agent->elapsed_ticks +
                 agent->config.MAP_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will (probably) receive soon
                 amountOfReceives++; //We are actually exchanging once more.
             }
         }
 
-        int previousNBytesReceived = agent->agentMapBytesReceived[agentQuadtree.first]; //Amount of bytes we received from this agent previously (we use this for the calculation)
+        int previousNBytesReceived = agent->agentMapBytesReceived[agentLocation.first]; //Amount of bytes we received from this agent previously (we use this for the calculation)
         float timeToReceiveS = float(previousNBytesReceived) * 8.0f / (this->wifiTransferSpeed_Mbps * 1000000.0f); //Time to receive the message
         float quadtreeExchangePowerUsage_mAh = timeToReceiveS * this->wifiReceiveConsumption_mA / 3600.0f; //In mAh, Power usage to receive the message
         totalReceivePowerUsage_mAh += quadtreeExchangePowerUsage_mAh * float(amountOfReceives); //Power usage to receive all the quadtree messages from this agent added to the total

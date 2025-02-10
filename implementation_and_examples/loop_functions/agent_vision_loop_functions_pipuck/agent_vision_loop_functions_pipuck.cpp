@@ -49,7 +49,11 @@ std::chrono::time_point end = std::chrono::system_clock::now();
  */
 void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     for (auto & it : agent->agentLocations) {
+        #ifdef SEPARATE_FRONTIERS
+        Coordinate agentLocation = std::get<0>(it.second);
+        #else
         Coordinate agentLocation = it.second.first;
+        #endif
         Coordinate agentLocationToArgos = agentLocation.FromOwnToArgos();
         CVector3 pos = CVector3(agentLocationToArgos.x, agentLocationToArgos.y, 0.02f);
         m_tOtherAgentCoordinates[pcFB].push_back(pos);
@@ -285,7 +289,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //                combinedCoverageMatrix.update(i, j, coverageMatrix[i][j]);
 //            }
 //        }
-        if(it.first->GetId() == "pipuck1"){
+        if(it.first->GetId() == "pipuck2"){
             coverageMatrix = it.second;
             coverageMatrixWidth = coverageMatrix.size();
             coverageMatrixHeight = coverageMatrix[0].size(); // columns;

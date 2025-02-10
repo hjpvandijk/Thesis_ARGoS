@@ -391,7 +391,7 @@ void Agent::checkForObstacles() {
                 close_to_other_agent = true;
             } else {
                 for (const auto &agentLocation: this->agentLocations) {
-                    if ((std::get<1>(agentLocation.second) - this->elapsed_ticks) / this->ticks_per_second >
+                    if ((getTimeFromAgentLocation(agentLocation.first) - this->elapsed_ticks) / this->ticks_per_second >
                         this->config.AGENT_LOCATION_RELEVANT_S)
                         continue;
                     argos::CVector2 objectToAgent =
@@ -946,7 +946,7 @@ void Agent::timeSyncWithCloseAgents() {
     if (this->elapsed_ticks - this->timeSynchronizer.getLastSyncAttempt() >=
         (this->config.TIME_SYNC_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) {
         for (const auto &agentLocationPair: this->agentLocations) {
-            double lastReceivedTick = std::get<1>(agentLocationPair.second);
+            double lastReceivedTick = this->getTimeFromAgentLocation(agentLocationPair.first);
             //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
             if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
                 this->config.AGENT_LOCATION_RELEVANT_S) {
@@ -966,7 +966,11 @@ void Agent::startMission() {
 
 
 void Agent::doStep() {
+    #ifdef SEPARATE_FRONTIERS
+    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
+    #else
     broadcastMessage("C:" + this->position.toString());
+    #endif
 
     #ifdef USING_CONFIDENCE_TREE
     sendQuadtreeToCloseAgents();
@@ -1018,7 +1022,7 @@ void Agent::sendQuadtreeToCloseAgents() {
     double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = std::get<1>(agentLocationPair.second);
+        double lastReceivedTick =getTimeFromAgentLocation(agentLocationPair.first);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
@@ -1047,7 +1051,7 @@ void Agent::sendMatricesToCloseAgents() {
     double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = std::get<1>(agentLocationPair.second);
+        double lastReceivedTick = this->getTimeFromAgentLocation(agentLocationPair.first);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the maps
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
@@ -1238,8 +1242,15 @@ void Agent::parseMessages() {
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
+            #ifdef SEPARATE_FRONTIERS
+            auto splitStrings = splitString(messageContent.substr(2), "|");
+            Coordinate receivedPosition = coordinateFromString(splitStrings[0]);
+            Coordinate receivedFrontier = coordinateFromString(splitStrings[1]);
+            this->agentLocations[senderId] = std::make_tuple(receivedPosition, receivedFrontier, this->elapsed_ticks);
+            #else
             Coordinate receivedPosition = coordinateFromString(messageContent.substr(2));
             this->agentLocations[senderId] = {receivedPosition, this->elapsed_ticks};
+            #endif
         } else if (messageContent.at(0) == 'M') {
             #ifdef USING_CONFIDENCE_TREE
             std::vector<std::string> chunks;
@@ -1368,9 +1379,9 @@ void Agent::loadConfig(const std::string& config_file) {
 //    this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
 //    this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();
 //#endif
-//#ifdef SEPARATE_FRONTIERS
-//    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
-//#endif
+#ifdef SEPARATE_FRONTIERS
+    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
+#endif
     this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
     this->config.MAP_EXCHANGE_INTERVAL_S = config_yaml["communication"]["map_exchange_interval"].as<double>();
     this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
@@ -1437,4 +1448,12 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.WIFI_SPEED_MBPS = config_yaml["communication"]["wifi_speed"].as<double>();
     this->config.MAX_JITTER_MS = config_yaml["communication"]["max_jitter"].as<double>();
     this->config.MESSAGE_LOSS_PROBABILITY = config_yaml["communication"]["message_loss_probability"].as<double>();
+}
+
+double Agent::getTimeFromAgentLocation(std::string agentId) {
+    #ifdef SEPARATE_FRONTIERS
+    return std::get<2>(this->agentLocations[agentId]);
+    #else
+    return std::get<1>(this->agentLocations[agentId]);
+    #endif
 }

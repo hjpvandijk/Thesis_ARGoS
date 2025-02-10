@@ -39,10 +39,10 @@ argos::CVector2 ForceVectorCalculator::getVirtualWallAvoidanceVector(Agent* agen
 bool ForceVectorCalculator::getAverageNeighborLocation(Agent* agent, Coordinate *averageNeighborLocation, double range) {
     int nAgentsWithinRange = 0;
     for (const auto &agentLocation: agent->agentLocations) {
-        auto agenttime = std::get<1>(agentLocation.second);
+        auto agenttime = agent->getTimeFromAgentLocation(agentLocation.first);
         auto diff = (agent->elapsed_ticks - agenttime );
         auto diffSeconds = diff / agent->ticks_per_second;
-        if( (agent->elapsed_ticks - std::get<1>(agentLocation.second)) / agent->ticks_per_second > agent->config.AGENT_LOCATION_RELEVANT_S) continue;
+        if( (agent->elapsed_ticks - agent->getTimeFromAgentLocation(agentLocation.first)) / agent->ticks_per_second > agent->config.AGENT_LOCATION_RELEVANT_S) continue;
         argos::CVector2 vectorToOtherAgent =
                 argos::CVector2(std::get<0>(agentLocation.second) .x, std::get<0>(agentLocation.second).y)
                 - argos::CVector2(agent->position.x, agent->position.y);
@@ -352,7 +352,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             skipFrontier = true;
         } else {
             for (auto agentLocationTuple: agent->agentLocations) {
-                if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
+                if ((agent->getTimeFromAgentLocation(agentLocationTuple.first) - agent->elapsed_ticks) / agent->ticks_per_second >
                     agent->config.AGENT_LOCATION_RELEVANT_S)
                     continue;
 

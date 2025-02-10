@@ -85,6 +85,10 @@ public:
 
         double FRONTIER_DIST_UNTIL_REACHED;
 
+        #if defined(SEPARATE_FRONTIERS)
+        double FRONTIER_SEPARATION_THRESHOLD;
+        #endif
+
 
         #ifdef USING_CONFIDENCE_TREE
         double P_FREE;
@@ -122,7 +126,11 @@ public:
     };
     Config config;
 
+    #ifdef SEPARATE_FRONTIERS
+    std::map<std::string, std::tuple<Coordinate, Coordinate, double>> agentLocations; //id: (location, target, timestamp)
+    #else
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
+    #endif
     std::map<std::string, double> agentMapSent; //id: sent timestamp
     std::map<std::string, int> agentMapBytesReceived; //id: bytes received
     std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
@@ -202,6 +210,8 @@ public:
     void checkMessages();
 
     void parseMessages();
+
+    double getTimeFromAgentLocation(std::string agentId);
 
 
 
