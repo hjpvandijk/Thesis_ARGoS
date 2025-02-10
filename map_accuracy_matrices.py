@@ -39,7 +39,7 @@ def read_quadtree(filename):
         data = [row for row in reader]
     return data
 
-def calculate_precision_recall(arena_boxes, quadtree_data):
+def calculate_precision_recall(arena_boxes, coverage_data, obstacle_data):
     true_positives = 0
     false_positives = 0
     false_negatives = 0
@@ -56,14 +56,21 @@ def calculate_precision_recall(arena_boxes, quadtree_data):
         )
         arena_rectangles.append(rect)
 
-    for row in quadtree_data:
+    for i,row in enumerate(coverage_data):
+        obstacle_row = obstacle_data[i]
         if row['agent_id'] != agent_id:
             continue
 
-        box_size = float(row['box_size'])
-        box_x = float(row['box_x']) - box_size / 2
-        box_y = float(row['box_y']) - box_size / 2
-        pheromone = float(row['pheromone'])
+        box_size = float(row['size'])
+        box_x = float(row['x']) - box_size / 2
+        box_y = float(row['y']) - box_size / 2
+        coverage = float(row['coverage'])
+
+        obstacle_box_size = float(obstacle_row['size'])
+        obstacle_box_x = float(obstacle_row['x']) - obstacle_box_size / 2
+        obstacle_box_y = float(obstacle_row['y']) - obstacle_box_size / 2
+        assert box_x == obstacle_box_x and box_y == obstacle_box_y
+        obstacle = float(obstacle_row['obstacle'])
 
         box_rect = patches.Rectangle((box_x, box_y), box_size, box_size)
         #If the entire box is outside the actual arena, ignore it
@@ -75,14 +82,15 @@ def calculate_precision_recall(arena_boxes, quadtree_data):
             for arena_rect in arena_rectangles
         )
 
-        if box_contains_arena and pheromone < 0.5:
+        if box_contains_arena and obstacle != -1:
             true_positives += 1 # Correctly identified as occupied
-        elif box_contains_arena and pheromone >= 0.5:
+        elif box_contains_arena and coverage != -1:
             false_negatives += 1 # Incorrectly identified as free (actually occupied)
-        elif not box_contains_arena and pheromone >= 0.5:
+        elif not box_contains_arena and coverage != -1:
             true_positives += 1 # Correctly identified as free
-        else:
+        else: # not box_contains_arena and obstacle != -1
             false_positives += 1 # Incorrectly identified as occupied (actually free)
+
 
     precision = true_positives / (true_positives + false_positives)
     recall = true_positives / (true_positives + false_negatives)
@@ -92,7 +100,7 @@ def calculate_precision_recall(arena_boxes, quadtree_data):
 
     return precision, recall
 
-def plot_mistakes(arena_boxes, quadtree_data):
+def plot_mistakes(arena_boxes, coverage_data, obstacle_data):
     fig, ax = plt.subplots()
     arena_rectangles = []
 
@@ -108,13 +116,20 @@ def plot_mistakes(arena_boxes, quadtree_data):
 
     agent_id = 'pipuck1'  # Replace with the actual agent ID you want to consider
 
-    for row in quadtree_data:
+    for i,row in enumerate(coverage_data):
+        obstacle_row = obstacle_data[i]
         if row['agent_id'] != agent_id:
             continue
-        box_size = float(row['box_size'])
-        box_x = float(row['box_x']) - box_size / 2
-        box_y = float(row['box_y']) - box_size / 2
-        pheromone = float(row['pheromone'])
+        box_size = float(row['size'])
+        box_x = float(row['x']) - box_size / 2
+        box_y = float(row['y']) - box_size / 2
+        coverage = float(row['coverage'])
+
+        obstacle_box_size = float(obstacle_row['size'])
+        obstacle_box_x = float(obstacle_row['x']) - obstacle_box_size / 2
+        obstacle_box_y = float(obstacle_row['y']) - obstacle_box_size / 2
+        assert box_x == obstacle_box_x and box_y == obstacle_box_y
+        obstacle = float(obstacle_row['obstacle'])
 
         box_rect = patches.Rectangle((box_x, box_y), box_size, box_size)
 
@@ -129,13 +144,14 @@ def plot_mistakes(arena_boxes, quadtree_data):
             box_rect.get_bbox().overlaps(arena_rect.get_bbox())
             for arena_rect in arena_rectangles
         )
-        if box_contains_arena and pheromone < 0.5:
+
+        if box_contains_arena and obstacle != -1:
             color = 'red'
-        elif (not box_contains_arena) and pheromone >= 0.5:
+        elif box_contains_arena and coverage != -1:
             color = 'green'
-        elif box_contains_arena and pheromone >= 0.5:
+        elif not box_contains_arena and coverage != -1:
             color = 'pink'
-        else:
+        else: # not box_contains_arena and obstacle != -1
             color = 'yellow'
 
         # if (box_contains_arena and pheromone >= 0.5) or (not box_contains_arena and pheromone < 0.5):
@@ -148,8 +164,8 @@ def plot_mistakes(arena_boxes, quadtree_data):
         ax.add_patch(rect)
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-5.5, 5.5)
-    plt.ylim(-5.5, 5.5)
+    # plt.xlim(-5.5, 5.5)
+    # plt.ylim(-5.5, 5.5)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('Mistakes in Quadtree Results')
@@ -158,8 +174,9 @@ def plot_mistakes(arena_boxes, quadtree_data):
     plt.show()
 
 # Usage
-arena_boxes = read_arena('implementation_and_examples/experiments/hugo_experiment.argos')
-quadtree_data = read_quadtree('implementation_and_examples/experiment_results/quadtree.csv')
-precision, recall = calculate_precision_recall(arena_boxes, quadtree_data)
+arena_boxes = read_arena('implementation_and_examples/experiments/office_config.argos')
+coverage_data = read_quadtree('implementation_and_examples/experiment_results/experiment/coverage_matrix.csv')
+obstacle_data = read_quadtree('implementation_and_examples/experiment_results/experiment/obstacle_matrix.csv')
+precision, recall = calculate_precision_recall(arena_boxes, coverage_data, obstacle_data)
 print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
-plot_mistakes(arena_boxes, quadtree_data)
+plot_mistakes(arena_boxes, coverage_data, obstacle_data)
