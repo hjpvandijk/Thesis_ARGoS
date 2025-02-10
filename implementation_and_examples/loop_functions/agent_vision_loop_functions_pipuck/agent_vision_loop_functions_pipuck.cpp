@@ -305,7 +305,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //                combinedObstacleMatrix.update(i, j, obstacleMatrix[i][j]);
 //            }
 //        }
-        if(it.first->GetId() == "pipuck1"){
+        if(it.first->GetId() == "pipuck2"){
             obstacleMatrix = it.second;
             obstacleMatrixWidth = obstacleMatrix.size();
             obstacleMatrixHeight = obstacleMatrix[0].size(); // columns;

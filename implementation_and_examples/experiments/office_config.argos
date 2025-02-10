@@ -388,31 +388,31 @@
             </devices>
         </pipuck>
 
-<!--        <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">-->
-<!--            <body position="-4.5,8.5,0" orientation="-90,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
+        <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4.5,8.5,0" orientation="-90,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
 
 
-<!--        <pipuck id="pipuck3" wifi_medium="wifi" wifi_range="4.0">-->
-<!--            <body position="-4.5,8,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
+        <pipuck id="pipuck3" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4.5,8,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
-<!--        <pipuck id="pipuck4" wifi_medium="wifi" wifi_range="4.0">-->
-<!--            <body position="-4,9,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
+        <pipuck id="pipuck4" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4,9,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
-<!--        <pipuck id="pipuck5" wifi_medium="wifi" wifi_range="4.0">-->
-<!--            <body position="-4,8.5,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
-<!--        <pipuck id="pipuck6" wifi_medium="wifi" wifi_range="4.0">-->
-<!--            <body position="-4,8,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
+        <pipuck id="pipuck5" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4,8.5,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck6" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4,8,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
 
     </arena>
@@ -467,7 +467,7 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-        <qt-opengl autoplay="true">
+        <qt-opengl autoplay="false">
             <user_functions
                     library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
                     label="agent_vision_qtuser_functions_pipuck"/>

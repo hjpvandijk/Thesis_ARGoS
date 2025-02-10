@@ -387,23 +387,27 @@ void Agent::checkForObstacles() {
             //If the detected object is actually another agent, add it as a free area
             //So check if the object coordinate is close to another agent
             bool close_to_other_agent = false;
-            for (const auto &agentLocation: this->agentLocations) {
-                if ((std::get<1>(agentLocation.second) - this->elapsed_ticks) / this->ticks_per_second >
-                    this->config.AGENT_LOCATION_RELEVANT_S)
-                    continue;
-                argos::CVector2 objectToAgent =
-                        argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
-                        - argos::CVector2(object.x, object.y);
+            if (this->agentLocations.empty()) {
+                close_to_other_agent = true;
+            } else {
+                for (const auto &agentLocation: this->agentLocations) {
+                    if ((std::get<1>(agentLocation.second) - this->elapsed_ticks) / this->ticks_per_second >
+                        this->config.AGENT_LOCATION_RELEVANT_S)
+                        continue;
+                    argos::CVector2 objectToAgent =
+                            argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
+                            - argos::CVector2(object.x, object.y);
 
-                //If detected object and another agent are not close, add the object as an obstacle
-                if (objectToAgent.Length() <=
+                    //If detected object and another agent are not close, add the object as an obstacle
+                    if (objectToAgent.Length() <=
                         #ifdef USING_CONFIDENCE_TREE
-                this->quadtree->getResolution()
+                        this->quadtree->getResolution()
                         #else
-                this->coverageMatrix->getResolution()
-                        #endif
-                ) {
-                    close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
+                        this->coverageMatrix->getResolution()
+                            #endif
+                            ) {
+                        close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
+                    }
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
@@ -427,7 +431,7 @@ void Agent::checkForObstacles() {
                 }
                 #else
                 addObjectLocation(object);
-                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
+                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
                 #endif
             } else {
                 #ifdef USING_CONFIDENCE_TREE
@@ -939,14 +943,17 @@ void Agent::calculateNextPosition() {
 }
 
 void Agent::timeSyncWithCloseAgents() {
-    for (const auto& agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = agentLocationPair.second.second;
-        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
-        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
-            this->config.AGENT_LOCATION_RELEVANT_S) {
-            //If we have not time synced with this agent in the past TIME_SYNC_INTERVAL_S seconds, do it
-            if (this->elapsed_ticks - this->timeSynchronizer.getLastSync(agentLocationPair.first) >= this->config.TIME_SYNC_INTERVAL_S * this->ticks_per_second) {
+    if (this->elapsed_ticks - this->timeSynchronizer.getLastSyncAttempt() >=
+        (this->config.TIME_SYNC_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) {
+        for (const auto &agentLocationPair: this->agentLocations) {
+            double lastReceivedTick = std::get<1>(agentLocationPair.second);
+            //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
+            if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+                this->config.AGENT_LOCATION_RELEVANT_S) {
+                //If we have not time synced with this agent in the past TIME_SYNC_INTERVAL_S seconds, do it
+
                 timeSynchronizer.initTimeSync(this); //Broadcasting time sync init
+                break; //Time sync is broadcasted, so we can break
             }
         }
     }
@@ -1324,8 +1331,8 @@ void Agent::parseMessages() {
                     assert(0 && "Unknown time sync message type");
                 }
             }
-
         }
+
     }
 }
 
@@ -1365,7 +1372,7 @@ void Agent::loadConfig(const std::string& config_file) {
 //    this->config.FRONTIER_SEPARATION_THRESHOLD = config_yaml["control"]["separate_frontiers"]["distance_threshold"].as<float>();
 //#endif
     this->config.AGENT_LOCATION_RELEVANT_S = config_yaml["communication"]["agent_info_relevant"].as<double>();
-    this->config.MAP_EXCHANGE_INTERVAL_S = config_yaml["communication"]["matrix_exchange_interval"].as<double>();
+    this->config.MAP_EXCHANGE_INTERVAL_S = config_yaml["communication"]["map_exchange_interval"].as<double>();
     this->config.TIME_SYNC_INTERVAL_S = config_yaml["communication"]["time_sync_interval"].as<double>();
 //
     this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();

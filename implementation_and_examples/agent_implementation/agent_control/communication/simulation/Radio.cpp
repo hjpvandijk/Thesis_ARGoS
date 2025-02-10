@@ -45,7 +45,7 @@ void Radio::send_message(std::string &messagePrependedWithId, const std::string&
 }
 
 void Radio::checkMessagesInTransit(std::vector<std::string> &messages, double current_time_s) {
-    while (!messagesInTransit.empty() && this->messagesInTransit.top().arrive_time_s <= current_time_s) {
+    while (!this->messagesInTransit.empty() && this->messagesInTransit.top().arrive_time_s <= current_time_s) {
         auto messageInTransit = this->messagesInTransit.top();
         this->messagesInTransit.pop();
         std::string messageStr(messageInTransit.cMessage.ToCArray(),
