@@ -699,7 +699,7 @@ void CAgentVisionLoopFunctions::checkReturnToDeploymentSite(CSpace::TMapPerType 
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         //Check if agent is within 1m from deployment position
         if (sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
-                 pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2)) <= 1.0) {
+                 pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2)) <= cController.agentObject->config.FRONTIER_DIST_UNTIL_REACHED) {
             this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = true;
         } else {
             this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = false;
