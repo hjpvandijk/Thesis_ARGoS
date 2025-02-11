@@ -95,6 +95,8 @@ public:
 
     double map_width = 10.0;
     double map_height = 10.0;
+    double unreachable_area = 10;
+
 
     Coordinate getActualAgentPosition();
     CRadians getActualAgentOrientation();

@@ -137,7 +137,11 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         longest_mission_time_s = std::max(longest_mission_time_s, agent->config.MISSION_END_TIME_S);
     }
     this->m_metrics = metrics();
-    this->m_metrics.map_observation_count.resize(map_cols, std::vector<int>(map_rows, 0));
+    this->m_metrics.map_observation_count_total.resize(map_cols, std::vector<int>(map_rows, 0));
+    this->m_metrics.map_observation_count = std::map<std::string, std::vector<std::vector<int>>>();
+    for (const auto& it : tFBMap) {
+        this->m_metrics.map_observation_count[it.first] = std::vector<std::vector<int>>(map_cols, std::vector<int>(map_rows, 0));
+    }
 }
 
 /**
@@ -411,7 +415,8 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
         double covered_area = 0;
 
 
-        //TODO: Consider irreachible area
+        //Consider unreachable area
+        double unreachable_area = cController.unreachable_area;
         for (auto &it: tree) {
             quadtree::Box box = std::get<0>(it);
 
@@ -419,7 +424,7 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
             covered_area += box_size * box_size;
         }
 
-        double coverage = covered_area / (cController.map_width * cController.map_height);
+        double coverage = covered_area / ((cController.map_width * cController.map_height) - unreachable_area);
         argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
 
 
@@ -651,12 +656,20 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     //Export map observation count
     std::ofstream mapObservationCountFile;
     mapObservationCountFile.open("experiment_results/" + experiment_name_str + "/map_observation_count.csv");
-    mapObservationCountFile << "x,y,observation_count\n";
-    for (int i = 0; i < m_metrics.map_observation_count.size(); i++) {
-        for (int j = 0; j < m_metrics.map_observation_count[0].size(); j++) {
+    mapObservationCountFile << "x,y,observation_count_total,";
+    for (auto & it : m_metrics.map_observation_count) {
+        mapObservationCountFile << it.first << ",";
+    }
+    mapObservationCountFile << "\n";
+    for (int i = 0; i < m_metrics.map_observation_count_total.size(); i++) {
+        for (int j = 0; j < m_metrics.map_observation_count_total[0].size(); j++) {
             mapObservationCountFile << i << ",";
             mapObservationCountFile << j << ",";
-            mapObservationCountFile << m_metrics.map_observation_count[i][j] << "\n";
+            mapObservationCountFile << m_metrics.map_observation_count_total[i][j] << ",";
+            for (auto & it : m_metrics.map_observation_count) {
+                mapObservationCountFile << m_metrics.map_observation_count[it.first][i][j] << ",";
+            }
+            mapObservationCountFile << "\n";
         }
     }
     mapObservationCountFile.close();
@@ -758,7 +771,7 @@ void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, 
 //                }
 ////                quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
 //                std::pair<int, int> mapIndex = coordinateToMapIndex(object, agent);
-//                m_metrics.map_observation_count[mapIndex.first][mapIndex.second]++;
+//                m_metrics.map_observation_count_total[mapIndex.first][mapIndex.second]++;
 //
 //                if (!addedObjectAtAgentLocation) {
 //                    observeAreaBetween(agentRealPosition, object, agent);
@@ -791,7 +804,7 @@ void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, 
             //If the detected object is actually another agent, add it as a free area
             //So check if the object coordinate is close to another agent
 //            std::pair<int, int> mapIndex = coordinateToMapIndex(object, agent);
-//            m_metrics.map_observation_count[mapIndex.first][mapIndex.second]++;
+//            m_metrics.map_observation_count_total[mapIndex.first][mapIndex.second]++;
             observeAreaBetween(agentRealPosition, object, agent);
 
         } else {
@@ -811,8 +824,8 @@ std::pair<int, int> CAgentVisionLoopFunctions::coordinateToMapIndex(Coordinate c
     #else
     double rootboxSize = agent->coverageMatrix->getRealWidth();
     #endif
-    int x = std::floor((coordinate.x + rootboxSize/2.0) / rootboxSize * this->m_metrics.map_observation_count.size());
-    int y = std::floor((coordinate.y + rootboxSize/2.0) / rootboxSize * this->m_metrics.map_observation_count[0].size());
+    int x = std::floor((coordinate.x + rootboxSize/2.0) / rootboxSize * this->m_metrics.map_observation_count_total.size());
+    int y = std::floor((coordinate.y + rootboxSize/2.0) / rootboxSize * this->m_metrics.map_observation_count_total[0].size());
     return std::make_pair(x, y);
 }
 
@@ -829,7 +842,7 @@ void CAgentVisionLoopFunctions::observeAreaBetween(Coordinate coordinate1, Coord
 //
 //    for (int s = 0; s < nSteps; s++) {
 //        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-//        this->m_metrics.map_observation_count[coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).first][coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).second]++;
+//        this->m_metrics.map_observation_count_total[coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).first][coordinateToMapIndex(Coordinate{x + 0.0000000001, y + 0.0000000001}, agent).second]++;
 //        x += stepX;
 //        y += stepY;
 //    }
@@ -847,9 +860,11 @@ void CAgentVisionLoopFunctions::observeAreaBetween(Coordinate coordinate1, Coord
     for (int i=0; i<linePoints.size(); i++){
         auto point = linePoints[i];
         std::pair<int, int> mapIndexCoordinate = coordinateToMapIndex(Coordinate{point.x, point.y}, agent);
-        if (mapIndexCoordinate.first >= 0 && mapIndexCoordinate.first < this->m_metrics.map_observation_count.size() &&
-            mapIndexCoordinate.second >= 0 && mapIndexCoordinate.second < this->m_metrics.map_observation_count[0].size())
-            this->m_metrics.map_observation_count[mapIndexCoordinate.first][mapIndexCoordinate.second]++;
+        if (mapIndexCoordinate.first >= 0 && mapIndexCoordinate.first < this->m_metrics.map_observation_count_total.size() &&
+            mapIndexCoordinate.second >= 0 && mapIndexCoordinate.second < this->m_metrics.map_observation_count_total[0].size()) {
+            this->m_metrics.map_observation_count_total[mapIndexCoordinate.first][mapIndexCoordinate.second]++;
+            this->m_metrics.map_observation_count[agent->id][mapIndexCoordinate.first][mapIndexCoordinate.second]++;
+        }
         else assert(0);
     }
 }
