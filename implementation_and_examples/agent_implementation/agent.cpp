@@ -387,29 +387,27 @@ void Agent::checkForObstacles() {
             //If the detected object is actually another agent, add it as a free area
             //So check if the object coordinate is close to another agent
             bool close_to_other_agent = false;
-            if (this->agentLocations.empty()) {
-                close_to_other_agent = true;
-            } else {
-                for (const auto &agentLocation: this->agentLocations) {
-                    if ((getTimeFromAgentLocation(agentLocation.first) - this->elapsed_ticks) / this->ticks_per_second >
-                        this->config.AGENT_LOCATION_RELEVANT_S)
-                        continue;
-                    argos::CVector2 objectToAgent =
-                            argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
-                            - argos::CVector2(object.x, object.y);
 
-                    //If detected object and another agent are not close, add the object as an obstacle
-                    if (objectToAgent.Length() <=
-                        #ifdef USING_CONFIDENCE_TREE
-                        this->quadtree->getResolution()
-                        #else
-                        this->coverageMatrix->getResolution()
-                            #endif
-                            ) {
-                        close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
-                    }
+            for (const auto &agentLocation: this->agentLocations) {
+                if ((getTimeFromAgentLocation(agentLocation.first) - this->elapsed_ticks) / this->ticks_per_second >
+                    this->config.AGENT_LOCATION_RELEVANT_S)
+                    continue;
+                argos::CVector2 objectToAgent =
+                        argos::CVector2(std::get<0>(agentLocation.second).x, std::get<0>(agentLocation.second).y)
+                        - argos::CVector2(object.x, object.y);
+
+                //If detected object and another agent are not close, add the object as an obstacle
+                if (objectToAgent.Length() <=
+                    #ifdef USING_CONFIDENCE_TREE
+                    this->quadtree->getResolution()
+                    #else
+                    this->coverageMatrix->getResolution()
+                        #endif
+                        ) {
+                    close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
                 }
             }
+
             //Only add the object as an obstacle if it is not close to another agent
             if (!close_to_other_agent) {
                 if (sqrt(pow(this->position.x - object.x, 2) + pow(this->position.y - object.y, 2)) <
@@ -990,36 +988,36 @@ void Agent::doStep() {
         //Do nothing
         this->differential_drive.stop();
     } else { //Exploring or returning
+        if (this->elapsed_ticks >= this->ticks_per_second) { //Wait one second before starting, allowing initial communication
 
-        checkForObstacles();
+            checkForObstacles();
 
-        calculateNextPosition();
+            calculateNextPosition();
 
-        //If there is no force vector, do not move
-        if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
-        else {
+            //If there is no force vector, do not move
+            if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
+            else {
 
-            argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
+                argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
 
-            argos::CDegrees diffDeg = ToDegrees(diff);
+                argos::CDegrees diffDeg = ToDegrees(diff);
 
 
-            if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) &&
-                diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
-                //Go straight
-                this->differential_drive.forward();
-            } else if (diffDeg > argos::CDegrees(0)) {
-                //turn right
-                this->differential_drive.turnRight();
-            } else {
-                //turn left
-                this->differential_drive.turnLeft();
+                if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) &&
+                    diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
+                    //Go straight
+                    this->differential_drive.forward();
+                } else if (diffDeg > argos::CDegrees(0)) {
+                    //turn right
+                    this->differential_drive.turnRight();
+                } else {
+                    //turn left
+                    this->differential_drive.turnLeft();
+                }
             }
+            checkMissionEnd();
         }
-
-
         this->elapsed_ticks++;
-        checkMissionEnd();
     }
 }
 
