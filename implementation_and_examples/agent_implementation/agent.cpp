@@ -854,37 +854,38 @@ void Agent::doStep() {
         //Do nothing
         this->differential_drive.stop();
     } else { //Exploring or returning
+        if (this->elapsed_ticks >= this->ticks_per_second) { //Wait one second before starting, allowing initial communication
+            checkForObstacles();
 
-        checkForObstacles();
+            calculateNextPosition();
 
-        calculateNextPosition();
+            //If there is no force vector, do not move
+            if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
+            else {
 
-        //If there is no force vector, do not move
-        if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
-        else {
+                argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
 
-            argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
-
-            argos::CDegrees diffDeg = ToDegrees(diff);
+                argos::CDegrees diffDeg = ToDegrees(diff);
 
 
-            if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) &&
-                diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
-                //Go straight
-                this->differential_drive.forward();
-            } else if (diffDeg > argos::CDegrees(0)) {
-                //turn right
-                this->differential_drive.turnRight();
-            } else {
-                //turn left
-                this->differential_drive.turnLeft();
+                if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) &&
+                    diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
+                    //Go straight
+                    this->differential_drive.forward();
+                } else if (diffDeg > argos::CDegrees(0)) {
+                    //turn right
+                    this->differential_drive.turnRight();
+                } else {
+                    //turn left
+                    this->differential_drive.turnLeft();
+                }
             }
-        }
 
+            //Check if the mission has ended, and if so, we will return to the deployment location
+            checkMissionEnd();
+        }
         this->elapsed_ticks++;
-        //Check if the mission has ended, and if so, we will return to the deployment location
-        checkMissionEnd();
-    }
+        }
 }
 
 
