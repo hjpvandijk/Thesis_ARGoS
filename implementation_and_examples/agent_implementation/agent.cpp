@@ -986,34 +986,41 @@ void Agent::doStep() {
 
     checkMessages();
 
-    checkForObstacles();
+    if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
+        //Do nothing
+        this->differential_drive.stop();
+    } else { //Exploring or returning
 
-    calculateNextPosition();
+        checkForObstacles();
 
-    //If there is no force vector, do not move
-    if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
-    else {
+        calculateNextPosition();
 
-        argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
+        //If there is no force vector, do not move
+        if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
+        else {
 
-        argos::CDegrees diffDeg = ToDegrees(diff);
+            argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
+
+            argos::CDegrees diffDeg = ToDegrees(diff);
 
 
-        if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) && diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
-            //Go straight
-            this->differential_drive.forward();
-        } else if (diffDeg > argos::CDegrees(0)) {
-            //turn right
-            this->differential_drive.turnRight();
-        } else {
-            //turn left
-            this->differential_drive.turnLeft();
+            if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) &&
+                diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
+                //Go straight
+                this->differential_drive.forward();
+            } else if (diffDeg > argos::CDegrees(0)) {
+                //turn right
+                this->differential_drive.turnRight();
+            } else {
+                //turn left
+                this->differential_drive.turnLeft();
+            }
         }
+
+
+        this->elapsed_ticks++;
+        checkMissionEnd();
     }
-
-
-    this->elapsed_ticks++;
-    checkMissionEnd();
 }
 
 #ifdef USING_CONFIDENCE_TREE
