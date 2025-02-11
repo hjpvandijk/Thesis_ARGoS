@@ -147,14 +147,14 @@ def check_circle_rectangle_overlap(circle, rectangle):
     # Check if the closest point is inside the circle
     return distance <= circle_radius
 
-def calculate_precision_recall(arena_boxes, arena_cylinders, coverage_data, obstacle_data):
+def calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data):
     fig, ax = plt.subplots()
 
     true_positives = 0
     false_positives = 0
     false_negatives = 0
 
-    agent_id = 'pipuck2'  # Replace with the actual agent ID you want to consider
+    agent_id = 'pipuck1'  # Replace with the actual agent ID you want to consider
 
     arena_rectangles = []
     for arena_box in arena_boxes:
@@ -181,25 +181,14 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, coverage_data, obst
         arena_circles.append(circle)
         ax.add_patch(circle)
 
-
-    for i,row in enumerate(coverage_data):
-        obstacle_row = obstacle_data[i]
+    for row in quadtree_data:
         if row['agent_id'] != agent_id:
             continue
 
-        box_size = float(row['size'])
-        box_x = float(row['x']) - box_size / 2
-        box_y = float(row['y']) - box_size / 2
-        coverage = float(row['coverage'])
-
-        # if float(row['x']) <-6 or float(row['x']) >-4.6 or float(row['y']) > -3.5:
-        #     continue
-
-        obstacle_box_size = float(obstacle_row['size'])
-        obstacle_box_x = float(obstacle_row['x']) - obstacle_box_size / 2
-        obstacle_box_y = float(obstacle_row['y']) - obstacle_box_size / 2
-        assert box_x == obstacle_box_x and box_y == obstacle_box_y
-        obstacle = float(obstacle_row['obstacle'])
+        box_size = float(row['box_size'])
+        box_x = float(row['box_x']) - box_size / 2
+        box_y = float(row['box_y']) - box_size / 2
+        pheromone = float(row['pheromone'])
 
         box_rect = patches.Rectangle((box_x, box_y), box_size, box_size)
         #If the entire box is outside the actual arena, ignore it
@@ -217,16 +206,16 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, coverage_data, obst
         # if box_contains_arena:
             
 
-        if box_contains_arena and obstacle != -1:
+        if box_contains_arena and pheromone < 0.5:
             true_positives += 1 # Correctly identified as occupied
             color = 'red'
-        elif box_contains_arena and coverage != -1:
+        elif box_contains_arena and pheromone >= 0.5:
             false_negatives += 1 # Incorrectly identified as free (actually occupied)
             color = 'pink'
-        elif not box_contains_arena and coverage != -1:
+        elif not box_contains_arena and pheromone >= 0.5:
             true_positives += 1 # Correctly identified as free
             color = 'green'
-        elif not box_contains_arena and obstacle != -1:
+        else:
             false_positives += 1 # Incorrectly identified as occupied (actually free)
             color = 'yellow'
 
@@ -234,15 +223,12 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, coverage_data, obst
         ax.add_patch(rect)
 
     precision = true_positives / (true_positives + false_positives)
-    recall =  true_positives / (true_positives + false_negatives)
+    recall = true_positives / (true_positives + false_negatives)
     print("True Positives: ", true_positives)
     print("False Positives: ", false_positives)
     print("False Negatives: ", false_negatives)
 
     print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
-
-
-
     ax.set_aspect('equal', 'box')
     plt.xlim(-10.5, 10.5)
     plt.ylim(-5.6, 5.6)
@@ -252,104 +238,78 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, coverage_data, obst
 
     plt.grid(True)
     plt.show()
-
     return precision, recall
 
-# def plot_mistakes(arena_boxes, coverage_data, obstacle_data):
-#     fig, ax = plt.subplots()
-#     arena_rectangles = []
-#     for arena_box in arena_boxes:
-#         angle_rad = np.radians(arena_box['angle'])
-#         translation_x = arena_box['width'] /2 * (1-np.cos(angle_rad)) + arena_box['height'] /2 * np.sin(angle_rad)
-#         translation_y = arena_box['height'] /2 * (1-np.cos(angle_rad)) - arena_box['width'] /2 * np.sin(angle_rad)
-#         rect = patches.Rectangle(
-#             (arena_box['x'] - arena_box['width'] / 2 + translation_x, arena_box['y'] - arena_box['height'] / 2 + translation_y),
-#             arena_box['width'], arena_box['height'],
-#             linewidth=0, facecolor='gray', alpha=0.5,
-#             angle=arena_box['angle']
-#         )
-#         arena_rectangles.append(rect)
-#         ax.add_patch(rect)
+def plot_mistakes(arena_boxes, quadtree_data):
+    fig, ax = plt.subplots()
+    arena_rectangles = []
 
+    for arena_box in arena_boxes:
+        rect = patches.Rectangle(
+            (arena_box['x'] - arena_box['width'] / 2, arena_box['y'] - arena_box['height'] / 2),
+            arena_box['width'], arena_box['height'],
+            linewidth=0, facecolor='gray', alpha=0.5,
+            angle=arena_box['angle']
+        )
+        arena_rectangles.append(rect)
+        ax.add_patch(rect)
 
-#     arena_circles = []
-#     for arena_cylinder in arena_cylinders:
-#         circle = patches.Circle(
-#             (arena_cylinder['x'], arena_cylinder['y']),
-#             arena_cylinder['radius'],
-#             linewidth=0, facecolor='gray', alpha=0.5
-#         )
-#         arena_circles.append(circle)
-#         ax.add_patch(circle)
+    agent_id = 'pipuck1'  # Replace with the actual agent ID you want to consider
 
-#     agent_id = 'pipuck2'  # Replace with the actual agent ID you want to consider
+    for row in quadtree_data:
+        if row['agent_id'] != agent_id:
+            continue
+        box_size = float(row['box_size'])
+        box_x = float(row['box_x']) - box_size / 2
+        box_y = float(row['box_y']) - box_size / 2
+        pheromone = float(row['pheromone'])
 
-#     for i,row in enumerate(coverage_data):
-#         obstacle_row = obstacle_data[i]
-#         if row['agent_id'] != agent_id:
-#             continue
-#         box_size = float(row['size'])
-#         box_x = float(row['x']) - box_size / 2
-#         box_y = float(row['y']) - box_size / 2
-#         coverage = float(row['coverage'])
+        box_rect = patches.Rectangle((box_x, box_y), box_size, box_size)
 
-#         obstacle_box_size = float(obstacle_row['size'])
-#         obstacle_box_x = float(obstacle_row['x']) - obstacle_box_size / 2
-#         obstacle_box_y = float(obstacle_row['y']) - obstacle_box_size / 2
-#         assert box_x == obstacle_box_x and box_y == obstacle_box_y
-#         obstacle = float(obstacle_row['obstacle'])
+        # #If the entire box is outside the actual arena, ignore it
+        # if not actual_arena.get_bbox().fully_overlaps(box_rect.get_bbox()):
+        #     continue
 
-#         box_rect = patches.Rectangle((box_x, box_y), box_size, box_size)
+        if not actual_arena.get_bbox().fully_overlaps(box_rect.get_bbox()):
+            continue
 
-#         # #If the entire box is outside the actual arena, ignore it
-#         # if not actual_arena.get_bbox().fully_overlaps(box_rect.get_bbox()):
-#         #     continue
+        box_contains_arena = any(
+            box_rect.get_bbox().overlaps(arena_rect.get_bbox())
+            for arena_rect in arena_rectangles
+        )
+        if box_contains_arena and pheromone < 0.5:
+            color = 'red'
+        elif (not box_contains_arena) and pheromone >= 0.5:
+            color = 'green'
+        elif box_contains_arena and pheromone >= 0.5:
+            color = 'pink'
+        else:
+            color = 'yellow'
 
-#         if not actual_arena.get_bbox().fully_overlaps(box_rect.get_bbox()):
-#             continue
+        # if (box_contains_arena and pheromone >= 0.5) or (not box_contains_arena and pheromone < 0.5):
+        #     color = 'red'
+        # else:
+        #     color = 'green'
+        # color = (1 - pheromone, pheromone, 0)  # Red to Green gradient
 
-#         box_contains_arena = any(
-#             box_rect.get_bbox().overlaps(arena_rect.get_bbox())
-#             for arena_rect in arena_rectangles
-#         ) or any(
-#             check_circle_rectangle_overlap(arena_circle, box_rect)
-#             for arena_circle in arena_circles
-#         )
+        rect = plt.Rectangle((box_x, box_y), box_size, box_size, color=color, alpha=1)
+        ax.add_patch(rect)
 
-#         if box_contains_arena and obstacle != -1:
-#             color = 'red'
-#         elif box_contains_arena and coverage != -1:
-#             color = 'green'
-#         elif not box_contains_arena and coverage != -1:
-#             color = 'pink'
-#         else: # not box_contains_arena and obstacle != -1
-#             color = 'yellow'
+    ax.set_aspect('equal', 'box')
+    plt.xlim(-5.5, 5.5)
+    plt.ylim(-5.5, 5.5)
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Mistakes in Quadtree Results')
 
-#         # if (box_contains_arena and pheromone >= 0.5) or (not box_contains_arena and pheromone < 0.5):
-#         #     color = 'red'
-#         # else:
-#         #     color = 'green'
-#         # color = (1 - pheromone, pheromone, 0)  # Red to Green gradient
-
-#         rect = plt.Rectangle((box_x, box_y), box_size, box_size, color=color, alpha=1)
-#         ax.add_patch(rect)
-
-#     ax.set_aspect('equal', 'box')
-#     plt.xlim(-10.5, 10.5)
-#     plt.ylim(-5.6, 5.6)
-#     plt.xlabel('X-axis')
-#     plt.ylabel('Y-axis')
-#     plt.title('Mistakes in Quadtree Results')
-
-#     plt.grid(True)
-#     plt.show()
+    plt.grid(True)
+    plt.show()
 
 # Usage
 arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office_config.argos')
 arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office_config.argos')
 
-coverage_data = read_file('implementation_and_examples/experiment_results/experiment/coverage_matrix.csv')
-obstacle_data = read_file('implementation_and_examples/experiment_results/experiment/obstacle_matrix.csv')
-precision, recall = calculate_precision_recall(arena_boxes, arena_cylinders, coverage_data, obstacle_data)
-print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
-# plot_mistakes(arena_boxes, coverage_data, obstacle_data)
+quadtree_data = read_file('implementation_and_examples/experiment_results/experiment/quadtree.csv')
+precision, recall = calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data)
+# print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
+# plot_mistakes(arena_boxes, quadtree_data)
