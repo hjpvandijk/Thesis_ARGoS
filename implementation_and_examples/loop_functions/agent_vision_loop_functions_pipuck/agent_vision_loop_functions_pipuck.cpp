@@ -425,7 +425,7 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
         }
 
         double coverage = covered_area / ((cController.map_width * cController.map_height) - unreachable_area);
-        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
+//        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
 
 
         m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
@@ -485,7 +485,6 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
         double covered_area = 0;
 
 
-        //TODO: Consider irreachible area
 
         for (int i = 0; i < matrix.size(); i++) {
             for (int j = 0; j < matrix[i].size(); j++) {
@@ -500,8 +499,8 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
         }
 
 
-        double coverage = covered_area / (cController.map_width * cController.map_height);
-        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
+        double coverage = covered_area / ((cController.map_width * cController.map_height)-cController.unreachable_area);
+//        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
 
 
         m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
