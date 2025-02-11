@@ -286,6 +286,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             color = CColor::GREEN;
             color.SetAlpha(UInt8(pheromone * 255));
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+            DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
         }
 
     }
@@ -331,6 +332,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
             color = CColor::RED;
             color.SetAlpha(UInt8(pheromone * 255));
             DrawPolygon(pos, CQuaternion(), posVec, color, fill);
+            DrawPolygon(pos, CQuaternion(), posVec, CColor::BLACK, false);
         }
 
     }

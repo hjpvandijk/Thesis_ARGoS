@@ -115,17 +115,23 @@ for arena_box in arena_boxes:
     )
     arena_rectangles.append(rect)
 
+arena_circles = []
 for arena_cylinder in arena_cylinders:
     circle = patches.Circle(
         (arena_cylinder['x'], arena_cylinder['y']),
         arena_cylinder['radius'],
         linewidth=0, facecolor='gray', alpha=0.5
     )
-    ax.add_patch(circle)
+    arena_circles.append(circle)
+    
+
 
 #plot arena rectangles
 for rect in arena_rectangles:
     ax.add_patch(rect)
+
+for circle in arena_circles:
+    ax.add_patch(circle)
 
 # ax.set_aspect('equal', 'box')
 plt.xlim(-10.5, 10.5)
