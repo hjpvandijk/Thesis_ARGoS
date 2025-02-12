@@ -119,12 +119,11 @@ argos::CVector2 ForceVectorCalculator::calculateAgentAlignmentVector(Agent* agen
     for (const auto &agentVelocity: agent->agentVelocities) {
         std::string agentID = agentVelocity.first;
         Coordinate otherAgentLocation = std::get<0>(agent->agentLocations[agentID]);
-        argos::CVector2 agentVector = agentVelocity.second.first;
-        double agentSpeed = agentVelocity.second.second;
+        argos::CVector2 agentVector = agentVelocity.second;
         argos::CVector2 vectorToOtherAgent = argos::CVector2(otherAgentLocation.x, otherAgentLocation.y)
                                              - argos::CVector2(agent->position.x, agent->position.y);
         if (vectorToOtherAgent.Length() < agent->config.AGENT_ALIGNMENT_RADIUS) {
-            alignmentVector += agentVector * agentSpeed;
+            alignmentVector += agentVector;
             nAgentsWithinRange++;
         }
     }
