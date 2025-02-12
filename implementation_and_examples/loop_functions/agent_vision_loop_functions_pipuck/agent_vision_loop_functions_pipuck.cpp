@@ -1,5 +1,6 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_rangefinders_sensor.h>
 #include <argos3/plugins/simulator/physics_engines/dynamics2d/dynamics2d_model.h> // Include the correct header
+#include<argos3/plugins/robots/generic/simulator/simple_radios_default_actuator.h>
 #include <set>
 #include "agent_vision_loop_functions_pipuck.h"
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
@@ -94,6 +95,10 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
+        auto all = pcFB->GetComponentMap().find("simple_radios")->second;
+        auto simple_radio = &(dynamic_cast<argos::CSimpleRadioEquippedEntity*>(all))->GetRadio(0);
+        simple_radio->SetRange(agent->config.WIFI_RANGE_M);
+
         agent->ticks_per_second = ticksPerSecond;
 
         currently_colliding[pcFB] = false;
@@ -105,6 +110,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         deployment_positions[pcFB->GetId()] = agentRealPosition;
 
         longest_mission_time_s = std::max(longest_mission_time_s, agent->config.MISSION_END_TIME_S);
+
     }
 
     this->m_metrics = metrics();

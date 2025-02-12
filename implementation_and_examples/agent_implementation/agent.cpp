@@ -1211,6 +1211,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.MOTOR_NO_LOAD_CURRENT = config_yaml["motor"]["no_load_current"].as<double>();
 
     this->config.WIFI_SPEED_MBPS = config_yaml["communication"]["wifi_speed"].as<double>();
+    this->config.WIFI_RANGE_M = config_yaml["communication"]["wifi_range"].as<double>();
     this->config.MAX_JITTER_MS = config_yaml["communication"]["max_jitter"].as<double>();
     this->config.MESSAGE_LOSS_PROBABILITY = config_yaml["communication"]["message_loss_probability"].as<double>();
 }
