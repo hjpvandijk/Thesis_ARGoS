@@ -380,7 +380,7 @@
             <body position="0.535,-5.16,0" orientation="0,0,0"/>
         </cylinder>
 
-        <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">
+        <pipuck id="pipuck1" wifi_medium="wifi">
             <body position="-4.5,9,0" orientation="90,0,0"/>
             <controller config="ppc"/>
             <devices>
@@ -388,31 +388,31 @@
             </devices>
         </pipuck>
 
-        <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
+        <pipuck id="pipuck2" wifi_medium="wifi">
             <body position="-4.5,8.5,0" orientation="-90,0,0"/>
             <controller config="ppc"/>
         </pipuck>
 
 
 
-        <pipuck id="pipuck3" wifi_medium="wifi" wifi_range="4.0">
-            <body position="-4.5,8,0" orientation="0,0,0"/>
-            <controller config="ppc"/>
-        </pipuck>
+                <pipuck id="pipuck3" wifi_medium="wifi">
+                    <body position="-4.5,8,0" orientation="0,0,0"/>
+                    <controller config="ppc"/>
+                </pipuck>
 
-        <pipuck id="pipuck4" wifi_medium="wifi" wifi_range="4.0">
-            <body position="-4,9,0" orientation="0,0,0"/>
-            <controller config="ppc"/>
-        </pipuck>
+                <pipuck id="pipuck4" wifi_medium="wifi">
+                    <body position="-4,9,0" orientation="0,0,0"/>
+                    <controller config="ppc"/>
+                </pipuck>
 
-        <pipuck id="pipuck5" wifi_medium="wifi" wifi_range="4.0">
-            <body position="-4,8.5,0" orientation="0,0,0"/>
-            <controller config="ppc"/>
-        </pipuck>
-        <pipuck id="pipuck6" wifi_medium="wifi" wifi_range="4.0">
-            <body position="-4,8,0" orientation="0,0,0"/>
-            <controller config="ppc"/>
-        </pipuck>
+                <pipuck id="pipuck5" wifi_medium="wifi">
+                    <body position="-4,8.5,0" orientation="0,0,0"/>
+                    <controller config="ppc"/>
+                </pipuck>
+                <pipuck id="pipuck6" wifi_medium="wifi">
+                    <body position="-4,8,0" orientation="0,0,0"/>
+                    <controller config="ppc"/>
+                </pipuck>
 
 
     </arena>
@@ -477,13 +477,13 @@
                                up="0.721522,-3.4075e-17,0.692391" lens_focal_length="100"/>
                 </placements>
             </camera>
-<!--            <frame_grabbing directory="experiment_results/office_config"-->
-<!--                            base_name="frame"-->
-<!--                            format="png"-->
-<!--                            quality="100"-->
-<!--                            headless_grabbing="true"-->
-<!--                            headless_frame_size="1800x960\"-->
-<!--                            headless_frame_rate="20"/>-->
+            <!--            <frame_grabbing directory="experiment_results/office_config"-->
+            <!--                            base_name="frame"-->
+            <!--                            format="png"-->
+            <!--                            quality="100"-->
+            <!--                            headless_grabbing="true"-->
+            <!--                            headless_frame_size="1800x960\"-->
+            <!--                            headless_frame_rate="20"/>-->
         </qt-opengl>
     </visualization>
 

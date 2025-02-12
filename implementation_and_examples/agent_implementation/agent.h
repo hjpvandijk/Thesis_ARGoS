@@ -123,6 +123,7 @@ public:
         double MOTOR_NO_LOAD_CURRENT;
 
         double WIFI_SPEED_MBPS;
+        double WIFI_RANGE_M;
         double MAX_JITTER_MS;
         double MESSAGE_LOSS_PROBABILITY;
 
