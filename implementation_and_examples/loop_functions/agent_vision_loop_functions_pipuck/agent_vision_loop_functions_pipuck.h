@@ -28,6 +28,7 @@ public:
         int n_agent_obstacle_collisions;
         std::vector<std::vector<int>> map_observation_count_total;
         std::map<std::string, std::vector<std::vector<int>>> map_observation_count; //Per agent
+        std::map<std::string, std::pair<int, int>> bytes_sent_received; //Per agent
     };
 
     std::map<CPiPuckEntity*, bool> currently_colliding;
@@ -175,6 +176,7 @@ private:
 
     void updateCollisions(CPiPuckEntity *pcFB);
     void updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    void updateBytesSentReceived(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
 
     #ifdef USING_CONFIDENCE_TREE
     void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);

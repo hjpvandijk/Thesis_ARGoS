@@ -1320,7 +1320,8 @@ void Agent::parseMessages() {
             speedPos = vectorString.find(delimiter);
             vector = vectorString.substr(0, speedPos);
             argos::CVector2 newVector = vector2FromString(vector);
-            agentVelocities[senderId] = newVector;        } else if (messageContent[0] == 'T') { //Time sync message
+            agentVelocities[senderId] = newVector;
+        } else if (messageContent[0] == 'T') { //Time sync message
             std::string timeSyncString = messageContent.substr(2);
             auto splitStrings = splitString(timeSyncString, "|");
             int messageType = std::stoi(splitStrings[0]);

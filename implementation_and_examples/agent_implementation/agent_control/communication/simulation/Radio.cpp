@@ -55,6 +55,17 @@ void Radio::checkMessagesInTransit(std::vector<std::string> &messages, double cu
 //    }
 }
 
+void Radio::checkMessagesInTransitPeek(std::vector<std::string> &messages, double current_time_s) {
+    std::priority_queue<MessageInTransit, std::vector<MessageInTransit>, Compare> tempQueue = this->messagesInTransit;
+    while (!tempQueue.empty() && tempQueue.top().arrive_time_s <= current_time_s) {
+        auto messageInTransit = tempQueue.top();
+        tempQueue.pop();
+        std::string messageStr(messageInTransit.cMessage.ToCArray(),
+                               messageInTransit.cMessage.ToCArray() + messageInTransit.cMessage.Size());
+        messages.push_back(messageStr);
+    }
+}
+
 void Radio::receive_messages(std::vector<std::string> &messages, double current_time_s) {
     //First check if our messages in transit have arrived
     messages.clear();
@@ -74,3 +85,5 @@ void Radio::receive_messages(std::vector<std::string> &messages, double current_
     //Check if messages have arrived
     checkMessagesInTransit(messages, current_time_s);
 }
+
+

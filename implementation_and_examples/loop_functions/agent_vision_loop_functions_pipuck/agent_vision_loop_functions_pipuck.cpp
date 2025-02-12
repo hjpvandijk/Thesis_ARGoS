@@ -274,6 +274,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         updateTraveledPathLength(pcFB, agent);
         updateBatteryUsage(pcFB, agent);
         updateCellObservationCount(pcFB, agent);
+        updateBytesSentReceived(pcFB, agent);
 
     }
 
@@ -673,6 +674,17 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     mapObservationCountFile.close();
 
+    //Export sent and received bytes
+    std::ofstream bytesSentReceivedFile;
+    bytesSentReceivedFile.open("experiment_results/" + experiment_name_str + "/bytes_sent_received.csv");
+    bytesSentReceivedFile << "agent_id,bytes_sent,bytes_received\n";
+    for (auto & it : m_metrics.bytes_sent_received) {
+        bytesSentReceivedFile << it.first << "," << it.second.first << "," << it.second.second << "\n";
+    }
+    bytesSentReceivedFile.close();
+
+
+
     //Export mission time
     std::ofstream missionTimeFile;
     missionTimeFile.open("experiment_results/" + experiment_name_str + "/mission_time.csv");
@@ -890,6 +902,22 @@ bool CAgentVisionLoopFunctions::IsExperimentFinished() {
 
 void CAgentVisionLoopFunctions::PostExperiment() {
 //    exit(0);
+}
+
+void CAgentVisionLoopFunctions::updateBytesSentReceived(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
+    std::vector<std::string> messages = {};
+    agent->wifi.checkMessagesInTransitPeek(messages, agent->elapsed_ticks/agent->ticks_per_second);
+    auto receivedBytes = 0;
+    for (const auto &message: messages) {
+        receivedBytes += message.size();
+    }
+    m_metrics.bytes_sent_received[pcFB->GetId()].second += receivedBytes;
+    auto sentMessages = agent->wifi.radioActuator->GetInterfaces()[0].Messages;
+    auto sentBytes = 0;
+    for (const auto &message: sentMessages) {
+        sentBytes += message.Size();
+    }
+    m_metrics.bytes_sent_received[pcFB->GetId()].first += sentBytes;
 }
 
 /****************************************/
