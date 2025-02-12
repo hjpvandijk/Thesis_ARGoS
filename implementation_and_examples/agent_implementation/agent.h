@@ -136,7 +136,7 @@ public:
     #endif
     std::map<std::string, double> agentMapSent; //id: sent timestamp
     std::map<std::string, int> agentMapBytesReceived; //id: bytes received
-    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
+    std::map<std::string, argos::CVector2> agentVelocities;
 
 //    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
     DifferentialDrive differential_drive;

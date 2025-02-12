@@ -976,11 +976,12 @@ void Agent::doStep() {
     sendMatricesToCloseAgents();
     #endif
 
-    timeSyncWithCloseAgents();
-
+    argos::CVector2 velocity = {1,0};
+    velocity.Rotate(this->heading);
     broadcastMessage(
-            "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
-            ":" + std::to_string(this->speed));
+            "V:" + std::to_string(velocity.GetX()) + ";" + std::to_string(velocity.GetY()));
+
+    timeSyncWithCloseAgents();
 
     checkMessages();
 
@@ -1319,10 +1320,7 @@ void Agent::parseMessages() {
             speedPos = vectorString.find(delimiter);
             vector = vectorString.substr(0, speedPos);
             argos::CVector2 newVector = vector2FromString(vector);
-            vectorString.erase(0, speedPos + delimiter.length());
-            double newSpeed = std::stod(vectorString);
-            agentVelocities[senderId] = {newVector, newSpeed};
-        } else if (messageContent[0] == 'T') { //Time sync message
+            agentVelocities[senderId] = newVector;        } else if (messageContent[0] == 'T') { //Time sync message
             std::string timeSyncString = messageContent.substr(2);
             auto splitStrings = splitString(timeSyncString, "|");
             int messageType = std::stoi(splitStrings[0]);
