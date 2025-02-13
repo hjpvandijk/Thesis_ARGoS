@@ -42,6 +42,29 @@ void MotionSystemBatteryManager::calculateForces(float (& forces)[6], Agent* age
     forces[5] = totalForceDuringTurnDeceleration; //In Newtons
 }
 
+void MotionSystemBatteryManager::calculateForcesPastMovement(float acceleration, float deceleration, float turnAcceleration, float turnDeceleration, float (& forces)[6], Agent* agent) const {
+    float momentOfInertia = 0.5f * robot_weight_kg * 0.0362f * 0.0362f; //In kg.m^2 , 0.0362 is the robot radius
+
+    float accelerationForce = robot_weight_kg * acceleration; //In Newtons
+    float decelerationForce = robot_weight_kg * deceleration; //In Newtons
+    float turnAccelerationForce =
+            momentOfInertia * turnAcceleration / robot_wheel_radius_m; //In Newtons
+    float turnDecelerationForce =
+            momentOfInertia * turnDeceleration / robot_wheel_radius_m; //In Newtons
+
+    float totalForceDuringAcceleration = rolling_force_without_acceleration_N + accelerationForce; //In Newtons
+    float totalForceDuringDeceleration = rolling_force_without_acceleration_N + decelerationForce; //In Newtons
+    float totalForceDuringTurnAcceleration = rolling_force_without_acceleration_N + turnAccelerationForce; //In Newtons
+    float totalForceDuringTurnDeceleration = rolling_force_without_acceleration_N + turnDecelerationForce; //In Newtons
+
+    forces[0] = totalForceDuringAcceleration; //In Newtons
+    forces[1] = rolling_force_without_acceleration_N; //In Newtons
+    forces[2] = totalForceDuringDeceleration; //In Newtons
+    forces[3] = totalForceDuringTurnAcceleration; //In Newtons
+    forces[4] = rolling_force_without_acceleration_N; //In Newtons
+    forces[5] = totalForceDuringTurnDeceleration; //In Newtons
+}
+
 
 float
 MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float forces[], float forceDurations[]) {
@@ -114,10 +137,19 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
     float forces[6];
     calculateForces(forces, agent);
 
-    for (auto &vector: relativePath) {
+    for (int i = 0; i < relativePath.size(); i++) {
+        argos::CVector2 vector = relativePath[i];
         float distance = vector.Length(); //In meters
         float turnAngle = std::abs(
                 vector.Angle().GetValue()); //In Radians, we assume both directions yield the same power usage
+        bool cameToAStop = false;
+        if (turnAngle > agent->config.TURN_THRESHOLD_DEGREES) cameToAStop = true;
+        bool willComeToAStop = false;
+        if (i < relativePath.size()-2){
+            argos::CVector2 nextVector = relativePath[i+1];
+            float nextTurnAngle = std::abs(nextVector.Angle().GetValue());
+            if (nextTurnAngle > agent->config.TURN_THRESHOLD_DEGREES) willComeToAStop = true;
+        } //We don't know what happens next yet, so we don't assume we will come to a stop
 
         //Now we know the distance and the angle, we can estimate the time it will take to travel this path
 
@@ -151,6 +183,14 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
         //We can estimate the time it will take to travel the distance
         float totalDriveTime = 0.0;
 
+        //If we didn't come to a stop, we don't accelerate
+        if (!cameToAStop) {
+            distanceToAccelerateDrive = 0;
+        }
+        //If we won't come to a stop, we don't decelerate
+        if (!willComeToAStop) {
+            distanceToDecelerateDrive = 0;
+        }
         if (distanceToAccelerateDrive + distanceToDecelerateDrive > distance) {
             //We can't accelerate and decelerate in time
             float maxAchievedDriveSpeed = sqrt(2 * distance / (1 / agent->differential_drive.acceleration +
@@ -159,10 +199,10 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
             timeToDecelerateDrive = maxAchievedDriveSpeed / agent->differential_drive.deceleration; //In seconds
         } else {
             //We can accelerate and decelerate in time
-            timeToAccelerateDrive =
-                    agent->differential_drive.max_speed_straight / agent->differential_drive.acceleration; //In seconds
-            timeToDecelerateDrive =
-                    agent->differential_drive.max_speed_straight / agent->differential_drive.deceleration; //In seconds
+            timeToAccelerateDrive = distanceToAccelerateDrive == 0 ? 0 :
+                                    agent->differential_drive.max_speed_straight / agent->differential_drive.acceleration; //In seconds
+            timeToDecelerateDrive = distanceToDecelerateDrive == 0 ? 0 :
+                                    agent->differential_drive.max_speed_straight / agent->differential_drive.deceleration; //In seconds
             float distanceToTravelDrive = distance - distanceToAccelerateDrive - distanceToDecelerateDrive; //In meters
             timeToConstantDrive = distanceToTravelDrive / agent->differential_drive.max_speed_straight; //In seconds
         }
@@ -180,6 +220,70 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
 
     return {totalMotorPowerUsage, totalDuration};
 }
+
+std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndDurationFromPastMovement(Agent *agent, argos::CVector2 prevMovement, argos::CVector2 movement, float time) {
+    //Estimate how long it will take the agent to travel the path
+
+    auto max_speed_turn_rad_s =
+            agent->differential_drive.max_speed_turn / 0.0565f; //0.0565 is inter-wheel distance in meters
+
+    float totalDuration = 0;
+    float distance = movement.Length(); //In meters
+    float turnAngle = std::abs(
+            movement.Angle().GetValue()); //In Radians, we assume both directions yield the same power usage
+
+    double averageSpeed = distance / time;
+//    argos::LOG << distance << "/" << time << "=" << averageSpeed << std::endl;
+    double averageTurnSpeed = turnAngle / time;
+//    argos::LOG << turnAngle << "/" << time << "=" << averageTurnSpeed << std::endl;
+
+    float acceleration = (averageSpeed - prevMovement.Length()) / time;
+    float turnAcceleration = (averageTurnSpeed - prevMovement.Angle().GetValue()) / time;
+    float deceleration = 0;
+    float turnDeceleration = 0;
+
+    if (acceleration < 0) {
+        deceleration = acceleration;
+        acceleration = 0;
+    }
+    if (turnAcceleration < 0) {
+        turnDeceleration = turnAcceleration;
+        turnAcceleration = 0;
+    }
+//
+//    argos::LOG << "Acceleration: " << acceleration << " m/s^2" << std::endl;
+//    argos::LOG << "Deceleration: " << deceleration << " m/s^2" << std::endl;
+//    argos::LOG << "Turn Acceleration: " << turnAcceleration << " rad/s^2" << std::endl;
+//    argos::LOG << "Turn Deceleration: " << turnDeceleration << " rad/s^2" << std::endl;
+
+    float forces[6];
+    calculateForcesPastMovement(acceleration, deceleration, turnAcceleration, turnDeceleration, forces, agent);
+
+    //Now we know the distance and the angle, we can estimate the time it will take to travel this path
+
+
+
+    float timeToAccelerateTurn = turnAcceleration == 0 ? 0 : time; //In seconds
+    float timeToDecelerateTurn = turnDeceleration == 0 ? 0 : time; //In seconds
+    float timeToConstantTurn = turnAcceleration + turnDeceleration == 0 && turnAngle != 0 ? time : 0; //In seconds
+    float timeToAccelerateDrive = acceleration == 0 ? 0 : time; //In seconds
+    float timeToDecelerateDrive = deceleration == 0 ? 0 : time; //In seconds
+    float timeToConstantDrive = acceleration + deceleration == 0 && distance != 0 ? time : 0; //In seconds
+    assert(timeToAccelerateTurn + timeToDecelerateTurn + timeToConstantTurn <= time);
+    assert(timeToAccelerateDrive + timeToDecelerateDrive + timeToConstantDrive <= time);
+
+    float forceDurations[] = {timeToAccelerateDrive, timeToConstantDrive, timeToDecelerateDrive, timeToAccelerateTurn, timeToConstantTurn,
+                              timeToDecelerateTurn};
+
+    totalDuration += time;
+
+    //We can also estimate the power usage
+    float motorPowerUsage = EstimateMotorPowerUsage(agent, forces, forceDurations); //In Wh
+
+    return {motorPowerUsage, totalDuration};
+}
+
+
 
 /**
  * Get the maximum achievable speed of the robot, based on max voltage (6v)

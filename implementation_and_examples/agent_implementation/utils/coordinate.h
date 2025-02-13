@@ -47,6 +47,12 @@ struct Coordinate {
      */
     bool operator==(const Coordinate &rhs) const;
 
+    /**
+     * @brief Compares two coordinates for being smaller
+     * @return
+     */
+    bool operator<(const Coordinate &rhs) const;
+
 
 
 };
