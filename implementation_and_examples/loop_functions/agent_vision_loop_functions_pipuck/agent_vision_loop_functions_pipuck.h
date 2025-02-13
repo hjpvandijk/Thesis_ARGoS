@@ -24,7 +24,9 @@ public:
         std::map<std::string, double> total_battery_usage; //Per agent
         int n_agent_agent_collisions; //Make sure to divide by 2
         int n_agent_obstacle_collisions;
-        std::vector<std::vector<int>> map_observation_count;
+        std::vector<std::vector<int>> map_observation_count_total;
+        std::map<std::string, std::vector<std::vector<int>>> map_observation_count; //Per agent
+        std::map<std::string, std::pair<int, int>> bytes_sent_received; //Per agent
     };
 
     std::map<CPiPuckEntity*, bool> currently_colliding;
@@ -153,6 +155,7 @@ private:
 
     void updateCollisions(CPiPuckEntity *pcFB);
     void updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    void updateBytesSentReceived(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);

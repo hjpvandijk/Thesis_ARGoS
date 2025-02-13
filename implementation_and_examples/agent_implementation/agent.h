@@ -158,6 +158,7 @@ public:
         double MOTOR_NO_LOAD_CURRENT;
 
         double WIFI_SPEED_MBPS;
+        double WIFI_RANGE_M;
         double MAX_JITTER_MS;
         double MESSAGE_LOSS_PROBABILITY;
 
@@ -175,7 +176,7 @@ public:
 //    double QUADTREE_EXCHANGE_INTERVAL_S = 5.0;
     std::map<std::string, double> agentQuadtreeSent; //id: sent timestamp
     std::map<std::string, int> agentQuadtreeBytesReceived; //id: bytes received
-    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities; //id: (direction, speed)
+    std::map<std::string, argos::CVector2> agentVelocities; //id: (direction, speed)
 
 //    double TIME_SYNC_INTERVAL_S = 10.0;
     int last_time_sync_tick = 0;

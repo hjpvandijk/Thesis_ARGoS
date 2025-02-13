@@ -227,6 +227,7 @@ CRadians PiPuckHugo::getActualAgentOrientation(){
     CRadians zAngle, yAngle, xAngle;
     const auto orientation = positionSensorReading.Orientation;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
+    zAngle = Coordinate::ArgosHeadingToOwn(zAngle).SignedNormalize();
     return zAngle;
 }
 

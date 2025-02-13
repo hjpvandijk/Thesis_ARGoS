@@ -844,9 +844,10 @@ void Agent::startMission() {
 void Agent::doStep() {
     broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
     sendQuadtreeToCloseAgents();
+    argos::CVector2 velocity = {1,0};
+    velocity.Rotate(this->heading);
     broadcastMessage(
-            "V:" + std::to_string(this->force_vector.GetX()) + ";" + std::to_string(this->force_vector.GetY()) +
-            ":" + std::to_string(this->speed));
+            "V:" + std::to_string(velocity.GetX()) + ";" + std::to_string(velocity.GetY()));
     timeSyncWithCloseAgents();
 
     checkMessages();
@@ -854,37 +855,38 @@ void Agent::doStep() {
         //Do nothing
         this->differential_drive.stop();
     } else { //Exploring or returning
+        if (this->elapsed_ticks >= this->ticks_per_second) { //Wait one second before starting, allowing initial communication
+            checkForObstacles();
 
-        checkForObstacles();
+            calculateNextPosition();
 
-        calculateNextPosition();
+            //If there is no force vector, do not move
+            if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
+            else {
 
-        //If there is no force vector, do not move
-        if (this->force_vector == argos::CVector2{0, 0}) this->differential_drive.stop();
-        else {
+                argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
 
-            argos::CRadians diff = (this->heading - this->targetHeading).SignedNormalize();
-
-            argos::CDegrees diffDeg = ToDegrees(diff);
+                argos::CDegrees diffDeg = ToDegrees(diff);
 
 
-            if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) &&
-                diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
-                //Go straight
-                this->differential_drive.forward();
-            } else if (diffDeg > argos::CDegrees(0)) {
-                //turn right
-                this->differential_drive.turnRight();
-            } else {
-                //turn left
-                this->differential_drive.turnLeft();
+                if (diffDeg > argos::CDegrees(-this->config.TURN_THRESHOLD_DEGREES) &&
+                    diffDeg < argos::CDegrees(this->config.TURN_THRESHOLD_DEGREES)) {
+                    //Go straight
+                    this->differential_drive.forward();
+                } else if (diffDeg > argos::CDegrees(0)) {
+                    //turn right
+                    this->differential_drive.turnRight();
+                } else {
+                    //turn left
+                    this->differential_drive.turnLeft();
+                }
             }
-        }
 
+            //Check if the mission has ended, and if so, we will return to the deployment location
+            checkMissionEnd();
+        }
         this->elapsed_ticks++;
-        //Check if the mission has ended, and if so, we will return to the deployment location
-        checkMissionEnd();
-    }
+        }
 }
 
 
@@ -1056,9 +1058,7 @@ void Agent::parseMessages() {
             speedPos = vectorString.find(delimiter);
             vector = vectorString.substr(0, speedPos);
             argos::CVector2 newVector = vector2FromString(vector);
-            vectorString.erase(0, speedPos + delimiter.length());
-            double newSpeed = std::stod(vectorString);
-            agentVelocities[senderId] = {newVector, newSpeed};
+            agentVelocities[senderId] = newVector;
         } else if (messageContent[0] == 'T') { //Time sync message
             std::string timeSyncString = messageContent.substr(2);
             auto splitStrings = splitString(timeSyncString, "|");
@@ -1211,6 +1211,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.MOTOR_NO_LOAD_CURRENT = config_yaml["motor"]["no_load_current"].as<double>();
 
     this->config.WIFI_SPEED_MBPS = config_yaml["communication"]["wifi_speed"].as<double>();
+    this->config.WIFI_RANGE_M = config_yaml["communication"]["wifi_range"].as<double>();
     this->config.MAX_JITTER_MS = config_yaml["communication"]["max_jitter"].as<double>();
     this->config.MESSAGE_LOSS_PROBABILITY = config_yaml["communication"]["message_loss_probability"].as<double>();
 }
