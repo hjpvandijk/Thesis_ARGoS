@@ -15,8 +15,6 @@ add_subdirectory(radios_loop_functions)
 # Descend into the radios_range_loop_functions directory
 add_subdirectory(position_loop_functions)
 
-# Descend into the radios_range_loop_functions directory
-add_subdirectory(position_loop_functions_lua)
 
 # If Qt+OpenGL dependencies were found, descend into these directories
 if(ARGOS_QTOPENGL_FOUND)
