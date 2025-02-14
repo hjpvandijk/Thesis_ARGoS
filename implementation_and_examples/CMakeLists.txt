@@ -10,8 +10,8 @@ endif()
 set(CMAKE_MACOSX_RPATH 0)
 
 # Set the path where CMake will find additional scripts
-set(CMAKE_MODULE_PATH $ENV{CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
-set(CMAKE_PREFIX_PATH $ENV{CMAKE_PREFIX_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH $ENV{CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_PREFIX_PATH $ENV{CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Use C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -20,7 +20,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Find the ARGoS package, make sure to save the ARGoS prefix
 find_package(ARGoS REQUIRED)
-include_directories(${CMAKE_SOURCE_DIR} ${ARGOS_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ARGOS_INCLUDE_DIRS})
 link_directories(${ARGOS_LIBRARY_DIR})
 link_libraries(${ARGOS_LDFLAGS})
 
