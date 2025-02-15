@@ -843,7 +843,6 @@ void Agent::startMission() {
 }
 
 void Agent::doStep() {
-    if (this->elapsed_ticks ==40) return;
     broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
     sendQuadtreeToCloseAgents();
     argos::CVector2 velocity = {1,0};
