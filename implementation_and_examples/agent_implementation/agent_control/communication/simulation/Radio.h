@@ -26,6 +26,7 @@ public:
 
     void receive_messages(std::vector<std::string> &messages, double current_time_s);
 
+    void checkMessagesInTransitPeek(std::vector<std::string> &messages, double current_time_s);
 
 private:
     float wifiTransferSpeed_Mbps; //Speed of the wifi transfer in Mbps
