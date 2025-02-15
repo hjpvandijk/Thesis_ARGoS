@@ -41,8 +41,8 @@ def plot_arena(filename):
 
     # Set plot limits and labels
     ax.set_aspect('equal', 'box')
-    plt.xlim(-5.5, 5.5)
-    plt.ylim(-5.5, 5.5)
+    # plt.xlim(-5.5, 5.5)
+    # plt.ylim(-5.5, 5.5)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('Arena Configuration')
@@ -51,4 +51,4 @@ def plot_arena(filename):
     plt.show()
 
 # Usage
-plot_arena('implementation_and_examples/experiments/hugo_experiment.argos')
+plot_arena('implementation_and_examples/experiments/office_config.argos')
