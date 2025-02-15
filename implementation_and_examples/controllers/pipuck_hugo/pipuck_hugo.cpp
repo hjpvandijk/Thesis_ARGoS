@@ -67,6 +67,9 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     agentObject = std::make_shared<Agent>(Agent(this->m_strId, std::max(map_width_with_noise_room, map_height_with_noise_room), config_file));
     agentObject->setWifi(Radio(m_pcRadiosActuator, m_pcRadiosSensor));
 
+    agentObject->left_right_borders = {-map_width / 2, map_width / 2};
+    agentObject->upper_lower_borders = {-map_height/ 2, map_height/ 2};
+
     agentObject->differential_drive.setActuator(m_pcWheels);
 
     readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);

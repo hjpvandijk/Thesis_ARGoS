@@ -23,11 +23,11 @@ argos::CVector2 ForceVectorCalculator::getVirtualWallAvoidanceVector(Agent* agen
         virtualWallAvoidanceVector.SetX(-1);
     }
 
-    if (agent->position.y < agent->upper_lower_borders.y) {
+    if (agent->position.y< agent->upper_lower_borders.x) {
         virtualWallAvoidanceVector.SetY(1);
     } else if (agent->upper_lower_borders.y <= agent->position.y && agent->position.y <= agent->upper_lower_borders.x) {
         virtualWallAvoidanceVector.SetY(0);
-    } else if (agent->position.y > agent->upper_lower_borders.x) {
+    } else if (agent->position.y > agent->upper_lower_borders.y) {
         virtualWallAvoidanceVector.SetY(-1);
     }
 
