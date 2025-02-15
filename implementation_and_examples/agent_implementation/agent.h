@@ -230,7 +230,7 @@ public:
     void sendMatricesToCloseAgents();
     #endif
     Coordinate left_right_borders = {-10,10};
-    Coordinate upper_lower_borders = {10,-10};
+    Coordinate upper_lower_borders = {-10,10};
 
     Coordinate currentBestFrontier = {0,0};
 
