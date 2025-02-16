@@ -97,7 +97,7 @@
                 <positioning implementation="default"/>
             </sensors>
             <!--     actual map width in m, actual mad height in m      -->
-            <params map_width ="20" map_height ="10.2" unreachable_area = "35.529569" config="agent_implementation/config.yaml"/>
+            <params map_width ="30" map_height ="30" unreachable_area = "35.529569" config="agent_implementation/config.yaml"/>
         </pipuck_hugo_controller>
 
     </controllers>
