@@ -192,52 +192,51 @@
             <body position="-2.665,3.44,0" orientation="-90.0,0,0"/>
         </box>
 
-        <cylinder id="circle_30" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="-3.915,5.185,0" orientation="0,0,0"/>
+        <cylinder id="circle_30" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="-3.895,5.675,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_31" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="-0.235,8.95,0" orientation="0,0,0"/>
+        <cylinder id="circle_31" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="0.005,8.775,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_32" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="4.435,8.93,0" orientation="0,0,0"/>
+        <cylinder id="circle_32" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="4.205,8.765,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_33" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_33" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="4.315,6.205,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_34" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_34" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="2.415,5.145,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_35" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_35" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="1.915,3.87,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_36" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_36" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-0.29,3.855,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_37" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_37" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.475,4.095,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_38" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="4.315,4.045,0" orientation="0,0,0"/>
+
+        <cylinder id="circle_38" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="4.315,4.14,0" orientation="0,0,0"/>
+        </cylinder>
+        <cylinder id="circle_42" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="4.325,2.835,0" orientation="0,0,0"/>
         </cylinder>
 
-
-
-        <cylinder id="circle_39" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_39" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.78,2.065,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_40" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_40" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="2.425,1.89,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_42" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="4.315,2.97,0" orientation="0,0,0"/>
-        </cylinder>
-        <cylinder id="circle_43" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_43" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="4.295,0.805,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_44" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_44" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.475,1.54,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_45" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_45" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.48,0.705,0" orientation="0,0,0"/>
         </cylinder>
         <box id="box_0" size="0.135,0.345,0.5" movable="false">
@@ -318,65 +317,65 @@
         <box id="box_25" size="0.15,10.03,0.5" movable="false">
             <body position="-0.055,-9.925,0" orientation="-90.0,0,0"/>
         </box>
-        <cylinder id="circle_6" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_6" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="1.125,-4.1,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_7" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_7" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-0.06,-4.1,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_8" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_8" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-0.095,-6.16,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_9" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_9" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="1.13,-6.17,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_10" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_10" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.9,-4.38,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_11" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_11" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.9,-5.225,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_12" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_12" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.925,-6.085,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_13" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_13" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.905,-6.93,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_14" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_14" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.91,-7.815,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_15" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_15" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.125,-4.37,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_16" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_16" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.125,-5.235,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_17" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_17" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.145,-6.095,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_18" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_18" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.125,-6.945,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_19" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_19" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.125,-7.805,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_20" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_20" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="3.875,-5.97,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_21" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_21" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="4.68,-5.975,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_22" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_22" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="3.58,-8.92,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_23" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_23" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-2.97,-8.595,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_24" radius="0.331436268383531" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_24" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.475,-1.85,0" orientation="0,0,0"/>
         </cylinder>
 
-        <cylinder id="circle_51" radius="0.9736657537368765" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_51" radius="0.815" height="0.5" temperature="0" movable="false">
             <body position="0.535,-5.16,0" orientation="0,0,0"/>
         </cylinder>
 
