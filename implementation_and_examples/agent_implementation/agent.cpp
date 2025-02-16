@@ -73,7 +73,6 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
 
 
 void Agent::setPosition(double new_x, double new_y) {
-    argos::RLOG << "Setting position in agent to (" << new_x << ", " << new_y << ")" << std::endl;
     this->position = {new_x, new_y};
 }
 

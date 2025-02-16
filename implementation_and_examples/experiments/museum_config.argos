@@ -235,32 +235,32 @@
         <box id="box_212" size="2.88,1.2533333333333334,0.5" movable="false">
             <body position="-6.706666666666667,-7.1066666666666665,0" orientation="-0.0,0,0"/>
         </box>
-        <cylinder id="circle_23" radius="1.7218594600024706" height="0.5" temperature="0" movable="false">
-            <body position="-0.0,-0.013333333333333334,0" orientation="0,0,0"/>
+
+
+        <box id="box_70" size="0.25455844122715715,0.9805214032453459,0.5" movable="false">
+            <body position="5.316666666666666,-4.716666666666667,0" orientation="-45.0,0,0"/>
+        </box>
+        <cylinder id="circle_71" radius="1.7825325304807824" height="0.5" temperature="0" movable="false">
+            <body position="0.04,-0.013333333333333334,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_25" radius="0.17333333333333334" height="0.5" temperature="0" movable="false">
-            <body position="-2.8,-6.88,0" orientation="0,0,0"/>
+
+        <cylinder id="circle_50" radius="0.15" height="0.5" temperature="0" movable="false">
+            <body position="-4.8,6.48,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_26" radius="0.2170509412813294" height="0.5" temperature="0" movable="false">
-            <body position="-3.453333333333333,-6.88,0" orientation="0,0,0"/>
+        <cylinder id="circle_51" radius="0.15" height="0.5" temperature="0" movable="false">
+            <body position="-3.76,6.48,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_27" radius="0.1895022720473586" height="0.5" temperature="0" movable="false">
-            <body position="-4.093333333333334,-6.88,0" orientation="0,0,0"/>
+        <cylinder id="circle_52" radius="0.15" height="0.5" temperature="0" movable="false">
+            <body position="-2.76,6.48,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_28" radius="0.20741798914805393" height="0.5" temperature="0" movable="false">
-            <body position="-4.733333333333333,-6.88,0" orientation="0,0,0"/>
+        <cylinder id="circle_53" radius="0.15" height="0.5" temperature="0" movable="false">
+            <body position="-2.76,-6.68,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_210" radius="0.1852325865259974" height="0.5" temperature="0" movable="false">
-            <body position="-4.72,6.666666666666667,0" orientation="0,0,0"/>
+        <cylinder id="circle_54" radius="0.15" height="0.5" temperature="0" movable="false">
+            <body position="-3.76,-6.68,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_211" radius="0.15202339001321838" height="0.5" temperature="0" movable="false">
-            <body position="-4.066666666666666,6.666666666666667,0" orientation="0,0,0"/>
-        </cylinder>
-        <cylinder id="circle_212" radius="0.19090428084368471" height="0.5" temperature="0" movable="false">
-            <body position="-3.44,6.666666666666667,0" orientation="0,0,0"/>
-        </cylinder>
-        <cylinder id="circle_213" radius="0.2" height="0.5" temperature="0" movable="false">
-            <body position="-2.7866666666666666,6.666666666666667,0" orientation="0,0,0"/>
+        <cylinder id="circle_55" radius="0.15" height="0.5" temperature="0" movable="false">
+            <body position="-4.8,-6.68,0" orientation="0,0,0"/>
         </cylinder>
 
         <box id="box_30" size="1.0088056744928078,2.960420390567679,0.5" movable="false">
@@ -338,9 +338,6 @@
         <box id="box_324" size="0.9805214032453459,2.9792765713993203,0.5" movable="false">
             <body position="-8.306666666666667,-10.066666666666666,0" orientation="45.0,0,0"/>
         </box>
-        <box id="box_325" size="0.24513035081133647,0.9805214032453459,0.5" movable="false">
-            <body position="5.073333333333333,-4.513333333333334,0" orientation="-45.0,0,0"/>
-        </box>
         <box id="box_326" size="0.23570226039551584,0.9428090415820634,0.5" movable="false">
             <body position="6.31,-5.79,0" orientation="-45.0,0,0"/>
         </box>
@@ -373,12 +370,7 @@
         <box id="box_53" size="0.23199999999999998,0.8666666666666667,0.5" movable="false">
             <body position="4.671446153846155,-6.219097435897438,0" orientation="-104.2500326978036,0,0"/>
         </box>
-        <box id="box_54" size="0.26666666666666666,0.9733333333333334,0.5" movable="false">
-            <body position="5.153333333333333,-5.4,0" orientation="-90.0,0,0"/>
-        </box>
-        <box id="box_55" size="0.26666666666666666,1.0,0.5" movable="false">
-            <body position="5.946666666666666,-4.3933333333333335,0" orientation="-0.0,0,0"/>
-        </box>
+
 
         <box id="box_60" size="0.9710933128295252,2.9792765713993203,0.5" movable="false">
             <body position="8.45,10.25,0" orientation="45.0,0,0"/>
