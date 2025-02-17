@@ -3,15 +3,15 @@ from tkinter import simpledialog, filedialog
 from PIL import Image, ImageTk
 import math
 
-map_width_m = 30
-map_height_m = 30
-meter_pixels = 75
+map_width_m = 12
+map_height_m = 9.5
+meter_pixels = 200
 
 canvas_width = map_width_m * meter_pixels
 canvas_height = map_height_m * meter_pixels
 
 only_vertical_or_horizontal = False
-only_45_degrees = True
+only_45_degrees = False
 
 class DrawApp:
     def __init__(self, root):
@@ -91,7 +91,7 @@ class DrawApp:
         self.canvas.create_line(0, canvas_height/2, canvas_height, canvas_height/2, fill="black")
 
     def load_image(self):
-        file_path = "museum.jpg"
+        file_path = "house.jpg"
         if file_path:
             self.original_image = Image.open(file_path)
             self.display_image(1.0)
@@ -269,7 +269,7 @@ class DrawApp:
             arena_x = (center_x - canvas_width/2) / meter_pixels
             arena_y = -(center_y - canvas_height/2) / meter_pixels
 
-            box_id = f"box_6{self.box_counter}"
+            box_id = f"box_{self.box_counter}"
             xml_size = f"{width/meter_pixels},{length/meter_pixels},0.5"
             xml_position = f"{arena_y},{-arena_x},0"
 
@@ -298,7 +298,7 @@ class DrawApp:
             arena_x = (center_x - canvas_width/2) / meter_pixels
             arena_y = -(center_y - canvas_height/2) / meter_pixels
 
-            circle_id = f"circle_5{self.circle_counter}"
+            circle_id = f"circle_{self.circle_counter}"
             xml_radius = f"{radius/meter_pixels}"
             xml_position = f"{arena_y},{-arena_x},0"
 

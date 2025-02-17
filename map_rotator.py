@@ -33,6 +33,7 @@ def read_arena_boxes(filename):
         angle = float(orientation[0])  # Assuming rotation around the Z-axis
 
         boxes.append({
+            'id': box.get('id'),
             'width': width,
             'height': height,
             'x': x,
@@ -81,6 +82,7 @@ def read_arena_boxes_and_rotate(filename, degrees):
         position = box.find('body').get('position').split(',')
         orientation = box.find('body').get('orientation').split(',')
 
+        id = box.get('id')
         height = float(size[0])
         width = float(size[1])
         y = float(position[0])
@@ -100,7 +102,7 @@ def read_arena_boxes_and_rotate(filename, degrees):
         xml_position = f"{y},{-x},0"
         xml_orientation = f"{angle},0,0"
 
-        box_id = f"box_{i}"
+        box_id = id
 
 
 
@@ -138,6 +140,8 @@ def read_arena_pipucks_and_rotate(filename, degrees):
     for i, pipuck in enumerate(arena.findall('pipuck')):
         position = pipuck.find('body').get('position').split(',')
 
+        id = pipuck.get('id')
+
         y = float(position[0])
         x = -float(position[1])
 
@@ -145,10 +149,11 @@ def read_arena_pipucks_and_rotate(filename, degrees):
 
         xml_position = f"{y},{-x},0"
 
-        pipuck_id = f"pipuck_{i}"
+        pipuck_id = id
 
-        xml = f'''<pipuck id="{pipuck_id}" temperature="0" movable="false">
+        xml = f'''<pipuck id="{pipuck_id}" wifi_medium="wifi">
         <body position="{xml_position}" orientation="0,0,0"/>
+        <controller config="ppc"/>
         </pipuck>'''
 
         print(xml)
@@ -198,6 +203,8 @@ def read_arena_cylinders_and_rotate(filename, degrees):
         radius = float(cylinder.get('radius'))
         position = cylinder.find('body').get('position').split(',')
 
+        id = cylinder.get('id')
+
         y = float(position[0])
         x = -float(position[1])
 
@@ -206,7 +213,7 @@ def read_arena_cylinders_and_rotate(filename, degrees):
         xml_radius = f"{radius}"
         xml_position = f"{y},{-x},0"
 
-        cylinder_id = f"cylinder_{i}"
+        cylinder_id = id
 
         xml = f'''<cylinder id="{cylinder_id}" radius="{xml_radius}" height="0.5" temperature="0" movable="false">
         <body position="{xml_position}" orientation="0,0,0"/>
@@ -346,8 +353,8 @@ def plot(arena_boxes, arena_cylinders):
         ax.add_patch(circle)
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-13, 13)
-    plt.ylim(-8, 8)
+    plt.xlim(-16.5, 16.5)
+    plt.ylim(-16.5, 16.5)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('Mistakes in Quadtree Results')
@@ -390,11 +397,11 @@ def rotate_map(arena_boxes, arena_cylinders, angle_degrees):
 
 # Usage
 # arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office_config.argos')
-arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/house_config.argos', 20)
+arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
 # arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office_config.argos')
-arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/house_config.argos', 20)
+arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
 
-arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/house_config.argos', 20)
+arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
 
 # arena_boxes, arena_cylinders = rotate_map(arena_boxes, arena_cylinders, 20)
 # print_rotated_shapes(arena_boxes, arena_cylinders)

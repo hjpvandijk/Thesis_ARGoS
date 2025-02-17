@@ -4,8 +4,8 @@ import matplotlib.patches as patches
 import numpy as np
 import csv
 
-actual_arena_width = 20
-actual_arena_height = 10.2
+actual_arena_width = 30
+actual_arena_height = 30
 actual_arena = patches.Rectangle((-actual_arena_width / 2, -actual_arena_height / 2), actual_arena_width, actual_arena_height, linewidth=0, edgecolor='r', facecolor='blue', alpha=0.5)
 
 def read_arena_boxes(filename):
@@ -167,7 +167,7 @@ def select_valid_cells(cells, boxes, circles):
     
     return valid_cells
 
-def calculate_unreachible_areas(arena_boxes, arena_cylinders, quadtree_data):
+def calculate_unreachible_areas(arena_boxes, arena_cylinders):
     fig, ax = plt.subplots()
 
     arena_rectangles = []
@@ -229,21 +229,20 @@ def calculate_unreachible_areas(arena_boxes, arena_cylinders, quadtree_data):
     print(f'Non-valid area: {non_valid_area:f} m^2')
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-10.5, 10.5)
-    plt.ylim(-5.6, 5.6)
+    plt.xlim(-15, 15)
+    plt.ylim(-15, 15)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('Mistakes in Quadtree Results')
 
     plt.grid(True)
     plt.show()
-    return precision, recall
 
 # Usage
-arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office_config.argos')
-arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office_config.argos')
+arena_boxes = read_arena_boxes('implementation_and_examples/experiments/museum.argos')
+arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/museum.argos')
 
 quadtree_data = read_file('implementation_and_examples/experiment_results/experiment/quadtree.csv')
-precision, recall = calculate_unreachible_areas(arena_boxes, arena_cylinders, quadtree_data)
+calculate_unreachible_areas(arena_boxes, arena_cylinders)
 # print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
 # plot_mistakes(arena_boxes, quadtree_data)
