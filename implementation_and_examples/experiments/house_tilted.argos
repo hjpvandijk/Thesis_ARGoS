@@ -1,0 +1,422 @@
+<?xml version="1.0" ?>
+<argos-configuration>
+
+    <!-- ************************* -->
+    <!-- * General configuration * -->
+    <!-- ************************* -->
+    <framework>
+        <!--
+            System configuration:
+            - threads: the number of slave threads to parallelize the
+              computation. For less than 100 robots thread management is not
+              beneficial, so here we set it to 0. When set to 0, it means that
+              the computation is not parallelized: the main thread does
+              everything.
+        -->
+        <system threads="0"/>
+        <!--
+            Experiment configuration:
+            - length: total experiment time in seconds (0 means the experiment
+              has no time limit)
+            - ticks_per_second: number of ticks per second (int value)
+            - random_seed: seed of the main random number generator. If unset
+              or set to zero, this value is taken from the clock and a warning
+              message is displayed.
+        -->
+        <experiment length="0"
+                    ticks_per_second="30"
+                    random_seed="124"/>
+
+        <log file="output.log" />
+        <logerr file="error.log" />
+    </framework>
+
+    <!-- *************** -->
+    <!-- * Controllers * -->
+    <!-- *************** -->
+    <controllers>
+
+        <!--
+             Here you list the controllers to be used in the experiment.
+             The XML tag is set by the REGISTER_CONTROLLER(class, "tag") macro.
+             You find it in the .cpp file of your controller.
+             For this example, the macro is called in
+             controllers/footbot_diffusion.cpp:100.
+        -->
+
+        <!--
+            The attributes are:
+            - id: a unique a identifier for this controller, to be used in the
+              subsequent <arena> section to say which robots use which
+              controller
+            - library: the path to the compiled library containing you
+              controller.
+        -->
+        <pipuck_hugo_controller id="ppc"
+                                library="build/controllers/pipuck_hugo/libpipuck_hugo">
+            <!--
+                The <actuators> section contains a list of the actuatocdrs used by
+                this controller.
+                If you forget a to mention an actuator here and then request it
+                in the controller, an error occurs.
+                For a list of the possible actuators, type at the command prompt:
+                $ launch_argos -q actuators
+
+                Multiple implementations of an actuator are possible. To
+                identify which one you want to use, pass it in the
+                'implementation' attribute below. When you type the 'argos3 -q'
+                command, the implementation is in the square brackets following
+                the name of the device:
+
+                $ argos3 -q actuators
+                ...
+                footbot_wheels [default]
+                ...
+            -->
+            <actuators>
+                <!--                <differential_steering implementation="default" />-->
+                <!--                <footbot_distance_scanner implementation="default" />-->
+                <pipuck_differential_drive implementation="default"/>
+                <simple_radios implementation="default"/>
+                <!--                <range_and_bearing implementation="default" medium="rab"/>-->
+            </actuators>
+            <!--
+                The <sensors> section contains a list of the sensors used by
+                this controller.
+                If you forget a to mention a sensor here and then request it in
+                the controller, an error occurs.
+                For a list of the possible sensors, type at the command prompt:
+                $ argos3 -q sensors
+            -->
+            <sensors>
+                <!--                <footbot_proximity implementation="default" show_rays="true" />-->
+                <!--                <footbot_distance_scanner implementation="rot_z_only" show_rays="false" />-->
+                <pipuck_rangefinders implementation="default" show_rays="true"/>
+                <simple_radios implementation="default" show_rays="false"/>
+                <!--                <range_and_bearing implementation="default" medium="rab"/>-->
+                <positioning implementation="default"/>
+            </sensors>
+            <!--     actual map width in m, actual mad height in m      -->
+            <params map_width ="13" map_height ="14.6" unreachable_area = "35.529569" config="{{CONFIG_PATH}}"/>
+        </pipuck_hugo_controller>
+
+    </controllers>
+
+    <!-- ****************** -->
+    <!-- * Loop functions * -->
+    <!-- ****************** -->
+    <!--    <loop_functions library="build/loop_functions/trajectory_loop_functions_pipuck/libtrajectory_loop_functions_pipuck"-->
+    <!--                    label="trajectory_loop_functions_pipuck" />-->
+    <!--    <loop_functions library="build/loop_functions/coverage_loop_functions_pipuck/libcoverage_loop_functions_pipuck"-->
+    <!--                    label="coverage_loop_functions_pipuck"/>-->
+    <loop_functions
+            library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
+            label="agent_vision_loop_functions_pipuck"/>
+
+    <!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
+    <!--                        label="radios_loop_functions" />-->
+    <!--    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"-->
+    <!--                        label="position_loop_functions" />-->
+
+
+    <!-- *********************** -->
+    <!-- * Arena configuration * -->
+    <!-- *********************** -->
+    <!--
+        Here you place all the objects in the arena.
+        All linear measures are expressed in meters.
+        Angles are expressed in degrees.
+        The 'size' attribute contains the size of the arena around the
+        origin.
+        To get help about which entities are available, type at the command
+        prompt:
+
+        $ argos3 -q entities
+
+        and to get help about a specific entity (for instance, the box)
+
+        $ argos3 -q box
+    -->
+    <arena size="14.6, 13, 1" center="0,0,0.5">
+<box id="box_0" size="0.195,11.775,0.5" movable="false">
+        <body position="-1.5777924583462215,4.371496706894081,0" orientation="110.0,0,0"/>
+        </box>
+<box id="box_1" size="0.2,0.085,0.5" movable="false">
+        <body position="-4.756466901275954,3.0469458260799995,0" orientation="110.0,0,0"/>
+        </box>
+<box id="box_2" size="0.105,0.28,0.5" movable="false">
+        <body position="-4.332361923552124,1.881726976305473,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_3" size="0.1,2.415,0.5" movable="false">
+        <body position="-5.465088859710713,1.3683511996069821,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_4" size="0.685,1.975,0.5" movable="false">
+        <body position="-5.5602242229232175,0.942639427786629,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_5" size="0.695,1.59,0.5" movable="false">
+        <body position="-5.783686614117738,-0.3438755584150971,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_6" size="1.555,0.45,0.5" movable="false">
+        <body position="-1.2787060153417942,4.163762382308662,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_7" size="0.095,3.39,0.5" movable="false">
+        <body position="-0.0506629859312834,3.041071277010213,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_8" size="0.1,0.145,0.5" movable="false">
+        <body position="0.5341742036884164,1.4927203924760477,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_9" size="1.035,1.965,0.5" movable="false">
+        <body position="-0.8197687463667162,2.215748564815138,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_10" size="0.055,0.08,0.5" movable="false">
+        <body position="-0.23265044233159546,3.796910589108323,0" orientation="110.0,0,0"/>
+        </box>
+<box id="box_11" size="0.07,0.66,0.5" movable="false">
+        <body position="1.1948272909046713,4.319130438515304,0" orientation="110.0,0,0"/>
+        </box>
+<box id="box_12" size="0.045,0.92,0.5" movable="false">
+        <body position="1.3315838080164157,4.842464848837676,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_13" size="0.465,0.66,0.5" movable="false">
+        <body position="3.8366765541011905,5.897908041772965,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_14" size="1.775,2.24,0.5" movable="false">
+        <body position="3.4370735629108933,4.371693787668461,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_15" size="0.7,0.445,0.5" movable="false">
+        <body position="4.728070866510514,3.4342032745972566,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_16" size="3.76,0.095,0.5" movable="false">
+        <body position="3.307761616200497,2.5048840971970496,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_17" size="1.345,0.55,0.5" movable="false">
+        <body position="2.3444642931751245,1.8110752132440175,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_18" size="0.095,0.68,0.5" movable="false">
+        <body position="2.9834725307767362,1.9851254136957337,0" orientation="200.0,0,0"/>
+        </box>
+<box id="box_19" size="0.87,0.28,0.5" movable="false">
+        <body position="3.744779079001122,2.459091224309401,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_20" size="0.63,0.26,0.5" movable="false">
+        <body position="5.188658068250101,2.4099642011414066,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_21" size="0.85,2.35,0.5" movable="false">
+        <body position="4.620506397485691,0.9740485772248719,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_22" size="0.955,0.125,0.5" movable="false">
+        <body position="3.506754722331413,0.5766574523981631,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_23" size="0.62,2.17,0.5" movable="false">
+        <body position="2.5643759360171483,-0.0722914848109636,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_24" size="5.88,0.215,0.5" movable="false">
+        <body position="3.2111486487123617,-0.1534783563658834,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_25" size="0.215,2.51,0.5" movable="false">
+        <body position="-2.253163941157696,-2.142325489804647,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_26" size="0.225,0.785,0.5" movable="false">
+        <body position="-4.723916402989298,-3.036284953288912,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_27" size="0.905,0.465,0.5" movable="false">
+        <body position="-4.9538472997734395,-2.6676974023542113,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_28" size="0.445,0.55,0.5" movable="false">
+        <body position="-3.628499953271761,0.14523890355834204,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_29" size="0.445,0.555,0.5" movable="false">
+        <body position="-2.587790375751367,0.52402621229152,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_30" size="0.55,0.46,0.5" movable="false">
+        <body position="-1.5455350768188,0.00680634429824143,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_31" size="0.44,0.54,0.5" movable="false">
+        <body position="-2.0091458304292478,-1.0292390548695525,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_32" size="0.435,0.545,0.5" movable="false">
+        <body position="-3.060107384515814,-1.4090973334840224,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_33" size="1.03,2.015,0.5" movable="false">
+        <body position="-2.7934088699580486,-0.43141990593816687,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_34" size="9.5,0.245,0.5" movable="false">
+        <body position="-5.544825593472196,-2.0234723590836894,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_35" size="0.095,2.915,0.5" movable="false">
+        <body position="1.411481302153432,-2.4526583605694565,0" orientation="200.0,0,0"/>
+        </box>
+<box id="box_36" size="0.105,2.34,0.5" movable="false">
+        <body position="0.7637493277475699,-4.188904178226704,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_37" size="0.21,3.495,0.5" movable="false">
+        <body position="-0.8255572442835922,-3.506313803185745,0" orientation="20.0,0,0"/>
+        </box>
+<box id="box_38" size="0.495,2.015,0.5" movable="false">
+        <body position="-1.3271877679544895,-5.263875485665669,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_39" size="0.165,3.84,0.5" movable="false">
+        <body position="-2.059025275884625,-5.716473665055079,0" orientation="110.0,0,0"/>
+        </box>
+<box id="box_40" size="0.985,0.585,0.5" movable="false">
+        <body position="0.6424018772849047,-1.9184843830640974,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_41" size="6.075,0.22,0.5" movable="false">
+        <body position="4.9742824572200695,3.6275742977632692,0" orientation="110.0,0,0"/>
+        </box>
+<box id="box_42" size="1.13,1.87,0.5" movable="false">
+        <body position="-2.391864186342355,-4.041817130214184,0" orientation="290.0,0,0"/>
+        </box>
+<box id="box_43" size="1.05,2.44,0.5" movable="false">
+        <body position="4.700414781186881,0.8860732953880772,0" orientation="110.0,0,0"/>
+        </box>
+<box id="box_44" size="0.592717062945883,0.9565693911055277,0.5" movable="false">
+        <body position="0.5821953007308459,-3.7520154304107414,0" orientation="133.0806172153438,0,0"/>
+        </box>
+<box id="spawn_box_0" size="1.4114594096312778,0.20223748416156684,0.5" movable="false">
+        <body position="-1.9283252825009793,-1.2796182744151283,0" orientation="281.46923439005184,0,0"/>
+        </box>
+<box id="spawn_box_1" size="0.09831243939640702,0.588430114796991,0.5" movable="false">
+        <body position="-1.0977491024897696,4.011122338823409,0" orientation="330.8653286262636,0,0"/>
+        </box>
+<box id="spawn_box_2" size="0.8395385637360562,0.22896506283710621,0.5" movable="false">
+        <body position="0.9804510013254667,3.3658176323146045,0" orientation="348.3924977537511,0,0"/>
+        </box>
+<box id="spawn_box_3" size="0.8825226081218281,0.1784656829757475,0.5" movable="false">
+        <body position="0.35470776796934933,-0.7850665670672891,0" orientation="211.3099324740202,0,0"/>
+        </box>
+<box id="spawn_box_4" size="0.06821910402406466,0.08062257748298549,0.5" movable="false">
+        <body position="2.761020680530936,0.7818613108299927,0" orientation="319.7448812969422,0,0"/>
+        </box>
+<box id="spawn_box_5" size="0.303232986171424,0.10124228365658293,0.5" movable="false">
+        <body position="1.3027214138352867,0.7776631055539855,0" orientation="77.0947570770121,0,0"/>
+        </box>
+<box id="spawn_box_6" size="0.0897847745026075,0.6891480247377918,0.5" movable="false">
+        <body position="-3.701298818258338,-5.778395453459216,0" orientation="48.610459665965216,0,0"/>
+        </box>
+<cylinder id="circle_0" radius="0.46219584593546487" height="0.5" temperature="0" movable="false">
+        <body position="0.4798648857858985,-0.4851336840394476,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_1" radius="0.45510987684294435" height="0.5" temperature="0" movable="false">
+        <body position="0.7037500359266626,-0.6324443745763109,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_2" radius="0.18200274723201296" height="0.5" temperature="0" movable="false">
+        <body position="5.036597148207727,2.3599394413132293,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_4" radius="0.16278820596099705" height="0.5" temperature="0" movable="false">
+        <body position="-1.6979424633033915,-3.2145942809802937,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_6" radius="0.18788294228055935" height="0.5" temperature="0" movable="false">
+        <body position="-1.3469572328158195,-4.135061210304529,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_8" radius="0.2150581316760657" height="0.5" temperature="0" movable="false">
+        <body position="-3.448327261306527,-3.8729658014150123,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_9" radius="0.2516445906432324" height="0.5" temperature="0" movable="false">
+        <body position="-3.1029041720147954,-4.7635318513990415,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_10" radius="0.6028474102125678" height="0.5" temperature="0" movable="false">
+        <body position="-1.5247904518779736,-3.7049445445055946,0" orientation="0,0,0"/>
+        </cylinder>
+<cylinder id="circle_12" radius="0.5707889277132134" height="0.5" temperature="0" movable="false">
+        <body position="-3.2679202634358333,-4.33939191037471,0" orientation="0,0,0"/>
+        </cylinder>
+<pipuck id="pipuck1" wifi_medium="wifi">
+        <body position="-6.617231071287046,2.2313399447850384,0" orientation="0,0,0"/>
+        <controller config="ppc"/>
+        </pipuck>
+<pipuck id="pipuck2" wifi_medium="wifi">
+        <body position="-6.3483306751976345,1.5363992444494212,0" orientation="0,0,0"/>
+        <controller config="ppc"/>
+        </pipuck>
+<pipuck id="pipuck3" wifi_medium="wifi">
+        <body position="-5.73476643037301,2.525926362558262,0" orientation="0,0,0"/>
+        <controller config="ppc"/>
+        </pipuck>
+<pipuck id="pipuck4" wifi_medium="wifi">
+        <body position="-5.4936422293284135,1.8634430649041964,0" orientation="0,0,0"/>
+        <controller config="ppc"/>
+        </pipuck>
+<pipuck id="pipuck5" wifi_medium="wifi">
+        <body position="-5.079538119164219,2.743126409037256,0" orientation="0,0,0"/>
+        <controller config="ppc"/>
+        </pipuck>
+<pipuck id="pipuck6" wifi_medium="wifi">
+        <body position="-4.762374830364839,2.0763937427924097,0" orientation="0,0,0"/>
+        <controller config="ppc"/>
+        </pipuck>
+
+
+    </arena>
+
+
+    <!-- ******************* -->
+    <!-- * Physics engines * -->
+    <!-- ******************* -->
+    <!--
+        In ARGoS, multiple physics engines can run at the same time.
+        In this section you say which engines to use for the experiment.
+        To know which engines are available, type at the command prompt:
+
+        $ argos3 -q physics_engines
+    -->
+    <physics_engines>
+        <!--
+            Use a 2D dynamics engine.
+        -->
+        <dynamics2d id="dyn2d"/>
+        <!--        <dynamics3d id="dyn3d" iterations="1" />-->
+    </physics_engines>
+
+    <!-- ********* -->
+    <!-- * Media * -->
+    <!-- ********* -->
+    <!--
+        Here you specify the media in use. Media allow robots to communicate.
+        In this experiment, robots do not communicate, so no media are
+        specified.
+        To know which media are available, type at the command prompt:
+
+        $ argos3 -q media
+    -->
+    <media>
+        <!--        <range_and_bearing id="rab" />-->
+        <simple_radio id="wifi" index="grid" grid_size="50,50,20"/>
+    </media>
+
+    <!-- ****************** -->
+    <!-- * Visualization * -->
+    <!-- ****************** -->
+    <!--
+        Here you specify which visualization to use.
+        You can also not specify a visualization at all, in which case ARGoS
+        will run without showing anything.
+        Having no visualization is useful when you run ARGoS in a batch of
+        experiments to collect statistics.
+        To know which visualizations are available, type at the command
+        prompt:
+
+        $ argos3 -q visualizations
+    -->
+    <visualization>
+        <qt-opengl autoplay="true">
+            <user_functions
+                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
+                    label="agent_vision_qtuser_functions_pipuck"/>
+            <camera>
+                <placements>
+                    <placement index="0" position="0,0,60" look_at="0,0,0"
+                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="100"/>
+                </placements>
+            </camera>
+            <frame_grabbing directory="{{FRAME_PATH}}"
+                            base_name="frame"
+                            format="png"
+                            quality="100"
+                            headless_grabbing="true"
+                            headless_frame_size="1800x960\"
+                            headless_frame_rate="300"/>
+        </qt-opengl>
+    </visualization>
+
+</argos-configuration>

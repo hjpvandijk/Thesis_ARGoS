@@ -379,17 +379,18 @@
             <body position="11.226666666666667,7.466666666666667,0" orientation="45.0,0,0"/>
         </box>
 
-        <box id="spawn_box_0" size="2.8551094426522985,3.0134513251235515,0.5" movable="false">
-            <body position="-1.056245366744976,0.8197264421822001,0" orientation="-36.362868584929245,0,0"/>
-        </box>
-        <box id="spawn_box_1" size="2.4027195920266053,0.3298484500494128,0.5" movable="false">
+
+        <box id="spawn_box_0" size="2.4027195920266053,0.3298484500494128,0.5" movable="false">
             <body position="6.558039215686275,-0.5788235294117657,0" orientation="-75.96375653207353,0,0"/>
         </box>
-        <box id="spawn_box_2" size="1.8313369620288753,0.36024682896283455,0.5" movable="false">
+        <box id="spawn_box_1" size="1.8313369620288753,0.36024682896283455,0.5" movable="false">
             <body position="10.227223744292237,2.278292237442923,0" orientation="-87.87890360333854,0,0"/>
         </box>
-        <box id="spawn_box_3" size="0.23696351288933054,1.177115117564973,0.5" movable="false">
+        <box id="spawn_box_2" size="0.23696351288933054,1.177115117564973,0.5" movable="false">
             <body position="5.329907621247112,12.18679753656659,0" orientation="-9.782407031807287,0,0"/>
+        </box>
+        <box id="spawn_box_3" size="2.8551094426522985,3.0134513251235515,0.5" movable="false">
+            <body position="-1.056245366744976,0.8197264421822001,0" orientation="-36.362868584929245,0,0"/>
         </box>
         <box id="spawn_box_4" size="0.9661891561237586,0.25888650451930134,0.5" movable="false">
             <body position="6.619398762157383,-13.159522546419103,0" orientation="-11.888658039627977,0,0"/>
@@ -408,6 +409,10 @@
         </box>
         <box id="spawn_box_9" size="2.0364334925467826,0.6334385877450508,0.5" movable="false">
             <body position="14.652069118298625,0.7989514104268225,0" orientation="-30.34324888423958,0,0"/>
+        </box>
+
+        <box id="box_0" size="0.6972048798851586,14.787682562036403,0.5" movable="false">
+            <body position="-5.625614221644106,4.613392474560654,0" orientation="48.21630359178124,0,0"/>
         </box>
 
 
@@ -510,13 +515,13 @@
                                up="0.721522,-3.4075e-17,0.692391" lens_focal_length="52"/>
                 </placements>
             </camera>
-                        <frame_grabbing directory="{{FRAME_PATH}}"
-                                        base_name="frame"
-                                        format="png"
-                                        quality="100"
-                                        headless_grabbing="true"
-                                        headless_frame_size="1800x960\"
-                                        headless_frame_rate="20"/>
+            <frame_grabbing directory="{{FRAME_PATH}}"
+                            base_name="frame"
+                            format="png"
+                            quality="100"
+                            headless_grabbing="true"
+                            headless_frame_size="1800x960\"
+                            headless_frame_rate="300"/>
         </qt-opengl>
     </visualization>
 

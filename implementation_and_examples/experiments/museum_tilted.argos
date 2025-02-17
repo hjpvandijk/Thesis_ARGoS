@@ -494,7 +494,7 @@
                                         quality="100"
                                         headless_grabbing="true"
                                         headless_frame_size="1800x960\"
-                                        headless_frame_rate="20"/>
+                                        headless_frame_rate="300"/>
         </qt-opengl>
     </visualization>
 

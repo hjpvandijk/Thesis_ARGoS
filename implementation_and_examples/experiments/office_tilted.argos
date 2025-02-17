@@ -97,7 +97,7 @@
                 <positioning implementation="default"/>
             </sensors>
             <!--     actual map width in m, actual mad height in m      -->
-            <params map_width ="25" map_height ="19" unreachable_area = "35.529569" config="agent_implementation/config.yaml"/>
+            <params map_width ="25" map_height ="19" unreachable_area = "35.529569" config="{{CONFIG_PATH}}"/>
         </pipuck_hugo_controller>
 
     </controllers>
@@ -137,7 +137,7 @@
 
         $ argos3 -q box
     -->
-    <arena size="19, 25, 1" center="0,0,0.5">
+    <arena size="16.4, 22.2, 1" center="0,0,0.5">
         <box id="box_0" size="0.76,2.11,0.5" movable="false">
             <body position="-5.8399975662147146,4.466996018199055,0" orientation="110.0,0,0"/>
         </box>
@@ -460,7 +460,7 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-        <qt-opengl autoplay="false">
+        <qt-opengl autoplay="true">
             <user_functions
                     library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
                     label="agent_vision_qtuser_functions_pipuck"/>
@@ -470,13 +470,13 @@
                                up="0.721522,-3.4075e-17,0.692391" lens_focal_length="100"/>
                 </placements>
             </camera>
-            <!--            <frame_grabbing directory="experiment_results/office_config"-->
-            <!--                            base_name="frame"-->
-            <!--                            format="png"-->
-            <!--                            quality="100"-->
-            <!--                            headless_grabbing="true"-->
-            <!--                            headless_frame_size="1800x960\"-->
-            <!--                            headless_frame_rate="20"/>-->
+            <frame_grabbing directory="{{FRAME_PATH}}"
+                            base_name="frame"
+                            format="png"
+                            quality="100"
+                            headless_grabbing="true"
+                            headless_frame_size="1800x960\"
+                            headless_frame_rate="300"/>
         </qt-opengl>
     </visualization>
 
