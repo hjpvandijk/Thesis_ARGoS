@@ -108,9 +108,6 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
 
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         deployment_positions[pcFB->GetId()] = agentRealPosition;
-
-        longest_mission_time_s = std::max(longest_mission_time_s, agent->config.MISSION_END_TIME_S);
-
     }
 
     this->m_metrics = metrics();
@@ -360,7 +357,7 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
         double covered_area = 0;
 
 
-        //TODO: Consider irreachible area
+//        //TODO: Consider irreachible area
         for (auto &it: tree) {
             quadtree::Box box = std::get<0>(it);
 
@@ -368,8 +365,8 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
             covered_area += box_size * box_size;
         }
 
-        double coverage = covered_area / (cController.map_width * cController.map_height);
-        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
+        double coverage = covered_area;
+//        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
 
 
         m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
@@ -382,7 +379,7 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
     auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
 
         //Update certainty over time at every interval, if mission has started
-        if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
+    if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
         double total_certainty = 0;
         int total_boxes = 0;
         double free_certainty = 0;
@@ -407,9 +404,9 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
         double average_total_certainty = total_certainty / total_boxes;
         double average_free_certainty = free_certainty / free_boxes;
         double average_occupied_certainty = occupied_certainty / occupied_boxes;
-        argos::LOG << "[" << pcFB->GetId() << "] Average total certainty: " << average_total_certainty << std::endl;
-        argos::LOG << "[" << pcFB->GetId() << "] Average free certainty: " << average_free_certainty << std::endl;
-        argos::LOG << "[" << pcFB->GetId() << "] Average occupied certainty: " << average_occupied_certainty << std::endl;
+//        argos::LOG << "[" << pcFB->GetId() << "] Average total certainty: " << average_total_certainty << std::endl;
+//        argos::LOG << "[" << pcFB->GetId() << "] Average free certainty: " << average_free_certainty << std::endl;
+//        argos::LOG << "[" << pcFB->GetId() << "] Average occupied certainty: " << average_occupied_certainty << std::endl;
 
 
         m_metrics.average_total_certainty_over_time[pcFB->GetId()].push_back(average_total_certainty);
@@ -479,7 +476,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     coverageFile << "\n";
     for (int i = 0; i < m_metrics.coverage_over_time.begin()->second.size(); i++) {
-        coverageFile << i*coverage_update_tick_interval << ",";
+        coverageFile << (i+1)*coverage_update_tick_interval << ",";
         for (auto & it : m_metrics.coverage_over_time) {
             if (i < it.second.size())
                 coverageFile << it.second[i] << ",";
@@ -488,6 +485,41 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         coverageFile << "\n";
     }
     coverageFile.close();
+
+    //Export certainty over time (average, free, occupied)
+    std::ofstream certaintyFile;
+    certaintyFile.open(metric_path_str + "/certainty.csv");
+    certaintyFile << "time_s,";
+    for (auto & it : m_metrics.average_total_certainty_over_time) {
+        certaintyFile << "all_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_free_pheromone_over_time) {
+        certaintyFile << "free_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_occupied_pheromone_over_time) {
+        certaintyFile << "occupied_" << it.first << ",";
+    }
+    certaintyFile << "\n";
+    for (int i = 0; i < m_metrics.average_total_certainty_over_time.begin()->second.size(); i++) {
+        certaintyFile << (i+1)*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.average_total_certainty_over_time) {
+            if (i < it.second.size())
+                certaintyFile << it.second[i] << ",";
+            else certaintyFile << ",";
+        }
+        for (auto & it : m_metrics.average_free_pheromone_over_time) {
+            if (i < it.second.size())
+                certaintyFile << it.second[i] << ",";
+            else certaintyFile << ",";
+        }
+        for (auto & it : m_metrics.average_occupied_pheromone_over_time) {
+            if (i < it.second.size())
+                certaintyFile << it.second[i] << ",";
+            else certaintyFile << ",";
+        }
+        certaintyFile << "\n";
+    }
+    certaintyFile.close();
 
     //Export traveled path length
     std::ofstream traveledPathFile;
