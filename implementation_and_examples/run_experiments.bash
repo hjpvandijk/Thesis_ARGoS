@@ -1,5 +1,9 @@
 #!/bin/bash
 
+cd build || exit
+make
+cd ..
+
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
 CONFIG_DIR="./agent_implementation/configs"
@@ -11,7 +15,8 @@ mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
 EXPERIMENTS=("museum_config.argos")
-CONFIGS=("config.yaml" "config2.yaml")
+CONFIGS=("config.yaml")
+
 
 
 # Iterate over each experiment file
@@ -47,7 +52,7 @@ for EXPERIMENT in "${EXPERIMENTS[@]}"; do
         echo "Running ARGoS3 with configuration: $EXP_PATH and $CONFIG_PATH"
 
         # Run ARGoS3 and log output
-        "$ARGOSEXEC" -c "temp_experiment2.argos" > "$LOGFILE" 2>&1
+        "$ARGOSEXEC" -n -c "temp_experiment2.argos"> "$LOGFILE" 2>&1
 
         # Check exit status
         if [ $? -eq 0 ]; then
@@ -55,6 +60,7 @@ for EXPERIMENT in "${EXPERIMENTS[@]}"; do
         else
             echo "Experiment '$EXPERIMENT' failed. Check log: $LOGFILE" >&2
         fi
+
     done
 
 done

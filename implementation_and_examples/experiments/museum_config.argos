@@ -379,6 +379,16 @@
             <body position="11.226666666666667,7.466666666666667,0" orientation="45.0,0,0"/>
         </box>
 
+        <box id="spawn_box_1" size="3.0120530689295553,3.8611685047692776,0.5" movable="false">
+            <body position="-1.3355811004718119,1.2018731790303778,0" orientation="-132.06074399999673,0,0"/>
+        </box>
+        <box id="spawn_box_2" size="0.998052110526134,1.2944325225965068,0.5" movable="false">
+            <body position="-9.1472275862069,3.6052689655172405,0" orientation="-87.63862534182438,0,0"/>
+        </box>
+        <box id="spawn_box_3" size="0.270344132801756,1.729482902809713,0.5" movable="false">
+            <body position="-11.453174839029222,4.237473997028231,0" orientation="27.552811576717797,0,0"/>
+        </box>
+
         <pipuck id="pipuck1" wifi_medium="wifi">
             <body position="-12.6,3.0933333333333333,0" orientation="0,0,0"/>
             <controller config="ppc"/>
@@ -411,6 +421,7 @@
             <body position="-12.813333333333333,-3.16,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
+
 
 
 
@@ -483,7 +494,7 @@
                                         quality="100"
                                         headless_grabbing="true"
                                         headless_frame_size="1800x960\"
-                                        headless_frame_rate="300"/>
+                                        headless_frame_rate="20"/>
         </qt-opengl>
     </visualization>
 

@@ -119,6 +119,22 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     for (const auto& it : tFBMap) {
         this->m_metrics.map_observation_count[it.first] = std::vector<std::vector<int>>(map_cols, std::vector<int>(map_rows, 0));
     }
+
+    CSpace::TMapPerType& boxMap = GetSpace().GetEntitiesByType("box");
+    argos::LOG << "found " << boxMap.size() << " boxes" << std::endl;
+    for (auto & it : boxMap) {
+        CBoxEntity *box = any_cast<CBoxEntity *>(it.second);
+//        argos::LOG << "found box: " << box->GetId() << std::endl;
+        if (box->GetId().find("spawn_box") != std::string::npos) {
+            auto copybox = std::make_unique<CBoxEntity>(*box);
+            this->spawn_boxes.push_back(copybox.get());
+            RemoveEntity(*box);
+        }
+    }
+
+    for (auto& box : spawn_boxes) {
+        argos::LOG << "spawn box: " << box->GetId() << std::endl;
+    }
 }
 
 /**
@@ -274,7 +290,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
 //    combinedQuadTree = boxesAndConfidenceAndTicks;
 
-//    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
+
 //    for(auto spawnObj: spawnableObjects) {
 //        int spawn_time = std::get<2>(spawnObj);
 //        if(loop_function_steps == spawn_time) {
@@ -286,6 +302,18 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        }
 //    }
 //
+    argos::LOG << "Spawn boxes size: " << this->spawn_boxes.size() << std::endl;
+//    if (!this->spawn_boxes.empty()) {
+//        auto spawn_time_front = this->spawn_times.front();
+//        if (loop_function_steps >= spawn_time_front) {
+//            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
+//            auto box = this->spawn_boxes.front();
+//            argos::LOG << "Spawning box " << box->GetId() << " at " << box->GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
+////            AddEntity(*box);
+//            this->spawn_times.pop_front();
+//            this->spawn_boxes.pop_front();
+//        }
+//    }
 
     //If a new agent is done, update the metrics and maps
     if (allAgentsDone(tFBMap)) {
