@@ -126,14 +126,16 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         CBoxEntity *box = any_cast<CBoxEntity *>(it.second);
 //        argos::LOG << "found box: " << box->GetId() << std::endl;
         if (box->GetId().find("spawn_box") != std::string::npos) {
-            auto copybox = std::make_unique<CBoxEntity>(*box);
-            this->spawn_boxes.push_back(copybox.get());
+            argos::LOG << "found spawn box: " << box->GetId() << " at " << box->GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
+            auto copybox = new CBoxEntity(box->GetId(), box->GetEmbodiedEntity().GetOriginAnchor().Position, box->GetEmbodiedEntity().GetOriginAnchor().Orientation, false, box->GetSize(), 1.0f);
+            this->spawn_boxes.push_back(*copybox);
+            delete copybox;
             RemoveEntity(*box);
         }
     }
 
     for (auto& box : spawn_boxes) {
-        argos::LOG << "spawn box: " << box->GetId() << std::endl;
+        argos::LOG << "spawn box: " << box.GetId() << " at " << box.GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
     }
 }
 
@@ -303,17 +305,19 @@ void CAgentVisionLoopFunctions::PostStep() {
 //    }
 //
     argos::LOG << "Spawn boxes size: " << this->spawn_boxes.size() << std::endl;
-//    if (!this->spawn_boxes.empty()) {
-//        auto spawn_time_front = this->spawn_times.front();
-//        if (loop_function_steps >= spawn_time_front) {
-//            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
-//            auto box = this->spawn_boxes.front();
-//            argos::LOG << "Spawning box " << box->GetId() << " at " << box->GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
-////            AddEntity(*box);
-//            this->spawn_times.pop_front();
-//            this->spawn_boxes.pop_front();
-//        }
-//    }
+    if (!this->spawn_boxes.empty()) {
+        auto spawn_time_front = this->spawn_times.front();
+        if (loop_function_steps >= spawn_time_front) {
+            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
+            auto box = this->spawn_boxes.front();
+            auto newBox = new CBoxEntity(box.GetId(), box.GetEmbodiedEntity().GetOriginAnchor().Position, box.GetEmbodiedEntity().GetOriginAnchor().Orientation, false, box.GetSize(), 1.0f);
+            argos::LOG << "Spawning box " << box.GetId() << " at " << box.GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
+            AddEntity(*newBox);
+            this->spawn_times.pop_front();
+            this->spawn_boxes.pop_front();
+        }
+    }
+
 
     //If a new agent is done, update the metrics and maps
     if (allAgentsDone(tFBMap)) {

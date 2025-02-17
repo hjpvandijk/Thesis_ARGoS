@@ -379,15 +379,37 @@
             <body position="11.226666666666667,7.466666666666667,0" orientation="45.0,0,0"/>
         </box>
 
-        <box id="spawn_box_1" size="3.0120530689295553,3.8611685047692776,0.5" movable="false">
-            <body position="-1.3355811004718119,1.2018731790303778,0" orientation="-132.06074399999673,0,0"/>
+        <box id="spawn_box_0" size="2.8551094426522985,3.0134513251235515,0.5" movable="false">
+            <body position="-1.056245366744976,0.8197264421822001,0" orientation="-36.362868584929245,0,0"/>
         </box>
-        <box id="spawn_box_2" size="0.998052110526134,1.2944325225965068,0.5" movable="false">
-            <body position="-9.1472275862069,3.6052689655172405,0" orientation="-87.63862534182438,0,0"/>
+        <box id="spawn_box_1" size="2.4027195920266053,0.3298484500494128,0.5" movable="false">
+            <body position="6.558039215686275,-0.5788235294117657,0" orientation="-75.96375653207353,0,0"/>
         </box>
-        <box id="spawn_box_3" size="0.270344132801756,1.729482902809713,0.5" movable="false">
-            <body position="-11.453174839029222,4.237473997028231,0" orientation="27.552811576717797,0,0"/>
+        <box id="spawn_box_2" size="1.8313369620288753,0.36024682896283455,0.5" movable="false">
+            <body position="10.227223744292237,2.278292237442923,0" orientation="-87.87890360333854,0,0"/>
         </box>
+        <box id="spawn_box_3" size="0.23696351288933054,1.177115117564973,0.5" movable="false">
+            <body position="5.329907621247112,12.18679753656659,0" orientation="-9.782407031807287,0,0"/>
+        </box>
+        <box id="spawn_box_4" size="0.9661891561237586,0.25888650451930134,0.5" movable="false">
+            <body position="6.619398762157383,-13.159522546419103,0" orientation="-11.888658039627977,0,0"/>
+        </box>
+        <box id="spawn_box_5" size="0.6443651229027597,1.084271388741972,0.5" movable="false">
+            <body position="-8.14312314128736,-3.3058279147134453,0" orientation="-135.49821161261366,0,0"/>
+        </box>
+        <box id="spawn_box_6" size="2.1744318085340955,0.6747509828735997,0.5" movable="false">
+            <body position="4.796238448522711,7.514713002733307,0" orientation="-119.6044507460049,0,0"/>
+        </box>
+        <box id="spawn_box_7" size="3.3610596788292377,0.5556977595779922,0.5" movable="false">
+            <body position="1.1265630397236601,-5.271606217616578,0" orientation="-120.25643716352927,0,0"/>
+        </box>
+        <box id="spawn_box_8" size="2.0292882258730516,0.5989620652057653,0.5" movable="false">
+            <body position="-5.619705979517676,-12.711228939544101,0" orientation="-73.17859010995917,0,0"/>
+        </box>
+        <box id="spawn_box_9" size="2.0364334925467826,0.6334385877450508,0.5" movable="false">
+            <body position="14.652069118298625,0.7989514104268225,0" orientation="-30.34324888423958,0,0"/>
+        </box>
+
 
         <pipuck id="pipuck1" wifi_medium="wifi">
             <body position="-12.6,3.0933333333333333,0" orientation="0,0,0"/>
