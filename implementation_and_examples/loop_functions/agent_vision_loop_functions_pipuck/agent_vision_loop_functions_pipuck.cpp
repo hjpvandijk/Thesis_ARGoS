@@ -407,22 +407,22 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
     }
 
-    std::string experiment_name_str = "experiment";
-    const char* experiment_name = std::getenv("EXPERIMENT");
-    if (experiment_name) {
+    std::string metric_path_str = "experiment";
+    const char* metric_path = std::getenv("METRIC_PATH");
+    if (metric_path) {
         //Remove ".argos"
-        experiment_name_str = experiment_name;
-        experiment_name_str = experiment_name_str.substr(0, experiment_name_str.find_last_of('.'));
+        metric_path_str = metric_path;
+        metric_path_str = metric_path_str.substr(0, metric_path_str.find_last_of('.'));
     }
 
-    if (mkdir(("experiment_results/" + experiment_name_str).c_str(), 0777) == -1) {
+    if (mkdir(metric_path_str.c_str(), 0777) == -1) {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
     }
 
 
     //Export metrics
     std::ofstream metricsFile;
-    metricsFile.open("experiment_results/" + experiment_name_str + "/metrics.csv");
+    metricsFile.open( metric_path_str + "/metrics.csv");
     metricsFile << "n_agent_agent_collisions,";
     metricsFile << "n_agent_obstacle_collisions\n";
     metricsFile << m_metrics.n_agent_agent_collisions << ",";
@@ -431,7 +431,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export agent returned to deployment site
     std::ofstream returnedToDeploymentSiteFile;
-    returnedToDeploymentSiteFile.open("experiment_results/" + experiment_name_str + "/returned_to_deployment_site.csv");
+    returnedToDeploymentSiteFile.open(metric_path_str + "/returned_to_deployment_site.csv");
     returnedToDeploymentSiteFile << "agent_id,returned_to_deployment_site\n";
     for (auto & it : m_metrics.returned_to_deployment_site) {
         returnedToDeploymentSiteFile << it.first << "," << it.second << "\n";
@@ -440,7 +440,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export coverage over time
     std::ofstream coverageFile;
-    coverageFile.open("experiment_results/" + experiment_name_str + "/coverage.csv");
+    coverageFile.open(metric_path_str + "/coverage.csv");
     coverageFile << "time_s,";
     for (auto & it : m_metrics.coverage_over_time) {
         coverageFile << it.first << ",";
@@ -459,7 +459,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export traveled path length
     std::ofstream traveledPathFile;
-    traveledPathFile.open("experiment_results/" + experiment_name_str + "/traveled_path.csv");
+    traveledPathFile.open(metric_path_str + "/traveled_path.csv");
     traveledPathFile << "agent_id,traveled_path\n";
     for (auto & it : m_metrics.total_traveled_path) {
         traveledPathFile << it.first << "," << it.second << "\n";
@@ -468,7 +468,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export battery usage
     std::ofstream batteryUsageFile;
-    batteryUsageFile.open("experiment_results/" + experiment_name_str + "/battery_usage.csv");
+    batteryUsageFile.open(metric_path_str + "/battery_usage.csv");
     batteryUsageFile << "agent_id,battery_usage\n";
     for (auto & it : m_metrics.total_battery_usage) {
         batteryUsageFile << it.first << "," << it.second << "\n";
@@ -477,7 +477,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export quadtree of each agent
     std::ofstream quadTreeFile;
-    quadTreeFile.open("experiment_results/" + experiment_name_str + "/quadtree.csv");
+    quadTreeFile.open(metric_path_str + "/quadtree.csv");
     quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
     for (auto & it : m_tQuadTree) {
         for (auto & box: it.second) {
@@ -493,7 +493,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export map observation count
     std::ofstream mapObservationCountFile;
-    mapObservationCountFile.open("experiment_results/" + experiment_name_str + "/map_observation_count.csv");
+    mapObservationCountFile.open(metric_path_str + "/map_observation_count.csv");
     mapObservationCountFile << "x,y,observation_count_total,";
     for (auto & it : m_metrics.map_observation_count) {
         mapObservationCountFile << it.first << ",";
@@ -514,7 +514,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export sent and received bytes
     std::ofstream bytesSentReceivedFile;
-    bytesSentReceivedFile.open("experiment_results/" + experiment_name_str + "/bytes_sent_received.csv");
+    bytesSentReceivedFile.open(metric_path_str + "/bytes_sent_received.csv");
     bytesSentReceivedFile << "agent_id,bytes_sent,bytes_received\n";
     for (auto & it : m_metrics.bytes_sent_received) {
         bytesSentReceivedFile << it.first << "," << it.second.first << "," << it.second.second << "\n";
@@ -523,7 +523,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export mission time
     std::ofstream missionTimeFile;
-    missionTimeFile.open("experiment_results/" + experiment_name_str + "/mission_time.csv");
+    missionTimeFile.open(metric_path_str + "/mission_time.csv");
     missionTimeFile << "agent_id,mission_time\n";
     for (auto & it : m_metrics.mission_time) {
         missionTimeFile << it.first << "," << it.second << "\n";

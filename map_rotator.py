@@ -5,9 +5,12 @@ import numpy as np
 import csv
 import math
 
-canvas_width = 2000*2
-canvas_height = 1020*2
-meter_pixels = 100*2
+map_width_m = 30
+map_height_m = 30
+meter_pixels = 75
+
+canvas_width = map_width_m * meter_pixels
+canvas_height = map_height_m * meter_pixels
 
 actual_arena_width = 21
 actual_arena_height = 11.2
@@ -387,11 +390,11 @@ def rotate_map(arena_boxes, arena_cylinders, angle_degrees):
 
 # Usage
 # arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office_config.argos')
-arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/office_config.argos', 20)
+arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/house_config.argos', 20)
 # arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office_config.argos')
-arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/office_config.argos', 20)
+arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/house_config.argos', 20)
 
-arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/office_config.argos', 20)
+arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/house_config.argos', 20)
 
 # arena_boxes, arena_cylinders = rotate_map(arena_boxes, arena_cylinders, 20)
 # print_rotated_shapes(arena_boxes, arena_cylinders)

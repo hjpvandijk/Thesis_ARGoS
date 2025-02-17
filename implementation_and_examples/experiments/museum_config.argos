@@ -97,7 +97,7 @@
                 <positioning implementation="default"/>
             </sensors>
             <!--     actual map width in m, actual mad height in m      -->
-            <params map_width ="30" map_height ="30" unreachable_area = "35.529569" config="agent_implementation/config.yaml"/>
+            <params map_width ="30" map_height ="30" unreachable_area = "35.529569" config="{{CONFIG_PATH}}"/>
         </pipuck_hugo_controller>
 
     </controllers>
@@ -379,9 +379,8 @@
             <body position="11.226666666666667,7.466666666666667,0" orientation="45.0,0,0"/>
         </box>
 
-
         <pipuck id="pipuck1" wifi_medium="wifi">
-            <body position="-4.5,9,0" orientation="90,0,0"/>
+            <body position="-12.6,3.0933333333333333,0" orientation="0,0,0"/>
             <controller config="ppc"/>
             <devices>
 
@@ -389,30 +388,31 @@
         </pipuck>
 
         <pipuck id="pipuck2" wifi_medium="wifi">
-            <body position="-4.5,8.5,0" orientation="-90,0,0"/>
+            <body position="-13.96,3.1466666666666665,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
 
 
+        <pipuck id="pipuck3" wifi_medium="wifi">
+            <body position="-14.12,0.92,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
-<!--        <pipuck id="pipuck3" wifi_medium="wifi">-->
-<!--            <body position="-4.5,8,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
+        <pipuck id="pipuck4" wifi_medium="wifi">
+            <body position="-14.12,-0.9466666666666667,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
-<!--        <pipuck id="pipuck4" wifi_medium="wifi">-->
-<!--            <body position="-4,9,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
+        <pipuck id="pipuck5" wifi_medium="wifi">
+            <body position="-14.146666666666667,-2.96,0"  orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck6" wifi_medium="wifi">
+            <body position="-12.813333333333333,-3.16,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
-<!--        <pipuck id="pipuck5" wifi_medium="wifi">-->
-<!--            <body position="-4,8.5,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
-<!--        <pipuck id="pipuck6" wifi_medium="wifi">-->
-<!--            <body position="-4,8,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
+
 
 
     </arena>
@@ -467,7 +467,7 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-        <qt-opengl autoplay="false">
+        <qt-opengl autoplay="true">
             <user_functions
                     library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
                     label="agent_vision_qtuser_functions_pipuck"/>
@@ -477,13 +477,13 @@
                                up="0.721522,-3.4075e-17,0.692391" lens_focal_length="52"/>
                 </placements>
             </camera>
-            <!--            <frame_grabbing directory="experiment_results/office_config"-->
-            <!--                            base_name="frame"-->
-            <!--                            format="png"-->
-            <!--                            quality="100"-->
-            <!--                            headless_grabbing="true"-->
-            <!--                            headless_frame_size="1800x960\"-->
-            <!--                            headless_frame_rate="20"/>-->
+                        <frame_grabbing directory="{{FRAME_PATH}}"
+                                        base_name="frame"
+                                        format="png"
+                                        quality="100"
+                                        headless_grabbing="true"
+                                        headless_frame_size="1800x960\"
+                                        headless_frame_rate="300"/>
         </qt-opengl>
     </visualization>
 
