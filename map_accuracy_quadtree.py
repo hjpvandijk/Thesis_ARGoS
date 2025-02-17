@@ -306,8 +306,8 @@ def plot_mistakes(arena_boxes, quadtree_data):
     plt.show()
 
 # Usage
-arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office_config.argos')
-arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office_config.argos')
+arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
+arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
 
 quadtree_data = read_file('implementation_and_examples/experiment_results/experiment/quadtree.csv')
 precision, recall = calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data)

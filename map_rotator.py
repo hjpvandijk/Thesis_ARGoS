@@ -5,17 +5,6 @@ import numpy as np
 import csv
 import math
 
-map_width_m = 30
-map_height_m = 30
-meter_pixels = 75
-
-canvas_width = map_width_m * meter_pixels
-canvas_height = map_height_m * meter_pixels
-
-actual_arena_width = 21
-actual_arena_height = 11.2
-actual_arena = patches.Rectangle((-actual_arena_width / 2, -actual_arena_height / 2), actual_arena_width, actual_arena_height, linewidth=0, edgecolor='r', facecolor='blue', alpha=0.5)
-
 def read_arena_boxes(filename):
     tree = ET.parse(filename)
     root = tree.getroot()
@@ -353,15 +342,14 @@ def plot(arena_boxes, arena_cylinders):
         ax.add_patch(circle)
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-16.5, 16.5)
-    plt.ylim(-16.5, 16.5)
+    plt.xlim(-11.1, 11.1)
+    plt.ylim(-8.2, 8.2)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('Mistakes in Quadtree Results')
 
     plt.grid(True)
     plt.show()
-    return precision, recall
 
 def rotate_map(arena_boxes, arena_cylinders, angle_degrees):
     angle_rad = np.radians(angle_degrees)
@@ -396,16 +384,16 @@ def rotate_map(arena_boxes, arena_cylinders, angle_degrees):
 
 
 # Usage
-# arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office_config.argos')
-arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
-# arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office_config.argos')
-arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
+# arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
+arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/office.argos', 20)
+# arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
+arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/office.argos', 20)
 
-arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
+arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/office.argos', 20)
 
 # arena_boxes, arena_cylinders = rotate_map(arena_boxes, arena_cylinders, 20)
 # print_rotated_shapes(arena_boxes, arena_cylinders)
 
-precision, recall = plot(arena_boxes, arena_cylinders)
+plot(arena_boxes, arena_cylinders)
 # print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
 # plot_mistakes(arena_boxes, quadtree_data)

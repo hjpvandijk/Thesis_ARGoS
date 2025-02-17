@@ -4,8 +4,8 @@ import matplotlib.patches as patches
 import numpy as np
 import csv
 
-actual_arena_width = 21
-actual_arena_height = 11.2
+actual_arena_width = 20
+actual_arena_height = 10.2
 actual_arena = patches.Rectangle((-actual_arena_width / 2, -actual_arena_height / 2), actual_arena_width, actual_arena_height, linewidth=0, edgecolor='r', facecolor='blue', alpha=0.5)
 
 def read_arena_boxes(filename):
@@ -176,17 +176,17 @@ def plot_arena(arena_boxes, arena_cylinders):
         ax.add_patch(circle)
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-15, 15)
-    plt.ylim(-15, 15)
+    plt.xlim(-actual_arena_width / 2, actual_arena_width / 2)
+    plt.ylim(-actual_arena_height / 2, actual_arena_height / 2)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
-    plt.title('Mistakes in Quadtree Results')
+    plt.title('Plotted Arena')
 
     plt.grid(True)
     plt.show()
 
 # Usage
-arena_boxes = read_arena_boxes('implementation_and_examples/experiments/museum.argos')
-arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/museum.argos')
+arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
+arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
 
 plot_arena(arena_boxes, arena_cylinders)

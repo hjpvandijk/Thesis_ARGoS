@@ -3,12 +3,12 @@ from tkinter import simpledialog, filedialog
 from PIL import Image, ImageTk
 import math
 
-map_width_m = 12
-map_height_m = 9.5
+map_width_m = 20
+map_height_m = 10.2
 meter_pixels = 200
 
-canvas_width = map_width_m * meter_pixels
-canvas_height = map_height_m * meter_pixels
+canvas_width = int(map_width_m * meter_pixels)
+canvas_height = int(map_height_m * meter_pixels)
 
 only_vertical_or_horizontal = False
 only_45_degrees = False
@@ -91,7 +91,7 @@ class DrawApp:
         self.canvas.create_line(0, canvas_height/2, canvas_height, canvas_height/2, fill="black")
 
     def load_image(self):
-        file_path = "house.jpg"
+        file_path = "office.jpg"
         if file_path:
             self.original_image = Image.open(file_path)
             self.display_image(1.0)
