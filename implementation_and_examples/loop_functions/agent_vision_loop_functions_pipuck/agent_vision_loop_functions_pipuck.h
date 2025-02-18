@@ -58,7 +58,7 @@ public:
     std::map<CPiPuckEntity*, std::vector<std::tuple<Coordinate, Coordinate>>> m_tNeighborPairs;
     std::map<CPiPuckEntity*, double> m_tAgentElapsedTicks;
     double globalElapsedTime;
-    std::map<CPiPuckEntity*, std::vector<quadtree::Box>> m_tAgentFrontiers;
+    std::map<CPiPuckEntity*, std::vector<std::pair<quadtree::Box, double>>> m_tAgentFrontiers;
     std::map<CPiPuckEntity*, std::vector<std::vector<std::pair<quadtree::Box, double>>>> m_tAgentFrontierRegions;
     std::map<CPiPuckEntity*, std::set<argos::CDegrees>> m_tAgentFreeAngles;
     std::vector<std::tuple<quadtree::Box, double>> combinedQuadTree;
@@ -101,9 +101,9 @@ public:
         return m_tAgentElapsedTicks;
     }
 
-    inline const std::map<CPiPuckEntity*, std::vector<quadtree::Box>>& GetAgentFrontiers() const {
-        return m_tAgentFrontiers;
-    }
+//    inline const std::map<CPiPuckEntity*, std::vector<quadtree::Box>>& GetAgentFrontiers() const {
+//        return m_tAgentFrontiers;
+//    }
 
     inline const std::map<CPiPuckEntity*, std::vector<std::vector<std::pair<quadtree::Box, double>>>>& GetAgentFrontierRegions() const {
         return m_tAgentFrontierRegions;

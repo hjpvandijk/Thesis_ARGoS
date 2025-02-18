@@ -604,7 +604,8 @@ void Agent::calculateNextPosition() {
         if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
             argos::CVector2 agentFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                            this->currentBestFrontier.y - this->position.y);
-            frontierReached = agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
+            auto pheromone_outside_thresholds = this->quadtree->getPheromoneFromCoordinate(this->currentBestFrontier, this->elapsed_ticks/this->ticks_per_second) <= this->config.P_OCCUPIED_THRESHOLD || this->quadtree->getPheromoneFromCoordinate(this->currentBestFrontier, this->elapsed_ticks/this->ticks_per_second) >= this->config.P_FREE_THRESHOLD;
+            frontierReached = pheromone_outside_thresholds && agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
               NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() <
               this->config.TURN_THRESHOLD_DEGREES * 2 ||
                     agentFrontierVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
@@ -1193,7 +1194,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
     this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
     this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
-    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_occupied_threshold"].as<float>();
     this->config.P_AT_MAX_SENSOR_RANGE = config_yaml["confidence"]["p_at_max_sensor_range"].as<float>();
 
     this->config.QUADTREE_RESOLUTION = config_yaml["quadtree"]["resolution"].as<double>();
