@@ -74,7 +74,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     for (auto & m_tAgentFrontierRegions : m_cAgVisLF.m_tAgentFrontierRegions) {
         std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
                                       CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
-        if (m_tAgentFrontierRegions.first->GetId() != "pipuck6") continue;
+        if (m_tAgentFrontierRegions.first->GetId() != "pipuck4") continue;
         int i = 0;
         for (auto frontierRegions: m_tAgentFrontierRegions.second) {
             //Assign a differnet color to every frontierRegion

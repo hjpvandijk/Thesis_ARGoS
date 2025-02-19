@@ -278,12 +278,12 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            node.occupancy = occ;
 ////            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
 ////                continue;
-//            node.visitedAtS = visitedTimeS;
+//            node.visitedAtS = visitedTimeS;d
 //            combinedTree->add(node);
 //        }
         updateCoverage(it.first, it.second);
         updateCertainty(it.first, it.second);
-        if(it.first->GetId()=="pipuck6") combinedQuadTree = it.second;
+        if(it.first->GetId()=="pipuck4") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 
