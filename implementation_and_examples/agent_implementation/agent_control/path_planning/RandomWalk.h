@@ -18,6 +18,8 @@ public:
 private:
     const float farEnoughDistance = 0.5;
     Coordinate walkStart;
+    int ticksWalkStart = 0;
+    int maxTicksSamePosition = 150;
 
 #endif
 };

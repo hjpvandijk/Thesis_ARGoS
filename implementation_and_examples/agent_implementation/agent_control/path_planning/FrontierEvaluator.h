@@ -18,6 +18,8 @@ public:
     //Count the number of ticks the agent has no direction to the target
     int countNoDirectionToTarget = 0;
 
+    int cantMoveAngle = 89;
+
 
     FrontierEvaluator() = default;
     FrontierEvaluator(int closest_coordinate_hit_count_before_decreasing_confidence, int max_ticks_no_direction);

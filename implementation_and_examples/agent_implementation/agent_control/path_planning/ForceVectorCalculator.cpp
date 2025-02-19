@@ -101,7 +101,13 @@ argos::CVector2 ForceVectorCalculator::calculateAgentAvoidanceVector(Agent* agen
             argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
             - argos::CVector2(agent->position.x, agent->position.y);
 
-    return vectorToOtherAgents * -1;
+    //Create a vector 90 degrees to the vector between agent and the average position of the agents within range
+    auto xfactor = 1;
+    auto yfactor = -1 * xfactor; //Assert that xfactor and yfactor are orthogonal
+    argos::CVector2 vectorToOtherAgents90Degrees = argos::CVector2(xfactor * vectorToOtherAgents.GetY(), yfactor * vectorToOtherAgents.GetX());
+
+//    return vectorToOtherAgents * -1;
+    return vectorToOtherAgents90Degrees;
 }
 
 /**
@@ -196,6 +202,16 @@ private:
     std::unordered_map<int, int> rank;
 };
 
+void truncateMaxRegions(std::vector <std::vector<std::pair<quadtree::Box, double>>> &frontierRegions, int max_regions) {
+    //Truncate the regions to the maximum amount of regions, by removing the smallest regions
+    if (frontierRegions.size() > max_regions) {
+        std::sort(frontierRegions.begin(), frontierRegions.end(), [](const auto &a, const auto &b) {
+            return a.size() > b.size();
+        });
+        frontierRegions.resize(max_regions);
+    }
+}
+
 void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> &frontiers,
                             std::vector<std::vector<std::pair<quadtree::Box, double>>> &frontierRegions, int max_regions) {
     UnionFind uf;
@@ -234,24 +250,33 @@ void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> 
         frontierRegions.push_back(region.second);
     }
 
-    //Truncate the regions to the maximum amount of regions, by removing the smallest regions
-    if (frontierRegions.size() > max_regions) {
-        std::sort(frontierRegions.begin(), frontierRegions.end(), [](const auto &a, const auto &b) {
-            return a.size() > b.size();
-        });
-        frontierRegions.resize(max_regions);
-    }
+    truncateMaxRegions(frontierRegions, max_regions);
+
+
 }
 
+
+
 double getValueOnPheromoneCurve(Agent* agent, double pheromone){
+//    if (pheromone < 0.5) {
+//        return -sqrt(0.5-pheromone) * (0.5-agent->config.P_OCCUPIED_THRESHOLD);
+//    } else if (pheromone > 0.5) {
+//        return -sqrt(pheromone-0.5) * (agent->config.P_FREE_THRESHOLD-0.5);
+//    } else {
+//        auto average_certainty_threshold = ((agent->config.P_FREE_THRESHOLD-0.5) + (0.5-agent->config.P_OCCUPIED_THRESHOLD))/2;
+//        return sqrt(average_certainty_threshold) * average_certainty_threshold;
+//    }
+    auto s = 0.0f;
     if (pheromone < 0.5) {
-        return -sqrt(0.5-pheromone) * (0.5-agent->config.P_OCCUPIED_THRESHOLD);
-    } else if (pheromone > 0.5) {
-        return -sqrt(pheromone-0.5) * (agent->config.P_FREE_THRESHOLD-0.5);
-    } else {
-        auto average_certainty_threshold = ((agent->config.P_FREE_THRESHOLD-0.5) + (0.5-agent->config.P_OCCUPIED_THRESHOLD))/2;
-        return sqrt(average_certainty_threshold/2) * average_certainty_threshold;
+        auto xl = 0.5f-agent->config.P_OCCUPIED_THRESHOLD;
+        s = (0-xl)/2;
+    } else if (pheromone >= 0.5) {
+        auto xr = agent->config.P_FREE_THRESHOLD-0.5f;
+        s = (0-xr)/2;
     }
+    auto val = exp(-pow((pheromone-0.5), 2)/(2*pow(s, 2)));
+    return val;
+
 }
 
 argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* agent) {
@@ -279,41 +304,45 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<std::pair<quadtree::Box, double>>> frontierRegions = {};
 
-    mergeAdjacentFrontiers(frontiers, frontierRegions, agent->config.MAX_FRONTIER_REGIONS);
+//    mergeAdjacentFrontiers(frontiers, frontierRegions, agent->config.MAX_FRONTIER_REGIONS);
 
 
 //// Iterate over each frontier box to merge adjacent ones into regions
-//    for (auto [frontierbox, frontierpheromone]: frontiers) {
-//        bool added = false; // Flag to check if the current frontier has been added to a region
-//
-//        // Iterate over existing regions to find a suitable one for the current frontier
-//        for (auto &region: frontierRegions) {
-//            for (auto [box, pheromone]: region) {
-//                // Calculate the center coordinates of the current box and the frontier
-//                Coordinate boxCenter = box.getCenter();
-//                Coordinate frontierCenter = frontierbox.getCenter();
-//
-//                // Check if the distance between the box and the frontier is less than or equal to
-//                // the average diagonal of the two boxes (ensuring adjacency)
-//                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
-//                    sqrt(2 * pow(frontierbox.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
-//                    region.push_back({frontierbox, frontierpheromone}); // Add the frontier to the current region
-//                    added = true; // Mark the frontier as added
-//                    break; // Exit the loop since the frontier has been added to a region
-//                }
-//            }
-//        }
-//
-//        // If the frontier was not added to any existing region, create a new region with it
-//        if (!added) {
-//            frontierRegions.push_back({{frontierbox, frontierpheromone}});
-//        }
-//    }
+    for (auto [frontierbox, frontierpheromone]: frontiers) {
+        bool added = false; // Flag to check if the current frontier has been added to a region
+
+        // Iterate over existing regions to find a suitable one for the current frontier
+        for (auto &region: frontierRegions) {
+            for (auto [box, pheromone]: region) {
+                // Calculate the center coordinates of the current box and the frontier
+                Coordinate boxCenter = box.getCenter();
+                Coordinate frontierCenter = frontierbox.getCenter();
+
+                // Check if the distance between the box and the frontier is less than or equal to
+                // the average diagonal of the two boxes (ensuring adjacency)
+                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
+                    sqrt(2 * pow(frontierbox.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
+                    region.push_back({frontierbox, frontierpheromone}); // Add the frontier to the current region
+                    added = true; // Mark the frontier as added
+                    break; // Exit the loop since the frontier has been added to a region
+                }
+            }
+        }
+
+        // If the frontier was not added to any existing region, create a new region with it
+        if (!added) {
+            frontierRegions.push_back({{frontierbox, frontierpheromone}});
+        }
+    }
+
+    truncateMaxRegions(frontierRegions, agent->config.MAX_FRONTIER_REGIONS);
+
+
     //Add the frontier region from the last best frontier to the options, if it is now out of range. To prevent unneccesary switching
     //If we haven't reached the frontier yet, add the region to the list of frontier regions
     if (!(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) && (sqrt(pow(agent->currentBestFrontier.x - agent->position.x, 2) + pow(agent->currentBestFrontier.y - agent->position.y, 2)) > agent->config.FRONTIER_SEARCH_RADIUS)) {
         if (!agent->bestFrontierRegionBoxes.empty()) frontierRegions.push_back(agent->bestFrontierRegionBoxes);
-        argos::LOG << "[" << agent->id << "] Found " << "Adding previous best frontier region to the list of frontier regions" << std::endl;
+//        argos::LOG << "[" << agent->id << "] Found " << "Adding previous best frontier region to the list of frontier regions" << std::endl;
     }
 
     agent->current_frontier_regions = frontierRegions;
@@ -332,13 +361,17 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #ifdef PATH_PLANNING_ENABLED
     int bestFrontierRouteWallFollowingDirection;
 #endif
-    
+
+
+
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
         //Calculate the average position of the frontier region
         double sumX = 0;
         double sumY = 0;
         double totalNumberOfCellsInRegion = 0;
+        int nUnknown = 0;
+        int nAmbiguous = 0;
         double averagePheromoneCertainty = 0;
         double pheromoneCurve = 0;
         for (auto [box, pheromone]: region) {
@@ -350,28 +383,35 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             totalNumberOfCellsInRegion += cellsInBox;
             averagePheromoneCertainty += std::abs(pheromone - 0.5);
             pheromoneCurve += getValueOnPheromoneCurve(agent, pheromone);
-
+            if (pheromone == 0.5) {
+                nUnknown++;
+            } else {
+                nAmbiguous++;
             }
+
+        }
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
         averagePheromoneCertainty /= totalNumberOfCellsInRegion;
 //        pheromoneCurve /= totalNumberOfCellsInRegion;
 
+        argos::LOG << "Frontier region " << frontierRegionX << ", " << frontierRegionY << " with pheromonecurve " << pheromoneCurve << " has " << totalNumberOfCellsInRegion << " cells of which " << nUnknown << " unknown and " << nAmbiguous << " ambiguous" << std::endl;
+        argos::LOG << "Average certainty: " << averagePheromoneCertainty << std::endl;
         bool skipFrontier = false;
 
-        //Skip too small areas
-        if (totalNumberOfCellsInRegion <= 5){
-            skipFrontier = true;
-            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                       << " because it is too small" << std::endl;
-        }
+//        //Skip too small areas
+//        if (totalNumberOfCellsInRegion <= 5){
+//            skipFrontier = true;
+//            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                       << " because it is too small" << std::endl;
+//        }
 #ifdef SEPARATE_FRONTIERS
 
         //If the frontier is mostly unknown, and if the frontier is close to our agent, skip it
         if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) < agent->config.FRONTIER_DIST_UNTIL_REACHED) {
             skipFrontier = true;
-            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                       << " because it is close to our agent" << std::endl;
+//            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                       << " because it is close to our agent" << std::endl;
         } else {
             for (auto agentLocationTuple: agent->agentLocations) {
                 if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
@@ -391,8 +431,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                    if (agentLocationTuple.first > agent->id) {
                         //If the other agent has a higher ID, so we can't select this frontier
                         skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's frontier" << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's frontier" << std::endl;
 //                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
                         break;
 //                    }
@@ -402,8 +442,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                    if (agentLocationTuple.first > agent->id) {
                         //If the other agent has a higher ID, so we can't select this frontier
                         skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's position" << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's position" << std::endl;
 //                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
 //                               << std::endl;
                         break;
@@ -414,8 +454,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             //If we are avoiding the frontier
             if (agent->frontierEvaluator.avoidingCoordinate(agent, {frontierRegionX, frontierRegionY})) {
                 skipFrontier = true;
-                argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                           << " because we are avoiding it" << std::endl;
+//                argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                           << " because we are avoiding it" << std::endl;
             }
             #endif
         }
@@ -504,7 +544,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     agent->pathPlanner.setWallFollowingDirection(bestFrontierRouteWallFollowingDirection);
 #endif
 
-    argos::LOG << "selected frontier region " << bestFrontierRegionCenter.x << ", " << bestFrontierRegionCenter.y << std::endl;
+//    argos::LOG << "selected frontier region " << bestFrontierRegionCenter.x << ", " << bestFrontierRegionCenter.y << std::endl;
 
 
     //Calculate the vector to the best frontier region

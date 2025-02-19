@@ -604,7 +604,10 @@ void Agent::calculateNextPosition() {
         if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
             argos::CVector2 agentFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                            this->currentBestFrontier.y - this->position.y);
-            auto pheromone_outside_thresholds = this->quadtree->getPheromoneFromCoordinate(this->currentBestFrontier, this->elapsed_ticks/this->ticks_per_second) <= this->config.P_OCCUPIED_THRESHOLD || this->quadtree->getPheromoneFromCoordinate(this->currentBestFrontier, this->elapsed_ticks/this->ticks_per_second) >= this->config.P_FREE_THRESHOLD;
+            auto pheromone = this->quadtree->getPheromoneFromCoordinate(this->currentBestFrontier,
+                                                                                     this->elapsed_ticks /
+                                                                                     this->ticks_per_second);
+            auto pheromone_outside_thresholds = pheromone <= this->config.P_OCCUPIED_THRESHOLD || pheromone >= this->config.P_FREE_THRESHOLD;
             frontierReached = pheromone_outside_thresholds && agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
               NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() <
               this->config.TURN_THRESHOLD_DEGREES * 2 ||
