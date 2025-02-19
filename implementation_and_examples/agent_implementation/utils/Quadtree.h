@@ -300,7 +300,7 @@ namespace quadtree {
                 Coordinate left = Coordinate{box.getCenter().x - box.size, box.getCenter().y};
                 if (mBox.contains(left)) {
 //                argos::LOG << "left: " << left.x << " " << left.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(left, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(left, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -314,7 +314,7 @@ namespace quadtree {
                 Coordinate right = Coordinate{box.getCenter().x + box.size, box.getCenter().y};
                 if (mBox.contains(right)) {
 //                argos::LOG << "right: " << right.x << " " << right.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(right, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(right, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -328,7 +328,7 @@ namespace quadtree {
                 Coordinate top = Coordinate{box.getCenter().x, box.getCenter().y + box.size};
                 if (mBox.contains(top)) {
 //                argos::LOG << "top: " << top.x << " " << top.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(top, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(top, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -342,7 +342,7 @@ namespace quadtree {
                 Coordinate bottom = Coordinate{box.getCenter().x, box.getCenter().y - box.size};
                 if (mBox.contains(bottom)) {
 //                argos::LOG << "bottom: " << bottom.x << " " << bottom.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(bottom, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(bottom, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -356,7 +356,7 @@ namespace quadtree {
                 Coordinate topLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y + box.size};
                 if (mBox.contains(topLeft)) {
 //                argos::LOG << "topLeft: " << topLeft.x << " " << topLeft.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(topLeft, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(topLeft, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -370,7 +370,7 @@ namespace quadtree {
                 Coordinate topRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y + box.size};
                 if (mBox.contains(topRight)) {
 //                argos::LOG << "topRight: " << topRight.x << " " << topRight.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(topRight, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(topRight, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -384,7 +384,7 @@ namespace quadtree {
                 Coordinate bottomLeft = Coordinate{box.getCenter().x - box.size, box.getCenter().y - box.size};
                 if (mBox.contains(bottomLeft)) {
 //                argos::LOG << "bottomLeft: " << bottomLeft.x << " " << bottomLeft.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(bottomLeft, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(bottomLeft, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -398,7 +398,7 @@ namespace quadtree {
                 Coordinate bottomRight = Coordinate{box.getCenter().x + box.size, box.getCenter().y - box.size};
                 if (mBox.contains(bottomRight)) {
 //                argos::LOG << "bottomRight: " << bottomRight.x << " " << bottomRight.y << std::endl;
-                    double pheromone = getPheromoneFromCoordinate(bottomRight, currentTimeS);
+                    double pheromone = getPheromoneFromCoordinateOnlyAmbiguous(bottomRight, currentTimeS);
                     if (pheromone == 0.5) {
                         return pheromone;
                     } else {
@@ -510,10 +510,24 @@ namespace quadtree {
          * Return the calculated pheromone of the QuadNode containing the coordinate
          * @param coordinate
          */
-        double getPheromoneFromCoordinate(Coordinate coordinate, double currentTimeS) const {
+        double getPheromoneFromCoordinateOnlyAmbiguous(Coordinate coordinate, double currentTimeS) const {
             QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
             if (quadNode.occupancy == UNKNOWN) return 0.5; //Unknown is ambiguous, and time factor will be 0
             else if (quadNode.occupancy == AMBIGUOUS) {
+                double pheromone = calculatePheromone(quadNode.visitedAtS, P(quadNode.LConfidence), currentTimeS);
+                return pheromone;
+            }
+            return -1;
+        }
+
+        /**
+       * Return the calculated pheromone of the QuadNode containing the coordinate
+       * @param coordinate
+       */
+        double getPheromoneFromCoordinate(Coordinate coordinate, double currentTimeS) const {
+            QuadNode quadNode = getQuadNodeFromCoordinate(mRoot.get(), mBox, coordinate);
+            if (quadNode.occupancy == UNKNOWN) return 0.5; //Unknown is ambiguous, and time factor will be 0
+            else if (quadNode.occupancy != ANY) {
                 double pheromone = calculatePheromone(quadNode.visitedAtS, P(quadNode.LConfidence), currentTimeS);
                 return pheromone;
             }
