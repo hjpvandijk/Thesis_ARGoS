@@ -691,9 +691,20 @@ void Agent::calculateNextPosition() {
                     this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
                 }
                 this->last_feasibility_check_tick = this->elapsed_ticks;
+
+            }
+#endif
+#if defined SKIP_UNREACHABLE_FRONTIERS && defined RANDOM_WALK_WHEN_NO_FRONTIERS
+            if (frontierEvaluator.avoidingCoordinate(this, this->deploymentLocation)) {
+                this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+            }
+            if (randomWalker.randomWalking && randomWalker.randomWalkedFarEnough(this)) {
+                //Force reset of frontier avoidance
+                this->frontierEvaluator.resetFrontierAvoidance(this, {0,0});
             }
 #endif
         }
+
     }
 
 
@@ -754,7 +765,7 @@ void Agent::calculateNextPosition() {
                                                                                   total_vector,
                                                                                   false);//targetVector.Length() == 0);
 #ifdef SKIP_UNREACHABLE_FRONTIERS
-    if (this->state == State::EXPLORING)
+//    if (this->state == State::EXPLORING)
         frontierEvaluator.skipIfFrontierUnreachable(this, objectAvoidanceAngle, total_vector);
 #endif
     //If there is not a free angle to move to, do not move

@@ -1,5 +1,5 @@
 mission:
-  end_time: 600 # The time in seconds when the mission ends
+  end_time: 230 # The time in seconds when the mission ends
   end_battery_level: 0 # The battery level in percent when the mission ends
 physical:
   robot_diameter: 0.08 # Agent diameter in meters
@@ -18,7 +18,7 @@ control:
   turn_threshold: 15 # The min angle difference in degrees between the desired and current orientation to start turning
   turn_speed_ratio: 0.1 # The ratio of the maximum speed of the motors to use when turning
   360_degrees_steps: 360 # The number of steps we divide the 360 degrees in when deciding the free directions
-  object_safety_radius: 0.1 # The safety radius around an object in meters
+  object_safety_radius: 0.2 # The safety radius around an object in meters
   agent_safety_radius_margin: 0.0 # The margin around the agent's safety radius in meters
   disallow_frontier_switching:
     frontier_reach_distance: 0.2 # The distance in meters when we consider a frontier reached
@@ -33,11 +33,11 @@ communication:
   quadtree_exchange_interval: 5 # The time in seconds between quadtree exchanges
   time_sync_interval: 10 # The time in seconds between time synchronization
   wifi_speed: 10 # The wifi speed in Mbps
-  wifi_range: 100.0 # The wifi range in meters
+  wifi_range: 4.0 # The wifi range in meters
   max_jitter: 10 # The maximum jitter in milliseconds
   message_loss_probability: 0 # 0.05 # The probability of a message being lost
 forces:
-  frontier_search_radius: 50.0 # The radius in meters around the agent to search for frontiers
+  frontier_search_radius: 5.0 # The radius in meters around the agent to search for frontiers
   max_frontier_cells: 999999 # The maximum number of queried frontier cells
   max_frontier_regions: 10 # The maximum number of frontier regions
   agent_avoidance_radius: 0.4 # The radius in meters around the agent to avoid other agents
