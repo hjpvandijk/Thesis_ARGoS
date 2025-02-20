@@ -257,6 +257,13 @@ void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> 
 
 
 
+/**
+ * Calculate the pheromone frontier fitness value.
+ * Based on the gaussian curve, where each tail corresponds to the occupied and free thresholds.
+ * @param agent
+ * @param pheromone
+ * @return
+ */
 double getValueOnPheromoneCurve(Agent* agent, double pheromone){
 //    if (pheromone < 0.5) {
 //        return -sqrt(0.5-pheromone) * (0.5-agent->config.P_OCCUPIED_THRESHOLD);
@@ -327,6 +334,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                     break; // Exit the loop since the frontier has been added to a region
                 }
             }
+            if (added) break; // Exit the loop since the frontier has been added to a region
         }
 
         // If the frontier was not added to any existing region, create a new region with it
