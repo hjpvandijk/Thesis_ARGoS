@@ -13,7 +13,7 @@ float MicroControllerBatteryManager::estimateCommunicationConsumption(Agent* age
 
     //Calculate the time we are not using RF
     float idleTimeS = seconds - transmitTimeS - receiveTimeS;
-    float idlePowerUsage_mAh = idleTimeS * this->modemSleepConsumption240MHz_ma / 3600.0f; //In mAh
+    float idlePowerUsage_mAh = idleTimeS * this->regularOperation_250MHz_mA / 3600.0f; //In mAh
 
     return transmitPower + receivePower + idlePowerUsage_mAh;
 }
