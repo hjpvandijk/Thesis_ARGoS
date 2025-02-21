@@ -248,7 +248,7 @@ public:
 
 
 
-    int ticks_per_second = 30;
+    double ticks_per_second = 30; //Needs to be double to prevent parsing necessity when doing elapsed ticks/ticks_per_second
 
     enum class State {
         NO_MISSION,
