@@ -1361,7 +1361,9 @@ namespace quadtree {
         }
 
         double calculatePheromone(double visitedTime, double PConfidence, double currentTime) const {
-            double timeProbability = 1.0 - std::min((currentTime - visitedTime) / EVAPORATION_TIME_S, (1.0 - EVAPORATED_PHEROMONE_FACTOR));
+//            double timeProbability = 1.0 - std::min((currentTime - visitedTime) / EVAPORATION_TIME_S, (1.0 - EVAPORATED_PHEROMONE_FACTOR));
+            double lambda = - std::log(this->EVAPORATED_PHEROMONE_FACTOR) / this->EVAPORATION_TIME_S; //Evaporate to EVAPORATED_PHEROMONE_FACTOR after EVAPORATION_TIME_S
+            double timeProbability = exp(-lambda * (currentTime - visitedTime)); //Exponential decay
             double pheromone = timeProbability * (PConfidence - 0.5) + 0.5;
             //This makes sure that a value once set to occupied or free, will not be changed to ambiguous again due to evaporation.
             //So we assume that if a cell is occupied, it will stay that way, albeit with a lower confidence.
