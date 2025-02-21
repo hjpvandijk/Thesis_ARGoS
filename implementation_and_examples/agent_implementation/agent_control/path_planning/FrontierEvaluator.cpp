@@ -104,4 +104,8 @@ void FrontierEvaluator::skipIfFrontierUnreachable(Agent* agent, argos::CRadians 
 
 }
 
+FrontierEvaluator::FrontierEvaluator(int max_count_no_direction) {
+    this->MAX_COUNT_NO_DIRECTION = max_count_no_direction;
+}
+
 #endif

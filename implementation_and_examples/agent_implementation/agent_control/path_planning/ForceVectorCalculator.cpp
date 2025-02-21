@@ -305,7 +305,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //TODO: Need to keep search area small for computation times. Maybe when in range only low scores, expand range or search a box besides.
     std::vector<std::pair<quadtree::Box, double>> frontiers = agent->quadtree->queryFrontierBoxes(agent->position, agent->config.FRONTIER_SEARCH_RADIUS,
                                                                               agent->elapsed_ticks /
-                                                                              agent->ticks_per_second, agent->config.MAX_FRONTIER_CELLS);
+                                                                              agent->ticks_per_second, agent->config.FRONTIER_CELL_RATIO);
     agent->current_frontiers = frontiers;
 
     // Initialize an empty vector of vectors to store frontier regions

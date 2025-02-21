@@ -66,7 +66,10 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->pathFollower = PathFollower();
 #endif
 #ifdef SKIP_UNREACHABLE_FRONTIERS
-    this->frontierEvaluator = FrontierEvaluator();
+    this->frontierEvaluator = FrontierEvaluator(5*this->ticks_per_second); //5 seconds
+#endif
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    this->randomWalker = RandomWalk(5*this->ticks_per_second); //5 seconds
 #endif
     this->sensor_reading_distance_probability = (1-this->config.P_AT_MAX_SENSOR_RANGE) / this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
 }
@@ -1185,6 +1188,7 @@ void Agent::loadConfig(const std::string& config_file) {
 //
     this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
     this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
+    this->config.FRONTIER_CELL_RATIO = config_yaml["forces"]["frontier_cell_ratio"].as<double>();
     this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
     this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
     this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();

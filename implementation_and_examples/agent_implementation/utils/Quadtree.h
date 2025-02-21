@@ -261,9 +261,10 @@ namespace quadtree {
 /**
 * Returns all the frontier boxes surrounding the given coordinate within the given area size
 */
-        std::vector<std::pair<Box, double>> queryFrontierBoxes(Coordinate coordinate, double areaRadius, double currentTimeS, int max_cells) {
+        std::vector<std::pair<Box, double>> queryFrontierBoxes(Coordinate coordinate, double areaRadius, double currentTimeS, double cell_ratio) {
             Box box = Box(Coordinate{coordinate.x - areaRadius, coordinate.y + areaRadius}, areaRadius*2.0);
             std::vector<Box> exploredBoxes = queryBoxes(box, {FREE, AMBIGUOUS}, currentTimeS); //Get FREE and AMBIGUOUS boxes, as the latter might be FREE
+            auto max_cells = std::max(1, static_cast<int>(exploredBoxes.size() * cell_ratio)); //Get random subset of the explored boxes, of size max_cells
             //Get random subset of the explored boxes, of size max_cells
             if (exploredBoxes.size() > max_cells) {
                 std::random_shuffle(exploredBoxes.begin(), exploredBoxes.end(), [](int i) { return rand() % i; });

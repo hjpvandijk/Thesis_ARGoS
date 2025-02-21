@@ -22,6 +22,7 @@ public:
 
 
     FrontierEvaluator() = default;
+    FrontierEvaluator(int max_count_no_direction);
     FrontierEvaluator(int closest_coordinate_hit_count_before_decreasing_confidence, int max_ticks_no_direction);
 
     void resetFrontierAvoidance(Agent* agent, argos::CVector2 unexploredFrontierVector);

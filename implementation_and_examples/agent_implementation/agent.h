@@ -117,6 +117,7 @@ public:
 
         double FRONTIER_SEARCH_RADIUS;
         int MAX_FRONTIER_CELLS;
+        double FRONTIER_CELL_RATIO;
         int MAX_FRONTIER_REGIONS;
         double AGENT_COHESION_RADIUS;
         double AGENT_AVOIDANCE_RADIUS;
@@ -246,7 +247,7 @@ public:
 
 
 
-    double ticks_per_second = 30;
+    int ticks_per_second = 30;
 
     enum class State {
         NO_MISSION,

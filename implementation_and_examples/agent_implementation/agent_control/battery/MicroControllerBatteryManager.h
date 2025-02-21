@@ -31,8 +31,16 @@ public:
 
     //Pico's wifi chip
     //https://www.mouser.com/datasheet/2/196/Infineon_CYW43439_DataSheet_v03_00_EN-3074791.pdf?srsltid=AfmBOoqbvp183iKToLTonbX_Zj0hb7Lp-svrc_1Ce22uR-Iw6ve1raZv
-    float wifiTransmitConsumption_mA = regularOperation_250MHz_mA + 320.0f; //Consumption of the microcontroller when transmitting via wifi
-    float wifiReceiveConsumption_mA = regularOperation_250MHz_mA + 43.0f; //Consumption of the microcontroller when receiving via wifi
+
+    //Measured it is much less https://www.youtube.com/watch?v=GqmnV_T4yAU
+//    float wifiTransmitConsumption_mA = regularOperation_250MHz_mA + 320.0f; //Consumption of the microcontroller when transmitting via wifi
+//    float wifiReceiveConsumption_mA = regularOperation_250MHz_mA + 43.0f; //Consumption of the microcontroller when receiving via wifi
+
+    //Measured it is much less https://www.youtube.com/watch?v=GqmnV_T4yAU
+    //https://www.jeffgeerling.com/blog/2022/raspberry-pi-pico-w-brings-wifi-6?utm_source=chatgpt.com
+    float wifiTransmitConsumption_mA = 80.0f; //Consumption of the microcontroller when transmitting via wifi
+    float wifiReceiveConsumption_mA = 80.0f; //Consumption of the microcontroller when receiving via wifi
+
 
     float bluetoothTransferSpeed_Mbps = 0.01; //Speed of the bluetooth transfer in Mbps
 
