@@ -127,6 +127,7 @@ public:
 
         #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
+        float FRONTIER_SWITCH_INTERVAL_S;
         bool FEASIBILITY_CHECK_ONLY_ROUTE;
         #endif
 
@@ -293,6 +294,7 @@ public:
 //    double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
 //    float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = 5.0;
     int last_feasibility_check_tick = 0;
+    int last_frontier_switch_tick = 0;
 #endif
 
 #ifdef SEPARATE_FRONTIERS

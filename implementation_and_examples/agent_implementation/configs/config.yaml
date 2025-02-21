@@ -22,7 +22,8 @@ control:
   agent_safety_radius_margin: 0.0 # The margin around the agent's safety radius in meters
   disallow_frontier_switching:
     frontier_reach_distance: 0.2 # The distance in meters when we consider a frontier reached
-    target_feasibility_check_interval: 5 # The time in seconds between target feasibility checks
+    frontier_switch_interval: 2 # The minimum time in seconds between allowing a frontier switch
+    target_feasibility_check_interval: 10 # The time in seconds between target feasibility checks
     feasibility_check_only_route: true # If true, we only check the feasibility of the route to the target, don't reevaluate the target itself
   separate_frontiers:
     distance_threshold: 1.0 # The distance in meters between two frontiers to consider them separate
@@ -39,7 +40,7 @@ communication:
 forces:
   frontier_search_radius: 5.0 # The radius in meters around the agent to search for frontiers
   max_frontier_cells: 999999 # The maximum number of queried frontier cells
-  frontier_cell_ratio: 0.9999 # The ratio of the frontier cells to the total number of cells in the frontier
+  frontier_cell_ratio: 1 # The ratio of the frontier cells to the total number of cells in the frontier
   max_frontier_regions: 10 # The maximum number of frontier regions
   agent_avoidance_radius: 0.4 # The radius in meters around the agent to avoid other agents
   agent_cohesion_radius: 1.5 # The radius in meters around the agent to align with other agents

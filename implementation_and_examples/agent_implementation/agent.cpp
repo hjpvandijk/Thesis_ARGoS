@@ -603,15 +603,13 @@ void Agent::calculateNextPosition() {
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         //If the agent is close to the frontier and is heading towards it, or if it is within object avoidance radius to the frontier.
         //So we don't 'reach' frontiers through walls.
-        bool frontierReached = false;
+        bool allow_frontier_switch = false;
         if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
             argos::CVector2 agentFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                            this->currentBestFrontier.y - this->position.y);
-            auto pheromone = this->quadtree->getPheromoneFromCoordinate(this->currentBestFrontier,
-                                                                                     this->elapsed_ticks /
-                                                                                     this->ticks_per_second);
-            auto pheromone_outside_thresholds = pheromone <= this->config.P_OCCUPIED_THRESHOLD || pheromone >= this->config.P_FREE_THRESHOLD;
-            frontierReached = pheromone_outside_thresholds && agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
+            bool frontier_switch_period_elapsed = (this->elapsed_ticks - this->last_frontier_switch_tick) >
+                                                   this->ticks_per_second * this->config.FRONTIER_SWITCH_INTERVAL_S;
+            allow_frontier_switch = frontier_switch_period_elapsed && agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
               NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() <
               this->config.TURN_THRESHOLD_DEGREES * 2 ||
                     agentFrontierVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
@@ -628,10 +626,10 @@ void Agent::calculateNextPosition() {
             #ifdef SKIP_UNREACHABLE_FRONTIERS
             //Or if we are avoiding the frontier
             frontierEvaluator.avoidingAgentTarget(this) ||
-            #endif
-            //Or we have reached the frontier
-            frontierReached
-            #ifdef PATH_PLANNING_ENABLED
+#endif
+            //Or are allowed to switch frontiers based on the distance to the current frontier and the time since the last switch
+            allow_frontier_switch
+#ifdef PATH_PLANNING_ENABLED
             //Or if it is time for a periodic check, and we are not only checking the route
             || (periodic_check_required &&
                 !this->config.FEASIBILITY_CHECK_ONLY_ROUTE)
@@ -643,11 +641,14 @@ void Agent::calculateNextPosition() {
             if (wallFollower.wallFollowingDirection == 0) {
                 //Find new frontier
                 targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+                this->last_frontier_switch_tick = this->elapsed_ticks;
             }
 #else
             //Find new frontier
             targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
             this->last_feasibility_check_tick = this->elapsed_ticks;
+            this->last_frontier_switch_tick = this->elapsed_ticks;
 #endif
         }
 #ifdef PATH_PLANNING_ENABLED
@@ -665,6 +666,7 @@ void Agent::calculateNextPosition() {
             }
 #endif
             this->last_feasibility_check_tick = this->elapsed_ticks;
+            this->last_frontier_switch_tick = this->elapsed_ticks;
 
         }
 #endif
@@ -1167,6 +1169,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
+    this->config.FRONTIER_SWITCH_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["frontier_switch_interval"].as<float>();
     this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();
 #endif
 #if defined(SEPARATE_FRONTIERS) || defined(SKIP_UNREACHABLE_FRONTIERS)
