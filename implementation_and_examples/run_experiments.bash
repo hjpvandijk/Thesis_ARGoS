@@ -60,7 +60,7 @@ for EXPERIMENT in "${EXPERIMENTS[@]}"; do
 
             # Generate timestamp for log file
             TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-            LOGFILE="$LOG_DIR/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_$((N_AGENTS-remove_agents))}_$TIMESTAMP.log"
+            LOGFILE="$LOG_DIR/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_$((N_AGENTS-remove_agents))_agents_$TIMESTAMP.log"
 
             echo "Running ARGoS3 with configuration: $EXP_PATH and $CONFIG_PATH with $((N_AGENTS-remove_agents)) agents"
 
