@@ -17,7 +17,9 @@ mkdir -p "$LOG_DIR"
 EXPERIMENTS=("office.argos")
 CONFIGS=("config.yaml")
 
-N_AGENTS=6
+N_AGENTS=10
+SEED=123
+export SEED
 
 # Iterate over each experiment file
 for EXPERIMENT in "${EXPERIMENTS[@]}"; do
@@ -34,17 +36,6 @@ for EXPERIMENT in "${EXPERIMENTS[@]}"; do
 
         for remove_agents in $(seq 0 $((N_AGENTS-1))); do
 
-
-            METRIC_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/$((N_AGENTS-remove_agents))_agents"
-            export METRIC_PATH
-            FRAME_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/$((N_AGENTS-remove_agents))_agents/frames"
-            sed "s|{{FRAME_PATH}}|${FRAME_PATH}|g" temp_experiment.argos > temp_experiment2.argos
-
-
-            mkdir -p "$FRAME_PATH"
-            # empty the directory
-            rm -rf "$FRAME_PATH"/*
-
             # Remove agents from the experiment file
             if [ $remove_agents -ne 0 ]; then
                 for i in $(seq 1 $remove_agents); do
@@ -58,23 +49,38 @@ for EXPERIMENT in "${EXPERIMENTS[@]}"; do
                 continue
             fi
 
-            # Generate timestamp for log file
-            TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-            LOGFILE="$LOG_DIR/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_$((N_AGENTS-remove_agents))_agents_$TIMESTAMP.log"
+            for AVERAGE_INTER_SPAWN_TIME in {120..20..20} # for loop from 300 to 30 with step 30
+            do
+              export AVERAGE_INTER_SPAWN_TIME
 
-            echo "Running ARGoS3 with configuration: $EXP_PATH and $CONFIG_PATH with $((N_AGENTS-remove_agents)) agents"
+              METRIC_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/spawn_time_${AVERAGE_INTER_SPAWN_TIME}/$((N_AGENTS-remove_agents))_agents"
+              export METRIC_PATH
+              FRAME_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/spawn_time_${AVERAGE_INTER_SPAWN_TIME}/$((N_AGENTS-remove_agents))_agents/frames"
+              sed "s|{{FRAME_PATH}}|${FRAME_PATH}|g" temp_experiment.argos > temp_experiment2.argos
+
+
+              mkdir -p "$FRAME_PATH"
+              # empty the directory
+              rm -rf "$FRAME_PATH"/*
+
+              # Generate timestamp for log file
+              TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+              LOGFILE="$LOG_DIR/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_spawn_time_${AVERAGE_INTER_SPAWN_TIME}_$((N_AGENTS-remove_agents))_agents_$TIMESTAMP.log"
+
+              echo "Running ARGoS3 with configuration: $EXP_PATH and $CONFIG_PATH with inter_spawn_time $AVERAGE_INTER_SPAWN_TIME with $((N_AGENTS-remove_agents)) agents"
 
 
 
-            # Run ARGoS3 and log output
-            "$ARGOSEXEC" -n -c "temp_experiment2.argos"> "$LOGFILE" 2>&1
+              # Run ARGoS3 and log output
+              "$ARGOSEXEC" -n -c "temp_experiment2.argos"> "$LOGFILE" 2>&1
 
-            # Check exit status
-            if [ $? -eq 0 ]; then
-                echo "Experiment '$EXPERIMENT' with config '$CONFIG_FILE' and $((N_AGENTS-remove_agents)) agents finished successfully."
-            else
-                echo "Experiment '$EXPERIMENT' with config '$CONFIG_FILE' and $((N_AGENTS-remove_agents)) agents failed. Check log: $LOGFILE" >&2
-            fi
+              # Check exit status
+              if [ $? -eq 0 ]; then
+                  echo "Experiment '$EXPERIMENT' with config '$CONFIG_FILE' with inter_spawn_time $AVERAGE_INTER_SPAWN_TIME and $((N_AGENTS-remove_agents)) agents finished successfully."
+              else
+                  echo "Experiment '$EXPERIMENT' with config '$CONFIG_FILE' with inter_spawn_time $AVERAGE_INTER_SPAWN_TIME and $((N_AGENTS-remove_agents)) agents failed. Check log: $LOGFILE" >&2
+              fi
+            done
       done
 
     done

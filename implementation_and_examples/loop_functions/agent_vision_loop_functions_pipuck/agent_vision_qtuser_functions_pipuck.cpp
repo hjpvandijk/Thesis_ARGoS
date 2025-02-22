@@ -28,7 +28,7 @@ double calculatePheromone(double visitedTime, double PConfidence, double current
 void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
-        if (m_tCell.first->GetId() != "pipuck1") continue;
+        if (m_tCell.first->GetId() != "pipuck6") continue;
         for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
             Coordinate neighbor1 = std::get<0>(neighborPair);
             Coordinate neighbor2 = std::get<1>(neighborPair);
@@ -73,8 +73,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 ////    /* Go through all the robot waypoints and draw them */
     for (auto & m_tAgentFrontierRegions : m_cAgVisLF.m_tAgentFrontierRegions) {
         std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
-                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
-        if (m_tAgentFrontierRegions.first->GetId() != "pipuck4") continue;
+                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE, CColor::GRAY10, CColor::GRAY20, CColor::GRAY30, CColor::GRAY40, CColor::GRAY50, CColor::GRAY60, CColor::GRAY70, CColor::GRAY80, CColor::GRAY90};
+        if (m_tAgentFrontierRegions.first->GetId() != "pipuck6") continue;
         int i = 0;
         for (auto frontierRegions: m_tAgentFrontierRegions.second) {
             //Assign a differnet color to every frontierRegion
@@ -85,6 +85,8 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
                 DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
                         color);
+//                DrawText(frontierCoordinate - CVector3(0.05,-0.05,0), std::to_string(frontier.getCenter().x) + " " + std::to_string(frontier.getCenter().y), CColor::BLACK);
+
             }
             i++;
             if (i > colors.size()) i = 0;

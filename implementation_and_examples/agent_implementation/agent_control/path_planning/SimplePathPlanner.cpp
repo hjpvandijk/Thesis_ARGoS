@@ -7,7 +7,7 @@
 #ifdef PATH_PLANNING_ENABLED
 
 std::tuple<int, std::vector<argos::CVector2>, double> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
-    srand(target.x * 100 + target.y * 100);
+//    srand(target.x * 100 + target.y * 100);
     int wall_following_direction;
     std::vector<argos::CVector2> relativeRoute;
     double route_length = 0;
