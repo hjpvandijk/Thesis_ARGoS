@@ -1144,8 +1144,10 @@ void Agent::checkMissionEnd() {
         auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
             this->state = State::RETURNING;
+            this->config.AGENT_AVOIDANCE_WEIGHT = 0.0;
         } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
             this->state = State::RETURNING;
+            this->config.AGENT_AVOIDANCE_WEIGHT = 0.0;
         }
     }
 }
