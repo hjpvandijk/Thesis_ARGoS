@@ -123,23 +123,28 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     srand(seed_int);
 
     const char* average_inter_spawn_time_s = std::getenv("AVERAGE_INTER_SPAWN_TIME");
-    this->spawn_rate = average_inter_spawn_time_s ? 1.0f / std::stof(average_inter_spawn_time_s) : 10.0f;
+    float average_inter_spawn_time = std::stof(average_inter_spawn_time_s);
+    this->spawn_rate = average_inter_spawn_time_s ? 1.0f /  average_inter_spawn_time: 10.0f;
 
-
-    CSpace::TMapPerType& boxMap = GetSpace().GetEntitiesByType("box");
+    CSpace::TMapPerType &boxMap = GetSpace().GetEntitiesByType("box");
     double prev_spawn_time = 0.0f;
-    for (auto & it : boxMap) {
+    for (auto &it: boxMap) {
         CBoxEntity *box = any_cast<CBoxEntity *>(it.second);
         if (box->GetId().find("spawn_box") != std::string::npos) {
-            auto copybox = new CBoxEntity(box->GetId(), box->GetEmbodiedEntity().GetOriginAnchor().Position, box->GetEmbodiedEntity().GetOriginAnchor().Orientation, false, box->GetSize(), 1.0f);
-            int spawn_time_ticks = int(calculateSpawnTime(this->spawn_rate)*ticksPerSecond) + prev_spawn_time;
-            prev_spawn_time = spawn_time_ticks;
-            this->spawn_boxes.push_back(*copybox);
-            this->spawn_times.push_back(spawn_time_ticks);
-            delete copybox;
+            if (average_inter_spawn_time > 0) { //If the spawn time is 0, don't spawn any boxes
+                auto copybox = new CBoxEntity(box->GetId(), box->GetEmbodiedEntity().GetOriginAnchor().Position,
+                                              box->GetEmbodiedEntity().GetOriginAnchor().Orientation, false,
+                                              box->GetSize(), 1.0f);
+                int spawn_time_ticks = int(calculateSpawnTime(this->spawn_rate) * ticksPerSecond) + prev_spawn_time;
+                prev_spawn_time = spawn_time_ticks;
+                this->spawn_boxes.push_back(*copybox);
+                this->spawn_times.push_back(spawn_time_ticks);
+                delete copybox;
+            }
             RemoveEntity(*box);
         }
     }
+
 
 
 

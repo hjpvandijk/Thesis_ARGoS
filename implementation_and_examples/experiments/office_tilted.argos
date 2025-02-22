@@ -399,31 +399,31 @@
         <cylinder id="circle_51" radius="0.815" height="0.5" temperature="0" movable="false">
             <body position="2.267559491680912,-4.6658331465760545,0" orientation="0,0,0"/>
         </cylinder>
-        <pipuck id="pipuck15" wifi_medium="wifi">
+        <pipuck id="pipuck1" wifi_medium="wifi">
             <body position="-7.512010169463007,7.481958514579211,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck14" wifi_medium="wifi">
+        <pipuck id="pipuck2" wifi_medium="wifi">
             <body position="-7.0661994586288905,6.382409556075592,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck13" wifi_medium="wifi">
+        <pipuck id="pipuck3" wifi_medium="wifi">
             <body position="-6.5813007314146965,5.175467155196439,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck12" wifi_medium="wifi">
+        <pipuck id="pipuck4" wifi_medium="wifi">
             <body position="-6.517387001643746,7.798364123156584,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck11" wifi_medium="wifi">
+        <pipuck id="pipuck5" wifi_medium="wifi">
             <body position="-6.194861565173277,6.745158232102047,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck10" wifi_medium="wifi">
+        <pipuck id="pipuck6" wifi_medium="wifi">
             <body position="-5.6964893563273025,5.375891841814009,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck9" wifi_medium="wifi">
+        <pipuck id="pipuck7" wifi_medium="wifi">
             <body position="-5.58623255910727,8.122074084137802,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
@@ -431,31 +431,31 @@
             <body position="-5.264940948482387,7.114026736021599,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck7" wifi_medium="wifi">
+        <pipuck id="pipuck9" wifi_medium="wifi">
             <body position="-4.83857564316863,5.733754515792954,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck6" wifi_medium="wifi">
+        <pipuck id="pipuck10" wifi_medium="wifi">
             <body position="-4.642887762119439,8.495828590104864,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck5" wifi_medium="wifi">
+        <pipuck id="pipuck11" wifi_medium="wifi">
             <body position="-4.303285969150105,7.479243063739228,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck4" wifi_medium="wifi">
+        <pipuck id="pipuck12" wifi_medium="wifi">
             <body position="-3.905002850275818,6.134357382353898,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck3" wifi_medium="wifi">
+        <pipuck id="pipuck13" wifi_medium="wifi">
             <body position="-4.524686987617271,4.996658425306756,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck2" wifi_medium="wifi">
+        <pipuck id="pipuck14" wifi_medium="wifi">
             <body position="-3.6252669077221866,5.324020562489896,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-        <pipuck id="pipuck1" wifi_medium="wifi">
+        <pipuck id="pipuck15" wifi_medium="wifi">
             <body position="-3.1178622148037762,6.436055683453904,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
