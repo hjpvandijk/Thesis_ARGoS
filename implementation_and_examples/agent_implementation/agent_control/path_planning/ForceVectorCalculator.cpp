@@ -403,8 +403,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         averagePheromoneCertainty /= totalNumberOfCellsInRegion;
 //        pheromoneCurve /= totalNumberOfCellsInRegion;
 
-        argos::LOG << "Frontier region " << frontierRegionX << ", " << frontierRegionY << " with pheromonecurve " << pheromoneCurve << " has " << totalNumberOfCellsInRegion << " cells of which " << nUnknown << " unknown and " << nAmbiguous << " ambiguous" << std::endl;
-        argos::LOG << "Average certainty: " << averagePheromoneCertainty << std::endl;
+//        argos::LOG << "Frontier region " << frontierRegionX << ", " << frontierRegionY << " with pheromonecurve " << pheromoneCurve << " has " << totalNumberOfCellsInRegion << " cells of which " << nUnknown << " unknown and " << nAmbiguous << " ambiguous" << std::endl;
+//        argos::LOG << "Average certainty: " << averagePheromoneCertainty << std::endl;
         bool skipFrontier = false;
 
 //        //Skip too small areas
@@ -511,18 +511,18 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                 + agent->config.FRONTIER_SIZE_WEIGHT * totalNumberOfCellsInRegion
                 - agent->config.FRONTIER_REACH_BATTERY_WEIGHT * powerUsage - agent->config.FRONTIER_REACH_DURATION_WEIGHT * duration;
 //        if (agent->id == "pipuck1") {
-            argos::LOG << "[" << agent->id << "] " << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
-                       << std::endl;
-            argos::LOG << "[" << agent->id << "] " << "Distance * weight = " << distance << " * " << -agent->config.FRONTIER_DISTANCE_WEIGHT << " = "
-                       << -distance * agent->config.FRONTIER_DISTANCE_WEIGHT << std::endl;
-            argos::LOG << "[" << agent->id << "] " << "Pheromone curve * weight = " << pheromoneCurve << " * " << agent->config.FRONTIER_PHEROMONE_WEIGHT
-                          << " = " << pheromoneCurve * agent->config.FRONTIER_PHEROMONE_WEIGHT << std::endl;
-            argos::LOG << "[" << agent->id << "] " << "Cell number * weight = " << totalNumberOfCellsInRegion << " * " << agent->config.FRONTIER_SIZE_WEIGHT
-                            << " = " << totalNumberOfCellsInRegion * agent->config.FRONTIER_SIZE_WEIGHT << std::endl;
-            argos::LOG << "[" << agent->id << "] " << "Power usage * weight = " << powerUsage << " * " << -agent->config.FRONTIER_REACH_BATTERY_WEIGHT
-                            << " = " << -powerUsage * agent->config.FRONTIER_REACH_BATTERY_WEIGHT << std::endl;
-            argos::LOG << "[" << agent->id << "] " << "Duration * weight = " << duration << " * " << -agent->config.FRONTIER_REACH_DURATION_WEIGHT
-                            << " = " << -duration * agent->config.FRONTIER_REACH_DURATION_WEIGHT << std::endl;
+//            argos::LOG << "[" << agent->id << "] " << "Frontier region: " << frontierRegionX << ", " << frontierRegionY << " Score: " << fitness
+//                       << std::endl;
+//            argos::LOG << "[" << agent->id << "] " << "Distance * weight = " << distance << " * " << -agent->config.FRONTIER_DISTANCE_WEIGHT << " = "
+//                       << -distance * agent->config.FRONTIER_DISTANCE_WEIGHT << std::endl;
+//            argos::LOG << "[" << agent->id << "] " << "Pheromone curve * weight = " << pheromoneCurve << " * " << agent->config.FRONTIER_PHEROMONE_WEIGHT
+//                          << " = " << pheromoneCurve * agent->config.FRONTIER_PHEROMONE_WEIGHT << std::endl;
+//            argos::LOG << "[" << agent->id << "] " << "Cell number * weight = " << totalNumberOfCellsInRegion << " * " << agent->config.FRONTIER_SIZE_WEIGHT
+//                            << " = " << totalNumberOfCellsInRegion * agent->config.FRONTIER_SIZE_WEIGHT << std::endl;
+//            argos::LOG << "[" << agent->id << "] " << "Power usage * weight = " << powerUsage << " * " << -agent->config.FRONTIER_REACH_BATTERY_WEIGHT
+//                            << " = " << -powerUsage * agent->config.FRONTIER_REACH_BATTERY_WEIGHT << std::endl;
+//            argos::LOG << "[" << agent->id << "] " << "Duration * weight = " << duration << " * " << -agent->config.FRONTIER_REACH_DURATION_WEIGHT
+//                            << " = " << -duration * agent->config.FRONTIER_REACH_DURATION_WEIGHT << std::endl;
 //        }
 #else
         //Calculate the cost of the frontier region
