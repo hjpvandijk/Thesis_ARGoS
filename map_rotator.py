@@ -385,11 +385,11 @@ def rotate_map(arena_boxes, arena_cylinders, angle_degrees):
 
 # Usage
 # arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
-arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/office.argos', 20)
+arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/house.argos', 20)
 # arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
-arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/office.argos', 20)
+arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/house.argos', 20)
 
-arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/office.argos', 20)
+arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/house.argos', 20)
 
 # arena_boxes, arena_cylinders = rotate_map(arena_boxes, arena_cylinders, 20)
 # print_rotated_shapes(arena_boxes, arena_cylinders)

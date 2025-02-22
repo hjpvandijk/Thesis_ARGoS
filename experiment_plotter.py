@@ -4,8 +4,8 @@ import matplotlib.patches as patches
 import numpy as np
 import csv
 
-actual_arena_width = 20
-actual_arena_height = 10.2
+actual_arena_width = 9.5
+actual_arena_height = 12
 actual_arena = patches.Rectangle((-actual_arena_width / 2, -actual_arena_height / 2), actual_arena_width, actual_arena_height, linewidth=0, edgecolor='r', facecolor='blue', alpha=0.5)
 
 def read_arena_boxes(filename):
@@ -186,7 +186,7 @@ def plot_arena(arena_boxes, arena_cylinders):
     plt.show()
 
 # Usage
-arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
-arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
+arena_boxes = read_arena_boxes('implementation_and_examples/experiments/house.argos')
+arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/house.argos')
 
 plot_arena(arena_boxes, arena_cylinders)

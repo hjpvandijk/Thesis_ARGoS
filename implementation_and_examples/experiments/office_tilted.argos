@@ -24,11 +24,8 @@
               message is displayed.
         -->
         <experiment length="0"
-                    ticks_per_second="30"
+                    ticks_per_second="16"
                     random_seed="124"/>
-
-        <log file="output.log" />
-        <logerr file="error.log" />
     </framework>
 
     <!-- *************** -->
@@ -138,275 +135,330 @@
         $ argos3 -q box
     -->
     <arena size="16.4, 22.2, 1" center="0,0,0.5">
-        <box id="box_0" size="0.76,2.11,0.5" movable="false">
+        <box id="box_40" size="0.76,2.11,0.5" movable="false">
             <body position="-5.8399975662147146,4.466996018199055,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_1" size="0.75,1.42,0.5" movable="false">
+        <box id="box_41" size="0.75,1.42,0.5" movable="false">
             <body position="-2.9305082345830895,7.452125300009436,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_2" size="0.13,2.7,0.5" movable="false">
+        <box id="box_42" size="0.13,2.7,0.5" movable="false">
             <body position="-5.009976617098768,2.9759593908727293,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_3" size="0.14,0.695,0.5" movable="false">
+        <box id="box_43" size="0.14,0.695,0.5" movable="false">
             <body position="-5.030782993273118,2.5506967135655247,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_4" size="0.615,0.28,0.5" movable="false">
+        <box id="box_44" size="0.615,0.28,0.5" movable="false">
             <body position="-5.689699191839723,2.5263668293378148,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_5" size="0.135,2.32,0.5" movable="false">
+        <box id="box_45" size="0.135,2.32,0.5" movable="false">
             <body position="-3.8625310591619026,7.90038828583821,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_6" size="0.145,1.73,0.5" movable="false">
+        <box id="box_46" size="0.145,1.73,0.5" movable="false">
             <body position="-2.7424575498891492,7.140126598111269,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_7" size="0.425,0.125,0.5" movable="false">
+        <box id="box_47" size="0.425,0.125,0.5" movable="false">
             <body position="-0.71678082126018,7.882733520440329,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_8" size="0.155,2.215,0.5" movable="false">
+        <box id="box_48" size="0.155,2.215,0.5" movable="false">
             <body position="-1.0938666570103266,8.948006383361664,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_9" size="0.73,1.4,0.5" movable="false">
+        <box id="box_49" size="0.73,1.4,0.5" movable="false">
             <body position="1.2690541022380106,9.012566320732008,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_10" size="0.135,1.655,0.5" movable="false">
+        <box id="box_410" size="0.135,1.655,0.5" movable="false">
             <body position="1.2864745617304332,8.606537962620074,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_11" size="1.485,2.185,0.5" movable="false">
+        <box id="box_411" size="1.485,2.185,0.5" movable="false">
             <body position="1.94462130872552,6.169676690528496,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_12" size="0.145,10.245,0.5" movable="false">
+        <box id="box_412" size="0.145,10.245,0.5" movable="false">
             <body position="-3.3725517881812648,9.331795482973003,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_13" size="1.45,2.21,0.5" movable="false">
+        <box id="box_413" size="1.45,2.21,0.5" movable="false">
             <body position="-0.4512931297857162,3.549723159770099,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_14" size="1.465,2.155,0.5" movable="false">
+        <box id="box_414" size="1.465,2.155,0.5" movable="false">
             <body position="3.0472216873720397,3.0964499815126194,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_15" size="0.12,2.26,0.5" movable="false">
+        <box id="box_415" size="0.12,2.26,0.5" movable="false">
             <body position="-3.4318115829264806,2.41169427152192,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_16" size="2.02,0.44,0.5" movable="false">
+        <box id="box_416" size="2.02,0.44,0.5" movable="false">
             <body position="-3.6808301274347466,2.321058933540618,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_17" size="0.135,0.345,0.5" movable="false">
+        <box id="box_0" size="0.135,0.345,0.5" movable="false">
             <body position="-4.5761034944393595,1.2795465244296063,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_18" size="0.13,1.125,0.5" movable="false">
+        <box id="box_1" size="0.13,1.125,0.5" movable="false">
             <body position="-5.155301345626963,1.0873588578647018,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_19" size="0.14,1.35,0.5" movable="false">
+        <box id="box_2" size="0.14,1.35,0.5" movable="false">
             <body position="-3.9948851703087,-0.3100281858922297,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_20" size="0.13,0.245,0.5" movable="false">
+        <box id="box_3" size="0.13,0.245,0.5" movable="false">
             <body position="-2.638748061723288,0.2181511328221604,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_21" size="0.145,2.59,0.5" movable="false">
+        <box id="box_4" size="0.145,2.59,0.5" movable="false">
             <body position="-3.899646274293034,-0.2354573961303061,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_22" size="0.605,0.645,0.5" movable="false">
+        <box id="box_5" size="0.605,0.645,0.5" movable="false">
             <body position="-4.594379682839269,-0.4829987887290575,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_23" size="0.125,1.135,0.5" movable="false">
+        <box id="box_6" size="0.125,1.135,0.5" movable="false">
             <body position="-4.0018384122611455,-2.0817545057357747,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_24" size="0.14,0.335,0.5" movable="false">
+        <box id="box_7" size="0.14,0.335,0.5" movable="false">
             <body position="-3.426276682029776,-1.8722671679488025,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_25" size="0.6,0.355,0.5" movable="false">
+        <box id="box_8" size="0.6,0.355,0.5" movable="false">
             <body position="-3.4851634485828114,-3.537854856641574,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_26" size="0.125,0.63,0.5" movable="false">
+        <box id="box_9" size="0.125,0.63,0.5" movable="false">
             <body position="-2.9677537704504022,-3.1393580248161284,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_27" size="0.12,2.175,0.5" movable="false">
+        <box id="box_10" size="0.12,2.175,0.5" movable="false">
             <body position="-1.8542436718368334,-1.9226379418530826,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_28" size="2.065,0.425,0.5" movable="false">
+        <box id="box_11" size="2.065,0.425,0.5" movable="false">
             <body position="-2.0897887024014534,-2.0722199881564816,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_29" size="0.14,2.825,0.5" movable="false">
+        <box id="box_12" size="0.14,2.825,0.5" movable="false">
             <body position="-2.635337618938916,-3.380188882918433,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_30" size="0.125,1.86,0.5" movable="false">
+        <box id="box_13" size="0.125,1.86,0.5" movable="false">
             <body position="0.5875921508337721,-2.1991570462971812,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_31" size="0.28,0.135,0.5" movable="false">
+        <box id="box_14" size="0.28,0.135,0.5" movable="false">
             <body position="2.6109196479107766,-1.4574051743264356,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_32" size="4.87,0.68,0.5" movable="false">
+        <box id="box_15" size="4.87,0.68,0.5" movable="false">
             <body position="5.413595801889675,-1.3072798069894953,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_33" size="0.125,1.655,0.5" movable="false">
+        <box id="box_16" size="0.125,1.655,0.5" movable="false">
             <body position="5.7989985138666755,-3.7769006786215704,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_34" size="4.52,1.7,0.5" movable="false">
+        <box id="box_17" size="4.52,1.7,0.5" movable="false">
             <body position="-0.7562473035907941,-6.766735920354189,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_35" size="0.13,0.195,0.5" movable="false">
+        <box id="box_18" size="0.13,0.195,0.5" movable="false">
             <body position="3.912781497161943,-4.471408861362059,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_36" size="1.465,0.735,0.5" movable="false">
+        <box id="box_19" size="1.465,0.735,0.5" movable="false">
             <body position="6.159034656486005,-6.418041336747865,0" orientation="20.0,0,0"/>
         </box>
-        <box id="box_37" size="1.69,2.97,0.5" movable="false">
+        <box id="box_20" size="1.69,2.97,0.5" movable="false">
             <body position="3.588620923009904,-8.324657642866496,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_38" size="7.615,0.125,0.5" movable="false">
+        <box id="box_21" size="7.615,0.125,0.5" movable="false">
             <body position="3.990694612571694,-5.036329914649284,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_39" size="7.57,0.165,0.5" movable="false">
+        <box id="box_22" size="7.57,0.165,0.5" movable="false">
             <body position="1.2057928813457455,-6.068574361190273,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_40" size="19.925,0.15,0.5" movable="false">
+        <box id="box_23" size="19.925,0.15,0.5" movable="false">
             <body position="4.712549865507735,1.7444927672830979,0" orientation="110.0,0,0"/>
         </box>
-        <box id="box_41" size="19.845,0.135,0.5" movable="false">
+        <box id="box_24" size="19.845,0.135,0.5" movable="false">
             <body position="-4.746492821649339,-1.8047349927430612,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_42" size="0.15,10.03,0.5" movable="false">
+        <box id="box_25" size="0.15,10.03,0.5" movable="false">
             <body position="3.3428668283640373,-9.345260369183054,0" orientation="290.0,0,0"/>
         </box>
-        <cylinder id="cylinder_0" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="-5.452271053520424,3.5332973776549417,0" orientation="0,0,0"/>
+        <box id="spawn_box_0" size="0.4851251615004529,1.0209781778076288,0.5" movable="false">
+            <body position="0.8446317333757065,-4.905105569744054,0" orientation="14.349346422784947,0,0"/>
+        </box>
+        <box id="spawn_box_1" size="0.39953346128497746,0.3254006574469708,0.5" movable="false">
+            <body position="-0.6372285133468846,-4.7739957443947585,0" orientation="356.15019831288095,0,0"/>
+        </box>
+        <box id="spawn_box_2" size="2.288271519814948,0.9254615070601003,0.5" movable="false">
+            <body position="4.28283121724293,-3.3328013514944392,0" orientation="184.87983235280348,0,0"/>
+        </box>
+        <box id="spawn_box_3" size="2.35643909692041,1.013421653896348,0.5" movable="false">
+            <body position="-2.768358868950434,7.551597707335654,0" orientation="129.8615343357513,0,0"/>
+        </box>
+        <box id="spawn_box_4" size="1.2151642909247256,0.5549500674346587,0.5" movable="false">
+            <body position="-0.217502604436185,1.3299550779664686,0" orientation="212.35812955797581,0,0"/>
+        </box>
+        <box id="spawn_box_5" size="0.17165352244118318,0.21620482270017352,0.5" movable="false">
+            <body position="-2.3408753567924276,2.3744642982215622,0" orientation="212.24539685474258,0,0"/>
+        </box>
+        <box id="spawn_box_6" size="1.511327543035872,0.17135359264356814,0.5" movable="false">
+            <body position="-7.143741602508681,4.79808883969971,0" orientation="347.3859513905681,0,0"/>
+        </box>
+        <box id="spawn_box_7" size="2.380011103232659,0.6050625521716165,0.5" movable="false">
+            <body position="0.286450544908111,-8.131557629384021,0" orientation="194.77262466625436,0,0"/>
+        </box>
+        <box id="spawn_box_8" size="1.6341882849623806,0.9819518250622753,0.5" movable="false">
+            <body position="-3.5091840375050203,0.88317363102429,0" orientation="120.07228184410877,0,0"/>
+        </box>
+        <box id="spawn_box_9" size="0.23264276826777106,0.39286233928370384,0.5" movable="false">
+            <body position="-0.14871581645338397,-5.266314172017315,0" orientation="325.04911769310274,0,0"/>
+        </box>
+        <cylinder id="circle_30" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="-5.601067071334283,4.000587164706551,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_1" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="-3.281908048649423,8.329874222352348,0" orientation="0,0,0"/>
+        <cylinder id="circle_31" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="-2.9965282945788134,8.247512848112976,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_2" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="1.1132968932872818,9.908314439267503,0" orientation="0,0,0"/>
+        <cylinder id="circle_32" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="0.9536009141552586,9.674600523872925,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_3" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_33" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="1.9325386693554205,7.306609630426823,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_4" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_34" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.5096640417874034,5.660697180074989,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_5" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_35" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.4758934141346767,4.291579016910122,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_6" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_36" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.5909985125483663,3.5233292115652333,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_7" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_37" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-5.605696964935553,2.3175011407359274,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_8" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="2.671302178938865,5.27687356952926,0" orientation="0,0,0"/>
+        <cylinder id="circle_38" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="2.6388102653229266,5.366144368503921,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_9" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_42" radius="0.27" height="0.5" temperature="0" movable="false">
+            <body position="3.0945434785707837,4.143265699811567,0" orientation="0,0,0"/>
+        </cylinder>
+        <cylinder id="circle_39" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.026688648245502777,2.2072409737169223,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_10" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_40" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="1.632336534520314,2.6054179008501133,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_11" radius="0.3" height="0.5" temperature="0" movable="false">
-            <body position="3.0389738330139586,4.266704002184409,0" orientation="0,0,0"/>
-        </cylinder>
-        <cylinder id="cylinder_12" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_43" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="3.7606535908983134,2.2254290753164034,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_13" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_44" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.731835498738469,-0.08341350537206838,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_14" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_45" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-4.450947142165466,-0.8697669444449306,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_15" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_6" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="2.4594367860193884,-3.467967083980847,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_16" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_7" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="1.3459010303880872,-3.8732609538217644,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_17" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_8" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="2.017573283911458,-5.820998457657135,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_18" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_9" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="3.1721169458074523,-5.4114207082910495,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_19" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_10" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-0.2873677517267969,-4.765691951361049,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_20" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_11" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.001639269383393068,-5.559732215925142,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_21" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_12" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.27228427712382025,-6.376418373384165,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_22" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_13" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.5800851506497285,-7.163618235081744,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_23" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_14" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.8780745143890161,-7.996956305193902,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_24" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_15" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-2.3816040344087,-5.5172898440528035,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_25" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_16" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-2.0857566104319964,-6.330123961032615,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_26" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_17" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.8104131395876393,-7.145100017775008,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_27" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_18" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.5009021653451031,-7.936998342576517,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_28" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_19" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-1.206764842085028,-8.745133996452399,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_29" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_20" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="5.683169161199637,-4.284636890704907,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_30" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_21" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="6.441331821648921,-4.014009138431673,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_31" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_22" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="6.414919260878517,-7.157626064304409,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_32" radius="0.3" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_23" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="0.14877604814997464,-9.09245790133212,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_33" radius="0.331436268383531" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_24" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-3.5723872128644523,-3.2689714898362983,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="cylinder_34" radius="0.9736657537368765" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_51" radius="0.815" height="0.5" temperature="0" movable="false">
             <body position="2.267559491680912,-4.6658331465760545,0" orientation="0,0,0"/>
         </cylinder>
-
-        <pipuck id="pipuck1" wifi_medium="wifi">
-            <body position="-7.306798083467607,6.918142942107666,0" orientation="0,0,0"/>
+        <pipuck id="pipuck15" wifi_medium="wifi">
+            <body position="-7.512010169463007,7.481958514579211,0" orientation="0,0,0"/>
             <controller config="ppc"/>
-            <devices>
-
-            </devices>
         </pipuck>
-
+        <pipuck id="pipuck14" wifi_medium="wifi">
+            <body position="-7.0661994586288905,6.382409556075592,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck13" wifi_medium="wifi">
+            <body position="-6.5813007314146965,5.175467155196439,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck12" wifi_medium="wifi">
+            <body position="-6.517387001643746,7.798364123156584,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck11" wifi_medium="wifi">
+            <body position="-6.194861565173277,6.745158232102047,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck10" wifi_medium="wifi">
+            <body position="-5.6964893563273025,5.375891841814009,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck9" wifi_medium="wifi">
+            <body position="-5.58623255910727,8.122074084137802,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck8" wifi_medium="wifi">
+            <body position="-5.264940948482387,7.114026736021599,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck7" wifi_medium="wifi">
+            <body position="-4.83857564316863,5.733754515792954,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck6" wifi_medium="wifi">
+            <body position="-4.642887762119439,8.495828590104864,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck5" wifi_medium="wifi">
+            <body position="-4.303285969150105,7.479243063739228,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck4" wifi_medium="wifi">
+            <body position="-3.905002850275818,6.134357382353898,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck3" wifi_medium="wifi">
+            <body position="-4.524686987617271,4.996658425306756,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
         <pipuck id="pipuck2" wifi_medium="wifi">
-            <body position="-7.135788011804772,6.448296631714713,0" orientation="0,0,0"/>
+            <body position="-3.6252669077221866,5.324020562489896,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-
-
-
-<!--        <pipuck id="pipuck3" wifi_medium="wifi">-->
-<!--            <body position="-4.5,8,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
-
-<!--        <pipuck id="pipuck4" wifi_medium="wifi">-->
-<!--            <body position="-4,9,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
-
-<!--        <pipuck id="pipuck5" wifi_medium="wifi">-->
-<!--            <body position="-4,8.5,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
-<!--        <pipuck id="pipuck6" wifi_medium="wifi">-->
-<!--            <body position="-4,8,0" orientation="0,0,0"/>-->
-<!--            <controller config="ppc"/>-->
-<!--        </pipuck>-->
-
+        <pipuck id="pipuck1" wifi_medium="wifi">
+            <body position="-3.1178622148037762,6.436055683453904,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
     </arena>
 
@@ -467,7 +519,7 @@
             <camera>
                 <placements>
                     <placement index="0" position="0,0,60" look_at="0,0,0"
-                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="100"/>
+                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="90"/>
                 </placements>
             </camera>
             <frame_grabbing directory="{{FRAME_PATH}}"

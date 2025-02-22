@@ -24,11 +24,8 @@
               message is displayed.
         -->
         <experiment length="0"
-                    ticks_per_second="30"
+                    ticks_per_second="16"
                     random_seed="124"/>
-
-        <log file="output.log" />
-        <logerr file="error.log" />
     </framework>
 
     <!-- *************** -->
@@ -147,9 +144,9 @@
         <box id="box_2" size="0.30666666666666664,3.8,0.5" movable="false">
             <body position="-4.06,7.406666666666666,0" orientation="-90.0,0,0"/>
         </box>
-        <box id="box_3" size="4.946666666666666,0.9866666666666667,0.5" movable="false">
-            <body position="-13.24,-0.02,0" orientation="-90.0,0,0"/>
-        </box>
+<!--        <box id="box_3" size="4.946666666666666,0.9866666666666667,0.5" movable="false">-->
+<!--            <body position="-13.24,-0.02,0" orientation="-90.0,0,0"/>-->
+<!--        </box>-->
         <box id="box_4" size="0.2,1.64,0.5" movable="false">
             <body position="-11.393333333333333,2.38,0" orientation="90.0,0,0"/>
         </box>
@@ -379,80 +376,104 @@
             <body position="11.226666666666667,7.466666666666667,0" orientation="45.0,0,0"/>
         </box>
 
-
-        <box id="spawn_box_0" size="2.4027195920266053,0.3298484500494128,0.5" movable="false">
-            <body position="6.558039215686275,-0.5788235294117657,0" orientation="-75.96375653207353,0,0"/>
+        <!-- Spawnable boxes, randomly generated: 12 boxes, length min 0.1, max  4.5, length min 0.05, max 2.25 -->
+        <box id="spawn_box_0" size="0.8013862541673118,0.5170141740769565,0.5" movable="false">
+            <body position="-6.82266725673771,-14.152345929393498,0" orientation="166.56880993172038,0,0"/>
         </box>
-        <box id="spawn_box_1" size="1.8313369620288753,0.36024682896283455,0.5" movable="false">
-            <body position="10.227223744292237,2.278292237442923,0" orientation="-87.87890360333854,0,0"/>
+        <box id="spawn_box_1" size="1.2217597847491233,0.3764964015080277,0.5" movable="false">
+            <body position="-10.597419305519319,11.369789945121557,0" orientation="351.7329457454122,0,0"/>
         </box>
-        <box id="spawn_box_2" size="0.23696351288933054,1.177115117564973,0.5" movable="false">
-            <body position="5.329907621247112,12.18679753656659,0" orientation="-9.782407031807287,0,0"/>
+        <box id="spawn_box_2" size="4.033269445620962,0.6002493425814163,0.5" movable="false">
+            <body position="-3.1297088029739695,11.727154394962469,0" orientation="172.09386199995689,0,0"/>
         </box>
-        <box id="spawn_box_3" size="2.8551094426522985,3.0134513251235515,0.5" movable="false">
-            <body position="-1.056245366744976,0.8197264421822001,0" orientation="-36.362868584929245,0,0"/>
+        <box id="spawn_box_3" size="1.430167567423362,0.10905475011661614,0.5" movable="false">
+            <body position="-12.344443768112878,1.8647584039657528,0" orientation="291.56373954022877,0,0"/>
         </box>
-        <box id="spawn_box_4" size="0.9661891561237586,0.25888650451930134,0.5" movable="false">
-            <body position="6.619398762157383,-13.159522546419103,0" orientation="-11.888658039627977,0,0"/>
+        <box id="spawn_box_4" size="3.172369970869038,0.9901176887946684,0.5" movable="false">
+            <body position="-0.5482221804832534,-1.2529568702252132,0" orientation="144.5482867244952,0,0"/>
         </box>
-        <box id="spawn_box_5" size="0.6443651229027597,1.084271388741972,0.5" movable="false">
-            <body position="-8.14312314128736,-3.3058279147134453,0" orientation="-135.49821161261366,0,0"/>
+        <box id="spawn_box_5" size="1.092881106067715,0.8223001642581805,0.5" movable="false">
+            <body position="2.165239760099192,-8.673121297157838,0" orientation="337.5870805982257,0,0"/>
         </box>
-        <box id="spawn_box_6" size="2.1744318085340955,0.6747509828735997,0.5" movable="false">
-            <body position="4.796238448522711,7.514713002733307,0" orientation="-119.6044507460049,0,0"/>
+        <box id="spawn_box_6" size="2.8434859090107025,0.8658768937977902,0.5" movable="false">
+            <body position="-12.736650541605663,-1.3718583331236849,0" orientation="340.0684252395881,0,0"/>
         </box>
-        <box id="spawn_box_7" size="3.3610596788292377,0.5556977595779922,0.5" movable="false">
-            <body position="1.1265630397236601,-5.271606217616578,0" orientation="-120.25643716352927,0,0"/>
+        <box id="spawn_box_7" size="0.775808930907029,2.127394940179293,0.5" movable="false">
+            <body position="-12.951725337113787,7.137996639777173,0" orientation="255.17564960177066,0,0"/>
         </box>
-        <box id="spawn_box_8" size="2.0292882258730516,0.5989620652057653,0.5" movable="false">
-            <body position="-5.619705979517676,-12.711228939544101,0" orientation="-73.17859010995917,0,0"/>
+        <box id="spawn_box_8" size="2.6443195488411817,2.1172528297898423,0.5" movable="false">
+            <body position="14.022700803447943,-2.2439461851915374,0" orientation="78.097077942923,0,0"/>
         </box>
-        <box id="spawn_box_9" size="2.0364334925467826,0.6334385877450508,0.5" movable="false">
-            <body position="14.652069118298625,0.7989514104268225,0" orientation="-30.34324888423958,0,0"/>
+        <box id="spawn_box_9" size="3.790810940013355,0.7891187839620311,0.5" movable="false">
+            <body position="2.8218156644510666,0.5347157506439641,0" orientation="211.221857440926,0,0"/>
         </box>
-
-        <box id="box_0" size="0.6972048798851586,14.787682562036403,0.5" movable="false">
-            <body position="-5.625614221644106,4.613392474560654,0" orientation="48.21630359178124,0,0"/>
+        <box id="spawn_box_10" size="1.1205530070910665,0.09521700650233943,0.5" movable="false">
+            <body position="7.633781869882194,0.5559201478383654,0" orientation="107.6130506169314,0,0"/>
         </box>
-
+        <box id="spawn_box_11" size="3.287045344726057,1.7967602859837457,0.5" movable="false">
+            <body position="-0.037307929029358484,6.408636335770209,0" orientation="12.13246858604547,0,0"/>
+        </box>
 
         <pipuck id="pipuck1" wifi_medium="wifi">
-            <body position="-12.6,3.0933333333333333,0" orientation="0,0,0"/>
+            <body position="-11.114285714285714,-0.6571428571428571,0" orientation="0,0,0"/>
             <controller config="ppc"/>
-            <devices>
-
-            </devices>
         </pipuck>
-
         <pipuck id="pipuck2" wifi_medium="wifi">
-            <body position="-13.96,3.1466666666666665,0" orientation="0,0,0"/>
+            <body position="-11.085714285714285,0.9428571428571428,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-
-
         <pipuck id="pipuck3" wifi_medium="wifi">
-            <body position="-14.12,0.92,0" orientation="0,0,0"/>
+            <body position="-11.971428571428572,-1.3714285714285714,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-
         <pipuck id="pipuck4" wifi_medium="wifi">
-            <body position="-14.12,-0.9466666666666667,0" orientation="0,0,0"/>
+            <body position="-11.914285714285715,0.2,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-
         <pipuck id="pipuck5" wifi_medium="wifi">
-            <body position="-14.146666666666667,-2.96,0"  orientation="0,0,0"/>
+            <body position="-11.857142857142858,1.6285714285714286,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck6" wifi_medium="wifi">
-            <body position="-12.813333333333333,-3.16,0" orientation="0,0,0"/>
+            <body position="-12.714285714285714,-2.942857142857143,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
-
-
-
-
-
+        <pipuck id="pipuck7" wifi_medium="wifi">
+            <body position="-12.771428571428572,-1.457142857142857,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck8" wifi_medium="wifi">
+            <body position="-12.8,0.02857142857142857,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck9" wifi_medium="wifi">
+            <body position="-12.914285714285715,1.457142857142857,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck10" wifi_medium="wifi">
+            <body position="-12.885714285714286,2.7142857142857144,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck11" wifi_medium="wifi">
+            <body position="-13.914285714285715,-2.857142857142857,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck12" wifi_medium="wifi">
+            <body position="-13.8,-1.3714285714285714,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck13" wifi_medium="wifi">
+            <body position="-13.742857142857142,0.2,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck14" wifi_medium="wifi">
+            <body position="-13.82857142857143,1.6571428571428573,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck15" wifi_medium="wifi">
+            <body position="-13.82857142857143,2.8857142857142857,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
     </arena>
 
 
@@ -512,7 +533,7 @@
             <camera>
                 <placements>
                     <placement index="0" position="0,0,60" look_at="0,0,0"
-                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="52"/>
+                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="45"/>
                 </placements>
             </camera>
             <frame_grabbing directory="{{FRAME_PATH}}"
