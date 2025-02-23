@@ -47,9 +47,9 @@ forces:
   agent_alignment_radius: 1.5 # The radius in meters around the agent to align with other agents
   object_avoidance_radius_margin: 0.0 # The margin around the object's safety radius in meters (to be added to agent_safety_radius + object_safety_radius))
   virtual_wall_avoidance_weight: 0 #1.1 # The weight of the virtual wall avoidance force
-  agent_cohesion_weight: 0.1 # The weight of the agent cohesion force
+  agent_cohesion_weight: 0 # The weight of the agent cohesion force
   agent_avoidance_weight: 1.15 # The weight of the agent avoidance force
-  agent_alignment_weight: 0.3 # The weight of the agent alignment force
+  agent_alignment_weight: 0 # The weight of the agent alignment force
   target_weight: 0.3 # The weight of the target (frontier or subtarget) force
   frontier_fitness:
     distance_weight: 0 # The weight of the euclidean distance to the target in the fitness function
