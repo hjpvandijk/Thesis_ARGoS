@@ -11,7 +11,7 @@ meter_pixels = 70
 canvas_width = int(map_width_m * meter_pixels)
 canvas_height = int(map_height_m * meter_pixels)
 
-only_vertical_or_horizontal = False
+only_vertical_or_horizontal = True
 only_45_degrees = False
 
 class DrawApp:
@@ -83,7 +83,7 @@ class DrawApp:
         self.undo_button = tk.Button(root, text="Undo", command=self.undo_last_shape)
         self.undo_button.pack(side=tk.LEFT)
 
-        self.draw_random_boxes_button = tk.Button(root, text="Draw Random Boxes", command=lambda: self.create_random_boxes(1, 0.1, 1.5))
+        self.draw_random_boxes_button = tk.Button(root, text="Draw Random Boxes", command=lambda: self.create_random_boxes(8, 0.1, 1.5))
         self.draw_random_boxes_button.pack(side=tk.LEFT)
 
     def draw_grid(self):
@@ -283,7 +283,6 @@ class DrawApp:
             xml = f'''<box id="{box_id}" size="{xml_size}" movable="false">
     <body position="{xml_position}" orientation="{xml_orientation}"/>
 </box>'''
-
             self.shapes.append(xml)
             print(xml)
 

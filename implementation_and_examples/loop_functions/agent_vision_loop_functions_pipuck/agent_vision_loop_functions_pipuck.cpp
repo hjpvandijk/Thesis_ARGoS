@@ -377,7 +377,6 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
         double covered_area = 0;
 
 
-//        //TODO: Consider irreachible area
         for (auto &it: tree) {
             quadtree::Box box = std::get<0>(it);
 
