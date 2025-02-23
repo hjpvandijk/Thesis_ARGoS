@@ -31,7 +31,7 @@ public:
     };
 
     std::map<CPiPuckEntity*, bool> currently_colliding;
-    int coverage_update_tick_interval = 300; //at 30 ticks/second, this is every 10 seconds
+    int coverage_update_tick_interval = 160; //at 16 ticks/second, this is every 16 seconds
     std::map<CPiPuckEntity*, Coordinate> previous_positions;
     int nAgentsDone = 0;
     std::map<std::string, Coordinate> deployment_positions;

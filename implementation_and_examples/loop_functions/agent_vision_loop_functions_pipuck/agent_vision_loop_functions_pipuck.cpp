@@ -301,6 +301,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            node.visitedAtS = visitedTimeS;d
 //            combinedTree->add(node);
 //        }
+        argos::LOG << "Updating coverage and certainty for " << it.first->GetId() << std::endl;
         updateCoverage(it.first, it.second);
         updateCertainty(it.first, it.second);
         if(it.first->GetId()=="pipuck6") combinedQuadTree = it.second;
@@ -341,6 +342,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         updateAgentsFinishedTime(tFBMap);
         checkReturnToDeploymentSite(tFBMap);
         exportMetricsAndMaps();
+        experimentFinished = true;
     }
 
     loop_function_steps++;
@@ -372,7 +374,9 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
     auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
     //Update coverage over time at every interval, if mission has started
+    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
+        argos::LOG << "Updating coverage for " << pcFB->GetId() << std::endl;
 
         double covered_area = 0;
 
@@ -494,7 +498,14 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         coverageFile << it.first << ",";
     }
     coverageFile << "\n";
-    for (int i = 0; i < m_metrics.coverage_over_time.begin()->second.size(); i++) {
+
+    //Get the size of the largest coverage vector
+    int max_coverage_list_size = 0;
+    for (auto & it : m_metrics.coverage_over_time) {
+        max_coverage_list_size = std::max(max_coverage_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_coverage_list_size; i++) {
         coverageFile << (i+1)*coverage_update_tick_interval << ",";
         for (auto & it : m_metrics.coverage_over_time) {
             if (i < it.second.size())
@@ -519,7 +530,14 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         certaintyFile << "occupied_" << it.first << ",";
     }
     certaintyFile << "\n";
-    for (int i = 0; i < m_metrics.average_total_certainty_over_time.begin()->second.size(); i++) {
+
+    //Get the size of the largest certainty vector
+    int max_certainty_list_size = 0;
+    for (auto & it : m_metrics.average_total_certainty_over_time) {
+        max_certainty_list_size = std::max(max_certainty_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_certainty_list_size; i++) {
         certaintyFile << (i+1)*coverage_update_tick_interval << ",";
         for (auto & it : m_metrics.average_total_certainty_over_time) {
             if (i < it.second.size())
@@ -632,8 +650,7 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
             allAgentsDone = false;
         }
     }
-    experimentFinished = allAgentsDone; //If all agents are done, the experiment is finished
-    return experimentFinished;
+    return allAgentsDone;
 }
 
 
