@@ -3,10 +3,11 @@ import pandas as pd
 import numpy as np
 
 # Read the CSV file
-data = pd.read_csv('implementation_and_examples/experiment_results/map_observation_count.csv')
-
+data = pd.read_csv('implementation_and_examples/experiment_results/office/config__alignment0_3__cohesion__0/spawn_time_0/6_agents/map_observation_count.csv')
+#get the column titles
+values = [entry for entry in data.columns if entry not in ['x', 'y']]
 # Pivot the data to create a matrix for the heatmap
-heatmap_data = data.pivot(index='y', columns='x', values='observation_count')
+heatmap_data = data.pivot(index='y', columns='x', values='observation_count_total')
 
 # Plot the heatmap
 plt.figure(figsize=(10, 8))
@@ -16,7 +17,7 @@ mask[heatmap_data == 0] = True
 
 # Plot the heatmap with the mask
 masked_heatmap_data = np.ma.masked_where(mask, heatmap_data)
-heatmap = plt.imshow(masked_heatmap_data, cmap='Spectral', origin='lower')
+heatmap = plt.imshow(masked_heatmap_data, cmap='Spectral', origin='lower', vmax=2000)
 # plt.imshow(mask, cmap='gray', origin='lower', alp ha=0.5)  # Overlay the mask with black color
 plt.colorbar(mappable=heatmap, label='Count')
 
