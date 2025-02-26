@@ -223,6 +223,20 @@ namespace quadtree {
             return queryBoxes(box, {OCCUPIED}, currentTimeS);
         }
 
+        /**
+         * Get all boxes surrounding the given coordinate within the given area size
+         * @param coordinate
+         * @param areaSize
+         * @param currentTimeS
+         * @return
+         */
+        std::vector<std::pair<Box, double>> queryBoxesAndPheromones(Coordinate coordinate, double areaSize, double currentTimeS) {
+            // Create a box centered at the given coordinate
+            Box box = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+
+            return queryBoxesAndPheromones(box, {FREE, OCCUPIED, AMBIGUOUS}, currentTimeS);
+        }
+
 //        /**
 //         * Returns all the unexplored boxes surrounding the given coordinate within the given area size
 //         * @param coordinate
