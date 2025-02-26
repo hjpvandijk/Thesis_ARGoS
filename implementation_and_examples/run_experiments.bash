@@ -10,16 +10,18 @@ CONFIG_DIR="./agent_implementation/configs"
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
 
-# Ensure log directory exists
+# Ensure log directory existsd
 mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
-#EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office.tilted.argos" "museum.argos" "museum.tilted.argos")
-EXPERIMENTS=( "museum.argos")
-CONFIGS=("config.yaml")
+EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
+#EXPERIMENTS=( "office.argos")
+#CONFIGS=("config__alignment0_3__cohesion__0.yaml" "config__alignment0_3__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
+CONFIGS=("config__alignment0__cohesion__0_1.yaml")
 
 N_AGENTS=15
 MAX_AGENTS=10
+MIN_AGENTS=2
 SEED=123
 export SEED
 
@@ -36,7 +38,7 @@ for EXPERIMENT in "${EXPERIMENTS[@]}"; do
         sed "s|{{CONFIG_PATH}}|${CONFIG_PATH}|g" "$EXP_PATH" > temp_experiment.argos
 
 
-        for remove_agents in $(seq $((N_AGENTS-MAX_AGENTS)) $((N_AGENTS))); do
+        for remove_agents in $(seq $((N_AGENTS-MAX_AGENTS)) $((N_AGENTS-MIN_AGENTS))); do
           REMAINING_AGENTS=$((N_AGENTS-remove_agents))
 
 
@@ -70,8 +72,8 @@ for EXPERIMENT in "${EXPERIMENTS[@]}"; do
 
               # Generate timestamp for log file
               TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-              LOGFILE="$LOG_DIR/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_spawn_time_${AVERAGE_INTER_SPAWN_TIME}_${REMAINING_AGENTS}_agents_$TIMESTAMP.log"
-
+#              LOGFILE="$LOG_DIR/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_spawn_time_${AVERAGE_INTER_SPAWN_TIME}_${REMAINING_AGENTS}_agents_$TIMESTAMP.log"
+              LOGFILE="$METRIC_PATH/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_spawn_time_${AVERAGE_INTER_SPAWN_TIME}_${REMAINING_AGENTS}_agents_$TIMESTAMP.log"
               echo "Running ARGoS3 with configuration: $EXP_PATH and $CONFIG_PATH with inter_spawn_time $AVERAGE_INTER_SPAWN_TIME with ${REMAINING_AGENTS} agents"
 
 
