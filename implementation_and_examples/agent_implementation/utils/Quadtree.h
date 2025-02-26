@@ -139,6 +139,8 @@ namespace quadtree {
                 mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE), P_OCCUPIED_THRESHOLD(P_OCCUPIED), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
             L_FREE_THRESHOLD = L(P_FREE);
+            l_max = L_FREE_THRESHOLD;
+            l_min = L(P_OCCUPIED);
         }
 
         /**
