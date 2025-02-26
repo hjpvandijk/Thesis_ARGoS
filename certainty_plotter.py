@@ -6,18 +6,21 @@ import math
 subplots = False
 ticks_per_second = 16
 
+path = 'implementation_and_examples/experiment_results/museum/config__alignment0__cohesion__0_1/spawn_time_0'
+
+
 if subplots:
 
-    n_directories = len(os.listdir('implementation_and_examples/experiment_results/office_keep'))
+    n_directories = len(os.listdir(path))
 
     fig,axs = plt.subplots(n_directories, 1, figsize=(12, 8*n_directories))
 
     #all in separate subplot
 
     # for all directories in 'experiment_results'
-    for i, directory in enumerate(os.listdir('implementation_and_examples/experiment_results/office_keep')):
+    for i, directory in enumerate(os.listdir(path)):
         # Construct the path to the CSV file in the current directory
-        csv_path = os.path.join('implementation_and_examples/experiment_results/office_keep', directory, 'spawn_time_0/6_agents/certainty.csv')
+        csv_path = os.path.join(path, directory, 'certainty.csv')
 
         # Check if the CSV file exists
         if os.path.exists(csv_path):
@@ -57,12 +60,10 @@ if subplots:
     plt.show()
 
 else:
-    #all in one subplot
-    fig, ax = plt.subplots(figsize=(12, 8))
 
-    for i, directory in enumerate(os.listdir('implementation_and_examples/experiment_results/office_keep')):
+    for i, directory in enumerate(os.listdir(path)):
         # Construct the path to the CSV file in the current directory
-        csv_path = os.path.join('implementation_and_examples/experiment_results/office_keep', directory, 'spawn_time_0/6_agents/certainty.csv')
+        csv_path = os.path.join(path, directory, 'certainty.csv')
 
         # Check if the CSV file exists
         if os.path.exists(csv_path):
@@ -81,21 +82,30 @@ else:
                 # if column not unnamed
                 if not column.startswith('Unnamed'):
                     if column == 'all':
-                        ax.plot(data['time_s']/ticks_per_second, data[column], label=f'{directory} - {column}')
+                        plt.plot(data['time_s']/ticks_per_second, data[column], label=f'{directory} - {column}')
                     # if column == 'free' or column == 'occupied':
                     #     ax.plot(data['time_s']/ticks_per_second, abs(data[column]-0.5), label=f'{directory} - {column}')
 
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Coverage')
-    ax.set_title('Coverage Over Time for Each Agent')
-    ax.legend()
-    ax.grid(True)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Certainty')
+    plt.title('Certainty Over Time for Each Agent')
+    plt.grid(True)
+
+    #order the legend
+    handles, labels = plt.gca().get_legend_handles_labels()
+    sorted_handles = [x for _, x in sorted(zip(labels, handles),key=lambda s: int(s[0].split('_')[0]))]
+    #make the colors go from lighter to darker
+    for i, handle in enumerate(sorted_handles):
+        handle.set_color(plt.cm.viridis(1 - i/len(sorted_handles)))
+
+    sorted_labels = sorted(labels,key=lambda s: int(s.split('_')[0]))
+    plt.legend(sorted_handles, sorted_labels)
 
     data_frames = [pd.read_csv(os.path.join('implementation_and_examples/experiment_results/office', directory, 'spawn_time_0/6_agents/certainty.csv')) for directory in os.listdir('implementation_and_examples/experiment_results/office') if os.path.exists(os.path.join('implementation_and_examples/experiment_results/office', directory, 'spawn_time_0/6_agents/certainty.csv'))]
     max_time = max([data['time_s'].max() for data in data_frames])
 
-    ax.set_xlim(0, 450)
-    ax.set_ylim(0, 0.4)
+    # plt.xlim(0, 450)
+    plt.ylim(0, 0.4)
 
     plt.tight_layout()
     plt.show()
