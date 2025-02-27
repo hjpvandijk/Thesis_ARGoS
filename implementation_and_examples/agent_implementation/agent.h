@@ -114,6 +114,9 @@ public:
         double FRONTIER_REACH_BATTERY_WEIGHT;
         double FRONTIER_REACH_DURATION_WEIGHT;
         double FRONTIER_PHEROMONE_WEIGHT;
+        double FRONTIER_PHEROMONE_K;
+        double FRONTIER_PHEROMONE_N;
+        double FRONTIER_PHEROMONE_M;
 
         double FRONTIER_SEARCH_RADIUS;
         int MAX_FRONTIER_CELLS;

@@ -57,6 +57,9 @@ forces:
     reach_battery_weight: 1.5 # The weight of battery usage to reach the frontier in the fitness function
     reach_duration_weight: 0.1 # The weight of the time to reach the frontier in the fitness function
     pheromone_weight: 0.05 # The weight of the pheromone value in the fitness function
+    k: 0.0001 # If increased, frontier region choice moves more towards random
+    n: 2 # >= 0; If increased, the average certainty and region size will have more impact on the probability of choosing a frontier region
+    m: 1 # >= 1 ; If increased, the reach distance, time, and battery usage have more impact on the probability of choosing a frontier region
 confidence:
   p_free: 0.51 # The probability of an observed free cell being free
   p_occupied: 0.46 # The probability of an observed occupied cell being not free
