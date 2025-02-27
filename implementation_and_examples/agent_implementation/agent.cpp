@@ -24,7 +24,7 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
-    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED,
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED_THRESHOLD,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,

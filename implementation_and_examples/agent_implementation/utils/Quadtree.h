@@ -135,12 +135,12 @@ namespace quadtree {
 
         };
 
-        Quadtree(const Box &box, float P_FREE, float P_OCCUPIED, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
-                mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE), P_OCCUPIED_THRESHOLD(P_OCCUPIED), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
+        Quadtree(const Box &box, float P_FREE_THRESHOLD, float P_OCCUPIED_THRESHOLD, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
+                mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE_THRESHOLD), P_OCCUPIED_THRESHOLD(P_OCCUPIED_THRESHOLD), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
-            L_FREE_THRESHOLD = L(P_FREE);
-            l_max = L_FREE_THRESHOLD;
-            l_min = L(P_OCCUPIED);
+            L_FREE_THRESHOLD = L(P_FREE_THRESHOLD);
+//            l_max = L(std::min((P_FREE_THRESHOLD - 0.5f) * 2 + 0.5f, 1.0f));
+//            l_min = L(std::max(0.5f - (0.5f - P_OCCUPIED_THRESHOLD) * 2, 0.0f));
         }
 
         /**
@@ -971,11 +971,15 @@ namespace quadtree {
                     // Otherwise, we split and we try again
                 else {
                     //If the to be added occupancy is the same as the parent, and the visited time is not too far apart, we can skip adding.
-                    float pv = P(value.LConfidence);
-                    float pc = P(cell->quadNode.LConfidence);
-                    if (cell->quadNode.visitedAtS == -1 || !(std::abs(pv - pc) <= MERGE_MAX_P_CONFIDENCE_DIFF &&
-                                                             value.visitedAtS - cell->quadNode.visitedAtS <=
-                                                             MERGE_MAX_VISITED_TIME_DIFF)) {
+//                    float pv = P(value.LConfidence);
+//                    float pc = P(cell->quadNode.LConfidence);
+                    double pv = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
+                    double pc = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
+                    if (cell->quadNode.visitedAtS == -1 || !(std::abs(pv - pc) <= MERGE_MAX_P_CONFIDENCE_DIFF
+//                                                            &&
+//                                                             value.visitedAtS - cell->quadNode.visitedAtS <=
+//                                                             MERGE_MAX_VISITED_TIME_DIFF
+                                                             )) {
                         split(cell, box, currentTimeS);
                         returnBox = add(cell, box, value, currentTimeS, ownObservation);
                     }
@@ -1076,6 +1080,8 @@ namespace quadtree {
                     double minVisitedTime = MAXFLOAT;
                     double maxVisitedTime = -1;
 
+                    std::vector<double> children_pheromones;
+
                     if (cell->children.at(0)->quadNode.visitedAtS == -1)
                         confidencesTooFarApart = true; //If the first child is empty, it is not the same occupancy as the others
                     else {
@@ -1091,51 +1097,63 @@ namespace quadtree {
                                 break;
                             }
 
-                            //If the confidence of the child is too far apart from the first child, it is not the same occupancy as the others
-                            if (child->quadNode.LConfidence < minConfidence)
-                                minConfidence = child->quadNode.LConfidence;
-                            if (child->quadNode.LConfidence > maxConfidence)
-                                maxConfidence = child->quadNode.LConfidence;
+                            //We can just look at the pheromones, as the evaporation curves follow the same shape, even when they have different stargint points.
+                            //This means merging them will not change the shape of the curve, and thus the evaporation will be the same.
 
-                            //If the visited time of the child is too far apart from the first child, it is not the same occupancy as the others
-                            if (child->quadNode.visitedAtS < minVisitedTime)
-                                minVisitedTime = child->quadNode.visitedAtS;
-                            if (child->quadNode.visitedAtS > maxVisitedTime)
-                                maxVisitedTime = child->quadNode.visitedAtS;
+                            //If the confidence of the child is too far apart from the first child, it is not the same occupancy as the others
+                            auto pheromone = calculatePheromone(child->quadNode.visitedAtS, P(child->quadNode.LConfidence), currentTimeS);
+                            children_pheromones.push_back(pheromone);
+                            if (pheromone < minConfidence)
+                                minConfidence = pheromone;
+                            if (pheromone > maxConfidence)
+                                maxConfidence = pheromone;
+
+//                            //If the visited time of the child is too far apart from the first child, it is not the same occupancy as the others
+//                            if (child->quadNode.visitedAtS < minVisitedTime)
+//                                minVisitedTime = child->quadNode.visitedAtS;
+//                            if (child->quadNode.visitedAtS > maxVisitedTime)
+//                                maxVisitedTime = child->quadNode.visitedAtS;
                         }
                         //If one of the children is occupied, all children should be kept
                         //If the occupancies are too far apart, the children should be kept
-                        if (minConfidence < L_FREE_THRESHOLD || P(maxConfidence) - P(minConfidence) > MERGE_MAX_P_CONFIDENCE_DIFF)
+                        // Only merge free cells if the confidence is not too far apart
+                        // Don't merge occupied cells, as we need them separated for the neighbors
+                        //Ambiguous cells can become free or occupied, so we don't merge them yet, as they are important regions.
+                        if (minConfidence < P_FREE_THRESHOLD || maxConfidence - minConfidence > MERGE_MAX_P_CONFIDENCE_DIFF)
                             confidencesTooFarApart = true;
-                        //If the visited times are too far apart, the children should be kept
-                        if (maxVisitedTime - minVisitedTime > MERGE_MAX_VISITED_TIME_DIFF)
-                            visitedTimesTooFarApart = true;
+//                        //If the visited times are too far apart, the children should be kept
+//                        if (maxVisitedTime - minVisitedTime > MERGE_MAX_VISITED_TIME_DIFF)
+//                            visitedTimesTooFarApart = true;
                     }
 //                assert(!cell->quadNode.visitedAtS == -1 && "A non-leaf cell should have a value");
 
                     // If all children have the same occupancy, and their visited times are not too far apart, we can delete the children and the parents will have all info
                     if (!confidencesTooFarApart && !visitedTimesTooFarApart) {
                         //Unitialize the children nodes as the parent now contains their information.
-                        float PConfidenceSum = 0.0;
+                        float PheromoneSum = 0.0;
                         for (auto &child: cell->children) {
-                            PConfidenceSum += P(child->quadNode.LConfidence);
+//                            PConfidenceSum += P(child->quadNode.LConfidence);
                             child.reset();
+                        }
+                        for (auto &pheromone: children_pheromones) {
+                            PheromoneSum += (pheromone-0.5); //This works because we only merge free (ph > 0.5) cells.
                         }
                         numberOfLeafNodes -= 3; //We remove 4 children and the parent is now a leaf node.
                         assert(isLeaf(cell) && "The cell should be a leaf again now");
-                        cell->quadNode.LConfidence = L(PConfidenceSum / 4.0);
-                        double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
+                        auto averagePheromone = PheromoneSum / 4.0 + 0.5; //This works because we only merge free (ph > 0.5) cells.
+                        cell->quadNode.LConfidence = L(averagePheromone);
+//                        double pheromone = calculatePheromone(maxVisitedTime, P(cell->quadNode.LConfidence), currentTimeS);
                         //If all children have the same occupancy, give the parent that occupancy
                         Occupancy occ = AMBIGUOUS;
-                        if (pheromone >= P_FREE_THRESHOLD){
+                        if (averagePheromone >= P_FREE_THRESHOLD){
                             occ = FREE;
-                        } else if (pheromone <= P_OCCUPIED_THRESHOLD){
+                        } else if (averagePheromone <= P_OCCUPIED_THRESHOLD){
                             occ = OCCUPIED;
                         }
                         cell->quadNode.occupancy = occ;
                         assert(cell->quadNode.occupancy != UNKNOWN && cell->quadNode.occupancy != ANY &&
                                "A non-leaf cell should not have UNKNOWN or ANY occupancy at this point");
-                        cell->quadNode.visitedAtS = maxVisitedTime;
+                        cell->quadNode.visitedAtS = currentTimeS; //Should be current time, since we set the confidence to the pheromone value.
 
                     } else {
                         //If the children have different occupancies, or the visited times are too far apart, the parent should have occupancy ANY
@@ -1363,12 +1381,14 @@ namespace quadtree {
         }
 
         double calculatePheromone(double visitedTime, double PConfidence, double currentTime) const {
+            if (visitedTime == currentTime) return PConfidence; //If the visited time is the same as the current time, the time factor will be 1, so the pheromone will be the same as the sensor confidence.
 //            double timeProbability = 1.0 - std::min((currentTime - visitedTime) / EVAPORATION_TIME_S, (1.0 - EVAPORATED_PHEROMONE_FACTOR));
             double lambda = - std::log(this->EVAPORATED_PHEROMONE_FACTOR) / this->EVAPORATION_TIME_S; //Evaporate to EVAPORATED_PHEROMONE_FACTOR after EVAPORATION_TIME_S
             double timeProbability = exp(-lambda * (currentTime - visitedTime)); //Exponential decay
             double pheromone = timeProbability * (PConfidence - 0.5) + 0.5;
             //This makes sure that a value once set to occupied or free, will not be changed to ambiguous again due to evaporation.
             //So we assume that if a cell is occupied, it will stay that way, albeit with a lower confidence.
+            //So the asymptote is P_OCCUPIED_THRESHOLD instead of 0.5;
             if (PConfidence <= P_OCCUPIED_THRESHOLD) pheromone = timeProbability * (PConfidence - P_OCCUPIED_THRESHOLD) + P_OCCUPIED_THRESHOLD;
             //But if a cell is free, it can become ambiguous again, as new obstacles can appear.
 //            if (PConfidence >= P_FREE) pheromone = timeProbability * (PConfidence - P_FREE) + P_FREE;

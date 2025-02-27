@@ -301,10 +301,10 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            node.visitedAtS = visitedTimeS;d
 //            combinedTree->add(node);
 //        }
-        argos::LOG << "Updating coverage and certainty for " << it.first->GetId() << std::endl;
+//        argos::LOG << "Updating coverage and certainty for " << it.first->GetId() << std::endl;
         updateCoverage(it.first, it.second);
         updateCertainty(it.first, it.second);
-        if(it.first->GetId()=="pipuck6") combinedQuadTree = it.second;
+        if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 
@@ -322,14 +322,14 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        }
 //    }
 
-    argos::LOG << "Spawn boxes size: " << this->spawn_boxes.size() << std::endl;
+//    argos::LOG << "Spawn boxes size: " << this->spawn_boxes.size() << std::endl;
     if (!this->spawn_boxes.empty()) {
         auto spawn_time_front = this->spawn_times.front();
         if (loop_function_steps >= spawn_time_front) {
-            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
+//            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
             auto box = this->spawn_boxes.front();
             auto newBox = new CBoxEntity(box.GetId(), box.GetEmbodiedEntity().GetOriginAnchor().Position, box.GetEmbodiedEntity().GetOriginAnchor().Orientation, false, box.GetSize(), 1.0f);
-            argos::LOG << "Spawning box " << box.GetId() << " at " << box.GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
+//            argos::LOG << "Spawning box " << box.GetId() << " at " << box.GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
             AddEntity(*newBox);
             this->spawn_times.pop_front();
             this->spawn_boxes.pop_front();
@@ -374,9 +374,9 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
     auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
     //Update coverage over time at every interval, if mission has started
-    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
+//    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
-        argos::LOG << "Updating coverage for " << pcFB->GetId() << std::endl;
+//        argos::LOG << "Updating coverage for " << pcFB->GetId() << std::endl;
 
         double covered_area = 0;
 
