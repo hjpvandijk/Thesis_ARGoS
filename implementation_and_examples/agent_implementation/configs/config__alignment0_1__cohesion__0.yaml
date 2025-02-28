@@ -1,5 +1,5 @@
 mission:
-    end_time: 400 # The time in seconds when the mission ends
+  end_time: 400 # The time in seconds when the mission ends
   end_battery_level: 0 # The battery level in percent when the mission ends
 physical:
   robot_diameter: 0.08 # Agent diameter in meters
@@ -44,18 +44,18 @@ forces:
   max_frontier_regions: 10 # The maximum number of frontier regions
   agent_avoidance_radius: 0.4 # The radius in meters around the agent to avoid other agents
   agent_cohesion_radius: 1.5 # The radius in meters around the agent to cohere with other agents
-  agent_alignment_radius: 1.5 # The radius in meters around the agent to align with other agents
+  agent_alignment_radius: 1 # The radius in meters around the agent to align with other agents
   object_avoidance_radius_margin: 0.0 # The margin around the object's safety radius in meters (to be added to agent_safety_radius + object_safety_radius))
   virtual_wall_avoidance_weight: 0 #1.1 # The weight of the virtual wall avoidance force
   agent_cohesion_weight: 0 # The weight of the agent cohesion force
   agent_avoidance_weight: 1.15 # The weight of the agent avoidance force
-  agent_alignment_weight: 0.3 # The weight of the agent alignment force
+  agent_alignment_weight: 0.1 # The weight of the agent alignment force
   target_weight: 0.3 # The weight of the target (frontier or subtarget) force
   frontier_fitness:
     distance_weight: 0 # The weight of the euclidean distance to the target in the fitness function
     size_weight: 0 # The weight of the size of the frontier in the fitness function
-    reach_battery_weight: 1.5 # The weight of battery usage to reach the frontier in the fitness function
-    reach_duration_weight: 0.1 # The weight of the time to reach the frontier in the fitness function
+    reach_battery_weight: 1.5 # The weight of battery usage to reach the frontier in the probability function
+    reach_duration_weight: 0.1 # The weight of the time to reach the frontier in the probability function
     pheromone_weight: 0.05 # The weight of the pheromone value in the fitness function
     k: 0.0001 # If increased, frontier region choice moves more towards random
     n: 2 # >= 0; If increased, the average certainty and region size will have more impact on the probability of choosing a frontier region
@@ -65,7 +65,7 @@ confidence:
   p_occupied: 0.46 # The probability of an observed occupied cell being not free
   alpha_receive: 0.1 # The factor with which we doubt a received confidence value
   p_free_threshold: 0.7 # The threshold for a cell to be considered free
-  p_occupied_threshold: 0.35 # The threshold for a cell to be considered occupied
+  p_occupied_threshold: 0.3 # The threshold for a cell to be considered occupied
   p_at_max_sensor_range: 0.5 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
 quadtree:
   resolution: 0.25 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size

@@ -327,19 +327,19 @@
         <box id="box_61" size="0.9805214032453459,2.9415642097360375,0.5" movable="false">
             <body position="7.995865419191472,10.856117710937623,0" orientation="65.0,0,0"/>
         </box>
-        <box id="box_70" size="0.52,2.0,0.5" movable="false">
+        <box id="box_80" size="0.52,2.0,0.5" movable="false">
             <body position="-6.1934719568506145,-0.1755455234864577,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_71" size="2.0,0.5,0.5" movable="false">
+        <box id="box_81" size="2.0,0.5,0.5" movable="false">
             <body position="-3.798638322263908,-1.3754967615637954,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_72" size="0.5,2.0,0.5" movable="false">
+        <box id="box_82" size="0.5,2.0,0.5" movable="false">
             <body position="-4.852752995013993,-3.859140596967219,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_73" size="2.0,0.5,0.5" movable="false">
+        <box id="box_83" size="2.0,0.5,0.5" movable="false">
             <body position="-7.292014737298649,-2.6540763122071893,0" orientation="290.0,0,0"/>
         </box>
-        <box id="box_74" size="2.0,2.0,0.5" movable="false">
+        <box id="box_84" size="2.0,2.0,0.5" movable="false">
             <body position="3.6188546322540556,6.489059342509774,0" orientation="65.0,0,0"/>
         </box>
         <box id="spawn_box_0" size="0.8013862541673118,0.5170141740769565,0.5" movable="false">

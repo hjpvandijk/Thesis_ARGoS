@@ -65,7 +65,7 @@ confidence:
   p_occupied: 0.46 # The probability of an observed occupied cell being not free
   alpha_receive: 0.1 # The factor with which we doubt a received confidence value
   p_free_threshold: 0.7 # The threshold for a cell to be considered free
-  p_occupied_threshold: 0.35 # The threshold for a cell to be considered occupied
+  p_occupied_threshold: 0.3 # The threshold for a cell to be considered occupied
   p_at_max_sensor_range: 0.5 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
 quadtree:
   resolution: 0.25 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size

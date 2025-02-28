@@ -303,22 +303,22 @@
         <cylinder id="circle_2" radius="0.18200274723201296" height="0.5" temperature="0" movable="false">
             <body position="5.036597148207727,2.3599394413132293,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_2" radius="0.5475" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_62" radius="0.5475" height="0.5" temperature="0" movable="false">
             <body position="-1.5393176802357176,-3.6942693566270624,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_6" radius="0.5475" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_66" radius="0.5475" height="0.5" temperature="0" movable="false">
             <body position="-3.0816918399952806,-4.266289418605647,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_8" radius="0.16" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_68" radius="0.16" height="0.5" temperature="0" movable="false">
             <body position="-3.2150969513594845,-3.841285799489404,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_14" radius="0.16" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_614" radius="0.16" height="0.5" temperature="0" movable="false">
             <body position="-2.9166757485742414,-4.690429359629978,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_16" radius="0.16" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_616" radius="0.16" height="0.5" temperature="0" movable="false">
             <body position="-1.686386341865755,-3.290201529689122,0" orientation="0,0,0"/>
         </cylinder>
-        <cylinder id="circle_17" radius="0.16" height="0.5" temperature="0" movable="false">
+        <cylinder id="circle_617" radius="0.16" height="0.5" temperature="0" movable="false">
             <body position="-1.3580642597403065,-4.133782948633855,0" orientation="0,0,0"/>
         </cylinder>
         <pipuck id="pipuck1" wifi_medium="wifi">
@@ -381,6 +381,7 @@
             <body position="-4.063700606624816,2.101132015620162,0" orientation="0,0,0"/>
             <controller config="ppc"/>
         </pipuck>
+
 
     </arena>
 

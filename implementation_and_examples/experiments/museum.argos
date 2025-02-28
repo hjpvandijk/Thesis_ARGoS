@@ -376,19 +376,19 @@
             <body position="11.226666666666667,7.466666666666667,0" orientation="45.0,0,0"/>
         </box>
 
-        <box id="box_70" size="0.52,2,0.5" movable="false">
+        <box id="box_80" size="0.52,2,0.5" movable="false">
             <body position="-5.88,1.9533333333333334,0" orientation="-90.0,0,0"/>
         </box>
-        <box id="box_71" size="2,0.5,0.5" movable="false">
+        <box id="box_81" size="2,0.5,0.5" movable="false">
             <body position="-4.04,0.006666666666666667,0" orientation="-90.0,0,0"/>
         </box>
-        <box id="box_72" size="0.5,2,0.5" movable="false">
+        <box id="box_82" size="0.5,2,0.5" movable="false">
             <body position="-5.88,-1.9666666666666666,0" orientation="-90.0,0,0"/>
         </box>
-        <box id="box_73" size="2,0.5,0.5" movable="false">
+        <box id="box_83" size="2,0.5,0.5" movable="false">
             <body position="-7.76,-0.0,0" orientation="-90.0,0,0"/>
         </box>
-        <box id="box_74" size="2,2,0.5" movable="false">
+        <box id="box_84" size="2,2,0.5" movable="false">
             <body position="5.62,4.86,0" orientation="45.0,0,0"/>
         </box>
 
