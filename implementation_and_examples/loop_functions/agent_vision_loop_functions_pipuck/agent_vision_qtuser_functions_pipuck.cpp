@@ -120,8 +120,8 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
             argos::CRadians angle_rad = ToRadians(angle);
 
             //Get the end of the ray
-            CVector3 ray_end = CVector3(agent_pos.GetX() + 0.48*cos(angle_rad.GetValue()),
-                                        agent_pos.GetY() + 0.48*sin(angle_rad.GetValue()), 0.02f);
+            CVector3 ray_end = CVector3(agent_pos.GetX() + 0.28*cos(angle_rad.GetValue()),
+                                        agent_pos.GetY() + 0.28*sin(angle_rad.GetValue()), 0.02f);
 
             CRay3 ray = CRay3(agent_pos, ray_end);
             DrawRay(ray, CColor::BLUE);

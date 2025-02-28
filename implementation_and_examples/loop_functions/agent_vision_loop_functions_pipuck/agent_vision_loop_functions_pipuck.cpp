@@ -482,13 +482,13 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     metricsFile.close();
 
     //Export agent returned to deployment site
-    std::ofstream returnedToDeploymentSiteFile;
-    returnedToDeploymentSiteFile.open(metric_path_str + "/returned_to_deployment_site.csv");
-    returnedToDeploymentSiteFile << "agent_id,returned_to_deployment_site\n";
-    for (auto & it : m_metrics.returned_to_deployment_site) {
-        returnedToDeploymentSiteFile << it.first << "," << it.second << "\n";
+    std::ofstream distanceToDeploymentSiteFile;
+    distanceToDeploymentSiteFile.open(metric_path_str + "/distance_to_deployment_site.csv");
+    distanceToDeploymentSiteFile << "agent_id,distance_to_deployment_site\n";
+    for (auto & it : m_metrics.distance_to_deployment_site) {
+        distanceToDeploymentSiteFile << it.first << "," << it.second << "\n";
     }
-    returnedToDeploymentSiteFile.close();
+    distanceToDeploymentSiteFile.close();
 
     //Export coverage over time
     std::ofstream coverageFile;
@@ -814,12 +814,9 @@ void CAgentVisionLoopFunctions::checkReturnToDeploymentSite(CSpace::TMapPerType 
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         //Check if agent is within 1m from deployment position
-        if (sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
-                 pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2)) <= cController.agentObject->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = true;
-        } else {
-            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = false;
-        }
+        auto distance = sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
+                             pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2));
+        this->m_metrics.distance_to_deployment_site[pcFB->GetId()] = distance;
     }
 }
 
