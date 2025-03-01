@@ -131,6 +131,13 @@ def read_arena_pipucks_and_rotate(filename, degrees):
 
         id = pipuck.get('id')
 
+        orientation = pipuck.find('body').get('orientation').split(',')
+        heading = float(orientation[0])
+        heading = (heading - degrees) % 360
+        orientation[0] = str(heading)
+
+        
+
         y = float(position[0])
         x = -float(position[1])
 
@@ -141,7 +148,7 @@ def read_arena_pipucks_and_rotate(filename, degrees):
         pipuck_id = id
 
         xml = f'''<pipuck id="{pipuck_id}" wifi_medium="wifi">
-        <body position="{xml_position}" orientation="0,0,0"/>
+        <body position="{xml_position}" orientation="{orientation[0]},{orientation[1]},{orientation[2]}"/>
         <controller config="ppc"/>
         </pipuck>'''
 
@@ -149,7 +156,8 @@ def read_arena_pipucks_and_rotate(filename, degrees):
 
         pipucks.append({
             'x': x,
-            'y': y
+            'y': y,
+            'heading': heading
         })
     return pipucks
 
@@ -313,7 +321,7 @@ def check_circle_rectangle_overlap(circle, rectangle):
     # Check if the closest point is inside the circle
     return distance <= circle_radius
 
-def plot(arena_boxes, arena_cylinders):
+def plot(arena_boxes, arena_cylinders, arena_pipucks):
     fig, ax = plt.subplots()
 
     arena_rectangles = []
@@ -340,6 +348,18 @@ def plot(arena_boxes, arena_cylinders):
         )
         arena_circles.append(circle)
         ax.add_patch(circle)
+
+    for pipuck in arena_pipucks:
+        circle = patches.Circle(
+            (pipuck['x'], pipuck['y']),
+            0.08,
+            linewidth=0, facecolor='red', alpha=0.5
+        )
+        ax.add_patch(circle)
+        # draw line in view direction
+        dx = 0.5 * np.sin(np.radians(pipuck['heading']))
+        dy = 0.5 * np.cos(np.radians(pipuck['heading']))
+        ax.arrow(pipuck['x'], pipuck['y'], dx, dy, head_width=0.1, head_length=0.1, fc='red', ec='red')
 
     ax.set_aspect('equal', 'box')
     plt.xlim(-11.1, 11.1)
@@ -385,15 +405,15 @@ def rotate_map(arena_boxes, arena_cylinders, angle_degrees):
 
 # Usage
 # arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
-arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/house.argos', 20)
+arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
 # arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
-arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/house.argos', 20)
+arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
 
-arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/house.argos', 20)
+arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
 
 # arena_boxes, arena_cylinders = rotate_map(arena_boxes, arena_cylinders, 20)
 # print_rotated_shapes(arena_boxes, arena_cylinders)
 
-plot(arena_boxes, arena_cylinders)
+plot(arena_boxes, arena_cylinders, arena_pipucks)
 # print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
 # plot_mistakes(arena_boxes, quadtree_data)
