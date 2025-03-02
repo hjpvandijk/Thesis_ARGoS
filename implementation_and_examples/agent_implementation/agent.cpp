@@ -72,6 +72,8 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->randomWalker = RandomWalk(5*this->ticks_per_second); //5 seconds
 #endif
     this->sensor_reading_distance_probability = (1-this->config.P_AT_MAX_SENSOR_RANGE) / this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+
+    this->deployment_location_reach_distance = this->config.FRONTIER_DIST_UNTIL_REACHED;
 }
 
 
@@ -675,9 +677,17 @@ void Agent::calculateNextPosition() {
                                        this->deploymentLocation.y - this->position.y);
 
         //If we are close to the deployment location, we have returned, we can stop
-        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
+        if (targetVector.Length() <= this->deployment_location_reach_distance) {
             this->state = State::FINISHED;
         } else {
+            //If we are getting closer to the deployment location, we can decrease the distance to reach it, 1cm at a time
+            if (targetVector.Length() < this->min_distance_to_deployment_location) {
+                this->deployment_location_reach_distance = std::max(this->deployment_location_reach_distance - 0.01, 0.1);
+                this->min_distance_to_deployment_location = targetVector.Length();
+            } //If we are not getting closer, we can increase the distance to reach it, 0.2cm at a time
+            else {
+                this->deployment_location_reach_distance += 0.002;
+            }
 
             //Set our current best 'frontier' to the deployment location
             if (!(this->currentBestFrontier == this->deploymentLocation)) {
@@ -1145,9 +1155,13 @@ void Agent::checkMissionEnd() {
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
             this->state = State::RETURNING;
             this->config.AGENT_ALIGNMENT_WEIGHT = 0.0;
+            this->min_distance_to_deployment_location = sqrt(pow(this->deploymentLocation.x - this->position.x, 2) +
+                                                             pow(this->deploymentLocation.y - this->position.y, 2));
         } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
             this->state = State::RETURNING;
             this->config.AGENT_ALIGNMENT_WEIGHT = 0.0;
+            this->min_distance_to_deployment_location = sqrt(pow(this->deploymentLocation.x - this->position.x, 2) +
+                                                             pow(this->deploymentLocation.y - this->position.y, 2));
         }
     }
 }

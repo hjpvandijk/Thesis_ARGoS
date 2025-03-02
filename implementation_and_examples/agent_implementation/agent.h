@@ -192,6 +192,8 @@ public:
     argos::CVector2 force_vector;
 
     Coordinate deploymentLocation;
+    double min_distance_to_deployment_location = MAXFLOAT;
+    double deployment_location_reach_distance;
 
 
     Agent() {}
