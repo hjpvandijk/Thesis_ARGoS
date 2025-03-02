@@ -270,6 +270,9 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
 
+        m_tAgentDeploymentReachDist[pcFB] = agent->deployment_location_reach_distance;
+        m_tAgentDeploymentSite[pcFB] = agent->deploymentLocation.FromOwnToArgos();
+
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);
         updateBatteryUsage(pcFB, agent);

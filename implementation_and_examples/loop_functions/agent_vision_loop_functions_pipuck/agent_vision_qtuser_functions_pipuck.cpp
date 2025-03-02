@@ -27,6 +27,16 @@ double calculatePheromone(double visitedTime, double PConfidence, double current
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
 
+    for (auto & it : m_cAgVisLF.m_tAgentDeploymentReachDist) {
+        Coordinate pos = m_cAgVisLF.m_tAgentDeploymentSite.at(it.first);
+        CVector3 vectorPos = CVector3(pos.x, pos.y, 0.02f);
+        auto radius = it.second;
+        //Draw a non-filled circle
+        DrawCircle(vectorPos, CQuaternion(), radius, CColor::RED, false);
+    }
+
+
+
     for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
         if (m_tCell.first->GetId() != "pipuck1") continue;
         for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
@@ -197,7 +207,6 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
     }
 
 
-
     for (auto & it : m_cAgVisLF.m_tAgentBestFrontierCoordinate) {
         if (it.second == CVector3(MAXFLOAT, MAXFLOAT, 0.1f)) continue; //skip if not set
         if (it.first->GetId() == "pipuck1")
@@ -242,6 +251,8 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
         DrawText(it.second + CVector3(0.1,0.1,0.1), std::to_string(batteryLevel) + '%', CColor::BLACK);
 //#endif
     }
+
+
 
 
 }

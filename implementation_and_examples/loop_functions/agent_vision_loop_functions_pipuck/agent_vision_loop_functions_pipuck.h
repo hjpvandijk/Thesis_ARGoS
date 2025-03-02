@@ -64,6 +64,8 @@ public:
     std::vector<std::tuple<quadtree::Box, double>> combinedQuadTree;
     std::map<CPiPuckEntity*, std::vector<std::pair<Coordinate, Coordinate>>> m_tAgentRoute;
     std::map<CPiPuckEntity*, float> m_tAgentBatteryLevels;
+    std::map<CPiPuckEntity*, float> m_tAgentDeploymentReachDist;
+    std::map<CPiPuckEntity*, Coordinate> m_tAgentDeploymentSite;
 
 public:
 
@@ -118,6 +120,7 @@ public:
     std::list<CBoxEntity> spawn_boxes;
     double spawn_rate;
     std::list<int> spawn_times;
+
 
 
 private:
