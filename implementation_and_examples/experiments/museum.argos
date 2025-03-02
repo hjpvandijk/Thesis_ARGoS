@@ -555,10 +555,10 @@
             <frame_grabbing directory="{{FRAME_PATH}}"
                             base_name="frame"
                             format="png"
-                            quality="100"
+                            quality="50"
                             headless_grabbing="true"
                             headless_frame_size="1800x960\"
-                            headless_frame_rate="300"/>
+                            headless_frame_rate="6000"/>
         </qt-opengl>
     </visualization>
 
