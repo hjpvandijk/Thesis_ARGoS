@@ -26,6 +26,7 @@ void RandomWalk::randomWalk(Agent* agent, argos::CVector2 &targetVector) {
         quadtree::Box rootBox = agent->quadtree->getRootBox();
         Coordinate rootBoxCenter = rootBox.getCenter();
         double rootBoxSize = rootBox.getSize();
+        int tries = 0;
         do{
             argos::CRadians randomAngle = (rand() % 360) * argos::CRadians::PI /
                                           180; //TODO: Maybe away from average location of other agents?
@@ -38,6 +39,7 @@ void RandomWalk::randomWalk(Agent* agent, argos::CVector2 &targetVector) {
                                                agent->subTarget.y - agent->position.y);
             this->walkStart = agent->position;
             this->ticksWalkStart = agent->elapsed_ticks;
+            tries++;
         } while (
                 #ifdef SKIP_UNREACHABLE_FRONTIERS
                 //If the subtarget is close to a frontier we are currently avoiding, try again
@@ -45,6 +47,7 @@ void RandomWalk::randomWalk(Agent* agent, argos::CVector2 &targetVector) {
                 #else
                 false
                 #endif
+                && tries < 10 //Prevent infinite loop
                 );
         this->randomWalking = true;
 
