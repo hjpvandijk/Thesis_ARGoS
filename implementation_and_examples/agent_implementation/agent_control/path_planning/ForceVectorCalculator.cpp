@@ -307,19 +307,19 @@ double calculateRegionVisitProbability(Agent* agent, std::map<Coordinate, std::t
                                 + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
                      , agent->config.FRONTIER_PHEROMONE_M);
 
-    argos::LOG << "[" << agent->id << "] " << "Numerator: (" << agent->config.FRONTIER_PHEROMONE_K + region_repulsion << ")^-" << agent->config.FRONTIER_PHEROMONE_N << " / (" << agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery << ")^-"
-               << agent->config.FRONTIER_PHEROMONE_M << " = " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) << " / " << std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery, agent->config.FRONTIER_PHEROMONE_M)
-               << "= " << numerator << std::endl;
+//    argos::LOG << "[" << agent->id << "] " << "Numerator: (" << agent->config.FRONTIER_PHEROMONE_K + region_repulsion << ")^-" << agent->config.FRONTIER_PHEROMONE_N << " / (" << agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery << ")^-"
+//               << agent->config.FRONTIER_PHEROMONE_M << " = " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) << " / " << std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery, agent->config.FRONTIER_PHEROMONE_M)
+//               << "= " << numerator << std::endl;
     #else
     auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
             std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance, agent->config.FRONTIER_PHEROMONE_M);
     #endif
     //if numerator is infinite, return 1
     if (numerator == INFINITY){
-        argos::LOG << "[" << agent->id << "] " << "Probability (infinity): 1" << std::endl;
+//        argos::LOG << "[" << agent->id << "] " << "Probability (infinity): 1" << std::endl;
         return 1;
     }
-    argos::LOG << "[" << agent->id << "] " << "Probability: " << numerator << " / " << denominator << " = " << numerator/denominator << std::endl;
+//    argos::LOG << "[" << agent->id << "] " << "Probability: " << numerator << " / " << denominator << " = " << numerator/denominator << std::endl;
     return numerator/denominator; //Probability of visiting this region, based on the summed certainties
 
 }
@@ -345,13 +345,13 @@ double calculateRegionVisitProbabilityDenominator(Agent* agent, const std::map<C
                                 + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time
                                 + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
                                , agent->config.FRONTIER_PHEROMONE_M);
-        argos::LOG << "[" << agent->id << "] " << "Numerator: (" << agent->config.FRONTIER_PHEROMONE_K + region_repulsion << ")^-" << agent->config.FRONTIER_PHEROMONE_N << " / (" << agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery << ")^-"
-                   << agent->config.FRONTIER_PHEROMONE_M << " = " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) << " / " << std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery, agent->config.FRONTIER_PHEROMONE_M)
-                   << "= " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
-                              std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance
-                                       + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time
-                                       + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
-                                      , agent->config.FRONTIER_PHEROMONE_M) << std::endl;
+//        argos::LOG << "[" << agent->id << "] " << "Numerator: (" << agent->config.FRONTIER_PHEROMONE_K + region_repulsion << ")^-" << agent->config.FRONTIER_PHEROMONE_N << " / (" << agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery << ")^-"
+//                   << agent->config.FRONTIER_PHEROMONE_M << " = " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) << " / " << std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery, agent->config.FRONTIER_PHEROMONE_M)
+//                   << "= " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+//                              std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance
+//                                       + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time
+//                                       + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
+//                                      , agent->config.FRONTIER_PHEROMONE_M) << std::endl;
         #else
         denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
                 std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance, agent->config.FRONTIER_PHEROMONE_M);
@@ -509,14 +509,14 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                       << " because it is too small" << std::endl;
 //        }
 #ifdef SEPARATE_FRONTIERS
-        argos::LOG << "Checking frontier region " << frontierRegionX << ", " << frontierRegionY << std::endl;
+//        argos::LOG << "Checking frontier region " << frontierRegionX << ", " << frontierRegionY << std::endl;
 
         //If the frontier is mostly unknown, and if the frontier is close to our agent, skip it
         if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) <
             agent->config.FRONTIER_DIST_UNTIL_REACHED) {
             skipFrontier = true;
-            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                       << " because it is close to our agent" << std::endl;
+//            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                       << " because it is close to our agent" << std::endl;
         } else {
             for (auto agentLocationTuple: agent->agentLocations) {
                 if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
@@ -536,9 +536,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                    if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's frontier" << std::endl;
-                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's frontier" << std::endl;
+//                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
                     break;
 //                    }
                 }
@@ -547,10 +547,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                    if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's position" << std::endl;
-                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
-                               << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's position" << std::endl;
+//                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
+//                               << std::endl;
                     break;
                 }
 //                }
@@ -559,8 +559,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             //If we are avoiding the frontier
             if (agent->frontierEvaluator.avoidingCoordinate(agent, {frontierRegionX, frontierRegionY})) {
                 skipFrontier = true;
-                argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                           << " because we are avoiding it" << std::endl;
+//                argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                           << " because we are avoiding it" << std::endl;
             }
 #endif
         }
@@ -611,7 +611,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         auto region = std::get<0>(region_and_summed_certainty.second);
 
 #ifdef BATTERY_MANAGEMENT_ENABLED
-        argos::LOG << "[" << agent->id << "] " << "Frontier region_and_summed_certainty: " << frontierRegionX << ", " << frontierRegionY << " with repulsion " << std::get<1>(region_and_summed_certainty.second) << " has " << std::get<2>(region_and_summed_certainty.second) << " distance, " << std::get<3>(region_and_summed_certainty.second) << " duration and " << std::get<4>(region_and_summed_certainty.second) << " power usage" << std::endl;
+//        argos::LOG << "[" << agent->id << "] " << "Frontier region_and_summed_certainty: " << frontierRegionX << ", " << frontierRegionY << " with repulsion " << std::get<1>(region_and_summed_certainty.second) << " has " << std::get<2>(region_and_summed_certainty.second) << " distance, " << std::get<3>(region_and_summed_certainty.second) << " duration and " << std::get<4>(region_and_summed_certainty.second) << " power usage" << std::endl;
         auto region_visit_probability = calculateRegionVisitProbability(agent, region_summed_certainties_and_reach_dist_time_battery, {frontierRegionX, frontierRegionY}, region_visit_probability_denominator);
 
 
@@ -682,9 +682,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //        }
         cumulative_probability += region_visit_probability;
         int random = rand() % 100;
-        argos::LOG << "Random: " << random << " < " << cumulative_probability * 100 << std::endl;
+//        argos::LOG << "Random: " << random << " < " << cumulative_probability * 100 << std::endl;
         if (random < cumulative_probability * 100) { //Chance of choosing this region
-            argos::LOG << "Selected frontier because of probability" << std::endl;
+//            argos::LOG << "Selected frontier because of probability" << std::endl;
 //            highestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
             agent->bestFrontierRegionBoxes = region;
@@ -693,9 +693,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             bestFrontierRouteWallFollowingDirection = region_routes[{frontierRegionX, frontierRegionY}].second;
 #endif
             break;
-        } else {
-            argos::LOG << "Skipped frontier because " << random << " > " << cumulative_probability * 100 << std::endl;
         }
+//        else {
+//            argos::LOG << "Skipped frontier because " << random << " > " << cumulative_probability * 100 << std::endl;
+//        }
     }
 
 
