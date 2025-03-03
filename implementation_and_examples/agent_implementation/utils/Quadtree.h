@@ -970,19 +970,20 @@ namespace quadtree {
                 }
                     // Otherwise, we split and we try again
                 else {
-                    //If the to be added occupancy is the same as the parent, and the visited time is not too far apart, we can skip adding.
-//                    float pv = P(value.LConfidence);
-//                    float pc = P(cell->quadNode.LConfidence);
-                    double pv = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
-                    double pc = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                    if (cell->quadNode.visitedAtS == -1 || !(std::abs(pv - pc) <= MERGE_MAX_P_CONFIDENCE_DIFF
-//                                                            &&
-//                                                             value.visitedAtS - cell->quadNode.visitedAtS <=
-//                                                             MERGE_MAX_VISITED_TIME_DIFF
-                                                             )) {
-                        split(cell, box, currentTimeS);
-                        returnBox = add(cell, box, value, currentTimeS, ownObservation);
-                    }
+//                    //If the to be added occupancy is the same as the parent, and the visited time is not too far apart, we can skip adding.
+                    // WRONG: should always add, as we are adding log likelihoods, not just occupancies.
+////                    float pv = P(value.LConfidence);
+////                    float pc = P(cell->quadNode.LConfidence);
+//                    double pv = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
+//                    double pc = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
+//                    if (cell->quadNode.visitedAtS == -1 || !(std::abs(pv - pc) <= MERGE_MAX_P_CONFIDENCE_DIFF
+////                                                            &&
+////                                                             value.visitedAtS - cell->quadNode.visitedAtS <=
+////                                                             MERGE_MAX_VISITED_TIME_DIFF
+//                                                             )) {
+                    split(cell, box, currentTimeS);
+                    returnBox = add(cell, box, value, currentTimeS, ownObservation);
+//                    }
                 }
             } else {
                 // If the cell is not a leaf
