@@ -677,7 +677,7 @@ void CAgentVisionLoopFunctions::updateAgentsFinishedTime(CSpace::TMapPerType &tF
 
 void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     double batteryUsage = agent->batteryManager.battery.getStateOfCharge();
-    m_metrics.total_battery_usage[pcFB->GetId()] = (1.0-batteryUsage)*100.0;
+    m_metrics.total_battery_usage[pcFB->GetId()] = (1.0-batteryUsage)*agent->config.BATTERY_CAPACITY; //In mAh
 }
 
 void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {

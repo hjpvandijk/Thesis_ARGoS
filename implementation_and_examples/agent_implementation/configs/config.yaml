@@ -8,7 +8,7 @@ physical:
   robot_inter_wheel_distance: 0.0656 # Agent inter-wheel distance in meters
 battery:
   capacity: 600 # Battery capacity in mAh
-  voltage: 7.2 # Battery voltage in volts
+  voltage: 5.0 # Battery voltage in volts
 motor:
   stall_current: 1.5 # Motor stall current in A
   stall_torque: 0.8 # Motor stall torque in Nm
