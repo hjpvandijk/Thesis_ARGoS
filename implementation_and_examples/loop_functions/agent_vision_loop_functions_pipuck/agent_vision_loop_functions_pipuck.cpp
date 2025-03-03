@@ -225,53 +225,53 @@ void CAgentVisionLoopFunctions::PostStep() {
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
         globalElapsedTime = agent->elapsed_ticks / agent->ticks_per_second;
 
-        Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
-        CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
-        m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
-        Coordinate subTarget = agent->subTarget.FromOwnToArgos();
-        CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
-//        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
-#ifdef WALL_FOLLOWING_ENABLED
-        Coordinate wallFollowingSubTarget = agent->wallFollower.wallFollowingSubTarget.FromOwnToArgos();
-        CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
-        m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
-#endif
-
-        if(!agent->lineVisualization.empty()) m_tLine.clear();
-
-        for(auto lineCoordinate: agent->lineVisualization){
-            Coordinate line = lineCoordinate.FromOwnToArgos();
-            CVector3 linePos = CVector3(line.x, line.y, 0.1f);
-            m_tLine[pcFB].push_back(linePos);
-        }
-
-
-        findAndPushObjectCoordinates(pcFB, agent);
-        findAndPushOtherAgentCoordinates(pcFB, agent);
-
-        Coordinate pos = agent->position.FromOwnToArgos();
-        CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
-        m_tAgentCoordinates[pcFB] = agentPos;
-        m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
-        pushQuadTree(pcFB, agent);
-
-        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
-        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
-
-//        m_tAgentFreeAngles[pcFB] = agent->freeAngles;
-        for(auto angle: agent->freeAnglesVisualization) {
-            m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
-        }
-
-//#ifdef BATTERY_MANAGEMENT_ENABLED
-        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
+//        Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
+//        CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
+//        m_tAgentBestFrontierCoordinate[pcFB] = bestFrontierPos;
+//        Coordinate subTarget = agent->subTarget.FromOwnToArgos();
+//        CVector3 subTargetPos = CVector3(subTarget.x, subTarget.y, 0.1f);
+////        m_tAgentSubTargetCoordinate[pcFB] = subTargetPos;
+//#ifdef WALL_FOLLOWING_ENABLED
+//        Coordinate wallFollowingSubTarget = agent->wallFollower.wallFollowingSubTarget.FromOwnToArgos();
+//        CVector3 wallFollowingSubTargetPos = CVector3(wallFollowingSubTarget.x, wallFollowingSubTarget.y, 0.1f);
+//        m_tAgentWallFollowingSubTargetCoordinate[pcFB] = wallFollowingSubTargetPos;
 //#endif
-
-
-        m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
-
-        m_tAgentDeploymentReachDist[pcFB] = agent->deployment_location_reach_distance;
-        m_tAgentDeploymentSite[pcFB] = agent->deploymentLocation.FromOwnToArgos();
+//
+//        if(!agent->lineVisualization.empty()) m_tLine.clear();
+//
+//        for(auto lineCoordinate: agent->lineVisualization){
+//            Coordinate line = lineCoordinate.FromOwnToArgos();
+//            CVector3 linePos = CVector3(line.x, line.y, 0.1f);
+//            m_tLine[pcFB].push_back(linePos);
+//        }
+//
+//
+//        findAndPushObjectCoordinates(pcFB, agent);
+//        findAndPushOtherAgentCoordinates(pcFB, agent);
+//
+//        Coordinate pos = agent->position.FromOwnToArgos();
+//        CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
+//        m_tAgentCoordinates[pcFB] = agentPos;
+//        m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
+        pushQuadTree(pcFB, agent);
+//
+//        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
+//        m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
+//
+////        m_tAgentFreeAngles[pcFB] = agent->freeAngles;
+//        for(auto angle: agent->freeAnglesVisualization) {
+//            m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
+//        }
+//
+////#ifdef BATTERY_MANAGEMENT_ENABLED
+//        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
+////#endif
+//
+//
+//        m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
+//
+//        m_tAgentDeploymentReachDist[pcFB] = agent->deployment_location_reach_distance;
+//        m_tAgentDeploymentSite[pcFB] = agent->deploymentLocation.FromOwnToArgos();
 
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);

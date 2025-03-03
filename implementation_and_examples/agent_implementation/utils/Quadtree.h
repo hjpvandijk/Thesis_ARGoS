@@ -135,12 +135,12 @@ namespace quadtree {
 
         };
 
-        Quadtree(const Box &box, float P_FREE_THRESHOLD, float P_OCCUPIED_THRESHOLD, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
+        Quadtree(const Box &box, float P_FREE_THRESHOLD, float P_OCCUPIED_THRESHOLD, float P_MAX, float P_MIN, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
                 mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE_THRESHOLD), P_OCCUPIED_THRESHOLD(P_OCCUPIED_THRESHOLD), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
             L_FREE_THRESHOLD = L(P_FREE_THRESHOLD);
-//            l_max = L(std::min((P_FREE_THRESHOLD - 0.5f) * 2 + 0.5f, 1.0f));
-//            l_min = L(std::max(0.5f - (0.5f - P_OCCUPIED_THRESHOLD) * 2, 0.0f));
+            l_max = L(P_MAX);
+            l_min = L(P_MIN);
         }
 
         /**

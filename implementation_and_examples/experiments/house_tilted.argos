@@ -435,24 +435,24 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-        <qt-opengl autoplay="true">
-            <user_functions
-                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
-                    label="agent_vision_qtuser_functions_pipuck"/>
-            <camera>
-                <placements>
-                    <placement index="0" position="0,0,60" look_at="0,0,0"
-                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="103"/>
-                </placements>
-            </camera>
-            <frame_grabbing directory="{{FRAME_PATH}}"
-                            base_name="frame"
-                            format="png"
-                            quality="50"
-                            headless_grabbing="true"
-                            headless_frame_size="1800x960\"
-                            headless_frame_rate="6000"/>
-        </qt-opengl>
+<!--        <qt-opengl autoplay="true">-->
+<!--&lt;!&ndash;            <user_functions&ndash;&gt;-->
+<!--&lt;!&ndash;                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"&ndash;&gt;-->
+<!--&lt;!&ndash;                    label="agent_vision_qtuser_functions_pipuck"/>&ndash;&gt;-->
+<!--            <camera>-->
+<!--                <placements>-->
+<!--                    <placement index="0" position="0,0,60" look_at="0,0,0"-->
+<!--                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="103"/>-->
+<!--                </placements>-->
+<!--            </camera>-->
+<!--&lt;!&ndash;            <frame_grabbing directory="{{FRAME_PATH}}"&ndash;&gt;-->
+<!--&lt;!&ndash;                            base_name="frame"&ndash;&gt;-->
+<!--&lt;!&ndash;                            format="png"&ndash;&gt;-->
+<!--&lt;!&ndash;                            quality="50"&ndash;&gt;-->
+<!--&lt;!&ndash;                            headless_grabbing="true"&ndash;&gt;-->
+<!--&lt;!&ndash;                            headless_frame_size="1800x960\"&ndash;&gt;-->
+<!--&lt;!&ndash;                            headless_frame_rate="6000"/>&ndash;&gt;-->
+<!--        </qt-opengl>-->
     </visualization>
 
 </argos-configuration>

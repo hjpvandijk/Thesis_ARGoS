@@ -25,6 +25,7 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->messages = std::vector<std::string>(0);
     auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED_THRESHOLD,
+                                                          this->config.P_MAX, this->config.P_MIN,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
@@ -1235,6 +1236,8 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
     this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
     this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_occupied_threshold"].as<float>();
+    this->config.P_MAX = config_yaml["confidence"]["p_max"].as<float>();
+    this->config.P_MIN = config_yaml["confidence"]["p_min"].as<float>();
     this->config.P_AT_MAX_SENSOR_RANGE = config_yaml["confidence"]["p_at_max_sensor_range"].as<float>();
 
     this->config.QUADTREE_RESOLUTION = config_yaml["quadtree"]["resolution"].as<double>();

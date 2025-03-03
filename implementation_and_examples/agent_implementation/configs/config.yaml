@@ -1,5 +1,5 @@
 mission:
-  end_time: 400 # The time in seconds when the mission ends
+  end_time: 200 # The time in seconds when the mission ends
   end_battery_level: 0 # The battery level in percent when the mission ends
 physical:
   robot_diameter: 0.08 # Agent diameter in meters
@@ -66,6 +66,8 @@ confidence:
   alpha_receive: 0.1 # The factor with which we doubt a received confidence value
   p_free_threshold: 0.7 # The threshold for a cell to be considered free
   p_occupied_threshold: 0.3 # The threshold for a cell to be considered occupied
+  p_max: 0.90 # The maximum confidence value (< 1), smaller results in faster change of occupancy estimation
+  p_min: 0.05 # The minimum confidence value (> 0), larger results in faster change of occupancy estimation
   p_at_max_sensor_range: 0.5 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
 quadtree:
   resolution: 0.25 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size

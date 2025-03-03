@@ -147,6 +147,8 @@ public:
         float ALPHA_RECEIVE;
         float P_FREE_THRESHOLD;
         float P_OCCUPIED_THRESHOLD;
+        float P_MAX;
+        float P_MIN;
         float P_AT_MAX_SENSOR_RANGE;
 
         double QUADTREE_RESOLUTION;
