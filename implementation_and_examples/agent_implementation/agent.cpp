@@ -26,6 +26,7 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED_THRESHOLD,
                                                           this->config.P_MAX, this->config.P_MIN,
+                                                          this->config.ALPHA_RECEIVE,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
@@ -1073,7 +1074,7 @@ void Agent::parseMessages() {
             }
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
-                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode, config.ALPHA_RECEIVE,
+                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode,
                                                              elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
                 if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)

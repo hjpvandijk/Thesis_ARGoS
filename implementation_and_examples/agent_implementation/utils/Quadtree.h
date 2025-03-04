@@ -28,7 +28,7 @@ namespace quadtree {
         Coordinate coordinate;
         Occupancy occupancy;
         double visitedAtS;
-        float LConfidence = 0.0; //The L(n) confidence of the reachability of this node by the agent. Positive is FREE, negative is OCCUPIED.
+        double LConfidence = 0.0; //The L(n) confidence of the reachability of this node by the agent. Positive is FREE, negative is OCCUPIED.
 
         bool operator==(const QuadNode &rhs) const {
             return coordinate.x == rhs.coordinate.x && coordinate.y == rhs.coordinate.y;
@@ -135,8 +135,8 @@ namespace quadtree {
 
         };
 
-        Quadtree(const Box &box, float P_FREE_THRESHOLD, float P_OCCUPIED_THRESHOLD, float P_MAX, float P_MIN, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
-                mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE_THRESHOLD), P_OCCUPIED_THRESHOLD(P_OCCUPIED_THRESHOLD), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
+        Quadtree(const Box &box, float P_FREE_THRESHOLD, float P_OCCUPIED_THRESHOLD, float P_MAX, float P_MIN, float ALPHA_RECEIVE, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
+                mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE_THRESHOLD), P_OCCUPIED_THRESHOLD(P_OCCUPIED_THRESHOLD), ALPHA_RECEIVE(ALPHA_RECEIVE), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
             L_FREE_THRESHOLD = L(P_FREE_THRESHOLD);
             l_max = L(P_MAX);
@@ -174,13 +174,10 @@ namespace quadtree {
          * @brief Add a QuadNode to the quadtree with a given a factor. Which decides how much the value is pulled towards 0.5P = ambiguous..
          * @param value
          */
-        Box addFromOther(QuadNode &value, float a, double currentTimeS) {
-            float PConfidence = P(value.LConfidence);
-            float PNew = (1.0-a) * PConfidence + a * 0.5; //Make more ambiguous as we have some uncertainty
-            value.LConfidence = L(PNew);
-            double pheromone = value.LConfidence;
+        Box addFromOther(QuadNode &value, double currentTimeS) {
+            double pheromone = P(value.LConfidence);
             if (value.visitedAtS != currentTimeS) //If the node was visited at the current time, the time factor will be 1.
-                pheromone = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
+                pheromone = calculatePheromone(value.visitedAtS, pheromone, currentTimeS);
             Occupancy occ = AMBIGUOUS;
             if (pheromone >= P_FREE_THRESHOLD){
                 occ = FREE;
@@ -551,10 +548,10 @@ namespace quadtree {
             return mBox;
         }
 
-        void updateConfidence(Coordinate coordinate, double areaSize, double Preading, double currentTimeS) {
-            Box functionSpace = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
-            updateConfidence(mRoot.get(), mBox, functionSpace, Preading, currentTimeS);
-        }
+//        void updateConfidence(Coordinate coordinate, double areaSize, double Preading, double currentTimeS) {
+//            Box functionSpace = Box(Coordinate{coordinate.x - areaSize / 2.0, coordinate.y + areaSize / 2.0}, areaSize);
+//            updateConfidence(mRoot.get(), mBox, functionSpace, Preading, currentTimeS);
+//        }
 
 
         /**
@@ -748,12 +745,13 @@ namespace quadtree {
         double EVAPORATED_PHEROMONE_FACTOR;
         double MERGE_MAX_VISITED_TIME_DIFF;
         double MERGE_MAX_P_CONFIDENCE_DIFF;
-        float l_min = -3.5;
-        float l_max = 2;
-        float L_FREE_THRESHOLD;
-        float P_FREE_THRESHOLD;
+        double l_min = -3.5;
+        double l_max = 2;
+        double L_FREE_THRESHOLD;
+        double P_FREE_THRESHOLD;
 //        float l_occupied = -0.41; //P=0.4
-        float P_OCCUPIED_THRESHOLD;
+        double P_OCCUPIED_THRESHOLD;
+        float ALPHA_RECEIVE; //How much the received value should be weighted
 
 
 
@@ -935,9 +933,25 @@ namespace quadtree {
 //                                   "Shouldn't get here, as neither current cell or added cell are OCCUPIED or FREE");
 //                        }
                         if (value.visitedAtS > cell->quadNode.visitedAtS) { //Only combine if the newly received value is more recent
-                            newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence,
-                                                                                        value.LConfidence);
-                            newNode.visitedAtS = value.visitedAtS;
+                            if (ownObservation) {
+                                //First calculate old pheromone, and use that to calculate new LConfidence. We do this to incorporate decay when adding.
+                                double  oldPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
+                                newNode.LConfidence = calculateOccupancyProbability(value.LConfidence, oldPheromone);
+                                newNode.visitedAtS = value.visitedAtS;
+                            } else {
+//                                auto valuePheromone = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
+//                                auto cellPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence),
+//                                                                        currentTimeS);
+//                                auto weightedAveragePheromone = ALPHA_RECEIVE * valuePheromone + (1 - ALPHA_RECEIVE) * cellPheromone;
+//                                newNode.LConfidence = L(weightedAveragePheromone);
+                                //First calculate old pheromone, and use that to calculate new LConfidence. We do this to incorporate decay when adding.
+                                auto P_value = P(value.LConfidence);
+                                auto valuePheromone = calculatePheromone(value.visitedAtS, P_value, currentTimeS);
+                                auto alpha_compensated = valuePheromone > 0.5 ? (valuePheromone - 0.5) * ALPHA_RECEIVE + 0.5 : 0.5 - (0.5-valuePheromone) * (ALPHA_RECEIVE);
+                                double  oldPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
+                                newNode.LConfidence = calculateOccupancyProbability(L(oldPheromone), alpha_compensated);
+                                newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                            }
                             double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
                                                                   currentTimeS);
                             Occupancy occ = AMBIGUOUS;
@@ -971,7 +985,7 @@ namespace quadtree {
                     // Otherwise, we split and we try again
                 else {
 //                    //If the to be added occupancy is the same as the parent, and the visited time is not too far apart, we can skip adding.
-                    // WRONG: should always add, as we are adding log likelihoods, not just occupancies.
+                    // WRONG: should always add, as we are adding log like
 ////                    float pv = P(value.LConfidence);
 ////                    float pc = P(cell->quadNode.LConfidence);
 //                    double pv = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
@@ -1025,8 +1039,8 @@ namespace quadtree {
 //                            returnBox = box;
                         if (cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == AMBIGUOUS) {
                             if (value.visitedAtS > cell->quadNode.visitedAtS) { //Only combine if the newly received value is more recent
-                                newNode.LConfidence = calculateOccupancyProbabilityFromTwoL(cell->quadNode.LConfidence,
-                                                                                            value.LConfidence);
+                                double  oldPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
+                                newNode.LConfidence = calculateOccupancyProbability(value.LConfidence, oldPheromone); //Calculate the new confidence, use old pheromone value so we take into account time decay
                                 newNode.visitedAtS = value.visitedAtS;
                                 double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
                                                                       currentTimeS);
@@ -1082,6 +1096,7 @@ namespace quadtree {
                     double maxVisitedTime = -1;
 
                     std::vector<double> children_pheromones;
+                    std::vector<double> children_l_confidences;
 
                     if (cell->children.at(0)->quadNode.visitedAtS == -1)
                         confidencesTooFarApart = true; //If the first child is empty, it is not the same occupancy as the others
@@ -1104,23 +1119,24 @@ namespace quadtree {
                             //If the confidence of the child is too far apart from the first child, it is not the same occupancy as the others
                             auto pheromone = calculatePheromone(child->quadNode.visitedAtS, P(child->quadNode.LConfidence), currentTimeS);
                             children_pheromones.push_back(pheromone);
+                            children_l_confidences.push_back(child->quadNode.LConfidence);
                             if (pheromone < minConfidence)
                                 minConfidence = pheromone;
                             if (pheromone > maxConfidence)
                                 maxConfidence = pheromone;
 
 //                            //If the visited time of the child is too far apart from the first child, it is not the same occupancy as the others
-//                            if (child->quadNode.visitedAtS < minVisitedTime)
-//                                minVisitedTime = child->quadNode.visitedAtS;
-//                            if (child->quadNode.visitedAtS > maxVisitedTime)
-//                                maxVisitedTime = child->quadNode.visitedAtS;
+                            if (child->quadNode.visitedAtS < minVisitedTime)
+                                minVisitedTime = child->quadNode.visitedAtS;
+                            if (child->quadNode.visitedAtS > maxVisitedTime)
+                                maxVisitedTime = child->quadNode.visitedAtS;
                         }
                         //If one of the children is occupied, all children should be kept
                         //If the occupancies are too far apart, the children should be kept
                         // Only merge free cells if the confidence is not too far apart
                         // Don't merge occupied cells, as we need them separated for the neighbors
                         //Ambiguous cells can become free or occupied, so we don't merge them yet, as they are important regions.
-                        if (minConfidence < P_FREE_THRESHOLD || maxConfidence - minConfidence > MERGE_MAX_P_CONFIDENCE_DIFF)
+                        if (minConfidence < P_OCCUPIED_THRESHOLD || maxConfidence - minConfidence > MERGE_MAX_P_CONFIDENCE_DIFF)
                             confidencesTooFarApart = true;
 //                        //If the visited times are too far apart, the children should be kept
 //                        if (maxVisitedTime - minVisitedTime > MERGE_MAX_VISITED_TIME_DIFF)
@@ -1131,19 +1147,24 @@ namespace quadtree {
                     // If all children have the same occupancy, and their visited times are not too far apart, we can delete the children and the parents will have all info
                     if (!confidencesTooFarApart && !visitedTimesTooFarApart) {
                         //Unitialize the children nodes as the parent now contains their information.
-                        float PheromoneSum = 0.0;
+                        double PheromoneSum = 0.0;
+
+                        for (auto &pheromone: children_pheromones) {
+                            PheromoneSum += pheromone;
+                        }
+
+                        auto averagePheromone = PheromoneSum / 4.0;
+                        auto PConfidenceAtTimeAndPheromone = reversePheromone(maxVisitedTime, averagePheromone, currentTimeS);
+                        //Cap at l_max and l_min, as rounding errors can occur.
+//                        cell->quadNode.LConfidence = std::max(std::min(L(PConfidenceAtTimeAndPheromone), l_max), l_min);
+                        cell->quadNode.LConfidence = (L(PConfidenceAtTimeAndPheromone));
+//                        double pheromone = calculatePheromone(maxVisitedTime, P(cell->quadNode.LConfidence), currentTimeS);
                         for (auto &child: cell->children) {
 //                            PConfidenceSum += P(child->quadNode.LConfidence);
                             child.reset();
                         }
-                        for (auto &pheromone: children_pheromones) {
-                            PheromoneSum += (pheromone-0.5); //This works because we only merge free (ph > 0.5) cells.
-                        }
                         numberOfLeafNodes -= 3; //We remove 4 children and the parent is now a leaf node.
                         assert(isLeaf(cell) && "The cell should be a leaf again now");
-                        auto averagePheromone = PheromoneSum / 4.0 + 0.5; //This works because we only merge free (ph > 0.5) cells.
-                        cell->quadNode.LConfidence = L(averagePheromone);
-//                        double pheromone = calculatePheromone(maxVisitedTime, P(cell->quadNode.LConfidence), currentTimeS);
                         //If all children have the same occupancy, give the parent that occupancy
                         Occupancy occ = AMBIGUOUS;
                         if (averagePheromone >= P_FREE_THRESHOLD){
@@ -1154,7 +1175,8 @@ namespace quadtree {
                         cell->quadNode.occupancy = occ;
                         assert(cell->quadNode.occupancy != UNKNOWN && cell->quadNode.occupancy != ANY &&
                                "A non-leaf cell should not have UNKNOWN or ANY occupancy at this point");
-                        cell->quadNode.visitedAtS = currentTimeS; //Should be current time, since we set the confidence to the pheromone value.
+                        cell->quadNode.visitedAtS = maxVisitedTime;
+
 
                     } else {
                         //If the children have different occupancies, or the visited times are too far apart, the parent should have occupancy ANY
@@ -1196,6 +1218,7 @@ namespace quadtree {
 
                     auto quadNode = QuadNode{childBoxCenter, cell->quadNode.occupancy,
                                              cell->quadNode.visitedAtS, cell->quadNode.LConfidence};
+                    auto childrenPConfidence = P(cell->quadNode.LConfidence);
                     add(cell->children.at(static_cast<std::size_t>(i)).get(), childBox, quadNode, currentTimeS, false);
                 }
                 this->numberOfLeafNodes--;
@@ -1382,7 +1405,7 @@ namespace quadtree {
         }
 
         double calculatePheromone(double visitedTime, double PConfidence, double currentTime) const {
-            if (visitedTime == currentTime) return PConfidence; //If the visited time is the same as the current time, the time factor will be 1, so the pheromone will be the same as the sensor confidence.
+            if ( visitedTime == currentTime) return PConfidence; //If the visited time is the same as the current time, the time factor will be 1, so the pheromone will be the same as the sensor confidence.
 //            double timeProbability = 1.0 - std::min((currentTime - visitedTime) / EVAPORATION_TIME_S, (1.0 - EVAPORATED_PHEROMONE_FACTOR));
             double lambda = - std::log(this->EVAPORATED_PHEROMONE_FACTOR) / this->EVAPORATION_TIME_S; //Evaporate to EVAPORATED_PHEROMONE_FACTOR after EVAPORATION_TIME_S
             double timeProbability = exp(-lambda * (currentTime - visitedTime)); //Exponential decay
@@ -1397,82 +1420,99 @@ namespace quadtree {
         }
 
         /**
-         * @brief Update the reachability confidence of the quadtree for QuadNodes that intersect with or are contained by the given box
-         * @param cell the current cell being looked in
-         * @param box the box the current cell belongs in
-         * @param queryBox the search space
-         * @param confidenceIncrease the increase in confidence
-         * @param currentTimeS the current experiment time of the agent
+         * Calculates p confidence from pheromone and time
+         * @param visitedTime
+         * @param pheromone
+         * @param currentTime
+         * @return
          */
-        void updateConfidence(Cell *cell, const Box &box, const Box &functionSpace, float Pn_zt, double currentTimeS) {
-            assert(cell != nullptr);
-            assert(functionSpace.intersects_or_contains(box));
-
-            //Only update the confidence if we haven't seen this FREE cell in a while
-            if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN &&
-//                    cell->quadNode.occupancy == FREE &&
-                (functionSpace.contains(cell->quadNode.coordinate) || functionSpace.intersects_or_contains(box))
-//                &&
-//                currentTimeS - cell->quadNode.visitedAtS > MERGE_MAX_VISITED_TIME_DIFF
-                ) {
-//                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
-                cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
-                double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                if (pheromone <= P_OCCUPIED_THRESHOLD) {
-                    cell->quadNode.occupancy = OCCUPIED;
-                    if (box.getSize() > RESOLUTION){
-                        split(cell, box, currentTimeS);
-                    } else {
-                        //Set neighbors
-                        cell->add_occupied_neighbors(box.getSize());
-                    }
-                } else {
-                    if (pheromone >= P_FREE_THRESHOLD) {
-                        cell->quadNode.occupancy = FREE;
-                    } else {
-                        cell->quadNode.occupancy = AMBIGUOUS;
-                    }
-                    //Remove neighbors; Make sure to remove neighbors if the cell is not occupied, or we will have pointer issues.
-                    cell->remove_neighbors();
-                }
-            }
-
-            //Only check further if the occupancy of the non-leaf cell is not all the same for its children, so ANY.
-            if (!isLeaf(cell) && (cell->quadNode.visitedAtS == -1 || cell->quadNode.occupancy == ANY ||
-                                  cell->quadNode.occupancy == UNKNOWN)) {
-                for (int d = 0; d < cell->children.size(); d++) {
-                    auto childBox = computeBox(box, static_cast<int>(d));
-                    if (functionSpace.intersects_or_contains(childBox)) {
-                        updateConfidence(cell->children.at(d).get(), childBox, functionSpace,
-                                         Pn_zt, currentTimeS);
-                    }
-                }
-            }
+        double reversePheromone(double visitedTime, double pheromone, double currentTime) const {
+//            double timeProbability = 1.0 - std::min((currentTime - visitedTime) / EVAPORATION_TIME_S, (1.0 - EVAPORATED_PHEROMONE_FACTOR));
+            double lambda = - std::log(this->EVAPORATED_PHEROMONE_FACTOR) / this->EVAPORATION_TIME_S; //Evaporate to EVAPORATED_PHEROMONE_FACTOR after EVAPORATION_TIME_S
+            double timeDifference = currentTime - visitedTime;
+//            double PConfidence = pheromone * exp(lambda*timeDifference);
+            double PConfidence = (pheromone-0.5) * exp(lambda*timeDifference) + 0.5;
+            return PConfidence;
         }
+
+//        /**
+//         * @brief Update the reachability confidence of the quadtree for QuadNodes that intersect with or are contained by the given box
+//         * @param cell the current cell being looked in
+//         * @param box the box the current cell belongs in
+//         * @param queryBox the search space
+//         * @param confidenceIncrease the increase in confidence
+//         * @param currentTimeS the current experiment time of the agent
+//         */
+//        void updateConfidence(Cell *cell, const Box &box, const Box &functionSpace, float Pn_zt, double currentTimeS) {
+//            assert(cell != nullptr);
+//            assert(functionSpace.intersects_or_contains(box));
+//
+//            //Only update the confidence if we haven't seen this FREE cell in a while
+//            if (cell->quadNode.occupancy != ANY && cell->quadNode.occupancy != UNKNOWN &&
+////                    cell->quadNode.occupancy == FREE &&
+//                (functionSpace.contains(cell->quadNode.coordinate) || functionSpace.intersects_or_contains(box))
+////                &&
+////                currentTimeS - cell->quadNode.visitedAtS > MERGE_MAX_VISITED_TIME_DIFF
+//                ) {
+////                cell->quadNode.LConfidence = std::max(100.0, cell->quadNode.LConfidence + confidenceIncrease);
+//
+//                cell->quadNode.LConfidence = calculateOccupancyProbability(cell->quadNode.LConfidence, Pn_zt);
+//                double pheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
+//                if (pheromone <= P_OCCUPIED_THRESHOLD) {
+//                    cell->quadNode.occupancy = OCCUPIED;
+//                    if (box.getSize() > RESOLUTION){
+//                        split(cell, box, currentTimeS);
+//                    } else {
+//                        //Set neighbors
+//                        cell->add_occupied_neighbors(box.getSize());
+//                    }
+//                } else {
+//                    if (pheromone >= P_FREE_THRESHOLD) {
+//                        cell->quadNode.occupancy = FREE;
+//                    } else {
+//                        cell->quadNode.occupancy = AMBIGUOUS;
+//                    }
+//                    //Remove neighbors; Make sure to remove neighbors if the cell is not occupied, or we will have pointer issues.
+//                    cell->remove_neighbors();
+//                }
+//            }
+//
+//            //Only check further if the occupancy of the non-leaf cell is not all the same for its children, so ANY.
+//            if (!isLeaf(cell) && (cell->quadNode.visitedAtS == -1 || cell->quadNode.occupancy == ANY ||
+//                                  cell->quadNode.occupancy == UNKNOWN)) {
+//                for (int d = 0; d < cell->children.size(); d++) {
+//                    auto childBox = computeBox(box, static_cast<int>(d));
+//                    if (functionSpace.intersects_or_contains(childBox)) {
+//                        updateConfidence(cell->children.at(d).get(), childBox, functionSpace,
+//                                         Pn_zt, currentTimeS);
+//                    }
+//                }
+//            }
+//        }
         //According to http://www.arminhornung.de/Research/pub/hornung13auro.pdf
         //Dynamic probability
-        float calculateOccupancyProbability(float Ln_z1tMinus1, float Pn_zt) {
+        double calculateOccupancyProbability(double Ln_z1tMinus1, double Pn_zt) {
 //            float Ln_z1tMinus1 = L(Pn_z1tMinus1); // L(P(n|z1:t-1))
-            float Ln_zt = L(Pn_zt); // L(P(n|zt))
-            float Ln_z1t = std::max(std::min(Ln_z1tMinus1 + Ln_zt, l_max), l_min); // L(P(n|z1:t)) = max(min(L(P(n|z1:t-1)) + L(P(n|zt)), l_max), l_min)
+            double Ln_zt = L(Pn_zt); // L(P(n|zt))
+            double Ln_z1t = std::max(std::min(Ln_z1tMinus1 + Ln_zt, l_max), l_min); // L(P(n|z1:t)) = max(min(L(P(n|z1:t-1)) + L(P(n|zt)), l_max), l_min)
 //            float Pn_z1t = std::exp(Ln_z1t) / (1 + std::exp(Ln_z1t)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
             return Ln_z1t;
         }
 
         //According to http://www.arminhornung.de/Research/pub/hornung13auro.pdf
         //Dynamic probability
-        float calculateOccupancyProbabilityFromTwoL(float Ln_z1tMinus1, float Ln_zt) {
-            float Ln_z1t = std::max(std::min(Ln_z1tMinus1 + Ln_zt, l_max), l_min); // L(P(n|z1:t)) = max(min(L(P(n|z1:t-1)) + L(P(n|zt)), l_max), l_min)
+        double calculateOccupancyProbabilityFromTwoL(double Ln_z1tMinus1, double Ln_zt) {
+            double Ln_z1t = std::max(std::min(Ln_z1tMinus1 + Ln_zt, l_max), l_min); // L(P(n|z1:t)) = max(min(L(P(n|z1:t-1)) + L(P(n|zt)), l_max), l_min)
 //            float Pn_z1t = std::exp(Ln_z1t) / (1 + std::exp(Ln_z1t)); // P(n|z1:t) = exp(L(P(n|z1:t))) / (1 + exp(L(P(n|z1:t))))
             return Ln_z1t;
         }
 
-        float L(float p) const{
+        double L(double p) const{
             assert(p >= 0 && p < 1);
             return std::log(p / (1-p));
         }
 
-        float P(float l) const {
+        double P(double l) const {
             return std::exp(l) / (1 + std::exp(l));
         }
 

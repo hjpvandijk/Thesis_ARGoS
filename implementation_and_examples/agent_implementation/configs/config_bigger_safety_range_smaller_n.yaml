@@ -61,9 +61,9 @@ forces:
     n: 2 # >= 0; If increased, the average certainty and region size will have more impact on the probability of choosing a frontier region
     m: 1 # >= 1 ; If increased, the reach distance, time, and battery usage have more impact on the probability of choosing a frontier region
 confidence:
-  p_free: 0.511441 # The probability of an observed free cell being free; 0.511422: at p_max=0.9, and 16 ticks per second, it takes 3 seconds of observations to reach 0.9
-  p_occupied: 0.46 #0.484670 # The probability of an observed occupied cell being not free; same as above, at p=min = 0.05, takes 48 ticks to reach 0.05
-  alpha_receive: 0.1 # The factor with which we doubt a received confidence value
+  p_free: 0.51 # The probability of an observed free cell being free
+  p_occupied: 0.46 # The probability of an observed occupied cell being not free
+  alpha_receive: 0.6 # The factor with which we doubt a received confidence value
   p_free_threshold: 0.7 # The threshold for a cell to be considered free
   p_occupied_threshold: 0.3 # The threshold for a cell to be considered occupied
   p_max: 0.90 # The maximum confidence value (< 1), smaller results in faster change of occupancy estimation
