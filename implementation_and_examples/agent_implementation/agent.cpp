@@ -828,22 +828,38 @@ void Agent::sendQuadtreeToCloseAgents() {
 
     for (const auto &agentLocationPair: this->agentLocations) {
         double lastReceivedTick = std::get<2>(agentLocationPair.second);
-        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
             if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
-                this->config.QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
+                argos::LOG << "[" << this->id << "] " << "SENDING BECAUSE " << agentLocationPair.first << " HAS NOT RECEIVED QUADTREE" << std::endl;
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
-                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
-                oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
-                this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
+                break; //We know we have to broadcast the quadtree, so we can break
             }
         }
     }
 
+
     if (!sendQuadtree) return; //If we don't need to send the quadtree to any agent, return
+
+    //Update the exchange time for all agents within range
+    for (const auto &agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            this->config.AGENT_LOCATION_RELEVANT_S) {
+            argos::LOG << "[" << this->id << "] " << "UPDATING " << agentLocationPair.first << " TO "
+                       << this->elapsed_ticks << std::endl;
+            //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+            oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
+            this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
+
+        }
+    }
+
+    argos::LOG << "[" << this->id << "] " << "BROADCASTING QUADTREE WITH OLDEST EXCHANGE" << oldest_exchange << " AND CURRENT TIME " << this->elapsed_ticks << std::endl;
     this->quadtree->toStringVector(&quadTreeToStrings, oldest_exchange/this->ticks_per_second);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
@@ -853,7 +869,7 @@ void Agent::sendQuadtreeToCloseAgents() {
 
 void Agent::timeSyncWithCloseAgents() {
     if (this->elapsed_ticks - this->timeSynchronizer.getLastSyncAttempt() >=
-        (this->config.TIME_SYNC_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) {
+        (this->config.TIME_SYNC_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the time sync interval a bit (between -2 and +2 seconds)
         for (const auto &agentLocationPair: this->agentLocations) {
             double lastReceivedTick = std::get<2>(agentLocationPair.second);
             //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
