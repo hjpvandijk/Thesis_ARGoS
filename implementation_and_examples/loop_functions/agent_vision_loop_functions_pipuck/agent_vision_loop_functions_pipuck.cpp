@@ -277,6 +277,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         #endif
         pushQuadTree(pcFB, agent);
 
+        updateNumberOfCellsAndLeaves(pcFB, agent);
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);
         updateBatteryUsage(pcFB, agent);
@@ -352,6 +353,18 @@ void CAgentVisionLoopFunctions::PostStep() {
     }
 
     loop_function_steps++;
+}
+
+void CAgentVisionLoopFunctions::updateNumberOfCellsAndLeaves(argos::CPiPuckEntity *pcFB,
+                                                             const std::shared_ptr<Agent> &agent) {
+    //Get controller
+    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED;
+    //Update coverage over time at every interval, if mission has started
+//    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
+    if (inMission && agent->elapsed_ticks % coverage_update_tick_interval == 0) {
+        this->m_metrics.number_of_cells_and_leaves_over_time[pcFB->GetId()].push_back(std::make_pair(agent->quadtree->numberOfCells,
+                                                                          agent->quadtree->numberOfLeafNodes));
+    }
 }
 
 void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
@@ -499,7 +512,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     //Export coverage over time
     std::ofstream coverageFile;
     coverageFile.open(metric_path_str + "/coverage.csv");
-    coverageFile << "time_s,";
+    coverageFile << "tick,";
     for (auto & it : m_metrics.coverage_over_time) {
         coverageFile << it.first << ",";
     }
@@ -525,7 +538,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     //Export certainty over time (average, free, occupied)
     std::ofstream certaintyFile;
     certaintyFile.open(metric_path_str + "/certainty.csv");
-    certaintyFile << "time_s,";
+    certaintyFile << "tick,";
     for (auto & it : m_metrics.average_total_certainty_over_time) {
         certaintyFile << "all_" << it.first << ",";
     }
@@ -563,6 +576,36 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         certaintyFile << "\n";
     }
     certaintyFile.close();
+
+    //Export number of cells and leaves
+    std::ofstream numberOfCellsAndLeavesFile;
+    numberOfCellsAndLeavesFile.open(metric_path_str + "/number_of_cells_and_leaves.csv");
+    numberOfCellsAndLeavesFile << "tick,";
+    for (auto & it : m_metrics.number_of_cells_and_leaves_over_time) {
+        numberOfCellsAndLeavesFile << "cells_" << it.first << ",";
+        numberOfCellsAndLeavesFile << "leaves_" << it.first << ",";
+    }
+    numberOfCellsAndLeavesFile << "\n";
+
+    //Get the size of the largest number of cells and leaves vector
+    int max_cells_and_leaves_list_size = 0;
+    for (auto & it : m_metrics.number_of_cells_and_leaves_over_time) {
+        max_cells_and_leaves_list_size = std::max(max_cells_and_leaves_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_cells_and_leaves_list_size; i++) {
+        numberOfCellsAndLeavesFile << (i+1)*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.number_of_cells_and_leaves_over_time) {
+            if (i < it.second.size())
+                numberOfCellsAndLeavesFile << it.second[i].first << ",";
+            else numberOfCellsAndLeavesFile << ",";
+            if (i < it.second.size())
+                numberOfCellsAndLeavesFile << it.second[i].second << ",";
+            else numberOfCellsAndLeavesFile << ",";
+        }
+        numberOfCellsAndLeavesFile << "\n";
+    }
+    numberOfCellsAndLeavesFile.close();
 
     //Export traveled path length
     std::ofstream traveledPathFile;
@@ -627,6 +670,8 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         bytesSentReceivedFile << it.first << "," << it.second.first << "," << it.second.second << "\n";
     }
     bytesSentReceivedFile.close();
+
+
 
     //Export mission time
     std::ofstream missionTimeFile;

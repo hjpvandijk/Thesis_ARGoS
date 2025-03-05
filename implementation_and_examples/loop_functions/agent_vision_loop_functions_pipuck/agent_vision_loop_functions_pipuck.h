@@ -21,6 +21,8 @@ public:
         std::map<std::string, std::vector<double>> average_total_certainty_over_time; //Per agent, total certainty
         std::map<std::string, std::vector<double>> average_free_pheromone_over_time; //Per agent, certainty of presumed free space
         std::map<std::string, std::vector<double>> average_occupied_pheromone_over_time; //Per agent, certainty of presumed occupied space
+        std::map<std::string, std::vector<std::pair<int, int>>> number_of_cells_and_leaves_over_time; //Per agent, Total number of cells, number of leaf nodes
+
         std::map<std::string, double> total_traveled_path; //Per agent
         std::map<std::string, double> total_battery_usage; //Per agent
         int n_agent_agent_collisions; //Make sure to divide by 2
@@ -132,6 +134,7 @@ private:
     void updateCollisions(CPiPuckEntity *pcFB);
     void updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     void updateBytesSentReceived(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
+    void updateNumberOfCellsAndLeaves(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);

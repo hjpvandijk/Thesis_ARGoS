@@ -40,6 +40,7 @@ namespace quadtree {
 
     public:
         int numberOfLeafNodes = 0; //Number of leaf nodes not UNKNOWN or ANY
+        int numberOfCells = 0; //Number of cells in the quadtree
         int numberOfNodesPerMessage = 50; //Number of nodes to send per message
 
         struct Cell {
@@ -48,10 +49,18 @@ namespace quadtree {
             std::array<Cell *, 4> neighbors; //Neighbors with the same occupancy: [left, top, right, bottom]
             //            std::vector<QuadNode> values;
             QuadNode quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
+            int& cellCounter;
 
-//            Cell(){
-//                quadNode = QuadNode{Coordinate{0, 0}, Occupancy::UNKNOWN, -1};
-//            }
+            Cell(int& counter) : cellCounter(counter){
+                parent = nullptr;
+                children = {nullptr, nullptr, nullptr, nullptr};
+                neighbors = {nullptr, nullptr, nullptr, nullptr};
+                cellCounter++;
+            }
+
+            ~Cell(){
+                cellCounter--;
+            }
 //
 //
 //
@@ -136,11 +145,12 @@ namespace quadtree {
         };
 
         Quadtree(const Box &box, float P_FREE_THRESHOLD, float P_OCCUPIED_THRESHOLD, float P_MAX, float P_MIN, float ALPHA_RECEIVE, double RESOLUTION, double EVAPORATION_TIME_S, double EVAPORATED_PHEROMONE_FACTOR, double MERGE_MAX_VISITED_TIME_DIFF, double MERGE_MAX_P_CONFIDENCE_DIFF) :
-                mBox(box), mRoot(std::make_unique<Cell>()), P_FREE_THRESHOLD(P_FREE_THRESHOLD), P_OCCUPIED_THRESHOLD(P_OCCUPIED_THRESHOLD), ALPHA_RECEIVE(ALPHA_RECEIVE), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
+                mBox(box), mRoot(std::make_unique<Cell>(this->numberOfCells)), P_FREE_THRESHOLD(P_FREE_THRESHOLD), P_OCCUPIED_THRESHOLD(P_OCCUPIED_THRESHOLD), ALPHA_RECEIVE(ALPHA_RECEIVE), RESOLUTION(RESOLUTION), EVAPORATION_TIME_S(EVAPORATION_TIME_S), EVAPORATED_PHEROMONE_FACTOR(EVAPORATED_PHEROMONE_FACTOR), MERGE_MAX_VISITED_TIME_DIFF(MERGE_MAX_VISITED_TIME_DIFF), MERGE_MAX_P_CONFIDENCE_DIFF(MERGE_MAX_P_CONFIDENCE_DIFF) {
             mRoot->quadNode = QuadNode{box.getCenter(), UNKNOWN, -1};
             L_FREE_THRESHOLD = L(P_FREE_THRESHOLD);
             l_max = L(P_MAX);
             l_min = L(P_MIN);
+            numberOfCells = 0;
         }
 
         /**
@@ -1201,7 +1211,7 @@ namespace quadtree {
             assert(isLeaf(cell) && "Only leaves can be split");
             // Create children
             for (auto &child: cell->children){
-                child = std::make_unique<Cell>();
+                child = std::make_unique<Cell>(this->numberOfCells);
                 child->parent = cell;
             }
 
