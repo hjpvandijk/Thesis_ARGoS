@@ -835,7 +835,6 @@ void Agent::sendQuadtreeToCloseAgents() {
             if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
                         (this->config.QUADTREE_EXCHANGE_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
-                argos::LOG << "[" << this->id << "] " << "SENDING BECAUSE " << agentLocationPair.first << " HAS NOT RECEIVED QUADTREE" << std::endl;
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
                 break; //We know we have to broadcast the quadtree, so we can break
             }
@@ -850,8 +849,6 @@ void Agent::sendQuadtreeToCloseAgents() {
         double lastReceivedTick = std::get<2>(agentLocationPair.second);
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
-            argos::LOG << "[" << this->id << "] " << "UPDATING " << agentLocationPair.first << " TO "
-                       << this->elapsed_ticks << std::endl;
             //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
             oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
             this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
@@ -859,7 +856,6 @@ void Agent::sendQuadtreeToCloseAgents() {
         }
     }
 
-    argos::LOG << "[" << this->id << "] " << "BROADCASTING QUADTREE WITH OLDEST EXCHANGE" << oldest_exchange << " AND CURRENT TIME " << this->elapsed_ticks << std::endl;
     this->quadtree->toStringVector(&quadTreeToStrings, oldest_exchange/this->ticks_per_second);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
