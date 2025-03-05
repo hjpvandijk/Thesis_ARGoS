@@ -512,12 +512,12 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //        argos::LOG << "Checking frontier region " << frontierRegionX << ", " << frontierRegionY << std::endl;
 
         //If the frontier is mostly unknown, and if the frontier is close to our agent, skip it
-        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) <
-            agent->config.FRONTIER_DIST_UNTIL_REACHED) {
-            skipFrontier = true;
-//            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-//                       << " because it is close to our agent" << std::endl;
-        } else {
+//        if (sqrt(pow(frontierRegionX - agent->position.x, 2) + pow(frontierRegionY - agent->position.y, 2)) <
+//            agent->config.FRONTIER_DIST_UNTIL_REACHED) {
+//            skipFrontier = true;
+////            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+////                       << " because it is close to our agent" << std::endl;
+//        } else {
             for (auto agentLocationTuple: agent->agentLocations) {
                 if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
                     agent->config.AGENT_LOCATION_RELEVANT_S)
@@ -554,7 +554,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
                     break;
                 }
 //                }
-            }
+//            }
 #ifdef SKIP_UNREACHABLE_FRONTIERS
             //If we are avoiding the frontier
             if (agent->frontierEvaluator.avoidingCoordinate(agent, {frontierRegionX, frontierRegionY})) {
