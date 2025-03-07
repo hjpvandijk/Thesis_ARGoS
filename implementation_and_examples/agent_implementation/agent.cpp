@@ -680,7 +680,7 @@ void Agent::calculateNextPosition() {
 
         //If we are close to the deployment location, we have returned, we can stop
         if (targetVector.Length() <= this->deployment_location_reach_distance) {
-            this->state = State::FINISHED;
+            this->state = State::FINISHED_EXPLORING;
         } else {
             //If we are getting closer to the deployment location, we can decrease the distance to reach it, 1cm at a time
             if (targetVector.Length() < this->min_distance_to_deployment_location) {
@@ -722,7 +722,7 @@ void Agent::calculateNextPosition() {
 #endif
         }
 
-    }
+    } else assert(0 && "Shouldn't be in any other state");
 
 
 #else
@@ -742,7 +742,7 @@ void Agent::calculateNextPosition() {
 
         //If we are close to the deployment location, we have returned, we can stop
         if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->state = State::FINISHED;
+            this->state = State::FINISHED_EXPLORING;
         }
     }
 #endif
@@ -895,9 +895,30 @@ void Agent::doStep() {
     timeSyncWithCloseAgents();
 
     checkMessages();
-    if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
+    if (this->state == State::NO_MISSION || this->state == State::FINISHED_EXPLORING || this->state == State::MAP_RELAYED) {
         //Do nothing
         this->differential_drive.stop();
+        if (this->state == State::FINISHED_EXPLORING) {
+            //If we are finished exploring, and any other agent is within communication range, and we have exchanged recently, we are fully done.
+            bool map_relayed = false;
+            for (const auto &agentLocationPair: this->agentLocations) {
+                double lastReceivedTick = std::get<2>(agentLocationPair.second);
+                //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
+                if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second < this->config.AGENT_LOCATION_RELEVANT_S) {
+                    //If we have sent the quadtree to this agent in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, we assume we have received it back
+                    //So we are done
+                    if (this->agentQuadtreeSent.count(agentLocationPair.first) &&
+                        this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] <
+                        this->config.QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                        map_relayed = true;
+                        break;
+                    }
+                }
+            }
+            if (map_relayed) {
+                this->state = State::MAP_RELAYED;
+            }
+        }
     } else { //Exploring or returning
         if (this->elapsed_ticks >= this->ticks_per_second) { //Wait one second before starting, allowing initial communication
             checkForObstacles();
@@ -929,8 +950,8 @@ void Agent::doStep() {
             //Check if the mission has ended, and if so, we will return to the deployment location
             checkMissionEnd();
         }
-        this->elapsed_ticks++;
-        }
+    }
+    this->elapsed_ticks++;
 }
 
 
@@ -1161,9 +1182,9 @@ void Agent::checkMissionEnd() {
     if (this->state == State::RETURNING) {
         //If we have are returning to the deployment location, but we are taking over double the time at which we return, we have failed (finished).
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S * 2.0f) {
-            this->state = State::FINISHED;
+            this->state = State::MAP_RELAYED;
         }
-    } else if (this->state == State::NO_MISSION || this->state == State::FINISHED) return;
+    } else if (this->state == State::NO_MISSION || this->state == State::FINISHED_EXPLORING || this->state == State::MAP_RELAYED) return;
     else {
         auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {

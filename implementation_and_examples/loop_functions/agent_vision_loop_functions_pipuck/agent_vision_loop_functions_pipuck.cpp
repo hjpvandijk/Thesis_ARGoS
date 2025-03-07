@@ -70,12 +70,32 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param pcFB
  * @param agent
  */
+void CAgentVisionLoopFunctions::pushQuadTreeIfTime(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+    #ifndef VISUALS
+    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED_EXPLORING && agent->state != Agent::State::MAP_RELAYED;
+    //Only have to update the quadtree every coverage_update_tick_interval ticks
+    if (inMission && agent->elapsed_ticks % coverage_update_tick_interval == 0){
+    #endif
+        pushQuadTree(pcFB, agent);
+    #ifndef VISUALS
+    }
+    #endif
+}
+
+
+/**
+ * Get all the boxes and their occupancy from the quadtree of a given agent
+ * @param pcFB
+ * @param agent
+ */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTime);
     m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
     m_tQuadTree[pcFB] = boxesAndPheromones;
+
 }
+
 
 /****************************************/
 /****************************************/
@@ -95,6 +115,10 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+        //Set orientation
+//        auto degrees20 = argos::CDegrees(20);
+//        auto degreesQuaternion = argos::CQuaternion(ToRadians(degrees20), argos::CVector3(0, 0, 1));
+//        pcFB->GetEmbodiedEntity().GetOriginAnchor().Orientation = degreesQuaternion;
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
@@ -145,6 +169,13 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
             }
             RemoveEntity(*box);
         }
+    }
+
+    const char* metric_path = std::getenv("METRIC_PATH");
+    if (metric_path) {
+        //Remove ".argos"
+        this->metric_path_str = metric_path;
+        this->metric_path_str = metric_path_str.substr(0, metric_path_str.find_last_of('.'));
     }
 
 
@@ -224,9 +255,10 @@ void CAgentVisionLoopFunctions::PostStep() {
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
-        #ifdef VISUALS
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
         globalElapsedTime = agent->elapsed_ticks / agent->ticks_per_second;
+        #ifdef VISUALS
+
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
@@ -265,9 +297,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 
-//#ifdef BATTERY_MANAGEMENT_ENABLED
-        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
-//#endif
+
 
 
         m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
@@ -275,7 +305,11 @@ void CAgentVisionLoopFunctions::PostStep() {
         m_tAgentDeploymentReachDist[pcFB] = agent->deployment_location_reach_distance;
         m_tAgentDeploymentSite[pcFB] = agent->deploymentLocation.FromOwnToArgos();
         #endif
-        pushQuadTree(pcFB, agent);
+        //#ifdef BATTERY_MANAGEMENT_ENABLED
+        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
+//#endif
+
+        pushQuadTreeIfTime(pcFB, agent);
 
         updateNumberOfCellsAndLeaves(pcFB, agent);
         updateCollisions(pcFB);
@@ -312,7 +346,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        argos::LOG << "Updating coverage and certainty for " << it.first->GetId() << std::endl;
         updateCoverage(it.first, it.second);
         updateCertainty(it.first, it.second);
-        if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
+        if(it.first->GetId()=="pipuck4") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 
@@ -344,11 +378,16 @@ void CAgentVisionLoopFunctions::PostStep() {
         }
     }
 
-
     //If a new agent is done, update the metrics and maps
     if (allAgentsDone(tFBMap)) {
-        updateAgentsFinishedTime(tFBMap);
         checkReturnToDeploymentSite(tFBMap);
+        //Update quadtree for the last time
+        for (auto & it : tFBMap) {
+            CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+            auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+            std::shared_ptr<Agent> agent = cController.agentObject;
+            pushQuadTree(pcFB, agent);
+        }
         experimentFinished = true;
     }
 
@@ -358,7 +397,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 void CAgentVisionLoopFunctions::updateNumberOfCellsAndLeaves(argos::CPiPuckEntity *pcFB,
                                                              const std::shared_ptr<Agent> &agent) {
     //Get controller
-    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED;
+    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED_EXPLORING && agent->state != Agent::State::MAP_RELAYED;
     //Update coverage over time at every interval, if mission has started
 //    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
     if (inMission && agent->elapsed_ticks % coverage_update_tick_interval == 0) {
@@ -391,7 +430,7 @@ void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
 void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED_EXPLORING && cController.agentObject->state != Agent::State::MAP_RELAYED;
     //Update coverage over time at every interval, if mission has started
 //    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
@@ -418,7 +457,7 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
 void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double>> &tree) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED_EXPLORING && cController.agentObject->state != Agent::State::MAP_RELAYED;
 
         //Update certainty over time at every interval, if mission has started
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
@@ -478,13 +517,6 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
     }
 
-    std::string metric_path_str = "experiment";
-    const char* metric_path = std::getenv("METRIC_PATH");
-    if (metric_path) {
-        //Remove ".argos"
-        metric_path_str = metric_path;
-        metric_path_str = metric_path_str.substr(0, metric_path_str.find_last_of('.'));
-    }
 
     if (mkdir(metric_path_str.c_str(), 0777) == -1) {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
@@ -625,21 +657,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     batteryUsageFile.close();
 
-    //Export quadtree of each agent
-    std::ofstream quadTreeFile;
-    quadTreeFile.open(metric_path_str + "/quadtree.csv");
-    quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
-    for (auto & it : m_tQuadTree) {
-        for (auto & box: it.second) {
-            quadTreeFile << it.first->GetId() << ",";
-            quadTreeFile << std::get<0>(box).getCenter().x << ",";
-            quadTreeFile << std::get<0>(box).getCenter().y << ",";
-            quadTreeFile << std::get<0>(box).getSize() << ",";
-            quadTreeFile << std::get<1>(box) << ",";
-            quadTreeFile << "\n";
-        }
-    }
-    quadTreeFile.close();
+    exportQuadtree("quadtree_all_done");
 
     //Export map observation count
     std::ofstream mapObservationCountFile;
@@ -684,6 +702,44 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
 }
 
+void CAgentVisionLoopFunctions::exportQuadtree(std::string filename) {
+    //Export quadtree of each agent
+    std::ofstream quadTreeFile;
+    quadTreeFile.open(this->metric_path_str + "/" + filename + ".csv");
+    quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
+    for (auto & it : m_tQuadTree) {
+        for (auto & box: it.second) {
+            quadTreeFile << it.first->GetId() << ",";
+            quadTreeFile << std::get<0>(box).getCenter().x << ",";
+            quadTreeFile << std::get<0>(box).getCenter().y << ",";
+            quadTreeFile << std::get<0>(box).getSize() << ",";
+            quadTreeFile << std::get<1>(box) << ",";
+            quadTreeFile << "\n";
+        }
+    }
+    quadTreeFile.close();
+}
+
+void CAgentVisionLoopFunctions::exportQuadtree(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
+    pushQuadTree(pcFB, agent);
+    //Export quadtree of each agent
+    std::ofstream quadTreeFile;
+    quadTreeFile.open(this->metric_path_str + "/" + filename + ".csv");
+    quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
+
+    auto quadTree = m_tQuadTree[pcFB];
+
+    for (auto & box: quadTree) {
+        quadTreeFile << agent->id << ",";
+        quadTreeFile << std::get<0>(box).getCenter().x << ",";
+        quadTreeFile << std::get<0>(box).getCenter().y << ",";
+        quadTreeFile << std::get<0>(box).getSize() << ",";
+        quadTreeFile << std::get<1>(box) << ",";
+        quadTreeFile << "\n";
+    }
+    quadTreeFile.close();
+}
+
 /**
  * Check if a new agent has finished its mission
  * @param tFBMap
@@ -697,30 +753,27 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
-        if (agent->state != Agent::State::FINISHED){
+        if (agent->state != Agent::State::MAP_RELAYED){
             allAgentsDone = false;
+            if (agent->state == Agent::State::RETURNING){
+                if (std::find(this->agents_returning.begin(), agents_returning.end(), pcFB->GetId()) == agents_returning.end()){
+                    //Export quadtree at point of return
+                    exportQuadtree("quadtree_returning_" + pcFB->GetId(), pcFB, agent);
+                    agents_returning.push_back(pcFB->GetId());
+                }
+            }
+        } else {
+            //If new agent done
+            if (std::find(this->agents_relayed_map.begin(), agents_relayed_map.end(), pcFB->GetId()) == agents_relayed_map.end()){
+                exportQuadtree("quadtree_map_relayed_" + pcFB->GetId(), pcFB, agent);
+                agents_relayed_map.push_back(pcFB->GetId());
+                m_metrics.mission_time[pcFB->GetId()] = agent->elapsed_ticks / agent->ticks_per_second;
+            }
         }
     }
     return allAgentsDone;
 }
 
-
-void CAgentVisionLoopFunctions::updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap) {
-    for (auto & it : tFBMap) {
-        /* Create a pointer to the current pi-puck */
-        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
-        auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-        std::shared_ptr<Agent> agent = cController.agentObject;
-        if (agent->state == Agent::State::FINISHED){
-            //If no value yet
-            if (m_metrics.mission_time.find(pcFB->GetId()) == m_metrics.mission_time.end()){
-                m_metrics.mission_time[pcFB->GetId()] = agent->elapsed_ticks / agent->ticks_per_second;
-            }
-        }
-
-    }
-
-}
 
 
 void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
@@ -730,7 +783,7 @@ void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const st
 
 void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     //Only update if agent is in mission or returning from mission
-    if (agent->state == Agent::State::NO_MISSION || agent->state == Agent::State::FINISHED) return;
+    if (agent->state == Agent::State::NO_MISSION || agent->state == Agent::State::FINISHED_EXPLORING || agent->state == Agent::State::MAP_RELAYED) return;
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
 
     Coordinate agentRealPosition = cController.getActualAgentPosition();

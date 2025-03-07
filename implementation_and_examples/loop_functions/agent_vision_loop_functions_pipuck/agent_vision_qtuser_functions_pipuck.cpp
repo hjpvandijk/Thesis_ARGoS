@@ -38,7 +38,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
 
     for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
-        if (m_tCell.first->GetId() != "pipuck1") continue;
+        if (m_tCell.first->GetId() != "pipuck4") continue;
         for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
             Coordinate neighbor1 = std::get<0>(neighborPair);
             Coordinate neighbor2 = std::get<1>(neighborPair);

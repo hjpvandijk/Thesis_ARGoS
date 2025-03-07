@@ -39,6 +39,12 @@ public:
     std::map<std::string, Coordinate> deployment_positions;
 
     metrics m_metrics;
+    std::string metric_path_str = "experiment";
+
+    std::vector<std::string> agents_relayed_map;
+    std::vector<std::string> agents_returning;
+
+
 
     bool experimentFinished = false;
     float longest_mission_time_s = 0;
@@ -129,6 +135,7 @@ private:
 
     void findAndPushObjectCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     void findAndPushOtherAgentCoordinates(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
+    void pushQuadTreeIfTime(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
     void pushQuadTree(CPiPuckEntity* pcFB, const std::shared_ptr<Agent>& agent);
 
     void updateCollisions(CPiPuckEntity *pcFB);
@@ -139,9 +146,10 @@ private:
     void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     bool allAgentsDone(CSpace::TMapPerType &tFBMap);
-    void updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap);
     void checkReturnToDeploymentSite(CSpace::TMapPerType &tFBMap);
     void exportMetricsAndMaps();
+    void exportQuadtree(std::string filename);
+    void exportQuadtree(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent);
     void updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     std::pair<int, int> coordinateToMapIndex(Coordinate coordinate, const std::shared_ptr<Agent> &agent);
     void observeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, const std::shared_ptr<Agent> &agent);
