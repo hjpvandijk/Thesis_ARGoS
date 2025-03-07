@@ -72,20 +72,80 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 
     agentObject->differential_drive.setActuator(m_pcWheels);
 
-    readHeatmapFromFile("controllers/pipuck_hugo/position_direction_offset.txt", this->directions_heatmap);
-    readHeatmapFromFile("controllers/pipuck_hugo/orientation_offset.txt", this->orientation_offset_heatmap);
-    readHeatmapFromFile("controllers/pipuck_hugo/error_heatmap.txt", this->error_mean_heatmap);
+    experiment_name = std::getenv("EXPERIMENT");
+    //Remove .argos
+    experiment_name = experiment_name.substr(0, experiment_name.size() - 6);
+    if (experiment_name.find("tilted") != std::string::npos) {
+        tilted = true;
+    }
+    //Remove _tilted
+    experiment_name = experiment_name.substr(0, experiment_name.size() - 7);
+
+    double width_m;
+    double height_m;
+    if(experiment_name.find("house") != std::string::npos) {
+        width_m = 9.5;
+        height_m = 12;
+        this->non_tilted_map_width = width_m;
+        this->non_tilted_map_height = height_m;
+
+    } else if(experiment_name.find("office") != std::string::npos) {
+        width_m = 20;
+        height_m = 10;
+        this->non_tilted_map_width = width_m;
+        this->non_tilted_map_height = height_m;
+    } else if (experiment_name.find("museum") != std::string::npos) {
+        width_m = 30;
+        height_m = 30;
+        this->non_tilted_map_width = width_m;
+        this->non_tilted_map_height = height_m;
+    } else {
+        assert(0); //Unknown experiment
+    }
+    int width_px = std::ceil(width_m * 51.2);
+    int height_px = std::ceil(height_m * 51.2);
+    this->directions_heatmap.resize(width_px, std::vector<double>(height_px, 0));
+    this->error_mean_heatmap.resize(width_px, std::vector<double>(height_px, 0));
+    this->orientation_offset_heatmap.resize(width_px, std::vector<double>(height_px, 0));
+    readHeatmapFromFile("controllers/pipuck_hugo/heatmaps/position_direction_offset_" + experiment_name + ".txt", this->directions_heatmap);
+    readHeatmapFromFile("controllers/pipuck_hugo/heatmaps/orientation_offset_" + experiment_name + ".txt", this->orientation_offset_heatmap);
+    readHeatmapFromFile("controllers/pipuck_hugo/heatmaps/error_heatmap_" + experiment_name + ".txt", this->error_mean_heatmap);
 
     previousAgentPosition = getActualAgentPosition();
     previousAgentOrientation = getActualAgentOrientation();
+
+
 }
 
-void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]) {
+//void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]) {
+//    std::ifstream file(filename);
+//    std::string line;
+//    int row_index = 0;
+//    assert(file.good());
+//    while (std::getline(file, line) && row_index < 512) {
+//        double value;
+//        int col_index = 0;
+//        //Remove the first character, which is a '{'
+//        line = line.substr(1);
+//        //Remove the last two characters, which are a '}' and a ','
+//        line = line.substr(0, line.size() - 2);
+//        std::stringstream ss(line);
+//        while (ss >> value && col_index < 512) {
+//            heatmap[row_index][col_index] = value;
+//            if (ss.peek() == ',') ss.ignore();
+//            col_index++;
+//        }
+//
+//        row_index++;
+//    }
+//}
+
+void PiPuckHugo::readHeatmapFromFile(const std::string& filename, std::vector<std::vector<double>> & heatmap) {
     std::ifstream file(filename);
     std::string line;
     int row_index = 0;
     assert(file.good());
-    while (std::getline(file, line) && row_index < 512) {
+    while (std::getline(file, line) && row_index < heatmap.size()) {
         double value;
         int col_index = 0;
         //Remove the first character, which is a '{'
@@ -93,7 +153,7 @@ void PiPuckHugo::readHeatmapFromFile(const std::string& filename, double (&heatm
         //Remove the last two characters, which are a '}' and a ','
         line = line.substr(0, line.size() - 2);
         std::stringstream ss(line);
-        while (ss >> value && col_index < 512) {
+        while (ss >> value && col_index < heatmap[0].size()) {
             heatmap[row_index][col_index] = value;
             if (ss.peek() == ',') ss.ignore();
             col_index++;
@@ -111,6 +171,21 @@ int mirrored_mod(int x, int m) {
         return m - (x % m);
     }
 }
+
+/****************************************/
+/****************************************/
+CVector2 RotateCoordinate(CVector2 coordinate, const CRadians& angle) {
+    return coordinate.Rotate(angle);
+}
+
+Coordinate RotateCoordinateBy20Degrees(const Coordinate& coord) {
+    CRadians angle = ToRadians(CDegrees(-20.0));
+    CVector2 vector(coord.x, coord.y);
+    CVector2 rotated_vector = RotateCoordinate(vector, angle);
+    return Coordinate{rotated_vector.GetX(), rotated_vector.GetY()};
+}
+
+
 
 /****************************************/
 /****************************************/
@@ -163,24 +238,33 @@ void PiPuckHugo::ControlStep() {
     double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
     double positionJitter = (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
 
+    auto positionx_ourcoordinatesystem = -position.GetY();
+    auto positiony_ourcoordinatesystem = position.GetX();
+    if (tilted) {
+        Coordinate rotatedPosition = RotateCoordinateBy20Degrees(Coordinate{positionx_ourcoordinatesystem, positiony_ourcoordinatesystem});
+        positionx_ourcoordinatesystem = rotatedPosition.x;
+        positiony_ourcoordinatesystem = rotatedPosition.y;
+    }
     //Get values from heatmap, and convert them into the correct range
-    int heatmap_size = sizeof(this->directions_heatmap)/sizeof(this->directions_heatmap[0]);
-    int heatmapX = std::floor((-position.GetY() + this->map_width_with_noise_room/2)/(this->map_width_with_noise_room/heatmap_size));
-    int heatmapY = std::floor((position.GetX() + this->map_height_with_noise_room/2)/(this->map_height_with_noise_room/heatmap_size));
+    int heatmap_width = this->directions_heatmap.size();
+    int heatmap_height = this->directions_heatmap[0].size();
+    int heatmapX = std::floor((positionx_ourcoordinatesystem + this->non_tilted_map_width/2)/(this->non_tilted_map_width/heatmap_width));
+    int heatmapY = std::floor((positiony_ourcoordinatesystem + this->non_tilted_map_height/2)/(this->non_tilted_map_height/heatmap_height));
+    assert(heatmapX >= 0 && heatmapX < heatmap_width);
+    assert(heatmapY >= 0 && heatmapY < heatmap_height);
 
     //Simulate position estimation offset
     //Direction, including jitter and agent-dependent noise
-    double direction_heatmap_value = this->directions_heatmap[heatmapY][heatmapX];
+    double direction_heatmap_value = this->directions_heatmap[heatmapX][heatmapY];
     CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
     //Magnitude, including jitter and agent-dependent noise
-    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapY][heatmapX] * agentObject->config.POSITION_NOISE_CM / 100.0;
+    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapX][heatmapY] * agentObject->config.POSITION_NOISE_CM / 100.0;
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
     CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
     agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
 
     //Simulate orientation (IMU) estimation offset
-    double orientation_offset_heatmap_value = this->orientation_offset_heatmap[heatmapY][heatmapX]*agentObject->config.ORIENTATION_NOISE_DEGREES;
-
+    double orientation_offset_heatmap_value = this->orientation_offset_heatmap[heatmapX][heatmapY]*agentObject->config.ORIENTATION_NOISE_DEGREES;
     CRadians zAngle, yAngle, xAngle;
     const auto orientation = positionSensorReading.Orientation;
     orientation.ToEulerAngles(zAngle, yAngle, xAngle);
