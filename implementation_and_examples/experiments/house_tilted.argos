@@ -322,63 +322,63 @@
             <body position="-2.207812213598772,-3.8311636912932983,0" orientation="0,0,0"/>
         </cylinder>
         <pipuck id="pipuck1" wifi_medium="wifi">
-            <body position="-6.631667027551607,2.1394312106428157,0" orientation="340.0,0,0"/>
+            <body position="-6.631667027551607,2.1394312106428157,0" orientation="{{PIPUCK1_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck2" wifi_medium="wifi">
-            <body position="-6.360518564582247,1.4779941998907578,0" orientation="340.0,0,0"/>
+            <body position="-6.360518564582247,1.4779941998907578,0" orientation="{{PIPUCK2_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck3" wifi_medium="wifi">
-            <body position="-6.1824506471897624,1.9076665720625647,0" orientation="340.0,0,0"/>
+            <body position="-6.1824506471897624,1.9076665720625647,0" orientation="{{PIPUCK3_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck4" wifi_medium="wifi">
-            <body position="-6.119129825911493,2.4019921940279056,0" orientation="340.0,0,0"/>
+            <body position="-6.119129825911493,2.4019921940279056,0" orientation="{{PIPUCK4_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck5" wifi_medium="wifi">
-            <body position="-5.855285715345977,1.6770864579930622,0" orientation="340.0,0,0"/>
+            <body position="-5.855285715345977,1.6770864579930622,0" orientation="{{PIPUCK5_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck6" wifi_medium="wifi">
-            <body position="-5.67845162379908,2.151917373103204,0" orientation="340.0,0,0"/>
+            <body position="-5.67845162379908,2.151917373103204,0" orientation="{{PIPUCK6_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck7" wifi_medium="wifi">
-            <body position="-5.587048616081341,2.610856456225229,0" orientation="340.0,0,0"/>
+            <body position="-5.587048616081341,2.610856456225229,0" orientation="{{PIPUCK7_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck8" wifi_medium="wifi">
-            <body position="-5.313432501420806,1.859102359596503,0" orientation="340.0,0,0"/>
+            <body position="-5.313432501420806,1.859102359596503,0" orientation="{{PIPUCK8_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck9" wifi_medium="wifi">
-            <body position="-5.164680596313378,2.3693198135499594,0" orientation="340.0,0,0"/>
+            <body position="-5.164680596313378,2.3693198135499594,0" orientation="{{PIPUCK9_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck10" wifi_medium="wifi">
-            <body position="-5.140398490080347,2.803828886434438,0" orientation="340.0,0,0"/>
+            <body position="-5.140398490080347,2.803828886434438,0" orientation="{{PIPUCK10_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck11" wifi_medium="wifi">
-            <body position="-4.820390006635892,2.0081500727129633,0" orientation="340.0,0,0"/>
+            <body position="-4.820390006635892,2.0081500727129633,0" orientation="{{PIPUCK11_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck12" wifi_medium="wifi">
-            <body position="-4.7558353595120355,2.45731715173997,0" orientation="340.0,0,0"/>
+            <body position="-4.7558353595120355,2.45731715173997,0" orientation="{{PIPUCK12_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck13" wifi_medium="wifi">
-            <body position="-4.422797106449348,3.004204271717168,0" orientation="340.0,0,0"/>
+            <body position="-4.422797106449348,3.004204271717168,0" orientation="{{PIPUCK13_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck14" wifi_medium="wifi">
-            <body position="-4.284755223273494,2.5831686804644702,0" orientation="340.0,0,0"/>
+            <body position="-4.284755223273494,2.5831686804644702,0" orientation="{{PIPUCK14_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck15" wifi_medium="wifi">
-            <body position="-4.063700606624816,2.101132015620162,0" orientation="340.0,0,0"/>
+            <body position="-4.063700606624816,2.101132015620162,0" orientation="{{PIPUCK15_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
 
@@ -435,24 +435,24 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-<!--        <qt-opengl autoplay="true">-->
-<!--&lt;!&ndash;            <user_functions&ndash;&gt;-->
-<!--&lt;!&ndash;                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"&ndash;&gt;-->
-<!--&lt;!&ndash;                    label="agent_vision_qtuser_functions_pipuck"/>&ndash;&gt;-->
-<!--            <camera>-->
-<!--                <placements>-->
-<!--                    <placement index="0" position="0,0,60" look_at="0,0,0"-->
-<!--                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="103"/>-->
-<!--                </placements>-->
-<!--            </camera>-->
-<!--&lt;!&ndash;            <frame_grabbing directory="{{FRAME_PATH}}"&ndash;&gt;-->
-<!--&lt;!&ndash;                            base_name="frame"&ndash;&gt;-->
-<!--&lt;!&ndash;                            format="png"&ndash;&gt;-->
-<!--&lt;!&ndash;                            quality="50"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_grabbing="true"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_frame_size="1800x960\"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_frame_rate="6000"/>&ndash;&gt;-->
-<!--        </qt-opengl>-->
+        <qt-opengl autoplay="false">
+            <user_functions
+                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
+                    label="agent_vision_qtuser_functions_pipuck"/>
+            <camera>
+                <placements>
+                    <placement index="0" position="0,0,60" look_at="0,0,0"
+                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="103"/>
+                </placements>
+            </camera>
+<!--            <frame_grabbing directory="{{FRAME_PATH}}"-->
+<!--                            base_name="frame"-->
+<!--                            format="png"-->
+<!--                            quality="50"-->
+<!--                            headless_grabbing="true"-->
+<!--                            headless_frame_size="1800x960\"-->
+<!--                            headless_frame_rate="6000"/>-->
+        </qt-opengl>
     </visualization>
 
 </argos-configuration>
