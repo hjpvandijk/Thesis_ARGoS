@@ -901,6 +901,7 @@ void Agent::doStep() {
         if (this->state == State::FINISHED_EXPLORING) {
             //If we are finished exploring, and any other agent is within communication range, and we have exchanged recently, we are fully done.
             bool map_relayed = false;
+            if (this->agentLocations.empty()) map_relayed = true; //Have never encountered another agent, so we assume there are no others
             for (const auto &agentLocationPair: this->agentLocations) {
                 double lastReceivedTick = std::get<2>(agentLocationPair.second);
                 //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
