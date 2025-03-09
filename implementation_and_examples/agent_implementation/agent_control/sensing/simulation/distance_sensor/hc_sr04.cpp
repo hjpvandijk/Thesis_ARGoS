@@ -7,6 +7,15 @@
 #include "hc_sr04.h"
 
 float HC_SR04::getProbability(float distance) {
+    float error = getError(distance);
+
+    float probability = 1.0 - pow(10*error, 2); //Decrease probability
+
+    return std::max(0.0f, std::min(1.0f, probability));
+
+}
+
+float HC_SR04::getError(float distance) {
     //-1,45E-03 + 3,18E-03x + 2,11E-03x^2
 
     float a = -1.45e-3;
@@ -14,8 +23,7 @@ float HC_SR04::getProbability(float distance) {
     float c = 2.11e-3;
     float error = a + b * distance + c * distance * distance;
 
-    float probability = 1.0 - pow(10*error, 2); //Decrease probability
 
-    return std::max(0.0f, std::min(1.0f, probability));
-
+    return error;
 }
+

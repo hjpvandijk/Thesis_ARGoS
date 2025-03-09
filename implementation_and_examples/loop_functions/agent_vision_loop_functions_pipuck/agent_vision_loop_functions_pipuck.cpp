@@ -525,6 +525,8 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
     }
 
+    argos::LOG << "Exporting metrics and maps to " << metric_path_str << std::endl;
+
 
     //Export metrics
     std::ofstream metricsFile;

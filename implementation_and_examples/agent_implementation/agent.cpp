@@ -365,7 +365,8 @@ void Agent::checkForObstacles() {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->distance_sensors[sensor_index].getDistance() < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
-            float sensor_probability = HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
+            //Calculate the accuracy of the sensor reading. When no noise we assume the sensor is always correct
+            float sensor_probability = this->config.DISTANCE_SENSOR_NOISE_CM == 0 ? 1.0 : HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
 
             double opposite = argos::Sin(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
             double adjacent = argos::Cos(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
