@@ -5,6 +5,7 @@
 /* 2D vector definition */
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/logging/argos_log.h>
+#include "agent_implementation/agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
 
 /****************************************/
 /****************************************/
@@ -206,6 +207,8 @@ void PiPuckHugo::ControlStep() {
 
     for(int i = 0; i < num_sensors; i++){
         auto sensorReading = proxReadings[i];
+        //Add real inaccuracy to the sensor readings if we are allowing noise.
+        sensorReading += agentObject->config.DISTANCE_SENSOR_NOISE_CM == 0 ? 0 : HC_SR04::getError(sensorReading);
         double sensorNoiseM = 0.0;
         double sensorNoiseRange = agentObject->config.DISTANCE_SENSOR_NOISE_CM * 100;
         // Add noise to the sensor reading, if it is not the maximum range (nothing hit)

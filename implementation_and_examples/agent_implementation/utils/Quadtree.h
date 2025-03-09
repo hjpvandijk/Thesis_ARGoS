@@ -1426,6 +1426,7 @@ namespace quadtree {
             if (PConfidence <= P_OCCUPIED_THRESHOLD) pheromone = timeProbability * (PConfidence - P_OCCUPIED_THRESHOLD) + P_OCCUPIED_THRESHOLD;
             //But if a cell is free, it can become ambiguous again, as new obstacles can appear.
 //            if (PConfidence >= P_FREE) pheromone = timeProbability * (PConfidence - P_FREE) + P_FREE;
+            assert(pheromone >= 0.0 && pheromone <= 1.0 && "Pheromone should be between 0 and 1");
             return pheromone;
         }
 
