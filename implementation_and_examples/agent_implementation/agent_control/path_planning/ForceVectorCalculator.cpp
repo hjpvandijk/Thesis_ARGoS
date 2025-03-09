@@ -761,9 +761,9 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
         argos::CRadians Bq = argos::ASin(
                 std::min(agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
         argos::CRadians Eta_q = OC.Angle();
-        if (agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS > OC.Length())
-            argos::LOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << agent->config.AGENT_SAFETY_RADIUS
-                           << " + " << agent->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+//        if (agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS > OC.Length())
+//            argos::LOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << agent->config.AGENT_SAFETY_RADIUS
+//                           << " + " << agent->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
 
         argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
         argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());

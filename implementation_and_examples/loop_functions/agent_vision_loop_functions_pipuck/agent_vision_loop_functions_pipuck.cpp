@@ -105,6 +105,8 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
      * Go through all the robots in the environment
      * and create an entry in the waypoint map for each of them
      */
+    start = std::chrono::system_clock::now();
+
     /* Get the map of all pi-pucks from the space */
     CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
     //Get ticks per second
@@ -116,9 +118,10 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
         //Set orientation
-//        auto degrees20 = argos::CDegrees(20);
-//        auto degreesQuaternion = argos::CQuaternion(ToRadians(degrees20), argos::CVector3(0, 0, 1));
-//        pcFB->GetEmbodiedEntity().GetOriginAnchor().Orientation = degreesQuaternion;
+        auto degrees20 = argos::CDegrees(50);
+        auto degreesQuaternion = argos::CQuaternion(ToRadians(degrees20), argos::CVector3(0, 0, 1));
+        pcFB->GetEmbodiedEntity().GetOriginAnchor().Orientation = degreesQuaternion;
+
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
@@ -206,13 +209,13 @@ void CAgentVisionLoopFunctions::Reset() {
 }
 
 void CAgentVisionLoopFunctions::PreStep() {
-    start = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = start-end;
-
-
-    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
-               << std::endl;
+//    start = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds = start-end;
+//
+//
+//    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
+//               << std::endl;
 
 }
 
@@ -221,19 +224,19 @@ void CAgentVisionLoopFunctions::PreStep() {
  * Get the coordinates of all agents and objects in the environment
  */
 void CAgentVisionLoopFunctions::PostStep() {
-    auto temp_end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
-
-    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
-               << std::endl;
-
-    end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = end-start;
-
-    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
-              << std::endl;
+//    auto temp_end = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
+//
+//    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
+//               << std::endl;
+//
+//    end = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds = end-start;
+//
+//    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
+//              << std::endl;
 
 
     /* Get the map of all pi-pucks from the space */
@@ -930,6 +933,12 @@ bool CAgentVisionLoopFunctions::IsExperimentFinished() {
 
 void CAgentVisionLoopFunctions::PostExperiment() {
     exportMetricsAndMaps();
+    end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = end-start;
+
+    argos::LOG << "Experiment time: " << (elapsed_seconds.count()) << "s : " << elapsed_seconds.count()/60.0 << "min" << std::endl;
+    argos::LOG.Flush();
     exit(0);
 }
 
