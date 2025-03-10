@@ -948,11 +948,11 @@ void Agent::doStep() {
                     this->differential_drive.turnLeft();
                 }
             }
-
-            //Check if the mission has ended, and if so, we will return to the deployment location
-            checkMissionEnd();
         }
+
     }
+    //Check if the mission has ended, and if so, we will return to the deployment location
+    checkMissionEnd();
     this->elapsed_ticks++;
 }
 
