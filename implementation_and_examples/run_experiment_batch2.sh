@@ -7,6 +7,7 @@ cd ..
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
 CONFIG_DIR="./agent_implementation/configs/noise"
+OTHER_CONFIG_DIRS="./agent_implementation/configs/comm_range_and_loss"
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
 
@@ -61,6 +62,9 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 
       for CONFIG_FILE in "${CONFIGS[@]}"; do
           CONFIG_PATH="$CONFIG_DIR/$CONFIG_FILE"
+
+
+
           #if 'house' in experiment name, replace '{END_TIME} with 400 in config file name
           #if 'office', replace with 600
           #if 'museum', replace with 1000
@@ -77,6 +81,16 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
             echo "Error: Experiment '$EXPERIMENT' not recognized!" >&2
             continue
           fi
+
+          #for all other config directories, check if the config already exists there. If so skip this experiment
+          for OTHER_CONFIG_DIR in $OTHER_CONFIG_DIRS; do
+            if [ -f "$OTHER_CONFIG_DIR/$CONFIG_FILE" ]; then
+              echo "Config file already exists in $OTHER_CONFIG_DIR: $CONFIG_FILE"
+              #add all experiments that we would run to already_exists
+              n_experiments_already_exist=$((n_experiments_already_exist+${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
+              continue 2 #skip this config file
+            fi
+          done
 
 
           sed "s|{{CONFIG_PATH}}|${CONFIG_PATH}|g" "$EXP_PATH" > "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
