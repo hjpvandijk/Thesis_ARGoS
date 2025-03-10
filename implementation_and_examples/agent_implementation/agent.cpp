@@ -1181,12 +1181,14 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
-    if (this->state == State::RETURNING) {
-        //If we have are returning to the deployment location, but we are taking over double the time at which we return, we have failed (finished).
-        if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S * 2.0f) {
-            this->state = State::MAP_RELAYED;
-        }
-    } else if (this->state == State::NO_MISSION || this->state == State::FINISHED_EXPLORING || this->state == State::MAP_RELAYED) return;
+    //If we are taking over double the time at which we return, we have failed (finished).
+    if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S * 2.0f) {
+        this->state = State::MAP_RELAYED;
+        return;
+    }
+    if (this->state == State::NO_MISSION  || this->state == State::MAP_RELAYED){
+      return;
+    }
     else {
         auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
