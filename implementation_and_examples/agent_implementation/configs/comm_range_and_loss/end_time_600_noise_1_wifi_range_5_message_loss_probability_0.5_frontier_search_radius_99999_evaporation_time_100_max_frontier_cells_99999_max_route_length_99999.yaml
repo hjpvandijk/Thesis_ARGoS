@@ -4,7 +4,7 @@ battery:
 communication:
   agent_info_relevant: 10
   max_jitter: 10
-  message_loss_probability: 0.25
+  message_loss_probability: 0.5
   quadtree_exchange_interval: 15
   time_sync_interval: 10
   wifi_range: 5

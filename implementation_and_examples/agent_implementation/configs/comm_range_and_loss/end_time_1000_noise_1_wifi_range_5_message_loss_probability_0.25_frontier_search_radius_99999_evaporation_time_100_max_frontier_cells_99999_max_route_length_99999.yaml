@@ -58,7 +58,7 @@ forces:
   virtual_wall_avoidance_weight: 0
 mission:
   end_battery_level: 0
-  end_time: 600
+  end_time: 1000
 motor:
   no_load_current: 0.16
   no_load_rpm: 250

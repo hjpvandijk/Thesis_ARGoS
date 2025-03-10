@@ -4,10 +4,10 @@ battery:
 communication:
   agent_info_relevant: 10
   max_jitter: 10
-  message_loss_probability: 0.25
+  message_loss_probability: 0
   quadtree_exchange_interval: 15
   time_sync_interval: 10
-  wifi_range: 5
+  wifi_range: 15
   wifi_speed: 10
 confidence:
   alpha_receive: 0.6
@@ -58,7 +58,7 @@ forces:
   virtual_wall_avoidance_weight: 0
 mission:
   end_battery_level: 0
-  end_time: 600
+  end_time: 1000
 motor:
   no_load_current: 0.16
   no_load_rpm: 250
@@ -76,9 +76,9 @@ quadtree:
   merge_max_visited_time_difference: 5
   resolution: 0.25
 sensors:
-  distance_sensor_noise: 10
+  distance_sensor_noise: 0
   distance_sensor_range: 2
-  orientation_jitter: 5
-  orientation_noise: 8
-  position_jitter: 10
-  position_noise: 103.3
+  orientation_jitter: 0
+  orientation_noise: 0
+  position_jitter: 0
+  position_noise: 0.0

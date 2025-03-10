@@ -4,10 +4,10 @@ battery:
 communication:
   agent_info_relevant: 10
   max_jitter: 10
-  message_loss_probability: 0.25
+  message_loss_probability: 0
   quadtree_exchange_interval: 15
   time_sync_interval: 10
-  wifi_range: 5
+  wifi_range: 99999
   wifi_speed: 10
 confidence:
   alpha_receive: 0.6
@@ -58,7 +58,7 @@ forces:
   virtual_wall_avoidance_weight: 0
 mission:
   end_battery_level: 0
-  end_time: 600
+  end_time: 1000
 motor:
   no_load_current: 0.16
   no_load_rpm: 250
