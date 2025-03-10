@@ -7,7 +7,7 @@ cd ..
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
 CONFIG_DIR="./agent_implementation/configs/noise"
-OTHER_CONFIG_DIRS=("./agent_implementation/configs/comm_range_and_loss")
+OTHER_CONFIG_DIRS=() #("./agent_implementation/configs/comm_range_and_loss")
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
 
@@ -16,7 +16,8 @@ mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
 EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
-#EXPERIMENTS=("house.argos")
+#EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos")
+#EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
 #CONFIGS=("config_bigger_safety_n_1.yaml" "config_bigger_safety_range.yaml" "config_bigger_safety_n_3.yaml")
 #CONFIGS=("n_3_m_2_5_cellratio0_75_noise.yaml" "n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5.yaml" "n_3_m_2_5_cellratio0_75_noise_object_safety_0_3.yaml")
@@ -29,7 +30,7 @@ CONFIGS=(
         )
 
 
-PARALLEL_JOBS=5
+PARALLEL_JOBS=6
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -168,7 +169,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
   #              LOGFILE="$LOG_DIR/${EXPERIMENT%.argos}_${CONFIG_FILE%.yaml}_spawn_time_${AVERAGE_INTER_SPAWN_TIME}_${REMAINING_AGENTS}_agents_$TIMESTAMP.log"
                 LOGFILE="$METRIC_PATH/${EXPERIMENT%.argos}_S${SEED}_${CONFIG_FILE%.yaml}_spawn_time_${AVERAGE_INTER_SPAWN_TIME}_${REMAINING_AGENTS}_agents_$TIMESTAMP.log"
-#                echo "Running ARGoS3 with configuration: S${SEED}, $EXP_PATH and $CONFIG_PATH with inter_spawn_time $AVERAGE_INTER_SPAWN_TIME with ${REMAINING_AGENTS} agents"
+                echo "Running ARGoS3 with configuration: S${SEED}, $EXP_PATH and $CONFIG_PATH with inter_spawn_time $AVERAGE_INTER_SPAWN_TIME with ${REMAINING_AGENTS} agents"
 
 
 
@@ -184,16 +185,16 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
               done
         done
 
-        #remove related temp files
-        rm "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
-        for agent_config in "${AGENT_CONFIGS[@]}"; do
-          remove_agents=$((N_AGENTS-agent_config))
-          REMAINING_AGENTS=$((N_AGENTS-remove_agents))
-          for AVERAGE_INTER_SPAWN_TIME in "${AVERAGE_INTER_SPAWN_TIMES[@]}"
-          do
-            rm "temp_${CONFIG_FILE%.yaml}_${REMAINING_AGENTS}_${AVERAGE_INTER_SPAWN_TIME}_S${SEED}_${EXPERIMENT}"
-          done
-        done
+#        #remove related temp files
+#        rm "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
+#        for agent_config in "${AGENT_CONFIGS[@]}"; do
+#          remove_agents=$((N_AGENTS-agent_config))
+#          REMAINING_AGENTS=$((N_AGENTS-remove_agents))
+#          for AVERAGE_INTER_SPAWN_TIME in "${AVERAGE_INTER_SPAWN_TIMES[@]}"
+#          do
+#            rm "temp_${CONFIG_FILE%.yaml}_${REMAINING_AGENTS}_${AVERAGE_INTER_SPAWN_TIME}_S${SEED}_${EXPERIMENT}"
+#          done
+#        done
       done
 
   done
