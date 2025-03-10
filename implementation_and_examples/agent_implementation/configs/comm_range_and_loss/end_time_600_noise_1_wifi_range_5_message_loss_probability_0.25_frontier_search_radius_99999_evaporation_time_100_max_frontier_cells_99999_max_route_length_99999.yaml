@@ -28,7 +28,7 @@ control:
     target_feasibility_check_interval: 10
   object_safety_radius: 0.2
   path_planning:
-    max_route_length: 99999
+    max_route_length: -1
   separate_frontiers:
     distance_threshold: 1.0
   turn_speed_ratio: 0.1
