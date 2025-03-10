@@ -320,7 +320,6 @@ double calculateRegionVisitProbability(Agent* agent, std::map<Coordinate, std::t
 //        argos::LOG << "[" << agent->id << "] " << "Probability (infinity): 1" << std::endl;
         return 1;
     }
-    argos::LOG << "[" << agent->id << "] " << "Probability: " << numerator << " / " << denominator << " = " << numerator/denominator << std::endl;
     return numerator/denominator; //Probability of visiting this region, based on the summed certainties
 
 }

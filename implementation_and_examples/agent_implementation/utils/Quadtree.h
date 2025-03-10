@@ -895,7 +895,7 @@ namespace quadtree {
          */
         Box add(Cell *cell, const Box &box, const QuadNode &value, double currentTimeS, bool ownObservation) {
             assert(cell != nullptr);
-            if (!box.contains(value.coordinate)) { //Temporary fix. TODO: If value added outside box, expand box.
+            if (!box.contains(value.coordinate)) { //TODO: If value added outside box, expand box.
                 return Box();
             }
             assert(box.contains(value.coordinate));

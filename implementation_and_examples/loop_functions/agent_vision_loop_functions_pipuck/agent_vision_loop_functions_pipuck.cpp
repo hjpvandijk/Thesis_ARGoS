@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <cstdlib>  // for getenv()
 
-#define VISUALS
+//#define VISUALS
 
 /****************************************/
 /****************************************/
