@@ -264,6 +264,36 @@
         <box id="box_52" size="4.505,1.35,0.5" movable="false">
             <body position="-0.7265623437735661,-6.753271034144141,0" orientation="290.0,0,0"/>
         </box>
+        <box id="spawn_box_0" size="0.4851251615004529,1.0209781778076288,0.5" movable="false">
+            <body position="0.8446317333757065,-4.905105569744054,0" orientation="14.349346422784947,0,0"/>
+        </box>
+        <box id="spawn_box_1" size="0.39953346128497746,0.3254006574469708,0.5" movable="false">
+            <body position="-0.6372285133468846,-4.7739957443947585,0" orientation="356.15019831288095,0,0"/>
+        </box>
+        <box id="spawn_box_2" size="2.288271519814948,0.9254615070601003,0.5" movable="false">
+            <body position="4.28283121724293,-3.3328013514944392,0" orientation="184.87983235280348,0,0"/>
+        </box>
+        <box id="spawn_box_3" size="2.35643909692041,1.013421653896348,0.5" movable="false">
+            <body position="-2.768358868950434,7.551597707335654,0" orientation="129.8615343357513,0,0"/>
+        </box>
+        <box id="spawn_box_4" size="1.2151642909247256,0.5549500674346587,0.5" movable="false">
+            <body position="-0.217502604436185,1.3299550779664686,0" orientation="212.35812955797581,0,0"/>
+        </box>
+        <box id="spawn_box_5" size="0.17165352244118318,0.21620482270017352,0.5" movable="false">
+            <body position="-2.3408753567924276,2.3744642982215622,0" orientation="212.24539685474258,0,0"/>
+        </box>
+        <box id="spawn_box_6" size="1.511327543035872,0.17135359264356814,0.5" movable="false">
+            <body position="-7.143741602508681,4.79808883969971,0" orientation="347.3859513905681,0,0"/>
+        </box>
+        <box id="spawn_box_7" size="2.380011103232659,0.6050625521716165,0.5" movable="false">
+            <body position="0.286450544908111,-8.131557629384021,0" orientation="194.77262466625436,0,0"/>
+        </box>
+        <box id="spawn_box_8" size="1.6341882849623806,0.9819518250622753,0.5" movable="false">
+            <body position="-3.5091840375050203,0.88317363102429,0" orientation="120.07228184410877,0,0"/>
+        </box>
+        <box id="spawn_box_9" size="0.23264276826777106,0.39286233928370384,0.5" movable="false">
+            <body position="-0.14871581645338397,-5.266314172017315,0" orientation="325.04911769310274,0,0"/>
+        </box>
         <cylinder id="circle_37" radius="0.27" height="0.5" temperature="0" movable="false">
             <body position="-5.605696964935553,2.3175011407359274,0" orientation="0,0,0"/>
         </cylinder>
@@ -370,7 +400,7 @@
             <body position="1.9708000159565808,7.208796955602615,0" orientation="0,0,0"/>
         </cylinder>
         <pipuck id="pipuck1" wifi_medium="wifi">
-            <body position="-7.512010169463007,7.481958514579211,0" orientation="PIPUCK15_ORIENTATION,0,0"/>
+            <body position="-7.512010169463007,7.481958514579211,0" orientation="PIPUCK1_ORIENTATION,0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck2" wifi_medium="wifi">
