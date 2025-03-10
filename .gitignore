@@ -2,3 +2,4 @@ implementation_and_examples/build
 cmake-build-debug
 implementation_and_examples/cmake-build-debug
 .idea
+implementation_and_examples/experiment_results
