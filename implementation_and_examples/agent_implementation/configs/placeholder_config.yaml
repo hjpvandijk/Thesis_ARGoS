@@ -70,7 +70,7 @@ confidence:
   p_min: 0.05 # The minimum confidence value (> 0), larger results in faster change of occupancy estimation
   p_at_max_sensor_range: 0.5 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
 quadtree:
-  resolution: 0.25 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size
+  resolution: 0.28 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size
   evaporation_time: -1 # The time in seconds it takes for a pheromone value to evaporate
   evaporated_pheromone_factor: 0.05 # If a cell has ever been explored, the pheromone value will never be lower than this factor of the maximum confidence value (from 0.5)
   merge_max_visited_time_difference: 5 # The maximum time difference in seconds between two quadtree nodes to merge them

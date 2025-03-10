@@ -74,7 +74,7 @@ quadtree:
   evaporation_time: 100
   merge_max_confidence_diff: 0.05
   merge_max_visited_time_difference: 5
-  resolution: 0.25
+  resolution: 0.28
 sensors:
   distance_sensor_noise: 10
   distance_sensor_range: 2
