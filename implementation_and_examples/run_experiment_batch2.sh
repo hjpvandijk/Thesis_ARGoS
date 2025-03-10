@@ -23,9 +23,9 @@ EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.ar
 #CONFIGS=("p_sensor_1.yaml")
 CONFIGS=(
         "end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml"
-        "end_time_{END_TIME}_noise_0.5_wifi_range_15_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml"
+        "end_time_{END_TIME}_noise_0_5_wifi_range_15_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml"
         "end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml"
-        "end_time_{END_TIME}_noise_1.5_wifi_range_15_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml"
+        "end_time_{END_TIME}_noise_1_5_wifi_range_15_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml"
         )
 
 
