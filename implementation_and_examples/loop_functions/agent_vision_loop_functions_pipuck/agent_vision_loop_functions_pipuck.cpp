@@ -154,12 +154,14 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     const char* average_inter_spawn_time_s = std::getenv("AVERAGE_INTER_SPAWN_TIME");
     float average_inter_spawn_time = std::stof(average_inter_spawn_time_s);
     this->spawn_rate = average_inter_spawn_time_s ? 1.0f /  average_inter_spawn_time: 10.0f;
+    argos::LOG << "Average inter spawn time: " << average_inter_spawn_time << std::endl;
 
     CSpace::TMapPerType &boxMap = GetSpace().GetEntitiesByType("box");
     double prev_spawn_time = 0.0f;
     for (auto &it: boxMap) {
         CBoxEntity *box = any_cast<CBoxEntity *>(it.second);
         if (box->GetId().find("spawn_box") != std::string::npos) {
+            argos::LOG << "Found spawn box: " << box->GetId() << std::endl;
             if (average_inter_spawn_time > 0) { //If the spawn time is 0, don't spawn any boxes
                 auto copybox = new CBoxEntity(box->GetId(), box->GetEmbodiedEntity().GetOriginAnchor().Position,
                                               box->GetEmbodiedEntity().GetOriginAnchor().Orientation, false,
@@ -168,6 +170,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
                 prev_spawn_time = spawn_time_ticks;
                 this->spawn_boxes.push_back(*copybox);
                 this->spawn_times.push_back(spawn_time_ticks);
+                argos::LOG << "Spawn time: " << spawn_time_ticks << std::endl;
                 delete copybox;
             }
             RemoveEntity(*box);
@@ -371,7 +374,8 @@ void CAgentVisionLoopFunctions::PostStep() {
     if (!this->spawn_boxes.empty()) {
         auto spawn_time_front = this->spawn_times.front();
         if (loop_function_steps >= spawn_time_front) {
-//            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
+            argos::LOG << "Spawn box at: " << loop_function_steps << std::endl;
+            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
             auto box = this->spawn_boxes.front();
             auto newBox = new CBoxEntity(box.GetId(), box.GetEmbodiedEntity().GetOriginAnchor().Position, box.GetEmbodiedEntity().GetOriginAnchor().Orientation, false, box.GetSize(), 1.0f);
 //            argos::LOG << "Spawning box " << box.GetId() << " at " << box.GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
