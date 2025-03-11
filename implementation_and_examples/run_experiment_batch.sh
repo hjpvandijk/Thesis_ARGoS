@@ -16,8 +16,8 @@ ARGOSEXEC="argos3"
 mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
-#EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
-EXPERIMENTS=("house.argos" "house_tilted.argos")
+EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
+#EXPERIMENTS=("house.argos" "house_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
 #CONFIGS=("config_bigger_safety_n_1.yaml" "config_bigger_safety_range.yaml" "config_bigger_safety_n_3.yaml")
 #CONFIGS=("n_3_m_2_5_cellratio0_75_noise.yaml" "n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5.yaml" "n_3_m_2_5_cellratio0_75_noise_object_safety_0_3.yaml")
@@ -85,6 +85,9 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
   for EXPERIMENT in "${EXPERIMENTS[@]}"; do
       EXP_PATH="$EXPERIMENT_DIR/$EXPERIMENT"
       export EXPERIMENT
+      
+      readarray -t completed_experiments_this_map < <(tr -d '\r' < "../completed_experiments_${EXPERIMENT%.argos}.csv")
+      echo "completed experiments size: ${#completed_experiments_this_map[@]}"
 
 
       for CONFIG_FILE in "${CONFIGS[@]}"; do
@@ -160,7 +163,8 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
   #            for AVERAGE_INTER_SPAWN_TIME in {120..20..0} # for loop from 300 to 30 with step 30
               for AVERAGE_INTER_SPAWN_TIME in "${AVERAGE_INTER_SPAWN_TIMES[@]}"
               do
-#                echo "Number of running jobs: $(pgrep -c -u $USER $ARGOSEXEC)"
+                echo "Jobs started: $n_experiments_started, jobs already exist: $n_experiments_already_exist : $((n_experiments_started+n_experiments_already_exist))/$n_total_experiments_to_run"
+
                 #Wait if we have more than PARALLEL_JOBS jobs running
                 while [ $(pgrep -c -u $USER $ARGOSEXEC) -ge $PARALLEL_JOBS ]; do
                     sleep 1
@@ -168,15 +172,25 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 export AVERAGE_INTER_SPAWN_TIME
 
                 METRIC_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/spawn_time_${AVERAGE_INTER_SPAWN_TIME}/${REMAINING_AGENTS}_agents/S${SEED}"
+
+                #if metric path in completed_experiments
+                for completed_experiment in "${completed_experiments_this_map[@]}"; do
+                  if [[ "$completed_experiment" == "$METRIC_PATH" ]]; then
+                    echo "Experiment already exists in completed_experiments: $METRIC_PATH"
+                    n_experiments_already_exist=$((n_experiments_already_exist+1))
+                    continue 2
+                  fi
+                done
+
                 #if it already exists, skip this experiment
                 if [ -d "$METRIC_PATH" ]; then
-                  #if "certainty.csv" exists, skip this experiment
+#                  if "certainty.csv" exists, skip this experiment
                   if [ -f "$METRIC_PATH/certainty.csv" ]; then
                     echo "Experiment already exists: $METRIC_PATH"
                     n_experiments_already_exist=$((n_experiments_already_exist+1))
                     continue
                   else
-                    #if certainty.csv doesn't exist, empty the mectric path
+#                    if certainty.csv doesn't exist, empty the mectric path
                     rm -rf "$METRIC_PATH"/*
                   fi
                 fi
@@ -208,7 +222,6 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 pids[$PID]="$SEED|$EXPERIMENT|$CONFIG_FILE|$AVERAGE_INTER_SPAWN_TIME|$REMAINING_AGENTS|$LOGFILE"
                 n_experiments_started=$((n_experiments_started+1))
                 total_jobs_started_and_exist=$((n_experiments_started+n_experiments_already_exist))
-                echo "Jobs started: $n_experiments_started, jobs already exist: $n_experiments_already_exist : $total_jobs_started_and_exist/$n_total_experiments_to_run"
 
               done
         done
