@@ -49,7 +49,9 @@ certainty_files = check_certainty_csv(root_directory)
 
 # export the list of certainty files to a csv file
 for outer_dir, files in certainty_files.items():
-    with open('completed_experiments_' + outer_dir +'.csv', 'w', newline='\n') as csvfile:
+    file_path = f'completed_experiments_{outer_dir}.csv'
+
+    with open(file_path, 'a', newline='\n') as csvfile:
         writer = csv.writer(csvfile)
         for file in files:
             writer.writerow([file])
