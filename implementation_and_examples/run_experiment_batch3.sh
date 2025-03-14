@@ -64,7 +64,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=4
+PARALLEL_JOBS=7
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -75,7 +75,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=1
+N_REPEATED_EXPERIMENTS=2
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -85,7 +85,8 @@ n_failed_experiments=0
 
 for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
-  SEED=$((r+3))
+SEED=$r
+
 #  echo "Seed: $SEED"
   export SEED
 
@@ -195,8 +196,9 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 
                 #if metric path in completed_experiments from zip
                 for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
-                  if [[ "$completed_experiment" == "$METRIC_PATH" ]]; then
-                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH"
+                  METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
+                  if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
+                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
                     n_experiments_already_exist=$((n_experiments_already_exist+1))
                     continue 2
                   fi
