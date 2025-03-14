@@ -30,7 +30,7 @@ CONFIGS=(
         )
 
 
-PARALLEL_JOBS=6
+PARALLEL_JOBS=7
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -41,7 +41,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=3
+N_REPEATED_EXPERIMENTS=2
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -51,7 +51,7 @@ n_failed_experiments=0
 
 for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
-  SEED=$r
+  SEED=$((r+3))
 #  echo "Seed: $SEED"
   export SEED
 
@@ -145,13 +145,18 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 METRIC_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/spawn_time_${AVERAGE_INTER_SPAWN_TIME}/${REMAINING_AGENTS}_agents/S${SEED}"
                 #if it already exists, skip this experiment
                 if [ -d "$METRIC_PATH" ]; then
-                  #if "certainty.csv" exists, skip this experiment
+#                  #if "certainty.csv" exists, skip this experiment
                   if [ -f "$METRIC_PATH/certainty.csv" ]; then
                     echo "Experiment already exists: $METRIC_PATH"
                     n_experiments_already_exist=$((n_experiments_already_exist+1))
                     continue
+                  else
+#                    if certainty.csv doesn't exist, empty the mectric path
+                    rm -rf "$METRIC_PATH"/*
                   fi
                 fi
+
+
 
                 mkdir -p "$METRIC_PATH"
                 export METRIC_PATH

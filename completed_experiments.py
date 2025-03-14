@@ -2,7 +2,6 @@ import os
 import csv
 import pandas as pd
 
-
 def check_certainty_csv(root_dir):
     certainty_files = {}
     non_completed_experiments = 0
