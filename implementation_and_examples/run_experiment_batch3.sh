@@ -64,7 +64,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=3
+PARALLEL_JOBS=4
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -75,7 +75,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=5
+N_REPEATED_EXPERIMENTS=1
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -85,7 +85,7 @@ n_failed_experiments=0
 
 for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
-  SEED=$r
+  SEED=$((r+3))
 #  echo "Seed: $SEED"
   export SEED
 
@@ -94,8 +94,10 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
       EXP_PATH="$EXPERIMENT_DIR/$EXPERIMENT"
       export EXPERIMENT
 
-      readarray -t completed_experiments_this_map < <(tr -d '\r' < "../completed_experiments_${EXPERIMENT%.argos}.csv")
-      echo "completed experiments size: ${#completed_experiments_this_map[@]}"
+      #readarray -t completed_experiments_this_map < <(tr -d '\r' < "../completed_experiments_${EXPERIMENT%.argos}.csv")
+      #echo "completed experiments size: ${#completed_experiments_this_map[@]}"
+      
+      readarray -t completed_experiments_this_map_fromzip < <(tr -d '\r' < "../completed_in_zip/completed_experiments_unique_${EXPERIMENT%.argos}.csv")
 
 
       for CONFIG_FILE in "${CONFIGS[@]}"; do
@@ -183,9 +185,18 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 METRIC_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/spawn_time_${AVERAGE_INTER_SPAWN_TIME}/${REMAINING_AGENTS}_agents/S${SEED}"
 
                 #if metric path in completed_experiments
-                for completed_experiment in "${completed_experiments_this_map[@]}"; do
+                #for completed_experiment in "${completed_experiments_this_map[@]}"; do
+                #  if [[ "$completed_experiment" == "$METRIC_PATH" ]]; then
+                #    echo "Experiment already exists in completed_experiments: $METRIC_PATH"
+                #    n_experiments_already_exist=$((n_experiments_already_exist+1))
+                #    continue 2
+                #  fi
+                #done
+                
+                #if metric path in completed_experiments from zip
+                for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
                   if [[ "$completed_experiment" == "$METRIC_PATH" ]]; then
-                    echo "Experiment already exists in completed_experiments: $METRIC_PATH"
+                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH"
                     n_experiments_already_exist=$((n_experiments_already_exist+1))
                     continue 2
                   fi
