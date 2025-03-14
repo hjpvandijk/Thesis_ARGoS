@@ -16,7 +16,7 @@ mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
 #EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
-EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos")
+EXPERIMENTS=("museum.argos" "museum_tilted.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
 #CONFIGS=("config_bigger_safety_n_1.yaml" "config_bigger_safety_range.yaml" "config_bigger_safety_n_3.yaml")
@@ -64,7 +64,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=7
+PARALLEL_JOBS=3
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -75,7 +75,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=3
+N_REPEATED_EXPERIMENTS=5
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
