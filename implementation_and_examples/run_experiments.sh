@@ -28,8 +28,8 @@ PARALLEL_JOBS=5
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
-MAX_AGENTS=8
-MIN_AGENTS=8
+MAX_AGENTS=15
+MIN_AGENTS=15
 
 N_REPEATED_EXPERIMENTS=1
 
@@ -49,7 +49,11 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
           CONFIG_PATH="$CONFIG_DIR/$CONFIG_FILE"
   #        export CONFIG_FILE
 
-          sed "s|{{CONFIG_PATH}}|${CONFIG_PATH}|g" "$EXP_PATH" > "temp_${CONFIG_FILE%.yaml}_${EXPERIMENT}_S${SEED}"
+          sed "s|{{CONFIG_PATH}}|${CONFIG_PATH}|g" "$EXP_PATH" > "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
+
+          #Copy the config file into the metric path
+          cp "$CONFIG_PATH" "experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
+
 
           for i in $(seq 1 $((N_AGENTS))); do
             ORIENTATION=$(shuf -i 0-360 -n 1 --random-source=<(openssl enc -aes-256-ctr -pbkdf2 -pass pass:$((SEED * i)) -nosalt < /dev/zero 2>/dev/null))
@@ -61,7 +65,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 
             AGENT_ID="PIPUCK$i"
 
-            sed -i "s/{{${AGENT_ID}_ORIENTATION}}/${ORIENTATION}/" "temp_${CONFIG_FILE%.yaml}_${EXPERIMENT}_S${SEED}"
+            sed -i "s/{{${AGENT_ID}_ORIENTATION}}/${ORIENTATION}/" "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
 #            echo "Agent $AGENT_ID orientation: $ORIENTATION"
           done
 
@@ -74,7 +78,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
               # Remove agents from the experiment file
               if [ $remove_agents -ne 0 ]; then
                   for i in $(seq 1 $((remove_agents))); do
-                    sed -i "/<pipuck id=\"pipuck$((N_AGENTS-i+1))\"/,/<\/pipuck>/d" "temp_${CONFIG_FILE%.yaml}_${EXPERIMENT}_S${SEED}"
+                    sed -i "/<pipuck id=\"pipuck$((N_AGENTS-i+1))\"/,/<\/pipuck>/d" "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
                   done
               fi
 
@@ -99,11 +103,13 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 export METRIC_PATH
 
                 FRAME_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/spawn_time_${AVERAGE_INTER_SPAWN_TIME}/${REMAINING_AGENTS}_agents/S${SEED}/frames"
-                sed "s|{{FRAME_PATH}}|${FRAME_PATH}|g" "temp_${CONFIG_FILE%.yaml}_${EXPERIMENT}_S${SEED}" > "temp_${CONFIG_FILE%.yaml}_${REMAINING_AGENTS}_${AVERAGE_INTER_SPAWN_TIME}_${EXPERIMENT}_S${SEED}"
+                sed "s|{{FRAME_PATH}}|${FRAME_PATH}|g" "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}" > "temp_${CONFIG_FILE%.yaml}_${REMAINING_AGENTS}_${AVERAGE_INTER_SPAWN_TIME}_S${SEED}_${EXPERIMENT}"
 
                 mkdir -p "$FRAME_PATH"
                 # empty the directory
                 rm -rf "$FRAME_PATH"/*
+
+
 
                 # Generate timestamp for log file
                 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -114,7 +120,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 
 
                 # Run ARGoS3 and log output, and save exit code
-                "$ARGOSEXEC" -n -c "temp_${CONFIG_FILE%.yaml}_${REMAINING_AGENTS}_${AVERAGE_INTER_SPAWN_TIME}_${EXPERIMENT}_S${SEED}" > "$LOGFILE" 2>&1 &
+                "$ARGOSEXEC" -n -c "temp_${CONFIG_FILE%.yaml}_${REMAINING_AGENTS}_${AVERAGE_INTER_SPAWN_TIME}_S${SEED}_${EXPERIMENT}" > "$LOGFILE" 2>&1 &
                 PID=$!
                 echo "ARGoS3 process $PID started"
                 pids[$PID]="$SEED|$EXPERIMENT|$CONFIG_FILE|$AVERAGE_INTER_SPAWN_TIME|$REMAINING_AGENTS|$LOGFILE"

@@ -6,7 +6,7 @@ cd ..
 
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
-CONFIG_DIR="./agent_implementation/configs/fsr_mfc_mrl"
+CONFIG_DIR="./agent_implementation/configs/dynam_and_evap"
 OTHER_CONFIG_DIRS=("./agent_implementation/configs/comm_range_and_loss")
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
@@ -38,7 +38,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=5
+PARALLEL_JOBS=7
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -62,7 +62,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #if r is 1, seed is 3, if r is 2, seed is 5
 # SEED=$r #1
 SEED=$((r+1)) #2,3
-SEED=$((r+3)) #4,5
+# SEED=$((r+3)) #4,5
 #  echo "Seed: $SEED"
   export SEED
 
