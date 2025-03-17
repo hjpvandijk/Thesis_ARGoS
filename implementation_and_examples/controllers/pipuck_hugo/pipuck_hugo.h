@@ -95,8 +95,6 @@ public:
 
     double map_width = 10.0;
     double map_height = 10.0;
-    double unreachable_area = 10;
-
 
     Coordinate getActualAgentPosition();
     CRadians getActualAgentOrientation();
@@ -140,13 +138,23 @@ private:
 
     lua_State *L;
 
+    std::string experiment_name = "default_experiment";
+    bool tilted = false;
+    double non_tilted_map_width = 10.0;
+    double non_tilted_map_height = 10.0;
 
-    double directions_heatmap[512][512];
-    double error_mean_heatmap[512][512];
-    double orientation_offset_heatmap[512][512];
+
+//    double directions_heatmap[512][512];
+//    double error_mean_heatmap[512][512];
+//    double orientation_offset_heatmap[512][512];
+
+    std::vector<std::vector<double>> directions_heatmap;
+    std::vector<std::vector<double>> error_mean_heatmap;
+    std::vector<std::vector<double>> orientation_offset_heatmap;
 
 
-    void readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]);
+//    void readHeatmapFromFile(const std::string& filename, double (&heatmap)[512][512]);
+    void readHeatmapFromFile(const std::string& filename, std::vector<std::vector<double>> & heatmap);
 
     bool mission_start = false;
 

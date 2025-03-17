@@ -17,11 +17,13 @@ public:
 
     struct metrics {
         std::map<std::string, double> mission_time; //Per agent
-        std::map<std::string, bool> returned_to_deployment_site;
+        std::map<std::string, double> distance_to_deployment_site;
         std::map<std::string, std::vector<double>> coverage_over_time; //Per agent
         std::map<std::string, std::vector<double>> average_total_certainty_over_time; //Per agent, total certainty
         std::map<std::string, std::vector<double>> average_free_pheromone_over_time; //Per agent, certainty of presumed free space
         std::map<std::string, std::vector<double>> average_occupied_pheromone_over_time; //Per agent, certainty of presumed occupied space
+        std::map<std::string, std::vector<std::pair<int, int>>> number_of_cells_and_leaves_over_time; //Per agent, Total number of cells, number of leaf nodes
+
         std::map<std::string, double> total_traveled_path; //Per agent
         std::map<std::string, double> total_battery_usage; //Per agent
         int n_agent_agent_collisions; //Make sure to divide by 2
@@ -32,12 +34,16 @@ public:
     };
 
     std::map<CPiPuckEntity*, bool> currently_colliding;
-    int coverage_update_tick_interval = 300; //at 30 ticks/second, this is every 10 seconds
+    int coverage_update_tick_interval = 160; //at 16 ticks/second, this is every 10 seconds
     std::map<CPiPuckEntity*, Coordinate> previous_positions;
     int nAgentsDone = 0;
     std::map<std::string, Coordinate> deployment_positions;
 
     metrics m_metrics;
+    std::string metric_path_str = "experiment";
+
+    std::vector<std::string> agents_relayed_map;
+    std::vector<std::string> agents_returning;
 
     bool experimentFinished = false;
     float longest_mission_time_s = 0;
@@ -177,18 +183,23 @@ private:
     void updateCollisions(CPiPuckEntity *pcFB);
     void updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     void updateBytesSentReceived(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
-
     #ifdef USING_CONFIDENCE_TREE
+    void updateNumberOfCellsAndLeaves(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
     void updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree);
+    void exportQuadtree(std::string filename);
+    void exportQuadtree(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent);
     #else
     void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>>& coverageMatrix, bool usingCoverageMatrix);
+    void exportMatrices(std::string filename);
+    void exportMatrices(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent);
     #endif
     void updateTraveledPathLength(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     bool allAgentsDone(CSpace::TMapPerType &tFBMap);
     void updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap);
     void checkReturnToDeploymentSite(CSpace::TMapPerType &tFBMap);
     void exportMetricsAndMaps();
+
     void updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent);
     std::pair<int, int> coordinateToMapIndex(Coordinate coordinate, const std::shared_ptr<Agent> &agent);
     void observeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, const std::shared_ptr<Agent> &agent);
