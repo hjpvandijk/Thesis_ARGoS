@@ -615,7 +615,7 @@ void Agent::calculateNextPosition() {
             bool frontier_switch_period_elapsed = (this->elapsed_ticks - this->last_frontier_switch_tick) >
                                                    this->ticks_per_second * this->config.FRONTIER_SWITCH_INTERVAL_S;
             allow_frontier_switch = frontier_switch_period_elapsed && agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
-              NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() <
+              NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() < //Use target vector here as we need to check if our intended heading is close to the frontier. Meaning we have determined we are free to move on that direction.
               this->config.TURN_THRESHOLD_DEGREES * 2 ||
                     agentFrontierVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
         }
