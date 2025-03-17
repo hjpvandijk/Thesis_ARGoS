@@ -4,8 +4,8 @@ import matplotlib.patches as patches
 import numpy as np
 import csv
 
-actual_arena_width = 21
-actual_arena_height = 11.2
+actual_arena_width = 9.5
+actual_arena_height = 12
 actual_arena = patches.Rectangle((-actual_arena_width / 2, -actual_arena_height / 2), actual_arena_width, actual_arena_height, linewidth=0, edgecolor='r', facecolor='blue', alpha=0.5)
 
 def read_arena_boxes(filename):
@@ -150,6 +150,11 @@ def check_circle_rectangle_overlap(circle, rectangle):
 def calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data):
     fig, ax = plt.subplots()
 
+    min_x = -5
+    max_x = 5
+    min_y = -5
+    max_y = 5
+
     true_positives = 0
     false_positives = 0
     false_negatives = 0
@@ -190,6 +195,11 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data):
         box_y = float(row['box_y']) - box_size / 2
         pheromone = float(row['pheromone'])
 
+        min_x = min(min_x, box_x)
+        max_x = max(max_x, box_x + box_size)
+        min_y = min(min_y, box_y)
+        max_y = max(max_y, box_y + box_size)
+
         box_rect = patches.Rectangle((box_x, box_y), box_size, box_size)
         #If the entire box is outside the actual arena, ignore it
         if not actual_arena.get_bbox().fully_overlaps(box_rect.get_bbox()):
@@ -218,7 +228,7 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data):
         else:
             false_positives += 1 # Incorrectly identified as occupied (actually free)
             color = 'yellow'
-
+            
         rect = plt.Rectangle((box_x, box_y), box_size, box_size, color=color, alpha=0.5)
         ax.add_patch(rect)
 
@@ -230,8 +240,8 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data):
 
     print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
     ax.set_aspect('equal', 'box')
-    plt.xlim(-10.5, 10.5)
-    plt.ylim(-5.6, 5.6)
+    plt.xlim(min_x, max_x)
+    plt.ylim(min_y, max_y)
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('Mistakes in Quadtree Results')
@@ -241,6 +251,10 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data):
     return precision, recall
 
 def plot_mistakes(arena_boxes, quadtree_data):
+    min_x = -5
+    max_x = 5
+    min_y = -5
+    max_y = 5
     fig, ax = plt.subplots()
     arena_rectangles = []
 
@@ -264,6 +278,12 @@ def plot_mistakes(arena_boxes, quadtree_data):
         box_y = float(row['box_y']) - box_size / 2
         pheromone = float(row['pheromone'])
 
+        min_x = min(min_x, box_x)
+        max_x = max(max_x, box_x + box_size)
+        min_y = min(min_y, box_y)
+        max_y = max(max_y, box_y + box_size)
+
+
         box_rect = patches.Rectangle((box_x, box_y), box_size, box_size)
 
         # #If the entire box is outside the actual arena, ignore it
@@ -278,13 +298,13 @@ def plot_mistakes(arena_boxes, quadtree_data):
             for arena_rect in arena_rectangles
         )
         if box_contains_arena and pheromone < 0.5:
-            color = 'red'
+            color = 'red' # Correctly identified as occupied
         elif (not box_contains_arena) and pheromone >= 0.5:
-            color = 'green'
+            color = 'green' # Correctly identified as free
         elif box_contains_arena and pheromone >= 0.5:
-            color = 'pink'
+            color = 'pink' # Incorrectly identified as free (actually occupied)
         else:
-            color = 'yellow'
+            color = 'yellow' # Incorrectly identified as occupied (actually free)
 
         # if (box_contains_arena and pheromone >= 0.5) or (not box_contains_arena and pheromone < 0.5):
         #     color = 'red'
@@ -296,20 +316,20 @@ def plot_mistakes(arena_boxes, quadtree_data):
         ax.add_patch(rect)
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-5.5, 5.5)
-    plt.ylim(-5.5, 5.5)
+    plt.xlim(min_x, max_x)
+    plt.ylim(min_y, max_y)
     plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
+    plt.ylabel('Y-axis') 
     plt.title('Mistakes in Quadtree Results')
 
     plt.grid(True)
     plt.show()
 
 # Usage
-arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
-arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
+arena_boxes = read_arena_boxes('implementation_and_examples/experiments/house.argos')
+arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/house.argos')
 
-quadtree_data = read_file('implementation_and_examples/experiment_results/experiment/quadtree.csv')
+quadtree_data = read_file('implementation_and_examples/experiment_results/house/n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5/spawn_time_0/8_agents/quadtree.csv')
 precision, recall = calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data)
 # print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
-# plot_mistakes(arena_boxes, quadtree_data)
+# plot_mistakes(arena_boxes, quadtree_data) 

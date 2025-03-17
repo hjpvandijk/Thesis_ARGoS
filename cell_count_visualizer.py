@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # Read the CSV file
-data = pd.read_csv('implementation_and_examples/experiment_results/office/config__alignment0_3__cohesion__0/spawn_time_0/6_agents/map_observation_count.csv')
+data = pd.read_csv('implementation_and_examples/experiment_results/house_tilted/config__alignment0__cohesion__0_1/spawn_time_0/10_agents/map_observation_count.csv')
 #get the column titles
 values = [entry for entry in data.columns if entry not in ['x', 'y']]
 # Pivot the data to create a matrix for the heatmap

@@ -132,9 +132,9 @@ def read_arena_pipucks_and_rotate(filename, degrees):
         id = pipuck.get('id')
 
         orientation = pipuck.find('body').get('orientation').split(',')
-        heading = float(orientation[0])
-        heading = (heading - degrees) % 360
-        orientation[0] = str(heading)
+        # heading = float(orientation[0])
+        # heading = (heading - degrees) % 360
+        # orientation[0] = str(heading)
 
         
 
@@ -156,8 +156,7 @@ def read_arena_pipucks_and_rotate(filename, degrees):
 
         pipucks.append({
             'x': x,
-            'y': y,
-            'heading': heading
+            'y': y
         })
     return pipucks
 
@@ -357,9 +356,9 @@ def plot(arena_boxes, arena_cylinders, arena_pipucks):
         )
         ax.add_patch(circle)
         # draw line in view direction
-        dx = 0.5 * np.sin(np.radians(pipuck['heading']))
-        dy = 0.5 * np.cos(np.radians(pipuck['heading']))
-        ax.arrow(pipuck['x'], pipuck['y'], dx, dy, head_width=0.1, head_length=0.1, fc='red', ec='red')
+        # dx = 0.5 * np.sin(np.radians(pipuck['heading']))
+        # dy = 0.5 * np.cos(np.radians(pipuck['heading']))
+        # ax.arrow(pipuck['x'], pipuck['y'], dx, dy, head_width=0.1, head_length=0.1, fc='red', ec='red')
 
     ax.set_aspect('equal', 'box')
     plt.xlim(-11.1, 11.1)
@@ -405,11 +404,11 @@ def rotate_map(arena_boxes, arena_cylinders, angle_degrees):
 
 # Usage
 # arena_boxes = read_arena_boxes('implementation_and_examples/experiments/office.argos')
-arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
+arena_boxes = read_arena_boxes_and_rotate('implementation_and_examples/experiments/office.argos', 20)
 # arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/office.argos')
-arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
+arena_cylinders = read_arena_cylinders_and_rotate('implementation_and_examples/experiments/office.argos', 20)
 
-arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/museum.argos', 20)
+arena_pipucks = read_arena_pipucks_and_rotate('implementation_and_examples/experiments/office.argos', 20)
 
 # arena_boxes, arena_cylinders = rotate_map(arena_boxes, arena_cylinders, 20)
 # print_rotated_shapes(arena_boxes, arena_cylinders)

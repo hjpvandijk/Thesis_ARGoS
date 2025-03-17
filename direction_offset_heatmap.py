@@ -1,15 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+import math
 
 # Configuration parameters
 time_steps = 100  # Number of time steps for the simulation
 initial_position = np.array([0, 0])  # Starting position (x, y)
 average_error = 0.5  # Average drift error per time step (units)
 max_error = 1.0  # Maximum drift error per time step (units)
-heatmap_size = (512, 512)  # Size of the heatmap grid
+pixels_per_meter = 51.2  # Conversion factor from meters to pixels
+real_width = 20  # Width of the environment in meters
+real_height = 10     # Height of the environment in meters
+heatmap_size = (math.ceil(real_width * pixels_per_meter), math.ceil(real_height*pixels_per_meter))  # Size of the heatmap grid
 
-def generate_heatmap(size, num_spots=10, min_spot_size = 30, max_spot_size=100, max_amplitude=2*np.pi, min_amplitude=0):
+def generate_heatmap(size, num_spots=5, min_spot_size = 80, max_spot_size=150, max_amplitude=2*np.pi, min_amplitude=0):
     # Create a random array to store the heatmap values
     heatmap = np.zeros(size)
 
@@ -55,8 +59,8 @@ def drift_step_with_heatmap(current_position, directions, grid_size):
 
 # # # Initialize variables
 # directions = generate_heatmap(heatmap_size)
-# # # Save the directions heatmap to a file
-# with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset.txt', 'w') as f:
+# # # # Save the directions heatmap to a file
+# with open('/home/hugo/Documents/Thesis_ARGoS/position_direction_offset_office_tilted.txt', 'w') as f:
 #     # f.write('{')
 #     for row in directions:
 #         f.write('{')
@@ -67,7 +71,7 @@ def drift_step_with_heatmap(current_position, directions, grid_size):
 
 # # Read the directions heatmap from a file
 directions = []
-with open('/home/hugo/Documents/Thesis_ARGoS/implementation_and_examples/controllers/pipuck_hugo/position_direction_offset.txt', 'r') as f:
+with open('/home/hugo/Documents/Thesis_ARGoS/implementation_and_examples/controllers/pipuck_hugo/heatmaps/position_direction_offset_office.txt', 'r') as f:
     lines = f.readlines()
     for line in lines:
         if line.strip().startswith('{') and line.strip().endswith('},'):
@@ -75,15 +79,22 @@ with open('/home/hugo/Documents/Thesis_ARGoS/implementation_and_examples/control
             directions.append([float(val) for val in row])
 directions = np.array(directions)
 
+# for i in range(26):
+#     for j in range(26):
+#         print(i, j, ":", directions[i,j])
+#print width
+print(directions.shape[0])
+print(directions.shape[1])
 # Visualize the directional heatmap using colors to represent angles
 angle_colors = (directions)  # Normalize angles to [0, 1] for coloring
 plt.figure(figsize=(8, 8))
-plt.imshow(angle_colors, cmap='twilight', origin='lower', extent=[0, heatmap_size[0], 0, heatmap_size[1]])
+plt.imshow(angle_colors, cmap='twilight', origin='lower')
+# color 25,24
 plt.colorbar(label='Angle (rad)')
 plt.title('Directional Heatmap (Color-encoded)')
 plt.xlabel('X Direction')
 plt.ylabel('Y Direction')
-plt.grid(False)
+plt.grid(True)
 
 # Add arrows representing directions
 # x_indices, y_indices = np.meshgrid(np.arange(heatmap_size[0]), np.arange(heatmap_size[1]))
@@ -92,29 +103,29 @@ plt.grid(False)
 # plt.quiver(x_indices, y_indices, arrows_x, arrows_y, scale=30, color='black', alpha=0.6)
 plt.show()
 
-# Fit a smooth equation to approximate the heatmap
-x_coords, y_coords = np.meshgrid(np.linspace(0, heatmap_size[0] - 1, heatmap_size[0]), 
-                                 np.linspace(0, heatmap_size[1] - 1, heatmap_size[1]))
-x_flat, y_flat = x_coords.ravel(), y_coords.ravel()
-angle_flat = directions.ravel()
+# # Fit a smooth equation to approximate the heatmap
+# x_coords, y_coords = np.meshgrid(np.linspace(0, heatmap_size[0] - 1, heatmap_size[0]), 
+#                                  np.linspace(0, heatmap_size[1] - 1, heatmap_size[1]))
+# x_flat, y_flat = x_coords.ravel(), y_coords.ravel()
+# angle_flat = directions.ravel()
 
-# Define a fitting function
-# More complex form with additional terms to improve fitting
-def fit_function(coords, a, b, c, d, e, f, g, h):
-    x, y = coords
-    return (a * np.sin(b * x + c * y) +
-            d * np.cos(e * x + f * y) +
-            g * np.sin(h * (x + y)))
+# # Define a fitting function
+# # More complex form with additional terms to improve fitting
+# def fit_function(coords, a, b, c, d, e, f, g, h):
+#     x, y = coords
+#     return (a * np.sin(b * x + c * y) +
+#             d * np.cos(e * x + f * y) +
+#             g * np.sin(h * (x + y)))
 
-# Fit the model
-initial_guess = [1, 0.1, 0.1, 1, 0.1, 0.1, 0.5, 0.1]
-params, _ = curve_fit(fit_function, (x_flat, y_flat), angle_flat, p0=initial_guess)
+# # Fit the model
+# initial_guess = [1, 0.1, 0.1, 1, 0.1, 0.1, 0.5, 0.1]
+# params, _ = curve_fit(fit_function, (x_flat, y_flat), angle_flat, p0=initial_guess)
 
-# Display the fitted function
-print("Approximated equation for directional heatmap angles:")
-print(f"f(x, y) = {params[0]:.3f} * sin({params[1]:.3f} * x + {params[2]:.3f} * y) + "
-      f"{params[3]:.3f} * cos({params[4]:.3f} * x + {params[5]:.3f} * y) + "
-      f"{params[6]:.3f} * sin({params[7]:.3f} * (x + y))")
+# # Display the fitted function
+# print("Approximated equation for directional heatmap angles:")
+# print(f"f(x, y) = {params[0]:.3f} * sin({params[1]:.3f} * x + {params[2]:.3f} * y) + "
+#       f"{params[3]:.3f} * cos({params[4]:.3f} * x + {params[5]:.3f} * y) + "
+#       f"{params[6]:.3f} * sin({params[7]:.3f} * (x + y))")
 
 # # Simulate drift over time using heatmap for bias
 # for _ in range(time_steps):

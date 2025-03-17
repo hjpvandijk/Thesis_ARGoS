@@ -14,49 +14,51 @@ path = 'implementation_and_examples/experiment_results'
 #n configs
 n_directories = 4
 
-n_agent_configs = 9 #2-10 agents
+n_agent_configs = 5 #8-3 agents
 
 map_max = {
     'museum': {
-        'vmax': 621,
-        'cell_count_x': 650,
+        'vmax': 350,
+        'cell_count_x': 350,
         'cell_count_y': 10**4
     },
     'museum_tilted': {
-        'vmax': 621,
+        'vmax': 255,
         'cell_count_x': 200,
         'cell_count_y': 10**5
     },
     'office': {
-        'vmax': 1463,
-        'cell_count_x': 1400,
+        'vmax': 457,
+        'cell_count_x': 460,
         'cell_count_y': 10**4
     },
     'office_tilted': {
-        'vmax': 1300,
-        'cell_count_x': 1200,
+        'vmax': 460,
+        'cell_count_x': 460,
         'cell_count_y': 10**4
     },
     'house': {
-        'vmax': 1724,
+        'vmax': 619,
         'cell_count_x': 1750,
         'cell_count_y': 10**3
     },
     'house_tilted': {
-        'vmax': 1792,
-        'cell_count_x': 2700,
-        'cell_count_y': 10**3
+        'vmax': 755,
+        'cell_count_x': 760,
+        'cell_count_y': 10**4#10**3
     }
 }
 
 
 for i, map in enumerate(os.listdir(path)):
-    if map != 'museum_tilted':
-        continue
+    # if map != 'house_tilted':
+    #     continue
 
     for j, config in enumerate(os.listdir(os.path.join(path, map))):
+        if config != 'n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5':
+            continue
         all_visits = pd.DataFrame()
-        n_succesful_agents = 9
+        n_succesful_agents = 5
         for k, spawn_time in enumerate(os.listdir(os.path.join(path, map, config))):
             for l, agents in enumerate(os.listdir(os.path.join(path, map, config, spawn_time))):
                 # Construct the path to the CSV file in`` the current directory
@@ -130,4 +132,4 @@ for i, map in enumerate(os.listdir(path)):
         ax2.set_ylim(0, map_max[map]['cell_count_y'])
         ax2.grid(True)
 
-    plt.show()
+plt.show()
