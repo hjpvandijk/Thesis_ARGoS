@@ -21,7 +21,7 @@ public:
     Coordinate getRealCoordinateFromIndex(int x, int y);
     std::pair<int,int> getIndexFromRealCoordinate(Coordinate coordinate);
     std::vector<std::pair<int, int>> getFrontierCells(double currentTimeS);
-    std::string matrixToString(const std::string& rowDelimiter = "|", const std::string& colDelimiter = ";");
+    void matrixToStringVector(std::vector<std::string> *strings);
 
 
     std::vector<std::vector<double>> getMatrix() const { return this->matrix; }

@@ -26,6 +26,9 @@
         <experiment length="0"
                     ticks_per_second="30"
                     random_seed="124"/>
+
+        <log file="output.log" />
+        <logerr file="error.log" />
     </framework>
 
     <!-- *************** -->
@@ -93,15 +96,8 @@
                 <!--                <range_and_bearing implementation="default" medium="rab"/>-->
                 <positioning implementation="default"/>
             </sensors>
-            <!--
-                The <params> section is passed as-is to the controller's Init()
-                function.
-                The user, writing the controller, defines how it is organized.
-                To understand what these parameters are for, check the
-                controller's header file in
-                controllers/footbot_diffusion/footbot_diffusion.h.
-            -->
-            <params alpha="1" delta="0.01" velocity="20"/>
+            <!--     actual map width in m, actual mad height in m      -->
+            <params map_width ="10" map_height ="10" config="agent_implementation/config.yaml"/>
         </pipuck_hugo_controller>
 
     </controllers>
@@ -116,6 +112,7 @@
     <loop_functions
             library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
             label="agent_vision_loop_functions_pipuck"/>
+
     <!--    <loop_functions library="build/loop_functions/radios_loop_functions/libradios_loop_functions"-->
     <!--                        label="radios_loop_functions" />-->
     <!--    <loop_functions library="build/loop_functions/position_loop_functions/libposition_loop_functions"-->
@@ -155,53 +152,53 @@
             <body position="0,5,0" orientation="0,0,0"/>
         </box>
 
-        <!--                <box id="box_0" size="0.65,0.61,0.5" movable="false">-->
-        <!--                    <body position="-0.465,-0.485,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_1" size="1.01,1.99,0.5" movable="false">-->
-        <!--                    <body position="1.495,-1.005,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_2" size="4.02,2.02,0.5" movable="false">-->
-        <!--                    <body position="2.01,2.01,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_3" size="2.06,0.42,0.5" movable="false">-->
-        <!--                    <body position="2.49,4.45,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_4" size="0.98,0.94,0.5" movable="false">-->
-        <!--                    <body position="-2.05,3.98,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_5" size="0.44,3.83,0.5" movable="false">-->
-        <!--                    <body position="-3.51,2.375,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_11" size="1.95,0.21,0.5" movable="false">-->
-        <!--                    <body position="-2.645,-4.465,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_12" size="0.25,4.07,0.5" movable="false">-->
-        <!--                    <body position="-4.445,-1.585,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--                <box id="box_13" size="1.04,1.29,0.5" movable="false">-->
-        <!--                    <body position="-1.79,-0.715,0" orientation="0,0,0"/>-->
-        <!--                </box>-->
-        <!--        <box id="box_0" size="8.48,0.95,0.5" movable="false">-->
-        <!--            <body position="0.25,0.505,0" orientation="0,0,0"/>-->
-        <!--        </box>-->
-        <!--        98 204-->
-        <!--        199 903-->
-        <!--        <box id="box_1" size="6.99,1.01,0.5" movable="false">-->
-        <!--            <body position="-0.535,3.515,0" orientation="0,0,0"/>-->
-        <!--        </box>-->
-        <!--        694 199-->
-        <!--        788 870-->
-        <!--        <box id="box_2" size="6.71,0.94,0.5" movable="false">-->
-        <!--            <body position="-0.345,-2.41,0" orientation="0,0,0"/>-->
-        <!--        </box>-->
-        <!--        612 26-->
-        <!--        943 70-->
-        <!--        <box id="box_3" size="0.44,3.31,0.5" movable="false">-->
-        <!--            <body position="4.52,-2.775,0" orientation="0,0,0"/>-->
-        <!--        </box>-->
-
-        <!--        ROOMS-->
+<!--                <box id="box_0" size="0.65,0.61,0.5" movable="false">-->
+<!--                    <body position="-0.465,-0.485,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_1" size="1.01,1.99,0.5" movable="false">-->
+<!--                    <body position="1.495,-1.005,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_2" size="4.02,2.02,0.5" movable="false">-->
+<!--                    <body position="2.01,2.01,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_3" size="2.06,0.42,0.5" movable="false">-->
+<!--                    <body position="2.49,4.45,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_4" size="0.98,0.94,0.5" movable="false">-->
+<!--                    <body position="-2.05,3.98,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_5" size="0.44,3.83,0.5" movable="false">-->
+<!--                    <body position="-3.51,2.375,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_11" size="1.95,0.21,0.5" movable="false">-->
+<!--                    <body position="-2.645,-4.465,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_12" size="0.25,4.07,0.5" movable="false">-->
+<!--                    <body position="-4.445,-1.585,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--                <box id="box_13" size="1.04,1.29,0.5" movable="false">-->
+<!--                    <body position="-1.79,-0.715,0" orientation="0,0,0"/>-->
+<!--                </box>-->
+<!--        <box id="box_0" size="8.48,0.95,0.5" movable="false">-->
+<!--            <body position="0.25,0.505,0" orientation="0,0,0"/>-->
+<!--        </box>-->
+<!--        98 204-->
+<!--        199 903-->
+<!--        <box id="box_1" size="6.99,1.01,0.5" movable="false">-->
+<!--            <body position="-0.535,3.515,0" orientation="0,0,0"/>-->
+<!--        </box>-->
+<!--        694 199-->
+<!--        788 870-->
+<!--        <box id="box_2" size="6.71,0.94,0.5" movable="false">-->
+<!--            <body position="-0.345,-2.41,0" orientation="0,0,0"/>-->
+<!--        </box>-->
+<!--        612 26-->
+<!--        943 70-->
+<!--        <box id="box_3" size="0.44,3.31,0.5" movable="false">-->
+<!--            <body position="4.52,-2.775,0" orientation="0,0,0"/>-->
+<!--        </box>-->
+        
+<!--        ROOMS-->
         <box id="box_0" size="0.17,2.94,0.5" movable="false">
             <body position="4.035,1.82,0" orientation="0,0,0"/>
         </box>
@@ -226,9 +223,9 @@
         <box id="box_7" size="1.02,0.32,0.5" movable="false">
             <body position="-3.01,1.55,0" orientation="0,0,0"/>
         </box>
-        <!--        <box id="box_8" size="0.21,4.04,0.5" movable="false">-->
-        <!--            <body position="0.365,-2.38,0" orientation="0,0,0"/>-->
-        <!--        </box>-->
+<!--        <box id="box_8" size="0.21,4.04,0.5" movable="false">-->
+<!--            <body position="0.365,-2.38,0" orientation="0,0,0"/>-->
+<!--        </box>-->
         <box id="box_8" size="0.21,3.9,0.5" movable="false">
             <body position="0.365,-2.38,0" orientation="0,0,0"/>
         </box>
@@ -238,9 +235,9 @@
         <box id="box_10" size="3.38,0.24,0.5" movable="false">
             <body position="-1.27,-0.5,0" orientation="0,0,0"/>
         </box>
-        <!--        <box id="box_11" size="3.31,0.24,0.5" movable="false">-->
-        <!--            <body position="-1.245,-4.34,0" orientation="0,0,0"/>-->
-        <!--        </box>-->
+<!--        <box id="box_11" size="3.31,0.24,0.5" movable="false">-->
+<!--            <body position="-1.245,-4.34,0" orientation="0,0,0"/>-->
+<!--        </box>-->
         <box id="box_11" size="3.31,0.24,0.5" movable="false">
             <body position="-1.245,-4.04,0" orientation="0,0,0"/>
         </box>
@@ -258,8 +255,9 @@
         </box>
 
 
+
         <pipuck id="pipuck1" wifi_medium="wifi" wifi_range="4.0">
-            <body position="1,-3,0" orientation="-45,0,0"/>
+            <body position="-4.5,-1,0" orientation="90,0,0"/>
             <controller config="ppc"/>
             <devices>
 
@@ -267,11 +265,30 @@
         </pipuck>
 
         <pipuck id="pipuck2" wifi_medium="wifi" wifi_range="4.0">
-            <body position="-1,2,0" orientation="85,0,0"/>
+            <body position="-4.5,-0.5,0" orientation="-90,0,0"/>
             <controller config="ppc"/>
-
         </pipuck>
 
+
+
+        <pipuck id="pipuck3" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4.5,0,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+
+        <pipuck id="pipuck4" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4.5,0.5,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+
+        <pipuck id="pipuck5" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4.5,1,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
+        <pipuck id="pipuck6" wifi_medium="wifi" wifi_range="4.0">
+            <body position="-4.5,1.5,0" orientation="0,0,0"/>
+            <controller config="ppc"/>
+        </pipuck>
 
     </arena>
 
@@ -325,7 +342,7 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-        <qt-opengl>
+        <qt-opengl autoplay="true">
             <user_functions
                     library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"
                     label="agent_vision_qtuser_functions_pipuck"/>

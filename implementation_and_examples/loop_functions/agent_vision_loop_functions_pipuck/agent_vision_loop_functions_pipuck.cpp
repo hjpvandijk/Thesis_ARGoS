@@ -590,12 +590,11 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
 void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>> &matrix, bool usingCoverageMatrix) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED_EXPLORING && cController.agentObject->state != Agent::State::MAP_RELAYED;
     //Update coverage over time at every interval, if mission has started
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
 
         double covered_area = 0;
-
 
 
         for (int i = 0; i < matrix.size(); i++) {

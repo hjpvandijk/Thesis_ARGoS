@@ -295,7 +295,7 @@ private:
     void checkMissionEnd();
 
     #ifdef USING_CONFIDENCE_TREE
-    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor);
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
     void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
     void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor);
     #else

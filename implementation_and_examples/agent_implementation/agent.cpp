@@ -1043,14 +1043,14 @@ void Agent::sendQuadtreeToCloseAgents() {
     double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        double lastReceivedTick = getTimeFromAgentLocation(agentLocationPair.first);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
-            if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
-                this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
-                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
+            if (!this->agentMapSent.count(agentLocationPair.first) ||
+                this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] >
+                        (this->config.MAP_EXCHANGE_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
                 break; //We know we have to broadcast the quadtree, so we can break
             }
@@ -1062,12 +1062,12 @@ void Agent::sendQuadtreeToCloseAgents() {
 
     //Update the exchange time for all agents within range
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        double lastReceivedTick = getTimeFromAgentLocation(agentLocationPair.first);
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
-            oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
-            this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
+            oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
+            this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
 
         }
     }
@@ -1112,10 +1112,16 @@ void Agent::sendMatricesToCloseAgents() {
         }
     }
 
-    std::string coverageMatrixString = this->coverageMatrix->matrixToString();
-    broadcastMessage("MC:" + coverageMatrixString);
-    std::string obstacleMatrixString = this->obstacleMatrix->matrixToString();
-    broadcastMessage("MO:" + obstacleMatrixString);
+    std::vector<std::string> coverageMatrixToStrings = {};
+    this->coverageMatrix->matrixToStringVector(&coverageMatrixToStrings);
+    for (const std::string &str: coverageMatrixToStrings) {
+        broadcastMessage("MC:" + str);
+    }
+    std::vector<std::string> obstacleMatrixToStrings = {};
+    this->obstacleMatrix->matrixToStringVector(&obstacleMatrixToStrings);
+    for (const std::string &str: obstacleMatrixToStrings) {
+        broadcastMessage("MO:" + str);
+    }
 }
 #endif
 
@@ -1283,6 +1289,9 @@ void Agent::parseMessages() {
     std::map<std::string, int> agentMapBytesReceivedCounter;
     #endif
     for (const std::string &message: this->messages) {
+        std::string targetId = getTargetIdFromMessage(message);
+        if (targetId != "A" && targetId != getId())
+            continue; //If the message is not broadcast to all agents and not for this agent, skip it
         std::string senderId = getIdFromMessage(message);
         std::string messageContent = message.substr(message.find(']') + 1);
         if (messageContent.at(0) == 'C') {
@@ -1311,7 +1320,7 @@ void Agent::parseMessages() {
             #endif
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
-                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode, config.ALPHA_RECEIVE,
+                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode,
                                                                       elapsed_ticks / ticks_per_second);
         #ifdef CLOSE_SMALL_AREAS
                         if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)
@@ -1325,26 +1334,44 @@ void Agent::parseMessages() {
             std::vector<std::string> chunks;
             std::stringstream ss(messageContent.substr(3));
             std::string chunk;
-            int i = 0;
+//            int i = 0;
             while (std::getline(ss, chunk, '|')) {
-                std::stringstream chunkStream(chunk);
-                std::string cellStr;
-                int j = 0;
-                while(std::getline(chunkStream, cellStr, ';')){
-                    if (coverage) {
-                        this->coverageMatrix->updateByIndex(i, j, std::stod(cellStr));
-                    } else {
-                        auto value = std::stod(cellStr);
-                        this->obstacleMatrix->updateByIndex(i, j, value);
-                        //If we have an obstacle, reset the corresponding coverage matrix cell
-                        if (value != -1){
-                            auto realObstacleCoordinate = this->obstacleMatrix->getRealCoordinateFromIndex(i, j);
-                            this->coverageMatrix->reset(realObstacleCoordinate);
-                        }
+                std::string valDelimiter = ":";
+                auto valPos = chunk.find(valDelimiter);
+                auto indexCoordinateStr = chunk.substr(0, valPos);
+                auto value = std::stod(chunk.substr(valPos + 1));
+                Coordinate indices = coordinateFromString(indexCoordinateStr);
+                int i = int(indices.x);
+                int j = int(indices.y);
+                if (coverage) {
+                    this->coverageMatrix->updateByIndex(i, j, value);
+                } else {
+                    this->obstacleMatrix->updateByIndex(i, j, value);
+                    //If we have an obstacle, reset the corresponding coverage matrix cell
+                    if (value != -1){
+                        auto realObstacleCoordinate = this->obstacleMatrix->getRealCoordinateFromIndex(i, j);
+                        this->coverageMatrix->reset(realObstacleCoordinate);
                     }
-                    j++;
                 }
-                i++;
+
+//                std::stringstream chunkStream(chunk);
+//                std::string cellStr;
+//                int j = 0;
+//                while(std::getline(chunkStream, cellStr, ';')){
+//                    if (coverage) {
+//                        this->coverageMatrix->updateByIndex(i, j, std::stod(cellStr));
+//                    } else {
+//                        auto value = std::stod(cellStr);
+//                        this->obstacleMatrix->updateByIndex(i, j, value);
+//                        //If we have an obstacle, reset the corresponding coverage matrix cell
+//                        if (value != -1){
+//                            auto realObstacleCoordinate = this->obstacleMatrix->getRealCoordinateFromIndex(i, j);
+//                            this->coverageMatrix->reset(realObstacleCoordinate);
+//                        }
+//                    }
+//                    j++;
+//                }
+//                i++;
 
 
             }

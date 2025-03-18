@@ -171,18 +171,39 @@ std::array<double, 9> PheromoneMatrix::MooreNeighbors(int x, int y, double curre
 
 }
 
-std::string PheromoneMatrix::matrixToString(const std::string& rowDelimiter, const std::string& colDelimiter) {
-    std::ostringstream oss;
+void PheromoneMatrix::matrixToStringVector(std::vector<std::string> *strings) {
+    std::string grouped_message = "";
+    grouped_message.clear();
+    int counter = 0;
+
+//    std::ostringstream oss;
     for (size_t i = 0; i < this->matrix.size(); ++i) {
         for (size_t j = 0; j < this->matrix[i].size(); ++j) {
-            oss << this->matrix[i][j];
-            if (j + 1 < this->matrix[i].size()) { // Add column delimiter if not the last element in the row
-                oss << colDelimiter;
+            std::string str = std::to_string(i) + ";" + std::to_string(j) + ":" + std::to_string(this->matrix[i][j]);
+//            str +=  this->matrix[i][j];
+//            if (j + 1 < this->matrix[i].size()) { // Add column delimiter if not the last element in the row
+//                str += colDelimiter;
+//            }
+            //Group every nodesPerMessage nodes
+            grouped_message.append(str);
+            if (counter == this->nodesPerMessage - 1) {
+                strings->emplace_back(grouped_message);
+                grouped_message.clear();
+                counter = 0;
+            } else {
+                grouped_message.append("|");
+                counter++;
             }
         }
-        if (i + 1 < this->matrix.size()) { // Add row delimiter if not the last row
-            oss << rowDelimiter;
-        }
+//        if (i + 1 < this->matrix.size()) { // Add row delimiter if not the last row
+//            str += rowDelimiter;
+//        }
     }
-    return oss.str();
+    //If there is an incomplete group, also send it.
+    if (!grouped_message.empty()) {
+        grouped_message.pop_back(); //Delete the last delimiter
+        strings->emplace_back(grouped_message);
+    }
+
+//    return oss.str();
 }
