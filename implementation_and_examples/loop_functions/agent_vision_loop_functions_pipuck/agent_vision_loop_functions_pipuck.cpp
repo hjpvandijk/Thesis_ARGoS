@@ -6,9 +6,12 @@
 #include "agent_implementation/utils/Algorithms.h"
 #include <chrono>
 #include <sys/stat.h>
+#include <cstdlib>  // for getenv()
 
 /****************************************/
 /****************************************/
+
+//#define VISUALS
 
 /*
  * To reduce the number of waypoints stored in memory,
@@ -70,6 +73,23 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param pcFB
  * @param agent
  */
+void CAgentVisionLoopFunctions::pushQuadTreeIfTime(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+    #ifndef VISUALS
+    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED_EXPLORING && agent->state != Agent::State::MAP_RELAYED;
+    //Only have to update the quadtree every coverage_update_tick_interval ticks
+    if (inMission && agent->elapsed_ticks % coverage_update_tick_interval == 0){
+    #endif
+        pushQuadTree(pcFB, agent);
+    #ifndef VISUALS
+    }
+    #endif
+}
+
+/**
+ * Get all the boxes and their occupancy from the quadtree of a given agent
+ * @param pcFB
+ * @param agent
+ */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTime);
     m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
@@ -77,6 +97,23 @@ void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::sha
     m_tQuadTree[pcFB] = boxesAndPheromones;
 }
 #else
+
+/**
+ * Get all the boxes and their occupancy from the quadtree of a given agent
+ * @param pcFB
+ * @param agent
+ */
+void CAgentVisionLoopFunctions::pushMatricesIfTime(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+    #ifndef VISUALS
+    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED_EXPLORING && agent->state != Agent::State::MAP_RELAYED;
+    //Only have to update the quadtree every coverage_update_tick_interval ticks
+    if (inMission && agent->elapsed_ticks % coverage_update_tick_interval == 0){
+        #endif
+        pushMatrices(pcFB, agent);
+        #ifndef VISUALS
+    }
+    #endif
+}
 
 /**
  * Get all the boxes and their occupancy from the quadtree of a given agent
@@ -141,8 +178,6 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         #endif
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         deployment_positions[pcFB->GetId()] = agentRealPosition;
-
-        longest_mission_time_s = std::max(longest_mission_time_s, agent->config.MISSION_END_TIME_S);
     }
     this->m_metrics = metrics();
     this->m_metrics.map_observation_count_total.resize(map_cols, std::vector<int>(map_rows, 0));
@@ -150,6 +185,48 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     for (const auto& it : tFBMap) {
         this->m_metrics.map_observation_count[it.first] = std::vector<std::vector<int>>(map_cols, std::vector<int>(map_rows, 0));
     }
+
+    const char* seed = std::getenv("SEED");
+    int seed_int = seed ? std::stoi(seed) : 0;
+    srand(seed_int);
+
+    const char* average_inter_spawn_time_s = std::getenv("AVERAGE_INTER_SPAWN_TIME");
+    float average_inter_spawn_time = std::stof(average_inter_spawn_time_s);
+    this->spawn_rate = average_inter_spawn_time_s ? 1.0f /  average_inter_spawn_time: 10.0f;
+    argos::LOG << "Average inter spawn time: " << average_inter_spawn_time << std::endl;
+
+    CSpace::TMapPerType &boxMap = GetSpace().GetEntitiesByType("box");
+    double prev_spawn_time = 0.0f;
+    for (auto &it: boxMap) {
+        CBoxEntity *box = any_cast<CBoxEntity *>(it.second);
+        if (box->GetId().find("spawn_box") != std::string::npos) {
+            argos::LOG << "Found spawn box: " << box->GetId() << std::endl;
+            if (average_inter_spawn_time > 0) { //If the spawn time is 0, don't spawn any boxes
+                auto copybox = new CBoxEntity(box->GetId(), box->GetEmbodiedEntity().GetOriginAnchor().Position,
+                                              box->GetEmbodiedEntity().GetOriginAnchor().Orientation, false,
+                                              box->GetSize(), 1.0f);
+                int spawn_time_ticks = int(calculateSpawnTime(this->spawn_rate) * ticksPerSecond) + prev_spawn_time;
+                prev_spawn_time = spawn_time_ticks;
+                this->spawn_boxes.push_back(*copybox);
+                this->spawn_times.push_back(spawn_time_ticks);
+                argos::LOG << "Spawn time: " << spawn_time_ticks << std::endl;
+                delete copybox;
+            }
+            RemoveEntity(*box);
+        }
+    }
+
+    const char* metric_path = std::getenv("METRIC_PATH");
+    if (metric_path) {
+        //Remove ".argos"
+        this->metric_path_str = metric_path;
+        this->metric_path_str = metric_path_str.substr(0, metric_path_str.find_last_of('.'));
+    }
+}
+
+double CAgentVisionLoopFunctions::calculateSpawnTime(double spawn_rate){
+    auto val = -std::log(1.0f - (float(rand()-1)/float(RAND_MAX))) / spawn_rate;
+    return val;
 }
 
 /**
@@ -175,13 +252,13 @@ void CAgentVisionLoopFunctions::Reset() {
 }
 
 void CAgentVisionLoopFunctions::PreStep() {
-    start = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = start-end;
-
-
-    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
-               << std::endl;
+//    start = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds = start-end;
+//
+//
+//    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
+//               << std::endl;
 
 }
 
@@ -199,19 +276,19 @@ Coordinate CAgentVisionLoopFunctions::getRealCoordinateFromIndex(int x, int y, d
  * Get the coordinates of all agents and objects in the environment
  */
 void CAgentVisionLoopFunctions::PostStep() {
-    auto temp_end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
-
-    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
-               << std::endl;
-
-    end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = end-start;
-
-    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
-               << std::endl;
+//    auto temp_end = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
+//
+//    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
+//               << std::endl;
+//
+//    end = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds = end-start;
+//
+//    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
+//               << std::endl;
 
 //
     /* Get the map of all pi-pucks from the space */
@@ -239,6 +316,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
         globalElapsedTime = agent->elapsed_ticks / agent->ticks_per_second;
+        #ifdef VISUALS
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
@@ -254,10 +332,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         m_tAgentCoordinates[pcFB] = agentPos;
         m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
         #ifdef USING_CONFIDENCE_TREE
-        pushQuadTree(pcFB, agent);
         m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
         #else
-        pushMatrices(pcFB, agent);
 
 //        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
         for (auto regioncenter : agent->current_frontier_regions){
@@ -275,8 +351,15 @@ void CAgentVisionLoopFunctions::PostStep() {
         for(auto angle: agent->freeAnglesVisualization) {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
-
+        #endif
         m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
+
+        #ifdef USING_CONFIDENCE_TREE
+        pushQuadTreeIfTime(pcFB, agent);
+        updateNumberOfCellsAndLeaves(pcFB, agent);
+        #else
+        pushMatricesIfTime(pcFB, agent);
+        #endif
 
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);
@@ -320,6 +403,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 #else
 //    combinedCoverageMatrix = PheromoneMatrix(10, 10, 0.2);
 
+
     for (const auto& it : m_tCoverageMatrix) {
 //        double** coverageMatrix = it.second;
 //        int height = sizeof *coverageMatrix / sizeof coverageMatrix[0]; // rows
@@ -334,7 +418,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             coverageMatrixWidth = coverageMatrix.size();
             coverageMatrixHeight = coverageMatrix[0].size(); // columns;
             coverageMatrixResolution = -(real_x_min * 2) / coverageMatrixWidth;
-            argos::LOG << "setting" << std::endl;
+//            argos::LOG << "setting" << std::endl;
 
         }
         updateCoverage(it.first, it.second, true);
@@ -363,30 +447,35 @@ void CAgentVisionLoopFunctions::PostStep() {
 #endif
 
 
-//    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = combinedTree->getAllBoxes();
+    if (!this->spawn_boxes.empty()) {
+        auto spawn_time_front = this->spawn_times.front();
+        if (loop_function_steps >= spawn_time_front) {
+            argos::LOG << "Spawn box at: " << loop_function_steps << std::endl;
+            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
+            auto box = this->spawn_boxes.front();
+            auto newBox = new CBoxEntity(box.GetId(), box.GetEmbodiedEntity().GetOriginAnchor().Position, box.GetEmbodiedEntity().GetOriginAnchor().Orientation, false, box.GetSize(), 1.0f);
+//            argos::LOG << "Spawning box " << box.GetId() << " at " << box.GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
+            AddEntity(*newBox);
+            this->spawn_times.pop_front();
+            this->spawn_boxes.pop_front();
+        }
+    }
 
-//    combinedQuadTree = boxesAndOccupancyAndTicks;
-
-
-
-//    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
-//    for(auto spawnObj: spawnableObjects) {
-//        int spawn_time = std::get<2>(spawnObj);
-//        if(loop_function_steps == spawn_time) {
-//            std::unique_ptr<CBoxEntity> box = std::make_unique<CBoxEntity>("spawn_box" + std::to_string(spawn_time), std::get<0>(spawnObj), CQuaternion(), false, std::get<1>(spawnObj), 0.0);
-//            GetSpace().AddEntity(*box);
-//            CEmbodiedEntity *embodiedEntity = &box->GetEmbodiedEntity();
-//            GetSpace().AddEntityToPhysicsEngine(*embodiedEntity);
-//            box.release(); // Release ownership after adding to the space
-//        }
-//    }
-//
-
-//If a new agent is done, update the metrics and maps
+    //If a new agent is done, update the metrics and maps
     if (allAgentsDone(tFBMap)) {
-        updateAgentsFinishedTime(tFBMap);
         checkReturnToDeploymentSite(tFBMap);
-        exportMetricsAndMaps();
+        //Update quadtree for the last time
+        for (auto & it : tFBMap) {
+            CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+            auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+            std::shared_ptr<Agent> agent = cController.agentObject;
+            #ifdef USING_CONFIDENCE_TREE
+            pushQuadTree(pcFB, agent);
+            #else
+            pushMatrices(pcFB, agent);
+            #endif
+        }
+        experimentFinished = true;
     }
 
     loop_function_steps++;
@@ -650,43 +739,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
    exportQuadtree("quadtree_all_done");
     #else
-    //Export coverage matrix of each agent
-    std::ofstream coverageMatrixFile;
-    coverageMatrixFile.open("experiment_results/" + experiment_name_str + "/coverage_matrix.csv");
-    coverageMatrixFile << "agent_id,x,y,coverage,size\n";
-    for (auto & it : m_tCoverageMatrix) {
-        for (int i = 0; i < it.second.size(); i++) {
-            for (int j = 0; j < it.second[0].size(); j++) {
-                if (it.second[i][j] == -1 && m_tObstacleMatrix[it.first][i][j] == -1) continue;
-                coverageMatrixFile << it.first->GetId() << ",";
-                auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
-                coverageMatrixFile << realCoords.x<< ",";
-                coverageMatrixFile << realCoords.y << ",";
-                coverageMatrixFile << it.second[i][j];
-                coverageMatrixFile << "," << coverageMatrixResolution << "\n";
-            }
-        }
-    }
-    coverageMatrixFile.close();
-
-    //Export obstacle matrix of each agent
-    std::ofstream obstacleMatrixFile;
-    obstacleMatrixFile.open("experiment_results/" + experiment_name_str + "/obstacle_matrix.csv");
-    obstacleMatrixFile << "agent_id,x,y,obstacle,size\n";
-    for (auto & it : m_tObstacleMatrix) {
-        for (int i = 0; i < it.second.size(); i++) {
-            for (int j = 0; j < it.second[0].size(); j++) {
-                if (it.second[i][j] == -1 && m_tCoverageMatrix[it.first][i][j] == -1) continue;
-                obstacleMatrixFile << it.first->GetId() << ",";
-                auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
-                obstacleMatrixFile << realCoords.x<< ",";
-                obstacleMatrixFile << realCoords.y << ",";
-                obstacleMatrixFile << it.second[i][j];
-                obstacleMatrixFile << "," << obstacleMatrixResolution << "\n";
-            }
-        }
-    }
-    obstacleMatrixFile.close();
+    exportMatrices("all_done");
     #endif
 
     //Export number of cells and leaves
@@ -799,6 +852,7 @@ void CAgentVisionLoopFunctions::exportQuadtree(std::string filename) {
     quadTreeFile.close();
 }
 
+
 void CAgentVisionLoopFunctions::exportQuadtree(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     pushQuadTree(pcFB, agent);
     //Export quadtree of each agent
@@ -817,6 +871,89 @@ void CAgentVisionLoopFunctions::exportQuadtree(std::string filename, CPiPuckEnti
         quadTreeFile << "\n";
     }
     quadTreeFile.close();
+}
+#else
+void CAgentVisionLoopFunctions::exportMatrices(std::string filename) {
+    //Export coverage matrix of each agent
+    std::ofstream coverageMatrixFile;
+    coverageMatrixFile.open(metric_path_str + "/coverage_matrix_"+filename+".csv");
+    coverageMatrixFile << "agent_id,x,y,coverage,size\n";
+    for (auto & it : m_tCoverageMatrix) {
+        for (int i = 0; i < it.second.size(); i++) {
+            for (int j = 0; j < it.second[0].size(); j++) {
+                if (it.second[i][j] == -1 && m_tObstacleMatrix[it.first][i][j] == -1) continue;
+                coverageMatrixFile << it.first->GetId() << ",";
+                auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
+                coverageMatrixFile << realCoords.x<< ",";
+                coverageMatrixFile << realCoords.y << ",";
+                coverageMatrixFile << it.second[i][j];
+                coverageMatrixFile << "," << coverageMatrixResolution << "\n";
+            }
+        }
+    }
+    coverageMatrixFile.close();
+
+    //Export obstacle matrix of each agent
+    std::ofstream obstacleMatrixFile;
+    obstacleMatrixFile.open(metric_path_str + "/obstacle_matrix_"+filename+".csv");
+    obstacleMatrixFile << "agent_id,x,y,obstacle,size\n";
+    for (auto & it : m_tObstacleMatrix) {
+        for (int i = 0; i < it.second.size(); i++) {
+            for (int j = 0; j < it.second[0].size(); j++) {
+                if (it.second[i][j] == -1 && m_tCoverageMatrix[it.first][i][j] == -1) continue;
+                obstacleMatrixFile << it.first->GetId() << ",";
+                auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
+                obstacleMatrixFile << realCoords.x<< ",";
+                obstacleMatrixFile << realCoords.y << ",";
+                obstacleMatrixFile << it.second[i][j];
+                obstacleMatrixFile << "," << obstacleMatrixResolution << "\n";
+            }
+        }
+    }
+    obstacleMatrixFile.close();
+
+}
+
+
+void CAgentVisionLoopFunctions::exportMatrices(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
+    pushMatrices(pcFB, agent);
+
+    auto coverageMatrixForExport = m_tCoverageMatrix[pcFB];
+    auto obstacleMatrixForExport = m_tObstacleMatrix[pcFB];
+
+    //Export coverage matrix of each agent
+    std::ofstream coverageMatrixFile;
+    coverageMatrixFile.open(metric_path_str + "/coverage_matrix_"+filename+".csv");
+    coverageMatrixFile << "agent_id,x,y,coverage,size\n";
+    for (int i = 0; i < coverageMatrixForExport.size(); i++) {
+        for (int j = 0; j < coverageMatrixForExport[0].size(); j++) {
+            if (coverageMatrixForExport[i][j] == -1 && obstacleMatrixForExport[i][j] == -1) continue;
+            coverageMatrixFile << agent->id << ",";
+            auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
+            coverageMatrixFile << realCoords.x<< ",";
+            coverageMatrixFile << realCoords.y << ",";
+            coverageMatrixFile << coverageMatrixForExport[i][j];
+            coverageMatrixFile << "," << coverageMatrixResolution << "\n";
+        }
+    }
+    coverageMatrixFile.close();
+
+    //Export obstacle matrix of each agent
+    std::ofstream obstacleMatrixFile;
+    obstacleMatrixFile.open(metric_path_str + "/obstacle_matrix_"+filename+".csv");
+    obstacleMatrixFile << "agent_id,x,y,obstacle,size\n";
+    for (int i = 0; i < obstacleMatrixForExport.size(); i++) {
+        for (int j = 0; j < obstacleMatrixForExport[0].size(); j++) {
+            if (obstacleMatrixForExport[i][j] == -1 && coverageMatrixForExport[i][j] == -1) continue;
+            obstacleMatrixFile << agent->id << ",";
+            auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
+            obstacleMatrixFile << realCoords.x<< ",";
+            obstacleMatrixFile << realCoords.y << ",";
+            obstacleMatrixFile << obstacleMatrixForExport[i][j];
+            obstacleMatrixFile << "," << obstacleMatrixResolution << "\n";
+        }
+    }
+    obstacleMatrixFile.close();
 }
 #endif
 
@@ -837,15 +974,23 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
             allAgentsDone = false;
             if (agent->state == Agent::State::RETURNING){
                 if (std::find(this->agents_returning.begin(), agents_returning.end(), pcFB->GetId()) == agents_returning.end()){
+                    #ifdef USING_CONFIDENCE_TREE
                     //Export quadtree at point of return
                     exportQuadtree("quadtree_returning_" + pcFB->GetId(), pcFB, agent);
+                    #else
+                    exportMatrices("returning_" + pcFB->GetId(), pcFB, agent);
+                    #endif
                     agents_returning.push_back(pcFB->GetId());
                 }
             }
         } else {
             //If new agent done
             if (std::find(this->agents_relayed_map.begin(), agents_relayed_map.end(), pcFB->GetId()) == agents_relayed_map.end()){
+                #ifdef USING_CONFIDENCE_TREE
                 exportQuadtree("quadtree_map_relayed_" + pcFB->GetId(), pcFB, agent);
+                #else
+                exportMatrices("map_relayed_" + pcFB->GetId(), pcFB, agent);
+                #endif
                 agents_relayed_map.push_back(pcFB->GetId());
                 m_metrics.mission_time[pcFB->GetId()] = agent->elapsed_ticks / agent->ticks_per_second;
             }
@@ -1007,12 +1152,9 @@ void CAgentVisionLoopFunctions::checkReturnToDeploymentSite(CSpace::TMapPerType 
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         //Check if agent is within 1m from deployment position
-        if (sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
-                 pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2)) <= cController.agentObject->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = true;
-        } else {
-            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = false;
-        }
+        auto distance = sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
+                             pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2));
+        this->m_metrics.distance_to_deployment_site[pcFB->GetId()] = distance;
     }
 }
 
