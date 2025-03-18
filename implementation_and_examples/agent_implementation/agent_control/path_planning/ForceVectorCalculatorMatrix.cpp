@@ -506,7 +506,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
     //Initialize variables to store the best frontier region and its score
     Coordinate bestFrontierRegionCenter = {MAXFLOAT, MAXFLOAT};
-    double highestFrontierFitness = -std::numeric_limits<double>::max();
+    double lowestFrontierFitness = std::numeric_limits<double>::max();
 
     //Iterate over all frontier regions to find the best one
     for (const auto &region: frontierRegions) {
@@ -529,11 +529,11 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //        }
 
         //Calculate the fitness of the frontier region
-        double fitness = -agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_SIZE_WEIGHT * region.size();
+        double fitness = agent->config.FRONTIER_DISTANCE_WEIGHT * distance - agent->config.FRONTIER_SIZE_WEIGHT * region.size();
 
         //If the fitness is lower than the best fitness, update the best fitness and best frontier region
-        if (fitness > highestFrontierFitness) {
-            highestFrontierFitness = fitness;
+        if (fitness < lowestFrontierFitness) {
+            lowestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
         }
     }
@@ -543,6 +543,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //Own fix:
     //If there is no best frontier region, return a zero vector
     if (bestFrontierRegionCenter.x == MAXFLOAT) {
+        assert(0 && "No best frontier region found");
         return {0, 0};
     }
 
@@ -617,9 +618,9 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
             argos::CRadians Bq = argos::ASin(
                     std::min(agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
             argos::CRadians Eta_q = OC.Angle();
-            if (agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS > OC.Length())
-                argos::LOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << agent->config.AGENT_SAFETY_RADIUS
-                               << " + " << agent->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
+//            if (agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS > OC.Length())
+//                argos::LOGERR << "AGENT_SAFETY_RADIUS + OBJECT_SAFETY_RADIOS > OC.Length(): " << agent->config.AGENT_SAFETY_RADIUS
+//                               << " + " << agent->config.OBJECT_SAFETY_RADIUS << ">" << OC.Length() << std::endl;
 
             argos::CDegrees minAngle = ToDegrees((Eta_q - Bq).SignedNormalize());
             argos::CDegrees maxAngle = ToDegrees((Eta_q + Bq).SignedNormalize());

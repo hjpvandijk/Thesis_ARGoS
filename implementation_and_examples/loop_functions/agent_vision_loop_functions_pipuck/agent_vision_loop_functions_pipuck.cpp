@@ -11,7 +11,7 @@
 /****************************************/
 /****************************************/
 
-//#define VISUALS
+#define VISUALS
 
 /*
  * To reduce the number of waypoints stored in memory,
@@ -123,8 +123,9 @@ void CAgentVisionLoopFunctions::pushMatricesIfTime(CPiPuckEntity *pcFB, const st
 void CAgentVisionLoopFunctions::pushMatrices(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
 //    std::vector<std::tuple<quadtree::Box, int, double>> boxesAndOccupancyAndTicks = agent->quadtree->getAllBoxes();
-    auto agentCoverageMatrix = agent->coverageMatrix->getMatrix();
-    auto agentObstacleMatrix = agent->obstacleMatrix->getMatrix();
+    auto agentCoverageMatrix = agent->coverageMatrix->getMatrixPheromones(globalElapsedTime);
+    auto agentObstacleMatrix = agent->obstacleMatrix->getMatrixPheromones(globalElapsedTime);
+//    agent->quadtree->getAllBoxes(globalElapsedTime)
 
     m_tCoverageMatrix[pcFB] = agentCoverageMatrix;
     m_tObstacleMatrix[pcFB] = agentObstacleMatrix;
@@ -413,35 +414,24 @@ void CAgentVisionLoopFunctions::PostStep() {
 //                combinedCoverageMatrix.update(i, j, coverageMatrix[i][j]);
 //            }
 //        }
+        auto obstacleMatrixOfAgent = m_tObstacleMatrix[it.first];
+
+//#ifdef VISUALS
         if(it.first->GetId() == "pipuck2"){
             coverageMatrix = it.second;
             coverageMatrixWidth = coverageMatrix.size();
             coverageMatrixHeight = coverageMatrix[0].size(); // columns;
             coverageMatrixResolution = -(real_x_min * 2) / coverageMatrixWidth;
 //            argos::LOG << "setting" << std::endl;
-
-        }
-        updateCoverage(it.first, it.second, true);
-    }
-//    combinedObstacleMatrix = PheromoneMatrix(10, 10, 0.2);
-
-    for (const auto& it : m_tObstacleMatrix) {
-//        double** obstacleMatrix = it.second;
-//        int height = sizeof *obstacleMatrix / sizeof obstacleMatrix[0]; // rows
-//        int width = sizeof *obstacleMatrix[0] / sizeof(double); // columns
-//        for (int i = 0; i < width; i++) {
-//            for (int j = 0; j < height; j++) {
-//                combinedObstacleMatrix.update(i, j, obstacleMatrix[i][j]);
-//            }
-//        }
-        if(it.first->GetId() == "pipuck2"){
-            obstacleMatrix = it.second;
+            obstacleMatrix = obstacleMatrixOfAgent;
             obstacleMatrixWidth = obstacleMatrix.size();
             obstacleMatrixHeight = obstacleMatrix[0].size(); // columns;
             obstacleMatrixResolution = -(real_x_min * 2) / obstacleMatrixWidth;
         }
-        updateCoverage(it.first, it.second, false);
+//#endif
+        updateCoverage(it.first, it.second, obstacleMatrixOfAgent);
     }
+//    combinedObstacleMatrix = PheromoneMatrix(10, 10, 0.2);
 
 
 #endif
@@ -587,7 +577,7 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
 
 }
 #else
-void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>> &matrix, bool usingCoverageMatrix) {
+void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>> &coverageMatrix, const std::vector<std::vector<double>> &obstacleMatrix) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
     auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED_EXPLORING && cController.agentObject->state != Agent::State::MAP_RELAYED;
@@ -597,14 +587,20 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
         double covered_area = 0;
 
 
-        for (int i = 0; i < matrix.size(); i++) {
-            for (int j = 0; j < matrix[i].size(); j++) {
-                if (matrix[i][j] > 0) {
-                    if (usingCoverageMatrix) {
-                        covered_area += cController.agentObject->coverageMatrix->getResolution() * cController.agentObject->coverageMatrix->getResolution();
-                    } else {
-                        covered_area += cController.agentObject->obstacleMatrix->getResolution() * cController.agentObject->obstacleMatrix->getResolution();
-                    }
+        for (int i = 0; i < coverageMatrix.size(); i++) {
+            for (int j = 0; j < coverageMatrix[i].size(); j++) {
+                if (coverageMatrix[i][j] > 0) { //Will be -1 when not visited or covered by obstacle matrix
+                    covered_area += cController.agentObject->coverageMatrix->getResolution() *
+                                    cController.agentObject->coverageMatrix->getResolution();
+                }
+            }
+        }
+
+        for (int i = 0; i < obstacleMatrix.size(); i++) {
+            for (int j = 0; j < obstacleMatrix[i].size(); j++) {
+                if (obstacleMatrix[i][j] > 0) { //Will be -1 when not visited
+                    covered_area += cController.agentObject->obstacleMatrix->getResolution() *
+                                    cController.agentObject->obstacleMatrix->getResolution();
                 }
             }
         }
@@ -876,11 +872,11 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename) {
     //Export coverage matrix of each agent
     std::ofstream coverageMatrixFile;
     coverageMatrixFile.open(metric_path_str + "/coverage_matrix_"+filename+".csv");
-    coverageMatrixFile << "agent_id,x,y,coverage,size\n";
+    coverageMatrixFile << "agent_id,x,y,coverage_pheromone,size\n";
     for (auto & it : m_tCoverageMatrix) {
         for (int i = 0; i < it.second.size(); i++) {
             for (int j = 0; j < it.second[0].size(); j++) {
-                if (it.second[i][j] == -1 && m_tObstacleMatrix[it.first][i][j] == -1) continue;
+//                if (it.second[i][j] == -1 && m_tObstacleMatrix[it.first][i][j] == -1) continue; //Skip empty cells
                 coverageMatrixFile << it.first->GetId() << ",";
                 auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
                 coverageMatrixFile << realCoords.x<< ",";
@@ -895,11 +891,11 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename) {
     //Export obstacle matrix of each agent
     std::ofstream obstacleMatrixFile;
     obstacleMatrixFile.open(metric_path_str + "/obstacle_matrix_"+filename+".csv");
-    obstacleMatrixFile << "agent_id,x,y,obstacle,size\n";
+    obstacleMatrixFile << "agent_id,x,y,obstacle_pheromone,size\n";
     for (auto & it : m_tObstacleMatrix) {
         for (int i = 0; i < it.second.size(); i++) {
             for (int j = 0; j < it.second[0].size(); j++) {
-                if (it.second[i][j] == -1 && m_tCoverageMatrix[it.first][i][j] == -1) continue;
+//                if (it.second[i][j] == -1 && m_tCoverageMatrix[it.first][i][j] == -1) continue;
                 obstacleMatrixFile << it.first->GetId() << ",";
                 auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
                 obstacleMatrixFile << realCoords.x<< ",";
@@ -923,7 +919,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename, CPiPuckEnti
     //Export coverage matrix of each agent
     std::ofstream coverageMatrixFile;
     coverageMatrixFile.open(metric_path_str + "/coverage_matrix_"+filename+".csv");
-    coverageMatrixFile << "agent_id,x,y,coverage,size\n";
+    coverageMatrixFile << "agent_id,x,y,coverage_pheromone,size\n";
     for (int i = 0; i < coverageMatrixForExport.size(); i++) {
         for (int j = 0; j < coverageMatrixForExport[0].size(); j++) {
             if (coverageMatrixForExport[i][j] == -1 && obstacleMatrixForExport[i][j] == -1) continue;
@@ -940,7 +936,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename, CPiPuckEnti
     //Export obstacle matrix of each agent
     std::ofstream obstacleMatrixFile;
     obstacleMatrixFile.open(metric_path_str + "/obstacle_matrix_"+filename+".csv");
-    obstacleMatrixFile << "agent_id,x,y,obstacle,size\n";
+    obstacleMatrixFile << "agent_id,x,y,obstacle_pheromone,size\n";
     for (int i = 0; i < obstacleMatrixForExport.size(); i++) {
         for (int j = 0; j < obstacleMatrixForExport[0].size(); j++) {
             if (obstacleMatrixForExport[i][j] == -1 && coverageMatrixForExport[i][j] == -1) continue;

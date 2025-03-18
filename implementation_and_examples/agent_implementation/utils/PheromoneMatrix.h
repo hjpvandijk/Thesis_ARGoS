@@ -25,6 +25,7 @@ public:
 
 
     std::vector<std::vector<double>> getMatrix() const { return this->matrix; }
+    std::vector<std::vector<double>> getMatrixPheromones(double currentTimeS) const;
 
     void evaporate(double rate);
     void print();

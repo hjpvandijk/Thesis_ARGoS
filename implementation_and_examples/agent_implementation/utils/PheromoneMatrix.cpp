@@ -207,3 +207,15 @@ void PheromoneMatrix::matrixToStringVector(std::vector<std::string> *strings) {
 
 //    return oss.str();
 }
+
+std::vector<std::vector<double>> PheromoneMatrix::getMatrixPheromones(double currentTimeS) const{
+    std::vector<std::vector<double>> pheromones;
+    for (int i = 0; i < this->width; i++) {// ?? CHECK WIDTH AND HEIGHT I J ??
+        std::vector<double> row;
+        for (int j = 0; j < this->height; j++) {
+            row.push_back(calculatePheromone(this->matrix[i][j], currentTimeS));
+        }
+        pheromones.push_back(row);
+    }
+    return pheromones;
+}

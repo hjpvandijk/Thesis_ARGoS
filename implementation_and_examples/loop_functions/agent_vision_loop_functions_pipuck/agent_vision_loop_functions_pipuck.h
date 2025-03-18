@@ -165,7 +165,7 @@ private:
     void exportQuadtree(std::string filename);
     void exportQuadtree(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent);
     #else
-    void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>>& coverageMatrix, bool usingCoverageMatrix);
+    void updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::vector<double>> &coverageMatrix, const std::vector<std::vector<double>> &obstacleMatrix);
     void exportMatrices(std::string filename);
     void exportMatrices(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent);
     #endif

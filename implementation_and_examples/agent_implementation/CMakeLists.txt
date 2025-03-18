@@ -7,7 +7,7 @@ add_library(agent_implementation SHARED
         feature_config.h
         agent.h
         agent.cpp
-        config.yaml
+        configs
         utils/coordinate.h
         utils/coordinate.cpp
         utils/Quadtree.h

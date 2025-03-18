@@ -8,7 +8,7 @@ physical:
     robot_inter_wheel_distance: 0.0656 # Agent inter-wheel distance in meters
 battery:
   capacity: 1000 # Battery capacity in mAh
-  voltage: 7.2 # Battery voltage in volts
+  voltage: 6.0 # Battery voltage in volts
 motor:
   stall_current: 1.5 # Motor stall current in A
   stall_torque: 0.8 # Motor stall torque in Nm
@@ -18,7 +18,7 @@ control:
   turn_threshold: 15 # The min angle difference in degrees between the desired and current orientation to start turning
   turn_speed_ratio: 0.1 # The ratio of the maximum speed of the motors to use when turning
   360_degrees_steps: 360 # The number of steps we divide the 360 degrees in when deciding the free directions
-  object_safety_radius: 0.1 # The safety radius around an object in meters
+  object_safety_radius: 0.2 # The safety radius around an object in meters
   agent_safety_radius_margin: 0.1 # The margin around the agent's safety radius in meters
   disallow_frontier_switching:
     frontier_reach_distance: 0.5 # The distance in meters when we consider a frontier reached
@@ -34,7 +34,7 @@ communication:
   time_sync_interval: 10 # The time in seconds between time synchronization
 forces:
   frontier_search_radius: 10.0 # The radius in meters around the agent to search for frontiers
-  max_frontier_cells: 200 # The maximum number of queried frontier cells
+#  max_frontier_cells: 200 # The maximum number of queried frontier cells
   max_frontier_regions: 10 # The maximum number of frontier regions
   agent_avoidance_radius: 0.68 # The radius in meters around the agent to avoid other agents
   agent_cohesion_radius: 1.5 # The radius in meters around the agent to align with other agents
@@ -49,19 +49,21 @@ forces:
     distance_weight: 0 # The weight of the euclidean distance to the target in the fitness function
     size_weight: 1 # The weight of the size of the frontier in the fitness function
 confidence:
-  p_free: 0.51 # The probability of an observed free cell being free
-  p_occupied: 0.46 # The probability of an observed occupied cell being not free
-  alpha_receive: 0.1 # The factor with which we doubt a received confidence value
-  p_free_threshold: 0.6 # The threshold for a cell to be considered free
-  p_occupied_threshold: 0.4 # The threshold for a cell to be considered occupied
+  p_free: 0.511441 # The probability of an observed free cell being free
+  p_occupied: 0.484670 # The probability of an observed occupied cell being not free
+  alpha_receive: 0.6 # The factor with which we doubt a received confidence value
+  p_free_threshold: 0.7 # The threshold for a cell to be considered free
+  p_occupied_threshold: 0.3 # The threshold for a cell to be considered occupied
+  p_max: 0.90 # The maximum confidence value (< 1), smaller results in faster change of occupancy estimation
+  p_min: 0.05 # The minimum confidence value (> 0), larger results in faster change of occupancy estimation
   p_at_max_sensor_range: 0.5 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
 map:
-  coverage_resolution: 0.2 # The resolution of the coverage matrix in meters --> will be rounded down to the nearest power of 2 division of the map size
-  obstacle_resolution: 0.2 # The resolution of the obstacle matrix in meters --> will be rounded down to the nearest power of 2 division of the map size
+  coverage_resolution: 0.28 # The resolution of the coverage matrix in meters --> will be rounded down to the nearest power of 2 division of the map size
+  obstacle_resolution: 0.28 # The resolution of the obstacle matrix in meters --> will be rounded down to the nearest power of 2 division of the map size
   coverage_evaporation_time: 100 # The time in seconds it takes for a coverage pheromone value to evaporate
   obstacle_evaporation_time: 100 # The time in seconds it takes for an obstacle pheromone value to evaporate
 quadtree:
-  resolution: 0.2 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size
+  resolution: 0.28 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size
   evaporation_time: 100 # The time in seconds it takes for a pheromone value to evaporate
   evaporated_pheromone_factor: 0.05 # If a cell has ever been explored, the pheromone value will never be lower than this factor of the maximum confidence value (from 0.5)
   merge_max_visited_time_difference: 5 # The maximum time difference in seconds between two quadtree nodes to merge them

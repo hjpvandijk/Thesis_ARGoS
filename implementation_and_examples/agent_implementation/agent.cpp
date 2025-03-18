@@ -1475,7 +1475,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
     this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
     this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
-    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
+//    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
 //#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //    this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
 //    this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();
@@ -1506,8 +1506,8 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.AGENT_COHESION_WEIGHT = config_yaml["forces"]["agent_cohesion_weight"].as<double>();
     this->config.AGENT_AVOIDANCE_WEIGHT = config_yaml["forces"]["agent_avoidance_weight"].as<double>();
     this->config.AGENT_ALIGNMENT_WEIGHT = config_yaml["forces"]["agent_alignment_weight"].as<double>();
-    this->config.TARGET_WEIGHT = config_yaml["forces"]["unexplored_frontier_weight"].as<double>();
-//
+    this->config.TARGET_WEIGHT = config_yaml["forces"]["target_weight"].as<double>();
+
     this->config.FRONTIER_DISTANCE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["distance_weight"].as<double>();
     this->config.FRONTIER_SIZE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["size_weight"].as<double>();
 //    this->config.FRONTIER_REACH_BATTERY_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_battery_weight"].as<double>();

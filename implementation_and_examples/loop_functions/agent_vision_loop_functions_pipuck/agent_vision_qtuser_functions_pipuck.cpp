@@ -248,9 +248,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     for (int i = 0; i < m_cAgVisLF.coverageMatrixWidth; i++) {
         for (int j = 0; j < m_cAgVisLF.coverageMatrixHeight; j++) {
-            double visitedTimeS = m_cAgVisLF.coverageMatrix[i][j];
-            double currentTimeS = m_cAgVisLF.globalElapsedTime;
-            double pheromone = visitedTimeS == -1 ? 0 : 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
+            double pheromone = m_cAgVisLF.coverageMatrix[i][j];
             if (pheromone == 0) continue;
 
 //            Coordinate cellCoordinate = m_cAgVisLF.combinedCoverageMatrix.getRealCoordinateFromIndex(i, j).FromOwnToArgos();
@@ -294,9 +292,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
     for (int i = 0; i < m_cAgVisLF.obstacleMatrixWidth; i++) {
         for (int j = 0; j < m_cAgVisLF.obstacleMatrixHeight; j++) {
 //            argos::LOG << "i: " << i << " j: " << j << std::endl;
-            double visitedTimeS = m_cAgVisLF.obstacleMatrix[i][j];
-            double currentTimeS = m_cAgVisLF.globalElapsedTime;
-            double pheromone = visitedTimeS == -1 ? 0 : 1.0 - std::min((currentTimeS - visitedTimeS) / 100.0, 1.0);
+            double pheromone = m_cAgVisLF.obstacleMatrix[i][j];
             if (pheromone == 0) continue;
 //            argos::LOG << "visitedTimeS: " << visitedTimeS << " currentTimeS: " << currentTimeS << " pheromone: " << pheromone << std::endl;
 
