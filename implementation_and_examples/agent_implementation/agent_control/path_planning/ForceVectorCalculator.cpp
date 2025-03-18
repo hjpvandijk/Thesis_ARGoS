@@ -101,13 +101,14 @@ argos::CVector2 ForceVectorCalculator::calculateAgentAvoidanceVector(Agent* agen
             argos::CVector2(averageNeighborLocation.x, averageNeighborLocation.y)
             - argos::CVector2(agent->position.x, agent->position.y);
 
-    //Create a vector 90 degrees to the vector between agent and the average position of the agents within range
-    auto xfactor = 1;
-    auto yfactor = -1 * xfactor; //Assert that xfactor and yfactor are orthogonal
-    argos::CVector2 vectorToOtherAgents90Degrees = argos::CVector2(xfactor * vectorToOtherAgents.GetY(), yfactor * vectorToOtherAgents.GetX());
+    return vectorToOtherAgents * -1;
 
-//    return vectorToOtherAgents * -1;
-    return vectorToOtherAgents90Degrees;
+//    //Create a vector 90 degrees to the vector between agent and the average position of the agents within range
+//    auto xfactor = 1;
+//    auto yfactor = -1 * xfactor; //Assert that xfactor and yfactor are orthogonal
+//    argos::CVector2 vectorToOtherAgents90Degrees = argos::CVector2(xfactor * vectorToOtherAgents.GetY(), yfactor * vectorToOtherAgents.GetX());
+
+//    return vectorToOtherAgents90Degrees;
 }
 
 /**

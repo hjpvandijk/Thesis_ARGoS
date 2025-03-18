@@ -770,6 +770,12 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
                     exportQuadtree("quadtree_returning_" + pcFB->GetId(), pcFB, agent);
                     agents_returning.push_back(pcFB->GetId());
                 }
+            } else if (agent->state == Agent::State::FINISHED_EXPLORING){
+                if (std::find(this->agents_finished_exploring.begin(), agents_finished_exploring.end(), pcFB->GetId()) == agents_finished_exploring.end()){
+                    //Export quadtree at point of return
+                    exportQuadtree("quadtree_finished_exploring_" + pcFB->GetId(), pcFB, agent);
+                    agents_finished_exploring.push_back(pcFB->GetId());
+                }
             }
         } else {
             //If new agent done

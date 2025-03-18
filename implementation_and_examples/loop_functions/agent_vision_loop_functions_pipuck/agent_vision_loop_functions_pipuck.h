@@ -43,6 +43,7 @@ public:
 
     std::vector<std::string> agents_relayed_map;
     std::vector<std::string> agents_returning;
+    std::vector<std::string> agents_finished_exploring;
 
 
 

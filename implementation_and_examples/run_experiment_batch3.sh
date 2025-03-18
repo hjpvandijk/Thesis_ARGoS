@@ -6,7 +6,7 @@ cd ..
 
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
-CONFIG_DIR="./agent_implementation/configs/fsr_mfc_mrl"
+CONFIG_DIR="./agent_implementation/configs/fsr_mrl"
 OTHER_CONFIG_DIRS=("./agent_implementation/configs/comm_range_and_loss")
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
@@ -15,51 +15,27 @@ ARGOSEXEC="argos3"
 mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
-#EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
-EXPERIMENTS=("museum.argos" "museum_tilted.argos")
+EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
+#EXPERIMENTS=("museum.argos" "museum_tilted.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
 #CONFIGS=("config_bigger_safety_n_1.yaml" "config_bigger_safety_range.yaml" "config_bigger_safety_n_3.yaml")
 #CONFIGS=("n_3_m_2_5_cellratio0_75_noise.yaml" "n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5.yaml" "n_3_m_2_5_cellratio0_75_noise_object_safety_0_3.yaml")
 #CONFIGS=("p_sensor_1.yaml")
 CONFIGS=(
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_2000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_2000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_1000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_1000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_99999_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_2000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_2000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_1000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_1000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_99999_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_2000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_2000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_1000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_1000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_99999_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_2000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_2000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_1000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_frontier_cells_1000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_99999_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_2000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_2000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_1000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_frontier_cells_1000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_99999_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_99999_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_2000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_2000_max_route_length_30.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_1000_max_route_length_99999.yaml" 
-	"end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_frontier_cells_1000_max_route_length_30.yaml" 
-	)
+        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_route_length_99999.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_route_length_30.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_route_length_99999.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_route_length_30.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_route_length_99999.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_route_length_30.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_route_length_99999.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_route_length_30.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_route_length_99999.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_15_evaporation_time_100_max_route_length_30.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_route_length_99999.yaml"
+        "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_5_evaporation_time_100_max_route_length_30.yaml"
+        )
 
 
 
@@ -75,7 +51,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=2
+N_REPEATED_EXPERIMENTS=3
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -86,11 +62,12 @@ n_failed_experiments=0
 for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
 #if r is 1, seed is 3, if r is 2, seed is 5
-if [ $r -eq 1 ]; then
-  SEED=3
-else
-  SEED=5
-fi
+#if [ $r -eq 1 ]; then
+#  SEED=3
+#else
+#  SEED=5
+#fi
+ SEED=$r #1
 
 #  echo "Seed: $SEED"
   export SEED
