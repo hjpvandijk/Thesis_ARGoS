@@ -317,7 +317,6 @@ void MotionSystemBatteryManager::calculateVoltageAtSpeed(float speed_m_s) {
     float torque_at_speed = rolling_force_without_acceleration_N * robot_wheel_radius_m * 10.1971621f; //In kg.cm
     float torque_per_motor = torque_at_speed / 2; //In kg.cm
 
-    //TODO: set values through config file
     float speed_at_torque_at_3V = 120.0f * (1-torque_per_motor/0.4); //In RPM @ 3V: no-load rpm * (1 - torque/stall torque);
     float speed_at_torque_at_4_5V = 185.0f * (1-torque_per_motor/0.6); //In RPM @ 4.5V: no-load rpm * (1 - torque/stall torque);
     float speed_at_torque_at_6V = 250.0f * (1-torque_per_motor/0.8); //In RPM @ 6V: no-load rpm * (1 - torque/stall torque);

@@ -8,6 +8,7 @@
 Radio::Radio(argos::CCI_SimpleRadiosActuator *radioActuator, argos::CCI_SimpleRadiosSensor *radioSensor) {
     this->radioActuator = radioActuator;
     this->radioSensor = radioSensor;
+    std::make_heap(this->messagesInTransit.begin(), this->messagesInTransit.end(), Compare());
 }
 
 void Radio::config(float wifiTransferSpeed_Mbps, float maxJitter_ms, float message_loss_probability){
@@ -20,7 +21,7 @@ void Radio::broadcast_message(std::string &messagePrependedWithId) const {
     messagePrependedWithId.insert(0, "<A>"); //Prepend with ALL
     auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
     argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
-    this->radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
+    radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
 }
 
 double calculateTransmissionTime(int messageSize, double transmissionRate) {
@@ -40,14 +41,16 @@ void Radio::send_message(std::string &messagePrependedWithId, const std::string&
 //    argos::LOG << "Prepend target id size: " << messagePrependedWithId.size() << std::endl;
     auto *buff = (argos::UInt8 *) messagePrependedWithId.c_str();
     argos::CByteArray cMessage = argos::CByteArray(buff, messagePrependedWithId.size() + 1);
-    this->radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
+    radioActuator->GetInterfaces()[0].Messages.emplace_back(cMessage);
 
 }
 
 void Radio::checkMessagesInTransit(std::vector<std::string> &messages, double current_time_s) {
-    while (!this->messagesInTransit.empty() && this->messagesInTransit.top().arrive_time_s <= current_time_s) {
-        auto messageInTransit = this->messagesInTransit.top();
-        this->messagesInTransit.pop();
+    while (!messagesInTransit.empty() && this->messagesInTransit.front().arrive_time_s <= current_time_s) {
+        std::pop_heap(this->messagesInTransit.begin(), this->messagesInTransit.end(), Compare());
+        auto messageInTransit = this->messagesInTransit.back();
+        this->messagesInTransit.pop_back();
+//        auto messageInTransit = this->messagesInTransit.top();
         std::string messageStr(messageInTransit.cMessage.ToCArray(),
                                messageInTransit.cMessage.ToCArray() + messageInTransit.cMessage.Size());
         messages.push_back(messageStr);
@@ -56,20 +59,28 @@ void Radio::checkMessagesInTransit(std::vector<std::string> &messages, double cu
 }
 
 void Radio::checkMessagesInTransitPeek(std::vector<std::string> &messages, double current_time_s) {
-    std::priority_queue<MessageInTransit, std::vector<MessageInTransit>, Compare> tempQueue = this->messagesInTransit;
-    while (!tempQueue.empty() && tempQueue.top().arrive_time_s <= current_time_s) {
-        auto messageInTransit = tempQueue.top();
-        tempQueue.pop();
-        std::string messageStr(messageInTransit.cMessage.ToCArray(),
-                               messageInTransit.cMessage.ToCArray() + messageInTransit.cMessage.Size());
-        messages.push_back(messageStr);
+//    std::priority_queue<MessageInTransit, std::vector<MessageInTransit>, Compare> tempQueue = this->messagesInTransit;
+    for (auto &messageInTransit: this->messagesInTransit) {
+        if (messageInTransit.arrive_time_s <= current_time_s) {
+            std::string messageStr(messageInTransit.cMessage.ToCArray(),
+                                   messageInTransit.cMessage.ToCArray() + messageInTransit.cMessage.Size());
+            messages.push_back(messageStr);
+        }
     }
+//    if (tempQueue.top().arrive_time_s <= current_time_s) {
+//        auto messageInTransit = tempQueue.top();
+//        tempQueue.pop();
+//        std::string messageStr(messageInTransit.cMessage.ToCArray(),
+//                               messageInTransit.cMessage.ToCArray() + messageInTransit.cMessage.Size());
+//        messages.push_back(messageStr);
+//    }
 }
+
 
 void Radio::receive_messages(std::vector<std::string> &messages, double current_time_s) {
     //First check if our messages in transit have arrived
     messages.clear();
-    std::vector<argos::CByteArray> sensorMessages = this->radioSensor->GetInterfaces()[0].Messages;
+    std::vector<argos::CByteArray> sensorMessages = radioSensor->GetInterfaces()[0].Messages;
     for (const auto &sensorMessage: sensorMessages) {
         //Random probability of dropping the message
         if ((rand() % 100) < this->message_loss_probability * 100) continue; //Ignore (drop) the message
@@ -78,12 +89,12 @@ void Radio::receive_messages(std::vector<std::string> &messages, double current_
         double jitter = calculateJitter(this->maxJitter_ms);
         auto messageReceiveTime = current_time_s + transmissionTime + jitter;
         MessageInTransit message = {sensorMessage, messageReceiveTime};
-        this->messagesInTransit.push(message);
+        this->messagesInTransit.push_back(message);
+        std::push_heap(this->messagesInTransit.begin(), this->messagesInTransit.end(), Compare());
 
     }
 
     //Check if messages have arrived
     checkMessagesInTransit(messages, current_time_s);
 }
-
 

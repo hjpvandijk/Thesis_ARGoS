@@ -21,6 +21,7 @@ public:
     }
 
     static float getProbability(float distance);
+    static float getError(float distance);
 
 };
 

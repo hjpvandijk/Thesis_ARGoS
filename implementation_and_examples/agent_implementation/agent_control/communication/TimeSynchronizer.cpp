@@ -89,6 +89,7 @@ void TimeSynchronizer::syncMissionTime(const std::string& other_agent_id, Agent*
     auto [t_TXi, t_RXj, t_TXj, t_RXi] = agentSyncs[other_agent_id];
     double time_offset = ((t_RXj - t_TXi) - (t_RXi - t_TXj))/2; //The difference in ticks between the agents
     int agent_compensation = std::floor(time_offset/2.0);//The amount this agent should compensate. Floor makes sure we get an integer difference, i.e. 0.5 means only one agent shifts one tick
+    assert(agent_compensation == 0);
     //Negative means agent is ahead of other agent
     //Positive means agent is behind other agent
 

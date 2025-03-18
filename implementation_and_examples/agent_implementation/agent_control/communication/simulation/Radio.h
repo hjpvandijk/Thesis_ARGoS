@@ -27,7 +27,6 @@ public:
     void receive_messages(std::vector<std::string> &messages, double current_time_s);
 
     void checkMessagesInTransitPeek(std::vector<std::string> &messages, double current_time_s);
-
 private:
     float wifiTransferSpeed_Mbps; //Speed of the wifi transfer in Mbps
     float maxJitter_ms; //Max jitter in ms
@@ -45,7 +44,8 @@ private:
     };
 
 //    std::priority_queue<std::tuple<std::string, double, double>> messagesInTransit; //Message, transmission time, sent time
-    std::priority_queue<MessageInTransit, std::vector<MessageInTransit>, Compare> messagesInTransit; //Message, transmission time, sent time
+//    std::priority_queue<MessageInTransit, std::vector<MessageInTransit>, Compare> messagesInTransit; //Message, transmission time, sent time
+    std::vector<MessageInTransit> messagesInTransit; //Message, transmission time, sent time
 
     void checkMessagesInTransit(std::vector<std::string> &messages, double current_time_s);
 

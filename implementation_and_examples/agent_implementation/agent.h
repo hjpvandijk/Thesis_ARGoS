@@ -56,8 +56,8 @@ public:
         double STEPS_360_DEGREES;
 
         double AGENT_LOCATION_RELEVANT_S;
-        double TIME_SYNC_INTERVAL_S;
         double MAP_EXCHANGE_INTERVAL_S;
+        double TIME_SYNC_INTERVAL_S;
 
         double DISTANCE_SENSOR_NOISE_CM;
         double ORIENTATION_NOISE_DEGREES;
@@ -76,6 +76,9 @@ public:
         double FRONTIER_SIZE_WEIGHT;
         #ifdef USING_CONFIDENCE_TREE
         double FRONTIER_PHEROMONE_WEIGHT;
+        double FRONTIER_PHEROMONE_K;
+        double FRONTIER_PHEROMONE_N;
+        double FRONTIER_PHEROMONE_M;
         #endif
 
         double FRONTIER_SEARCH_RADIUS;
@@ -99,6 +102,8 @@ public:
         float ALPHA_RECEIVE;
         float P_FREE_THRESHOLD;
         float P_OCCUPIED_THRESHOLD;
+        float P_MAX;
+        float P_MIN;
         float P_AT_MAX_SENSOR_RANGE;
 
         double QUADTREE_RESOLUTION;
@@ -161,7 +166,8 @@ public:
     argos::CVector2 force_vector;
 
     Coordinate deploymentLocation;
-
+    double min_distance_to_deployment_location = MAXFLOAT;
+    double deployment_location_reach_distance;
 
 
 
@@ -234,13 +240,14 @@ public:
 
     Coordinate currentBestFrontier = {0,0};
 
-    double ticks_per_second = 30;
+    double ticks_per_second = 16;
 
     enum class State {
         NO_MISSION,
         EXPLORING,
         RETURNING,
-        FINISHED
+        FINISHED_EXPLORING,
+        MAP_RELAYED
     };
 
     State state = State::NO_MISSION;

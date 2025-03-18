@@ -28,7 +28,9 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     #ifdef USING_CONFIDENCE_TREE
 
     auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
-    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED,
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED_THRESHOLD,
+                                                          this->config.P_MAX, this->config.P_MIN,
+                                                          this->config.ALPHA_RECEIVE,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
@@ -164,36 +166,35 @@ void Agent::readInfraredSensor() {
  * @param coordinate2
  */
 void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
-                               float Psensor) {//    double x = coordinate1.x;
+                               float Psensor) {
+    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
+    if (dist < this->quadtree->getResolution())
+        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
+//    double x = coordinate1.x;
 //    double y = coordinate1.y;
 //    double dx = coordinate2.x - coordinate1.x;
 //    double dy = coordinate2.y - coordinate1.y;
 //    double distance = sqrt(dx * dx + dy * dy);
-//    double stepSize = this->coverageMatrix->getResolution();
+//    double stepSize = this->quadtree->getResolution();
 //    int nSteps = std::ceil(distance / stepSize);
 //    double stepX = dx / nSteps;
 //    double stepY = dy / nSteps;
 //
 //    for (int s = 0; s < nSteps; s++) {
-////        this->quadtree->add(Coordinate{x, y}, quadtree::Occupancy::FREE, elapsed_ticks / ticks_per_second);
-//        //If the cell is occupied, don't set area as free
-//        if (this->obstacleMatrix->get(x, y, elapsed_ticks/ticks_per_second) > 0) {
-//            continue;
+//        if (objectBox.size > 0) {
+//            if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
+//                double p = (this->config.P_FREE - 0.5) * (1 - double(s) / double(nSteps)) +
+//                           0.5; //Increasingly more uncertain the further away from the agent
+//                //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+//                this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, p * Psensor,
+//                                    elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+//            } else {
+//                break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
+//            }
 //        }
-//        this->coverageMatrix->update(x, y, elapsed_ticks/ticks_per_second);
-//
 //        x += stepX;
 //        y += stepY;
 //    }
-
-    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
-    #ifdef USING_CONFIDENCE_TREE
-    if (dist < this->quadtree->getResolution())
-        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
-    #else
-    if (dist < this->coverageMatrix->getResolution())
-        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
-    #endif
 
     std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
                                                                                     coordinate2);
@@ -205,17 +206,9 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
             double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
                        0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
 //            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
-            #ifdef USING_CONFIDENCE_TREE
-            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+                       //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
             this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
                                 elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
-            #else
-            if (this->obstacleMatrix->get(point.x, point.y, elapsed_ticks/ticks_per_second) > 0) {
-                continue;
-            }
-            this->coverageMatrix->update(point.x, point.y, elapsed_ticks/ticks_per_second);
-            #endif
-
         } else {
             break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
         }
@@ -309,7 +302,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
  * Add occupied object location to the quadtree
  * @param objectCoordinate
  */
-quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) {
+quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) const {
     //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
     quadtree::Box objectBox = this->quadtree->add(
             Coordinate{objectCoordinate.x + 0.0000000001, objectCoordinate.y + 0.0000000001}, this->config.P_OCCUPIED /
@@ -335,49 +328,12 @@ void Agent::addObjectLocation(Coordinate objectCoordinate) {
  * If there is no obstacle within range, add the free area between the agent and the end of the range to the quadtree
  */
 void Agent::checkForObstacles() {
-//    for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
-//        argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
-//        if (this->lastRangeReadings[sensor_index] < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
-//
-//            double opposite = argos::Sin(sensor_rotation) * this->lastRangeReadings[sensor_index];
-//            double adjacent = argos::Cos(sensor_rotation) * this->lastRangeReadings[sensor_index];
-//
-//
-//            Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
-//            addFreeAreaBetween(this->position, object);
-//            //If the detected object is actually another agent, add it as a free area
-//            //So check if the object coordinate is close to another agent
-//            bool close_to_other_agent = false;
-//            for (const auto &agentLocation: this->agentLocations) {
-//                argos::CVector2 objectToAgent =
-//                        argos::CVector2(agentLocation.second.first.x, agentLocation.second.first.y)
-//                        - argos::CVector2(object.x, object.y);
-//
-//                //If detected object and another agent are not close, add the object as an obstacle
-//                if (objectToAgent.Length() <= this->coverageMatrix->getResolution()) {
-//                    close_to_other_agent = true;
-//                }
-//            }
-//            //Only add the object as an obstacle if it is not close to another agent
-//            if (!close_to_other_agent) addObjectLocation(object);
-//
-//
-//        } else {
-//            double opposite = argos::Sin(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
-//            double adjacent = argos::Cos(sensor_rotation) * this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
-//
-//
-//            Coordinate end_of_ray = {this->position.x + adjacent, this->position.y + opposite};
-//            addFreeAreaBetween(this->position, end_of_ray);
-//        }
-//    }
-
     bool addedObjectAtAgentLocation = false;
     for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->distance_sensors[sensor_index].getDistance() < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
-            float sensor_probability = HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
+            float sensor_probability = this->config.DISTANCE_SENSOR_NOISE_CM == 0 ? 1.0 : HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
 
             double opposite = argos::Sin(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
             double adjacent = argos::Cos(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
@@ -861,10 +817,47 @@ void Agent::calculateNextPosition() {
                                        this->deploymentLocation.y - this->position.y);
 
         //If we are close to the deployment location, we have returned, we can stop
-        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->state = State::FINISHED;
+        if (targetVector.Length() <= this->deployment_location_reach_distance) {
+            this->state = State::FINISHED_EXPLORING;
+        } else {
+            //If we are getting closer to the deployment location, we can decrease the distance to reach it, 1cm at a time
+            if (targetVector.Length() < this->min_distance_to_deployment_location) {
+                this->deployment_location_reach_distance = std::max(this->deployment_location_reach_distance - 0.01, 0.1);
+                this->min_distance_to_deployment_location = targetVector.Length();
+            } //If we are not getting closer, we can increase the distance to reach it, 0.2cm at a time
+            else {
+                this->deployment_location_reach_distance += 0.002;
+            }
+
+            //Set our current best 'frontier' to the deployment location
+            if (!(this->currentBestFrontier == this->deploymentLocation)) {
+                this->currentBestFrontier = this->deploymentLocation;
+#ifdef PATH_PLANNING_ENABLED
+                periodic_check_required = true;
+#endif
+            }
+#ifdef PATH_PLANNING_ENABLED
+            if (periodic_check_required) {
+                this->route_to_best_frontier.clear();
+                this->pathPlanner.getRoute(this, this->position, deploymentLocation, this->route_to_best_frontier);
+                if (this->route_to_best_frontier.empty()) { //If there is no route to the deployment location, we reset the current best frontier
+                    this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+                }
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+
+            }
+#endif
+#if defined SKIP_UNREACHABLE_FRONTIERS && defined RANDOM_WALK_WHEN_NO_FRONTIERS
+            if (frontierEvaluator.avoidingCoordinate(this, this->deploymentLocation)) {
+                this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+            }
+            if (randomWalker.randomWalking && randomWalker.randomWalkedFarEnough(this)) {
+                //Force reset of frontier avoidance
+                this->frontierEvaluator.resetFrontierAvoidance(this, {0,0});
+            }
+#endif
         }
-    }
+    } else assert(0 && "Shouldn't be in any other state");
 #endif
 #if defined(RANDOM_WALK_WHEN_NO_FRONTIERS) || defined(PATH_PLANNING_ENABLED)
     bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
@@ -985,12 +978,33 @@ void Agent::doStep() {
 
     checkMessages();
 
-    if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
+    if (this->state == State::NO_MISSION || this->state == State::FINISHED_EXPLORING || this->state == State::MAP_RELAYED) {
         //Do nothing
         this->differential_drive.stop();
+        if (this->state == State::FINISHED_EXPLORING) {
+            //If we are finished exploring, and any other agent is within communication range, and we have exchanged recently, we are fully done.
+            bool map_relayed = false;
+            if (this->agentLocations.empty()) map_relayed = true; //Have never encountered another agent, so we assume there are no others
+            for (const auto &agentLocationPair: this->agentLocations) {
+                double lastReceivedTick = getTimeFromAgentLocation(agentLocationPair.first);
+                //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
+                if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second < this->config.AGENT_LOCATION_RELEVANT_S) {
+                    //If we have sent the quadtree to this agent in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, we assume we have received it back
+                    //So we are done
+                    if (this->agentMapSent.count(agentLocationPair.first) &&
+                        this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] <
+                        this->config.MAP_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                        map_relayed = true;
+                        break;
+                    }
+                }
+            }
+            if (map_relayed) {
+                this->state = State::MAP_RELAYED;
+            }
+        }
     } else { //Exploring or returning
         if (this->elapsed_ticks >= this->ticks_per_second) { //Wait one second before starting, allowing initial communication
-
             checkForObstacles();
 
             calculateNextPosition();
@@ -1016,8 +1030,8 @@ void Agent::doStep() {
                     this->differential_drive.turnLeft();
                 }
             }
-            checkMissionEnd();
         }
+        checkMissionEnd();
         this->elapsed_ticks++;
     }
 }
@@ -1029,23 +1043,35 @@ void Agent::sendQuadtreeToCloseAgents() {
     double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick =getTimeFromAgentLocation(agentLocationPair.first);
-        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
-            //If we have not sent the quadtree to this agent yet in the past MAP_EXCHANGE_INTERVAL_S seconds, send it
-            if (!this->agentMapSent.count(agentLocationPair.first) ||
-                this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] >
-                this->config.MAP_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+            //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
+            if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
+                this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
+                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
-                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
-                oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
-                this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
+                break; //We know we have to broadcast the quadtree, so we can break
             }
         }
     }
 
+
     if (!sendQuadtree) return; //If we don't need to send the quadtree to any agent, return
+
+    //Update the exchange time for all agents within range
+    for (const auto &agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            this->config.AGENT_LOCATION_RELEVANT_S) {
+            //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+            oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
+            this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
+
+        }
+    }
+
     this->quadtree->toStringVector(&quadTreeToStrings, oldest_exchange/this->ticks_per_second);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
@@ -1065,16 +1091,27 @@ void Agent::sendMatricesToCloseAgents() {
             //If we have not sent the quadtree to this agent yet in the past MAP_EXCHANGE_INTERVAL_S seconds, send it
             if (!this->agentMapSent.count(agentLocationPair.first) ||
                 this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] >
-                this->config.MAP_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                        (this->config.MAP_EXCHANGE_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the map exchange interval a bit (between -2 and +2 seconds)
                 sendMatrices = true; //We need to send the quadtree to at least one agent
-                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
-                oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
-                this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
+                break;
             }
         }
     }
 
     if (!sendMatrices) return; //If we don't need to send the quadtree to any agent, return
+
+    //Update the exchange time for all agents within range
+    for (const auto &agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = this->getTimeFromAgentLocation(agentLocationPair.first);
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            this->config.AGENT_LOCATION_RELEVANT_S) {
+            //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+            oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
+            this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
+
+        }
+    }
+
     std::string coverageMatrixString = this->coverageMatrix->matrixToString();
     broadcastMessage("MC:" + coverageMatrixString);
     std::string obstacleMatrixString = this->obstacleMatrix->matrixToString();
@@ -1372,18 +1409,26 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
-    if (this->state == State::RETURNING) {
+    if (this->state == State::RETURNING || this->state == State::FINISHED_EXPLORING) {
         //If we have are returning to the deployment location, but we are taking over double the time at which we return, we have failed (finished).
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S * 2.0f) {
-            this->state = State::FINISHED;
+            this->state = State::MAP_RELAYED;
         }
-    } else if (this->state == State::NO_MISSION || this->state == State::FINISHED) return;
+    } else if (this->state == State::NO_MISSION  || this->state == State::MAP_RELAYED){
+        return;
+    }
     else {
         auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
             this->state = State::RETURNING;
+            this->config.AGENT_ALIGNMENT_WEIGHT = 0.0;
+            this->min_distance_to_deployment_location = sqrt(pow(this->deploymentLocation.x - this->position.x, 2) +
+                                                             pow(this->deploymentLocation.y - this->position.y, 2));
         } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
             this->state = State::RETURNING;
+            this->config.AGENT_ALIGNMENT_WEIGHT = 0.0;
+            this->min_distance_to_deployment_location = sqrt(pow(this->deploymentLocation.x - this->position.x, 2) +
+                                                             pow(this->deploymentLocation.y - this->position.y, 2));
         }
     }
 }
@@ -1443,11 +1488,19 @@ void Agent::loadConfig(const std::string& config_file) {
 //    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
 
     #ifdef USING_CONFIDENCE_TREE
+    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
+    this->config.FRONTIER_PHEROMONE_K = config_yaml["forces"]["frontier_fitness"]["k"].as<double>();
+    this->config.FRONTIER_PHEROMONE_N = config_yaml["forces"]["frontier_fitness"]["n"].as<double>();
+    this->config.FRONTIER_PHEROMONE_M = config_yaml["forces"]["frontier_fitness"]["m"].as<double>();
+
+
     this->config.P_FREE = config_yaml["confidence"]["p_free"].as<double>();
     this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
     this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
     this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
     this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_MAX = config_yaml["confidence"]["p_max"].as<float>();
+    this->config.P_MIN = config_yaml["confidence"]["p_min"].as<float>();
     this->config.P_AT_MAX_SENSOR_RANGE = config_yaml["confidence"]["p_at_max_sensor_range"].as<float>();
 
     this->config.QUADTREE_RESOLUTION = config_yaml["quadtree"]["resolution"].as<double>();
