@@ -392,12 +392,11 @@
             <body position="5.62,4.86,0" orientation="45.0,0,0"/>
         </box>
 
-        <!-- Spawnable boxes, randomly generated: 12 boxes, length min 0.1, max  4.5, length min 0.05, max 2.25 -->
-        <box id="spawn_box_0" size="0.8013862541673118,0.5170141740769565,0.5" movable="false">
-            <body position="-6.82266725673771,-14.152345929393498,0" orientation="166.56880993172038,0,0"/>
+        <box id="spawn_box_0" size="0.3664638874731285,1.2083045973594573,0.5" movable="false">
+            <body position="-5.128939726027397,-11.490572602739725,0" orientation="-12.425942865427485,0,0"/>
         </box>
-        <box id="spawn_box_1" size="1.2217597847491233,0.3764964015080277,0.5" movable="false">
-            <body position="-10.597419305519319,11.369789945121557,0" orientation="351.7329457454122,0,0"/>
+        <box id="spawn_box_1" size="0.6759326439783108,1.9617339269126177,0.5" movable="false">
+            <body position="-7.519897100093544,-5.725622076707205,0" orientation="-156.5713071912546,0,0"/>
         </box>
         <box id="spawn_box_2" size="4.033269445620962,0.6002493425814163,0.5" movable="false">
             <body position="-3.1297088029739695,11.727154394962469,0" orientation="172.09386199995689,0,0"/>

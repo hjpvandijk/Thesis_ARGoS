@@ -273,23 +273,23 @@
         <box id="spawn_box_1" size="0.36793984070215235,0.7332223246404739,0.5" movable="false">
             <body position="2.225424856644985,4.556537061932947,0" orientation="250.00555304619888,0,0"/>
         </box>
-        <box id="spawn_box_2" size="1.3475425310094278,0.29973391674425454,0.5" movable="false">
-            <body position="-0.899777657808689,4.490725605161639,0" orientation="65.8872071568166,0,0"/>
+        <box id="spawn_box_2" size="0.25484264489982256,1.239294153944091,0.5" movable="false">
+            <body position="-3.80343415028114,-5.083584244350129,0" orientation="238.11827636936306,0,0"/>
         </box>
-        <box id="spawn_box_3" size="1.3788751049689358,0.34345613949661397,0.5" movable="false">
+        <box id="spawn_box_3" size="0.1955155893237905,0.7710382610480494,0.5" movable="false">
+            <body position="-5.060559145587038,0.42106234003053505,0" orientation="10.29334759066029,0,0"/>
+        </box>
+        <box id="spawn_box_4" size="1.3788751049689358,0.34345613949661397,0.5" movable="false">
             <body position="-1.0095197790671628,-2.6138870253650097,0" orientation="157.62632987215986,0,0"/>
         </box>
-        <box id="spawn_box_4" size="1.115307071808511,0.43760280492240183,0.5" movable="false">
+        <box id="spawn_box_5" size="1.115307071808511,0.43760280492240183,0.5" movable="false">
             <body position="-2.106902778034238,1.9926773330853416,0" orientation="227.60258605264985,0,0"/>
         </box>
-        <box id="spawn_box_5" size="1.387088147486205,0.3764055239380532,0.5" movable="false">
-            <body position="-5.423662935718413,0.5752666204819321,0" orientation="275.54483608661394,0,0"/>
+        <box id="spawn_box_6" size="0.2406715367096475,0.7197569034055873,0.5" movable="false">
+            <body position="-0.6099784261343884,3.454327989632429,0" orientation="278.37783203643045,0,0"/>
         </box>
-        <box id="spawn_box_6" size="0.32708579646514946,0.40308923531741025,0.5" movable="false">
-            <body position="3.245188064675837,0.34496557927973537,0" orientation="12.795206843349092,0,0"/>
-        </box>
-        <box id="spawn_box_7" size="0.31402894571466744,0.29292415094818225,0.5" movable="false">
-            <body position="-3.2557367996734734,-2.731493181595487,0" orientation="45.866393338283615,0,0"/>
+        <box id="spawn_box_7" size="0.27910549147395847,0.6490377492873585,0.5" movable="false">
+            <body position="4.727504981231533,1.4892860066827536,0" orientation="237.48785589694722,0,0"/>
         </box>
         <cylinder id="circle_0" radius="0.375" height="0.5" temperature="0" movable="false">
             <body position="0.4798648857858985,-0.4851336840394476,0" orientation="0,0,0"/>
@@ -381,8 +381,6 @@
             <body position="-4.063700606624816,2.101132015620162,0" orientation="{{PIPUCK15_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
-
-
     </arena>
 
 
