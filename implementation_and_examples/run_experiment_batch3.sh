@@ -7,7 +7,7 @@ cd ..
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
 CONFIG_DIR="./agent_implementation/configs/fsr_mrl"
-OTHER_CONFIG_DIRS=("./agent_implementation/configs/comm_range_and_loss")
+OTHER_CONFIG_DIRS=("./agent_implementation/configs/noise" "./agent_implementation/configs/dynam_and_evap")
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
 

@@ -7,7 +7,7 @@ cd ..
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
 CONFIG_DIR="./agent_implementation/configs/dynam_and_evap"
-OTHER_CONFIG_DIRS=("./agent_implementation/configs/comm_range_and_loss")
+OTHER_CONFIG_DIRS=("./agent_implementation/configs/fsr_mrl" "./agent_implementation/configs/noise") 
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
 
@@ -49,7 +49,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=3
+N_REPEATED_EXPERIMENTS=5
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
