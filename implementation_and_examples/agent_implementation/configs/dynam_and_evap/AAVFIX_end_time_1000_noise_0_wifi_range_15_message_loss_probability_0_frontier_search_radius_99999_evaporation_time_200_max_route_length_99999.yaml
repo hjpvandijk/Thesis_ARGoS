@@ -11,7 +11,7 @@ communication:
   wifi_speed: 10
 confidence:
   alpha_receive: 0.6
-  p_at_max_sensor_range: 0.5
+  p_at_max_sensor_range: 1.0
   p_free: 0.511441
   p_free_threshold: 0.7
   p_max: 0.9
@@ -76,7 +76,8 @@ quadtree:
   merge_max_visited_time_difference: 5
   resolution: 0.28
 sensors:
-  distance_sensor_noise: 0
+  distance_sensor_jitter: 0
+  distance_sensor_noise_factor: 0
   distance_sensor_range: 2
   orientation_jitter: 0
   orientation_noise: 0

@@ -96,7 +96,8 @@ public:
         double QUADTREE_EXCHANGE_INTERVAL_S;
         double TIME_SYNC_INTERVAL_S;
 
-        double DISTANCE_SENSOR_NOISE_CM;
+        double DISTANCE_SENSOR_JITTER_CM;
+        double DISTANCE_SENSOR_NOISE_FACTOR;
         double ORIENTATION_NOISE_DEGREES;
         double ORIENTATION_JITTER_DEGREES;
         double POSITION_NOISE_CM;
@@ -352,7 +353,7 @@ private:
 
     void checkForObstacles();
 
-    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
+//    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
 
     bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const;
 
@@ -364,10 +365,10 @@ private:
     void checkMissionEnd();
 
 
-    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor);
-    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox);
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+//    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox);
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();

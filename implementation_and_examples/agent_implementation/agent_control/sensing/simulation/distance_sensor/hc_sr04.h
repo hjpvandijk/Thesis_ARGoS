@@ -20,10 +20,11 @@ public:
         HC_SR04::distance = new_distance;
     }
 
-    static float getProbability(float distance);
+//    static float getProbability(float distance);
     static float getError(float distance);
+    static float getSimulatedMeasurement(float actual_distance);
 
-};
+    };
 
 
 #endif //IMPLEMENTATION_AND_EXAMPLES_HC_SR04_H

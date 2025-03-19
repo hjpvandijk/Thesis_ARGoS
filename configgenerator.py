@@ -7,7 +7,7 @@ noise_full_position = 103.3
 noise_full_position_jitter = 10
 noise_full_orientation = 8
 noise_full_orientation_jitter = 5
-noise_distance = 10
+noise_distance_jitter = 10
 
 active = "fsr_mrl"
 
@@ -36,26 +36,7 @@ def update_yaml_value(oldfile_path,file_path, key, new_value):
     with open(file_path, "w") as file:
         yaml.dump(data, file, default_flow_style=False)  # Save back to YAML
 
-if active == "comm":
-    #Comm range and loss
-    dir = "implementation_and_examples/agent_implementation/configs/comm_range_and_loss"
-    #make directory
-    os.makedirs(dir, exist_ok=True)
-
-    #clear directory
-    for file in os.listdir(dir):
-        os.remove(os.path.join(dir, file))
-
-    options = {
-        "mission.end_time": [400, 600, 1000],
-        "noise": [0, 1],
-        "communication.wifi_range": [99999, 15, 10, 5],
-        "communication.message_loss_probability": [0, 0.25, 0.5],
-        "forces.frontier_search_radius" : [99999],
-        "quadtree.evaporation_time" : [100],
-        "control.path_planning.max_route_length" : [99999],
-    }
-
+def create_configs(options, dir, prefix):
     #number of combinations
     print(len(options["mission.end_time"])*len(options["noise"])*len(options["communication.wifi_range"])*len(options["communication.message_loss_probability"])*len(options["forces.frontier_search_radius"])*len(options["quadtree.evaporation_time"])*len(options["control.path_planning.max_route_length"]))
     print()
@@ -77,7 +58,8 @@ if active == "comm":
                                 update_yaml_value(yaml_path, yaml_path, "sensors.position_jitter", noise_full_position_jitter*noise)
                                 update_yaml_value(yaml_path, yaml_path, "sensors.orientation_noise", noise_full_orientation*noise)
                                 update_yaml_value(yaml_path, yaml_path, "sensors.orientation_jitter", noise_full_orientation_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_noise", noise_distance*noise)
+                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_jitter", noise_distance_jitter*noise)
+                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_noise_factor", noise)
                                 
                                 update_yaml_value(yaml_path, yaml_path, "mission.end_time", end_time)
                                 update_yaml_value(yaml_path, yaml_path, "communication.wifi_range", wifi_range)
@@ -92,6 +74,28 @@ if active == "comm":
 
                                 
     print(")")
+
+if active == "comm":
+    #Comm range and loss
+    dir = "implementation_and_examples/agent_implementation/configs/comm_range_and_loss"
+    #make directory
+    os.makedirs(dir, exist_ok=True)
+
+    #clear directory
+    for file in os.listdir(dir):
+        os.remove(os.path.join(dir, file))
+
+    options = {
+        "mission.end_time": [400, 600, 1000],
+        "noise": [0, 1],
+        "communication.wifi_range": [99999, 15, 10, 5],
+        "communication.message_loss_probability": [0, 0.25, 0.5],
+        "forces.frontier_search_radius" : [99999],
+        "quadtree.evaporation_time" : [100],
+        "control.path_planning.max_route_length" : [99999],
+    }
+
+    create_configs(options, dir, prefix)
 
 elif active == "noise":
 
@@ -114,42 +118,7 @@ elif active == "noise":
         "control.path_planning.max_route_length" : [99999],
     }
 
-    #number of combinations
-    print(len(options["mission.end_time"])*len(options["noise"])*len(options["communication.wifi_range"])*len(options["communication.message_loss_probability"])*len(options["forces.frontier_search_radius"])*len(options["quadtree.evaporation_time"])*len(options["control.path_planning.max_route_length"]))
-    print()
-    print("(")
-    outer = 0
-    #For all combionations of the options
-    for end_time in options["mission.end_time"]:
-        for noise in options["noise"]:
-            for wifi_range in options["communication.wifi_range"]:
-                for message_loss_probability in options["communication.message_loss_probability"]:
-                    for frontier_search_radius in options["forces.frontier_search_radius"]:
-                        for evaporation_time in options["quadtree.evaporation_time"]:
-                            for max_route_length in options["control.path_planning.max_route_length"]:
-                                # Construct the path to the YAML file in the current directory
-                                config_string = f"{prefix}end_time_{str(end_time).replace('.', '_')}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml";
-                                yaml_path = os.path.join(dir, config_string)
-                                # Update the YAML file
-                                update_yaml_value(placeholder, yaml_path, "sensors.position_noise", noise_full_position*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.position_jitter", noise_full_position_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_noise", noise_full_orientation*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_jitter", noise_full_orientation_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_noise", noise_distance*noise)
-                                
-                                update_yaml_value(yaml_path, yaml_path, "mission.end_time", end_time)
-                                update_yaml_value(yaml_path, yaml_path, "communication.wifi_range", wifi_range)
-                                update_yaml_value(yaml_path, yaml_path, "communication.message_loss_probability", message_loss_probability)
-                                update_yaml_value(yaml_path, yaml_path, "forces.frontier_search_radius", frontier_search_radius)
-                                update_yaml_value(yaml_path, yaml_path, "quadtree.evaporation_time", evaporation_time)
-                                update_yaml_value(yaml_path, yaml_path, "control.path_planning.max_route_length", max_route_length)
-                                
-                                if outer == 0:
-                                    print(f"\"{prefix}end_time_{{END_TIME}}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml\" ")
-        outer += 1
-
-                                
-    print(")")
+    create_configs(options, dir, prefix)
 
 elif active == "dynam_evap":
 
@@ -172,42 +141,9 @@ elif active == "dynam_evap":
         "control.path_planning.max_route_length" : [99999],
     }
 
-    #number of combinations
-    print(len(options["mission.end_time"])*len(options["noise"])*len(options["communication.wifi_range"])*len(options["communication.message_loss_probability"])*len(options["forces.frontier_search_radius"])*len(options["quadtree.evaporation_time"])*len(options["control.path_planning.max_route_length"]))
-    print()
-    print("(")
-    outer = 0
-    #For all combionations of the options
-    for end_time in options["mission.end_time"]:
-        for noise in options["noise"]:
-            for wifi_range in options["communication.wifi_range"]:
-                for message_loss_probability in options["communication.message_loss_probability"]:
-                    for frontier_search_radius in options["forces.frontier_search_radius"]:
-                        for evaporation_time in options["quadtree.evaporation_time"]:
-                            for max_route_length in options["control.path_planning.max_route_length"]:
-                                # Construct the path to the YAML file in the current directory
-                                config_string = f"{prefix}end_time_{str(end_time).replace('.', '_')}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml";
-                                yaml_path = os.path.join(dir, config_string)
-                                # Update the YAML file
-                                update_yaml_value(placeholder, yaml_path, "sensors.position_noise", noise_full_position*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.position_jitter", noise_full_position_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_noise", noise_full_orientation*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_jitter", noise_full_orientation_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_noise", noise_distance*noise)
-                                
-                                update_yaml_value(yaml_path, yaml_path, "mission.end_time", end_time)
-                                update_yaml_value(yaml_path, yaml_path, "communication.wifi_range", wifi_range)
-                                update_yaml_value(yaml_path, yaml_path, "communication.message_loss_probability", message_loss_probability)
-                                update_yaml_value(yaml_path, yaml_path, "forces.frontier_search_radius", frontier_search_radius)
-                                update_yaml_value(yaml_path, yaml_path, "quadtree.evaporation_time", evaporation_time)
-                                update_yaml_value(yaml_path, yaml_path, "control.path_planning.max_route_length", max_route_length)
-                                
-                                if outer == 0:
-                                    print(f"\"{prefix}end_time_{{END_TIME}}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml\" ")
-        outer += 1
+    create_configs(options, dir, prefix)
 
-                                
-    print(")")
+
 
 elif active == "fsr_mrl":
 
@@ -230,42 +166,7 @@ elif active == "fsr_mrl":
         "control.path_planning.max_route_length" : [99999, 30],
     }
 
-    #number of combinations
-    print(len(options["mission.end_time"])*len(options["noise"])*len(options["communication.wifi_range"])*len(options["communication.message_loss_probability"])*len(options["forces.frontier_search_radius"])*len(options["quadtree.evaporation_time"])*len(options["control.path_planning.max_route_length"]))
-    print()
-    print("(")
-    outer = 0
-    #For all combionations of the options
-    for end_time in options["mission.end_time"]:
-        for noise in options["noise"]:
-            for wifi_range in options["communication.wifi_range"]:
-                for message_loss_probability in options["communication.message_loss_probability"]:
-                    for frontier_search_radius in options["forces.frontier_search_radius"]:
-                        for evaporation_time in options["quadtree.evaporation_time"]:
-                            for max_route_length in options["control.path_planning.max_route_length"]:
-                                # Construct the path to the YAML file in the current directory
-                                config_string = f"{prefix}end_time_{str(end_time).replace('.', '_')}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml";
-                                yaml_path = os.path.join(dir, config_string)
-                                # Update the YAML file
-                                update_yaml_value(placeholder, yaml_path, "sensors.position_noise", noise_full_position*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.position_jitter", noise_full_position_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_noise", noise_full_orientation*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_jitter", noise_full_orientation_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_noise", noise_distance*noise)
-                                
-                                update_yaml_value(yaml_path, yaml_path, "mission.end_time", end_time)
-                                update_yaml_value(yaml_path, yaml_path, "communication.wifi_range", wifi_range)
-                                update_yaml_value(yaml_path, yaml_path, "communication.message_loss_probability", message_loss_probability)
-                                update_yaml_value(yaml_path, yaml_path, "forces.frontier_search_radius", frontier_search_radius)
-                                update_yaml_value(yaml_path, yaml_path, "quadtree.evaporation_time", evaporation_time)
-                                update_yaml_value(yaml_path, yaml_path, "control.path_planning.max_route_length", max_route_length)
-                                
-                                if outer == 0:
-                                    print(f"\"{prefix}end_time_{{END_TIME}}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml\" ")
-        outer += 1
-
-                                
-    print(")")
+    create_configs(options, dir, prefix)
 
 elif active == "dynam_and_evap":
 
@@ -288,42 +189,7 @@ elif active == "dynam_and_evap":
         "control.path_planning.max_route_length" : [99999],
     }
 
-    #number of combinations
-    print(len(options["mission.end_time"])*len(options["noise"])*len(options["communication.wifi_range"])*len(options["communication.message_loss_probability"])*len(options["forces.frontier_search_radius"])*len(options["quadtree.evaporation_time"])*len(options["control.path_planning.max_route_length"]))
-    print()
-    print("(")
-    outer = 0
-    #For all combionations of the options
-    for end_time in options["mission.end_time"]:
-        for noise in options["noise"]:
-            for wifi_range in options["communication.wifi_range"]:
-                for message_loss_probability in options["communication.message_loss_probability"]:
-                    for frontier_search_radius in options["forces.frontier_search_radius"]:
-                        for evaporation_time in options["quadtree.evaporation_time"]:
-                            for max_route_length in options["control.path_planning.max_route_length"]:
-                                # Construct the path to the YAML file in the current directory
-                                config_string = f"{prefix}end_time_{str(end_time).replace('.', '_')}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml";
-                                yaml_path = os.path.join(dir, config_string)
-                                # Update the YAML file
-                                update_yaml_value(placeholder, yaml_path, "sensors.position_noise", noise_full_position*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.position_jitter", noise_full_position_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_noise", noise_full_orientation*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_jitter", noise_full_orientation_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_noise", noise_distance*noise)
-                                
-                                update_yaml_value(yaml_path, yaml_path, "mission.end_time", end_time)
-                                update_yaml_value(yaml_path, yaml_path, "communication.wifi_range", wifi_range)
-                                update_yaml_value(yaml_path, yaml_path, "communication.message_loss_probability", message_loss_probability)
-                                update_yaml_value(yaml_path, yaml_path, "forces.frontier_search_radius", frontier_search_radius)
-                                update_yaml_value(yaml_path, yaml_path, "quadtree.evaporation_time", evaporation_time)
-                                update_yaml_value(yaml_path, yaml_path, "control.path_planning.max_route_length", max_route_length)
-                                
-                                if outer == 0:
-                                    print(f"\"{prefix}end_time_{{END_TIME}}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml\" ")
-        outer += 1
-
-                                
-    print(")")
+    create_configs(options, dir, prefix)
 
 elif active == "try":
 
@@ -345,39 +211,4 @@ elif active == "try":
         "quadtree.evaporation_time" : [100],
     }
 
-    #number of combinations
-    print(len(options["mission.end_time"])*len(options["noise"])*len(options["communication.wifi_range"])*len(options["communication.message_loss_probability"])*len(options["forces.frontier_search_radius"])*len(options["quadtree.evaporation_time"])*len(options["control.path_planning.max_route_length"]))
-    print()
-    print("(")
-    outer = 0
-    #For all combionations of the options
-    for end_time in options["mission.end_time"]:
-        for noise in options["noise"]:
-            for wifi_range in options["communication.wifi_range"]:
-                for message_loss_probability in options["communication.message_loss_probability"]:
-                    for frontier_search_radius in options["forces.frontier_search_radius"]:
-                        for evaporation_time in options["quadtree.evaporation_time"]:
-                            for max_route_length in options["control.path_planning.max_route_length"]:
-                                # Construct the path to the YAML file in the current directory
-                                config_string = f"{prefix}end_time_{str(end_time).replace('.', '_')}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml";
-                                yaml_path = os.path.join(dir, config_string)
-                                # Update the YAML file
-                                update_yaml_value(placeholder, yaml_path, "sensors.position_noise", noise_full_position*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.position_jitter", noise_full_position_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_noise", noise_full_orientation*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.orientation_jitter", noise_full_orientation_jitter*noise)
-                                update_yaml_value(yaml_path, yaml_path, "sensors.distance_sensor_noise", noise_distance*noise)
-                                
-                                update_yaml_value(yaml_path, yaml_path, "mission.end_time", end_time)
-                                update_yaml_value(yaml_path, yaml_path, "communication.wifi_range", wifi_range)
-                                update_yaml_value(yaml_path, yaml_path, "communication.message_loss_probability", message_loss_probability)
-                                update_yaml_value(yaml_path, yaml_path, "forces.frontier_search_radius", frontier_search_radius)
-                                update_yaml_value(yaml_path, yaml_path, "quadtree.evaporation_time", evaporation_time)
-                                update_yaml_value(yaml_path, yaml_path, "control.path_planning.max_route_length", max_route_length)
-                                
-                                if outer == 0:
-                                    print(f"\"{prefix}end_time_{{END_TIME}}_noise_{str(noise).replace('.', '_')}_wifi_range_{str(wifi_range).replace('.', '_')}_message_loss_probability_{str(message_loss_probability).replace('.', '_')}_frontier_search_radius_{str(frontier_search_radius).replace('.', '_')}_evaporation_time_{str(evaporation_time).replace('.', '_')}_max_route_length_{str(max_route_length).replace('.', '_')}.yaml\" ")
-        outer += 1
-
-                                
-    print(")")
+    create_configs(options, dir, prefix)

@@ -861,8 +861,6 @@ void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, 
         argos::CRadians sensor_rotation = agentRealHeading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (agent->distance_sensors[sensor_index].getDistance() < agent->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
-            float sensor_probability = HC_SR04::getProbability(agent->distance_sensors[sensor_index].getDistance());
-
             double opposite = argos::Sin(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
             double adjacent = argos::Cos(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
 
@@ -907,10 +905,6 @@ void CAgentVisionLoopFunctions::observeAreaBetween(Coordinate coordinate1, Coord
 //        x += stepX;
 //        y += stepY;
 //    }
-
-    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
-    if (dist < agent->quadtree->getResolution())
-        return;
 
     std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent.get(), coordinate1,
                                                                                     coordinate2);

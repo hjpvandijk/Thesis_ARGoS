@@ -68,7 +68,7 @@ confidence:
   p_occupied_threshold: 0.3 # The threshold for a cell to be considered occupied
   p_max: 0.90 # The maximum confidence value (< 1), smaller results in faster change of occupancy estimation
   p_min: 0.05 # The minimum confidence value (> 0), larger results in faster change of occupancy estimation
-  p_at_max_sensor_range: 0.5 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
+  p_at_max_sensor_range: 1.0 #The probability of a sensor reading being correct at the maximum sensor range, used to linearly interpolate probability values
 quadtree:
   resolution: 0.28 # The resolution of the quadtree in meters --> will be rounded down to the nearest power of 2 division of the map size
   evaporation_time: -1 # The time in seconds it takes for a pheromone value to evaporate
@@ -80,5 +80,6 @@ sensors:
   position_jitter: -1 # Position jitter in centimeters (uniform)
   orientation_noise: -1 # Orientation sensor noise in degrees (uniform)
   orientation_jitter: -1 # Orientation sensor jitter in degrees (uniform)
-  distance_sensor_noise: -1 # Distance sensor noise in centimeters (uniform)
+  distance_sensor_noise_factor: -1 # Distance sensor noise factor (multiplied with error based on tests)
+  distance_sensor_jitter: -1 # Distance sensor jitter in centimeters (uniform)
   distance_sensor_range: 2 # Distance sensor range in meters
