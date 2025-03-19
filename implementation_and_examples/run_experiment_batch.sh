@@ -8,7 +8,6 @@ cd ..
 EXPERIMENT_DIR="./experiments"
 CONFIG_DIR="./agent_implementation/configs/comm_range_and_loss"
 OTHER_CONFIG_DIRS=("./agent_implementation/configs/noise" "./agent_implementation/configs/dynam_and_evap" "./agent_implementation/configs/fsr_mrl")  # ("./agent_implementation/configs/noise")
-
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
 
