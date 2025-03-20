@@ -13,7 +13,7 @@ public:
     std::vector<Coordinate> avoidingCoordinates;
 
     //If the agent is counts this many ticks without a direction to the target, it will skip the target
-    int MAX_COUNT_NO_DIRECTION = 150;
+    int MAX_COUNT_NO_DIRECTION = 80;
 
     //Count the number of ticks the agent has no direction to the target
     int countNoDirectionToTarget = 0;
