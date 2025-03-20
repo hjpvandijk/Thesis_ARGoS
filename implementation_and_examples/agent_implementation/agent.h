@@ -121,7 +121,7 @@ public:
         double FRONTIER_PHEROMONE_L;
 
         double FRONTIER_SEARCH_RADIUS;
-        int MAX_FRONTIER_CELLS;
+//        int MAX_FRONTIER_CELLS;
         double FRONTIER_CELL_RATIO;
         int MAX_FRONTIER_REGIONS;
         double AGENT_COHESION_RADIUS;

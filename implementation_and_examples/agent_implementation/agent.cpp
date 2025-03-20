@@ -558,13 +558,13 @@ void Agent::checkForObstacles() {
 //}
 
 
-bool Agent::frontierPheromoneEvaporated() {
-    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getResolution() / 2.0,
-                                 this->elapsed_ticks / this->ticks_per_second,
-                                 this->config.MAX_FRONTIER_CELLS); //Update pheromone of frontier cell
-    if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
-    return false;
-}
+//bool Agent::frontierPheromoneEvaporated() {
+//    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getResolution() / 2.0,
+//                                 this->elapsed_ticks / this->ticks_per_second,
+//                                 this->config.MAX_FRONTIER_CELLS); //Update pheromone of frontier cell
+//    if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
+//    return false;
+//}
 
 void Agent::calculateNextPosition() {
     //Inspired by boids algorithm:
@@ -1245,7 +1245,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
 //
     this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
-    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
+//    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
     this->config.FRONTIER_CELL_RATIO = config_yaml["forces"]["frontier_cell_ratio"].as<double>();
     this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
     this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
