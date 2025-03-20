@@ -248,24 +248,22 @@ namespace quadtree {
 
 
         void processBox(const Box &box, std::vector<std::pair<Box, double>> &frontierBoxes, int current_quadrant, double currentTimeS) const {
-            if (box.size == RESOLUTION) {
+            if (std::abs(box.size - RESOLUTION) < 1e-6) { //If the box is the smallest resolution (account for floating point / rounding errors)
                 double MooreNeighborPheromone = isMooreNeighbourUnknownOrAmbighous(box, current_quadrant, currentTimeS);
                 if (MooreNeighborPheromone != -1) {
                     frontierBoxes.emplace_back(box, MooreNeighborPheromone);
                 }
             } else {
                 for (int i = 0; i < 4; i++) {
-                    if (current_quadrant + i !=
-                        3) {  //Only process the boxes that are at the outer edges of the queried box
+//                    if (current_quadrant + i !=
+//                        3) {  //Only process the boxes that are at the outer edges of the queried box
                         Box childBox = computeBox(box, i);
                         processBox(childBox, frontierBoxes, i, currentTimeS);
-                    }
+//                    }
                 }
 
             }
         }
-
-
 
 /**
 * Returns all the frontier boxes surrounding the given coordinate within the given area size
@@ -276,7 +274,7 @@ namespace quadtree {
             auto max_cells = std::max(1, static_cast<int>(exploredBoxes.size() * cell_ratio)); //Get random subset of the explored boxes, of size max_cells
             //Get random subset of the explored boxes, of size max_cells
             if (exploredBoxes.size() > max_cells) {
-                std::random_shuffle(exploredBoxes.begin(), exploredBoxes.end(), [](int i) { return rand() % i; });
+                std::shuffle(exploredBoxes.begin(), exploredBoxes.end(), std::default_random_engine(std::rand()));  // Temporary RNG
                 exploredBoxes.resize(max_cells);
             }
 
