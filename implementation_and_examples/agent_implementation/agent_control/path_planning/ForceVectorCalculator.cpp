@@ -297,13 +297,14 @@ double getValueOnPheromoneCurve(Agent* agent, double pheromone){
  * @return
  */
 double calculateRegionVisitProbability(Agent* agent, std::map<Coordinate, std::tuple<std::vector<std::pair<quadtree::Box, double>>, double, double, double, double>>& region_summed_certainties_and_reach_time_battery, Coordinate coordinate, double denominator){
+    auto region = std::get<0>(region_summed_certainties_and_reach_time_battery[coordinate]);
     auto region_repulsion = std::get<1>(region_summed_certainties_and_reach_time_battery[coordinate]);
     auto distance = std::get<2>(region_summed_certainties_and_reach_time_battery[coordinate]);
 
     #ifdef BATTERY_MANAGEMENT_ENABLED
     auto reach_time = std::get<3>(region_summed_certainties_and_reach_time_battery[coordinate]);
     auto reach_battery = std::get<4>(region_summed_certainties_and_reach_time_battery[coordinate]);
-    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
                      std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance
                                 + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time
                                 + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
@@ -313,7 +314,7 @@ double calculateRegionVisitProbability(Agent* agent, std::map<Coordinate, std::t
 //               << agent->config.FRONTIER_PHEROMONE_M << " = " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) << " / " << std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery, agent->config.FRONTIER_PHEROMONE_M)
 //               << "= " << numerator << std::endl;
     #else
-    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
             std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance, agent->config.FRONTIER_PHEROMONE_M);
     #endif
     //if numerator is infinite, return 1
@@ -336,12 +337,13 @@ double calculateRegionVisitProbabilityDenominator(Agent* agent, const std::map<C
 
     double denominator = 0.0;
     for (auto &it : region_summed_certainties_and_reach_time_battery) {
+        auto region = std::get<0>(it.second);
         auto region_repulsion = std::get<1>(it.second);
         auto distance = std::get<2>(it.second);
         #ifdef BATTERY_MANAGEMENT_ENABLED
         auto reach_time = std::get<3>(it.second);
         auto reach_battery = std::get<4>(it.second);
-        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
                        std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance
                                 + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time
                                 + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
@@ -354,7 +356,7 @@ double calculateRegionVisitProbabilityDenominator(Agent* agent, const std::map<C
 //                                       + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
 //                                      , agent->config.FRONTIER_PHEROMONE_M) << std::endl;
         #else
-        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
                 std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance, agent->config.FRONTIER_PHEROMONE_M);
         #endif
     }
@@ -476,11 +478,11 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 
         }
-        region_repulsion /= (totalNumberOfCellsInRegion *
-                             totalNumberOfCellsInRegion); //Average divided by the total number of cells in the region. This is the repulsion from the region. (Smaller repulsion when more cells in the region)
         double frontierRegionX = sumX / totalNumberOfCellsInRegion;
         double frontierRegionY = sumY / totalNumberOfCellsInRegion;
-        argos::LOG << "[" << agent->id << "] " << "Frontier region " << frontierRegionX << ", " << frontierRegionY << " has repulsion " << region_repulsion << " / (" << totalNumberOfCellsInRegion << " * " << totalNumberOfCellsInRegion << ") = " << region_repulsion / (totalNumberOfCellsInRegion * totalNumberOfCellsInRegion) << std::endl;
+//        argos::LOG << "[" << agent->id << "] " << "Frontier region " << frontierRegionX << ", " << frontierRegionY << " has repulsion " << region_repulsion << " / " << totalNumberOfCellsInRegion << " = " << region_repulsion / totalNumberOfCellsInRegion << std::endl;
+        region_repulsion /= totalNumberOfCellsInRegion; //Average
+
 //    }
 //
 //
@@ -536,8 +538,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                    if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's frontier" << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's frontier" << std::endl;
 //                    argos::LOG << "Distance from other agent's frontier: " << distanceFromOtherAgentsFrontier << std::endl;
                     break;
 //                    }
@@ -547,8 +549,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                    if (agentLocationTuple.first > agent->id) {
                     //If the other agent has a higher ID, so we can't select this frontier
                     skipFrontier = true;
-                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
-                               << " because it is close to another agent's position" << std::endl;
+//                    argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
+//                               << " because it is close to another agent's position" << std::endl;
 //                    argos::LOG << "Distance from other agent's position: " << distanceFromOtherAgentsPosition
 //                               << std::endl;
                     break;
@@ -604,6 +606,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     }
     double region_visit_probability_denominator = calculateRegionVisitProbabilityDenominator(agent, region_summed_certainties_and_reach_dist_time_battery);
 
+    int random = rand() % 100;
     double cumulative_probability = 0;
 //    argos::LOG << "[" << agent->id << "] " << "Considering " << region_summed_certainties_and_reach_dist_time_battery.size() << " frontier regions" << std::endl;
     for (const auto &region_and_summed_certainty: region_summed_certainties_and_reach_dist_time_battery) {
@@ -615,7 +618,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //#ifdef BATTERY_MANAGEMENT_ENABLED
 //        argos::LOG << "[" << agent->id << "] " << "Frontier region_and_summed_certainty: " << frontierRegionX << ", " << frontierRegionY << " with repulsion " << std::get<1>(region_and_summed_certainty.second) << " has " << std::get<2>(region_and_summed_certainty.second) << " distance, " << std::get<3>(region_and_summed_certainty.second) << " duration and " << std::get<4>(region_and_summed_certainty.second) << " power usage" << std::endl;
         auto region_visit_probability = calculateRegionVisitProbability(agent, region_summed_certainties_and_reach_dist_time_battery, {frontierRegionX, frontierRegionY}, region_visit_probability_denominator);
-        argos::LOG << "[" << agent->id << "] " << "Frontier region_and_summed_certainty: " << frontierRegionX << ", " << frontierRegionY << " has " << region_visit_probability << " probability" << std::endl;
+//        argos::LOG << "[" << agent->id << "] " << "Frontier region_and_summed_certainty: " << frontierRegionX << ", " << frontierRegionY << " has " << region_visit_probability << " probability" << std::endl;
 
 //        //Calculate the cost of the frontier region_and_summed_certainty
 //        double cost =
@@ -683,10 +686,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //#endif
 //        }
         cumulative_probability += region_visit_probability;
-        int random = rand() % 100;
-        argos::LOG << "Random: " << random << " < " << cumulative_probability * 100 << std::endl;
+//        argos::LOG << "Random: " << random << " < " << cumulative_probability * 100 << std::endl;
         if (random < cumulative_probability * 100) { //Chance of choosing this region
-            argos::LOG << "Selected frontier because of probability" << std::endl;
+//            argos::LOG << "Selected frontier because of probability" << std::endl;
 //            highestFrontierFitness = fitness;
             bestFrontierRegionCenter = {frontierRegionX, frontierRegionY};
             agent->bestFrontierRegionBoxes = region;
