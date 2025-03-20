@@ -81,28 +81,28 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //    }
 
 ////    /* Go through all the robot waypoints and draw them */
-//    for (auto & m_tAgentFrontierRegions : m_cAgVisLF.m_tAgentFrontierRegions) {
-//        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
-//                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE, CColor::GRAY10, CColor::GRAY20, CColor::GRAY30, CColor::GRAY40, CColor::GRAY50, CColor::GRAY60, CColor::GRAY70, CColor::GRAY80, CColor::GRAY90};
-//        if (m_tAgentFrontierRegions.first->GetId() != "pipuck1") continue;
-//        int i = 0;
-//        for (auto frontierRegions: m_tAgentFrontierRegions.second) {
-//            //Assign a differnet color to every frontierRegion
-//            CColor color = colors[i];
-//            for (auto [frontier, pheromone]: frontierRegions) {
-//                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
-//                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
-//
-//                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
-//                        color);
-////                DrawText(frontierCoordinate - CVector3(0.05,-0.05,0), std::to_string(frontier.getCenter().x) + " " + std::to_string(frontier.getCenter().y), CColor::BLACK);
-//
-//            }
-//            i++;
-//            if (i > colors.size()) i = 0;
-//
-//        }
-//    }
+    for (auto & m_tAgentFrontierRegions : m_cAgVisLF.m_tAgentFrontierRegions) {
+        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
+                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE, CColor::GRAY10, CColor::GRAY20, CColor::GRAY30, CColor::GRAY40, CColor::GRAY50, CColor::GRAY60, CColor::GRAY70, CColor::GRAY80, CColor::GRAY90};
+        if (m_tAgentFrontierRegions.first->GetId() != "pipuck9") continue;
+        int i = 0;
+        for (auto frontierRegions: m_tAgentFrontierRegions.second) {
+            //Assign a differnet color to every frontierRegion
+            CColor color = colors[i];
+            for (auto [frontier, pheromone]: frontierRegions) {
+                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+
+                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+                        color);
+//                DrawText(frontierCoordinate - CVector3(0.05,-0.05,0), std::to_string(frontier.getCenter().x) + " " + std::to_string(frontier.getCenter().y), CColor::BLACK);
+
+            }
+            i++;
+            if (i > colors.size()) i = 0;
+
+        }
+    }
 
 for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
     CRadians heading = m_cAgVisLF.m_tAgentHeadings[agentheading.first];

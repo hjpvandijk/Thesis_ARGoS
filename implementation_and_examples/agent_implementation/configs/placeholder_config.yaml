@@ -24,7 +24,7 @@ control:
     frontier_reach_distance: 1 # The distance in meters when we consider a frontier reached
     frontier_switch_interval: 5 # The minimum time in seconds between allowing a frontier switch
     target_feasibility_check_interval: 10 # The time in seconds between target feasibility checks
-    feasibility_check_only_route: true # If true, we only check the feasibility of the route to the target, don't reevaluate the target itself
+    feasibility_check_only_route: false # If true, we only check the feasibility of the route to the target, don't reevaluate the target itself
   separate_frontiers:
     distance_threshold: 1.0 # The distance in meters between two frontiers to consider them separate
   path_planning:
@@ -39,9 +39,8 @@ communication:
   message_loss_probability: -1 # The probability of a message being lost
 forces:
   frontier_search_radius: -1 # The radius in meters around the agent to search for frontiers
-  max_frontier_cells: -1 # The maximum number of queried frontier cells
-  frontier_cell_ratio: 0.75 # The ratio of the frontier cells to the total number of cells in the frontier
-  max_frontier_regions: 10 # The maximum number of frontier regions
+  frontier_cell_ratio: 1.0 # The ratio of the frontier cells to the total number of cells in the frontier
+  max_frontier_regions: -1 # The maximum number of frontier regions
   agent_avoidance_radius: 0.5 # The radius in meters around the agent to avoid other agents
   agent_cohesion_radius: 1.5 # The radius in meters around the agent to cohere with other agents
   agent_alignment_radius: 1 # The radius in meters around the agent to align with other agents
@@ -49,7 +48,7 @@ forces:
   virtual_wall_avoidance_weight: 0 #1.1 # The weight of the virtual wall avoidance force
   agent_cohesion_weight: 0 # The weight of the agent cohesion force
   agent_avoidance_weight: 1.15 # The weight of the agent avoidance force
-  agent_alignment_weight: 0.1 # The weight of the agent alignment force
+  agent_alignment_weight: 0 # The weight of the agent alignment force
   target_weight: 0.3 # The weight of the target (frontier or subtarget) force
   frontier_fitness:
     distance_weight: 0 # The weight of the euclidean distance to the target in the fitness function
@@ -57,12 +56,13 @@ forces:
     reach_battery_weight: 1.5 # The weight of battery usage to reach the frontier in the probability function
     reach_duration_weight: 0.1 # The weight of the time to reach the frontier in the probability function
     pheromone_weight: 0.05 # The weight of the pheromone value in the fitness function
-    k: 0.0001 # If increased, frontier region choice moves more towards random
-    n: 3 # >= 0; If increased, the average certainty and region size will have more impact on the probability of choosing a frontier region
+    k: 0.1 # If increased, frontier region choice moves more towards random
+    n: 3 # >= 0; If increased, the average certainty will have more impact on the probability of choosing a frontier region
     m: 2.5 # >= 1 ; If increased, the reach distance, time, and battery usage have more impact on the probability of choosing a frontier region
+    l: 0.8 # >= 0 ; If increased, the region size will have more impact on the probability of choosing a frontier region
 confidence:
-  p_free: 0.511441 # The probability of an observed free cell being free
-  p_occupied: 0.484670 # The probability of an observed occupied cell being not free
+  p_free: 0.6 # The probability of an observed free cell being free
+  p_occupied: 0.35 # The probability of an observed occupied cell being not free
   alpha_receive: 0.6 # The factor with which we doubt a received confidence value
   p_free_threshold: 0.7 # The threshold for a cell to be considered free
   p_occupied_threshold: 0.3 # The threshold for a cell to be considered occupied

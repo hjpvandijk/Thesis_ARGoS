@@ -117,10 +117,6 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
-        //Set orientation
-        auto degrees20 = argos::CDegrees(50);
-        auto degreesQuaternion = argos::CQuaternion(ToRadians(degrees20), argos::CVector3(0, 0, 1));
-        pcFB->GetEmbodiedEntity().GetOriginAnchor().Orientation = degreesQuaternion;
 
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
@@ -352,7 +348,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        argos::LOG << "Updating coverage and certainty for " << it.first->GetId() << std::endl;
         updateCoverage(it.first, it.second);
         updateCertainty(it.first, it.second);
-        if(it.first->GetId()=="pipuck4") combinedQuadTree = it.second;
+        if(it.first->GetId()=="pipuck9") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 
