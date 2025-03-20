@@ -118,6 +118,7 @@ public:
         double FRONTIER_PHEROMONE_K;
         double FRONTIER_PHEROMONE_N;
         double FRONTIER_PHEROMONE_M;
+        double FRONTIER_PHEROMONE_L;
 
         double FRONTIER_SEARCH_RADIUS;
         int MAX_FRONTIER_CELLS;
