@@ -52,33 +52,48 @@ Coordinate PathFollower::followPath(Agent *agent) {
 
 }
 
-//Need to use this version as with the Amanatides_Woo_Voxel_Traversal we need to use the center of the cells, which can cause the line to miss an occupied cell which would be on the actual line
 bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate start, Coordinate target) const {
-    auto x = start.x;
-    auto y = start.y;
-    auto dx = target.x - start.x;
-    auto dy = target.y - start.y;
-    auto distance = sqrt(dx * dx + dy * dy);
-    auto stepSize = agent->quadtree->getResolution()/4;
-    auto nSteps = std::ceil(distance / stepSize);
-    auto stepX = dx / nSteps;
-    auto stepY = dy / nSteps;
-    quadtree::Box prev_box = quadtree::Box();
+//    auto x = start.x;
+//    auto y = start.y;
+//    auto dx = target.x - start.x;
+//    auto dy = target.y - start.y;
+//    auto distance = sqrt(dx * dx + dy * dy);
+//    auto stepSize = agent->quadtree->getResolution()/4;
+//    auto nSteps = std::ceil(distance / stepSize);
+//    auto stepX = dx / nSteps;
+//    auto stepY = dy / nSteps;
+//    quadtree::Box prev_box = quadtree::Box();
+//
+//    for (int s = 0; s < nSteps; s++) {
+//        auto coordinate = Coordinate{x, y};
+//        if (!prev_box.contains(coordinate)) { //We don't have to check the same box twice
+//            auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
+//            auto cell = cell_and_box.first;
+//            auto box = cell_and_box.second;
+//            if (cell != nullptr) {
+//                if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
+//                    return true;
+//                }
+//            }
+//        }
+//        x += stepX;
+//        y += stepY;
+//    }
+    //Small offset towards the start, so the raytracing method selects the correct cell
+    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
+    //Small offset towards the start, so the raytracing method selects the correct cell
+    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
 
-    for (int s = 0; s < nSteps; s++) {
-        auto coordinate = Coordinate{x, y};
-        if (!prev_box.contains(coordinate)) { //We don't have to check the same box twice
-            auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(Coordinate{x, y});
-            auto cell = cell_and_box.first;
-            auto box = cell_and_box.second;
-            if (cell != nullptr) {
-                if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
-                    return true;
-                }
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent, start_with_offset,
+                                                                                    target_with_offset);
+    for (const auto& point: linePoints) {
+        auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(point);
+        auto cell = cell_and_box.first;
+        if (cell != nullptr) {
+            if (cell->quadNode.occupancy == quadtree::Occupancy::OCCUPIED) {
+                return true;
             }
         }
-        x += stepX;
-        y += stepY;
     }
     return false;
 
