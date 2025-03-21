@@ -81,7 +81,7 @@ void FrontierEvaluator::skipIfFrontierUnreachable(Agent* agent, argos::CRadians 
     sqrt(pow(target.x - previousTarget.x, 2) + pow(target.y - previousTarget.y, 2)) < agent->config.FRONTIER_SEPARATION_THRESHOLD/2) { //If we are still on route to almost the same target
         if (std::abs(ToDegrees(objectAvoidanceAngle).GetValue()) > this->cantMoveAngle) { //If we cannot move within 90 degrees towards the target
             this->countNoDirectionToTarget++;
-            this->cantMoveAngle = std::min(this->cantMoveAngle + 5, 89);
+            this->cantMoveAngle = std::min(this->cantMoveAngle + int(agent->ticks_per_second/3), 89);
             if (this->countNoDirectionToTarget >= this->MAX_COUNT_NO_DIRECTION) {
                 this->avoidingCoordinates.push_back(target);
                 //Also avoid the current best frontier if we are on route to it
