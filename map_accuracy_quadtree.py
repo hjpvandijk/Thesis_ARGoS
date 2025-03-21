@@ -228,6 +228,11 @@ def calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data):
         else:
             false_positives += 1 # Incorrectly identified as occupied (actually free)
             color = 'yellow'
+
+        if pheromone < 0.5:
+            color = 'red'
+        else:
+            color = 'green'
             
         rect = plt.Rectangle((box_x, box_y), box_size, box_size, color=color, alpha=0.5)
         ax.add_patch(rect)
@@ -329,7 +334,7 @@ def plot_mistakes(arena_boxes, quadtree_data):
 arena_boxes = read_arena_boxes('implementation_and_examples/experiments/house.argos')
 arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/house.argos')
 
-quadtree_data = read_file('implementation_and_examples/experiment_results/house/n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5/spawn_time_0/8_agents/quadtree.csv')
+quadtree_data = read_file('implementation_and_examples/experiment_results/house/AAVFIX_end_time_400_noise_1_wifi_range_15_message_loss_probability_0_1_frontier_search_radius_99999_evaporation_time_100_max_route_length_99999_1/spawn_time_0/15_agents/S1/quadtree_returning_pipuck2.csv')
 precision, recall = calculate_precision_recall(arena_boxes, arena_cylinders, quadtree_data)
 # print(f'Precision: {precision:.4f}, Recall: {recall:.4f}')
 # plot_mistakes(arena_boxes, quadtree_data) 

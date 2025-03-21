@@ -324,9 +324,7 @@ def plot_certainty_with_different_configs(zipfiles, categories_and_values):
                                                                 time_certainty = df['tick'].to_numpy()/ticks_per_second
                                                 average_all_df = pd.DataFrame(average_all)
                                                 average_all_df.fillna(method='ffill', inplace=True)
-                                                print(average_all_df.iloc[:,0])
                                                 s_all = average_all_df.mean(axis=0).to_numpy()
-                                                print(s_all[0])
                                                 n_agents = agent.split('_')[0]
                                                 lbl = f'communication range: {comm_range}'
                                                 agent_index = agents.index(agent)
