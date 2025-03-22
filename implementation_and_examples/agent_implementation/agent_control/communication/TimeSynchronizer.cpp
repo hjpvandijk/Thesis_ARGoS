@@ -131,7 +131,7 @@ void TimeSynchronizer::calculateCompensation(const std::string& other_agent_id, 
     assert(agent_compensation == 0);
 
 //    if (agent_compensation != 0) {
-        this->compensations.push_back(agent_compensation);
+        this->compensations[other_agent_id] = agent_compensation;
 
 //        argos::LOG << "t_TXi: " << t_TXi << " t_RXj: " << t_RXj << " t_TXj: " << t_TXj << " t_RXi: " << t_RXi
 //                   << std::endl;
@@ -149,7 +149,8 @@ void TimeSynchronizer::syncMissionTime(Agent* agent){
     }
     int agent_compensation = 0;
     for (auto& compensation : this->compensations){
-        agent_compensation += compensation;
+        auto val = compensation.second;
+        agent_compensation += val;
     }
     auto avg_compensation = static_cast<double>(agent_compensation) / this->compensations.size();
     agent_compensation = std::floor(avg_compensation);

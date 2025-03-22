@@ -35,7 +35,8 @@ private:
     std::map<std::string, std::tuple<double, double, double, double>> agentSyncs; //id: ( t_TXi, t_RXj, tTXj, tRXi )
     int lastSyncAttemptTick = 0;
     int lastSuccesfulSyncTick = 0;
-    std::vector<int> compensations = {};
+//    std::vector<int> compensations = {};
+    std::map<std::string, int> compensations = {};
 
     std::string t_TXiMessage(double t_TXi);
     std::string t_TXi_t_RXj_t_TXjMessage(double t_TXi, double t_RXj, double t_TXj);
