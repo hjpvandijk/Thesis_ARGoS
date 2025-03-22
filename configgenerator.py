@@ -164,7 +164,7 @@ elif active == "fsr_mfr_mrl":
     options = {
         "mission.end_time": [400, 600, 1000],
         "noise": [0, 1],
-        "communication.wifi_range": [15],
+        "communication.wifi_range": [99999],
         "communication.message_loss_probability": [0],
         "forces.frontier_search_radius" : [99999, 15, 5],
         "forces.max_frontier_regions" : [99999, 20],
