@@ -865,7 +865,7 @@ void Agent::sendQuadtreeToCloseAgents() {
 
 void Agent::timeSyncWithCloseAgents() {
     if (this->elapsed_ticks - this->timeSynchronizer.getLastSyncAttempt() >=
-        (this->config.TIME_SYNC_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the time sync interval a bit (between -2 and +2 seconds)
+        (this->config.TIME_SYNC_INTERVAL_S + (rand() % 400 - 200)/100) * this->ticks_per_second) { //Randomize the time sync interval a bit (between -2 and +2 seconds)
         for (const auto &agentLocationPair: this->agentLocations) {
             double lastReceivedTick = std::get<2>(agentLocationPair.second);
             //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
@@ -886,15 +886,17 @@ void Agent::startMission() {
 }
 
 void Agent::doStep() {
-    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
-    sendQuadtreeToCloseAgents();
-    argos::CVector2 velocity = {1,0};
-    velocity.Rotate(this->heading);
-    broadcastMessage(
-            "V:" + std::to_string(velocity.GetX()) + ";" + std::to_string(velocity.GetY()));
-    timeSyncWithCloseAgents();
+    if (this->state != State::NO_MISSION) { //Don't do anything before mission
+        broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
+        sendQuadtreeToCloseAgents();
+        argos::CVector2 velocity = {1, 0};
+        velocity.Rotate(this->heading);
+        broadcastMessage(
+                "V:" + std::to_string(velocity.GetX()) + ";" + std::to_string(velocity.GetY()));
+        timeSyncWithCloseAgents();
 
-    checkMessages();
+        checkMessages();
+    }
     if (this->state == State::NO_MISSION || this->state == State::FINISHED_EXPLORING || this->state == State::MAP_RELAYED) {
         //Do nothing
         this->differential_drive.stop();
@@ -950,9 +952,11 @@ void Agent::doStep() {
         }
 
     }
-    //Check if the mission has ended, and if so, we will return to the deployment location
-    checkMissionEnd();
-    this->elapsed_ticks++;
+    if (this->state != State::NO_MISSION) { //Don't update ticks before mission has started.
+        //Check if the mission has ended, and if so, we will return to the deployment location
+        checkMissionEnd();
+        this->elapsed_ticks++;
+    }
 }
 
 

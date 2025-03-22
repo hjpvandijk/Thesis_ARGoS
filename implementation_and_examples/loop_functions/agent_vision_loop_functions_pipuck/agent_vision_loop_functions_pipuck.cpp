@@ -391,6 +391,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             std::shared_ptr<Agent> agent = cController.agentObject;
             pushQuadTree(pcFB, agent);
         }
+        exportMetricsAndMaps();
         experimentFinished = true;
     }
 
@@ -934,7 +935,6 @@ bool CAgentVisionLoopFunctions::IsExperimentFinished() {
 }
 
 void CAgentVisionLoopFunctions::PostExperiment() {
-    exportMetricsAndMaps();
     end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end-start;

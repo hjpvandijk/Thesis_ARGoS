@@ -1413,7 +1413,10 @@ namespace quadtree {
         }
 
         double calculatePheromone(double visitedTime, double PConfidence, double currentTime) const {
-            if ( visitedTime == currentTime) return PConfidence; //If the visited time is the same as the current time, the time factor will be 1, so the pheromone will be the same as the sensor confidence.
+            //If the visited time is the same as the current time, the time factor will be 1, so the pheromone will be the same as the sensor confidence.
+            //If the visited time is greater than the current time, an agent's steps went overtime or oscillator drift occurred as a cell cannot have a visited time that is in the future.
+            // So we just take time factor 1 here.
+            if (visitedTime >= currentTime) return PConfidence;
 //            double timeProbability = 1.0 - std::min((currentTime - visitedTime) / EVAPORATION_TIME_S, (1.0 - EVAPORATED_PHEROMONE_FACTOR));
             double lambda = - std::log(this->EVAPORATED_PHEROMONE_FACTOR) / this->EVAPORATION_TIME_S; //Evaporate to EVAPORATED_PHEROMONE_FACTOR after EVAPORATION_TIME_S
             double timeProbability = exp(-lambda * (currentTime - visitedTime)); //Exponential decay
