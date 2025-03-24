@@ -125,7 +125,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         auto simple_radio = &(dynamic_cast<argos::CSimpleRadioEquippedEntity*>(all))->GetRadio(0);
         simple_radio->SetRange(agent->config.WIFI_RANGE_M);
 
-        agent->ticks_per_second = ticksPerSecond;
+        assert(agent->ticks_per_second == ticksPerSecond);
 
         currently_colliding[pcFB] = false;
         previous_positions[pcFB] = Coordinate{MAXFLOAT, MAXFLOAT};

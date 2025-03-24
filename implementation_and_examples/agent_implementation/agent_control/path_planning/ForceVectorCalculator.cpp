@@ -502,7 +502,6 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 //        argos::LOG << "Frontier region_and_summed_certainty " << frontierRegionX << ", " << frontierRegionY << " with pheromonecurve " << pheromoneCurve << " has " << totalNumberOfCellsInRegion << " cells of which " << nUnknown << " unknown and " << nAmbiguous << " ambiguous" << std::endl;
 //        argos::LOG << "Average certainty: " << averagePheromoneCertainty << std::endl;
-        bool skipFrontier = false;
 
 //        //Skip too small areas
 //        if (totalNumberOfCellsInRegion <= 5){
@@ -510,7 +509,6 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //            argos::LOG << "Skipping frontier region_and_summed_certainty " << frontierRegionX << ", " << frontierRegionY
 //                       << " because it is too small" << std::endl;
 //        }
-#ifdef SEPARATE_FRONTIERS
 //        argos::LOG << "Checking frontier region " << frontierRegionX << ", " << frontierRegionY << std::endl;
 
         //If the frontier is mostly unknown, and if the frontier is close to our agent, skip it
@@ -520,7 +518,10 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 ////            argos::LOG << "Skipping frontier region " << frontierRegionX << ", " << frontierRegionY
 ////                       << " because it is close to our agent" << std::endl;
 //        } else {
+#if defined(SEPARATE_FRONTIERS) || defined(SKIP_UNREACHABLE_FRONTIERS)
+        bool skipFrontier = false;
             for (auto agentLocationTuple: agent->agentLocations) {
+#ifdef SEPARATE_FRONTIERS
                 if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
                     agent->config.AGENT_LOCATION_RELEVANT_S)
                     continue;
@@ -568,6 +569,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 #endif
         }
         if (skipFrontier) continue;
+#endif
 
 
         argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX - agent->position.x,
@@ -762,6 +764,8 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
         argos::CVector2 OC = argos::CVector2(box.getCenter().x - agent->position.x,
                                              box.getCenter().y - agent->position.y);
+        if (OC.Length() > agent->config.OBJECT_AVOIDANCE_RADIUS) continue;
+
         argos::CRadians Bq = argos::ASin(
                 std::min(agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
         argos::CRadians Eta_q = OC.Angle();
@@ -839,9 +843,6 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
                 minAngle = maxAngle;
                 maxAngle = temp;
             }
-            //Increase by 1 degree to make sure we don't miss any angles
-            minAngle = argos::CDegrees(int(minAngle.GetValue()) - 1).SignedNormalize();
-            maxAngle = argos::CDegrees(int(maxAngle.GetValue()) + 1).SignedNormalize();
 
             auto diffMinSensor = NormalizedDifference(ToRadians(minAngle), sensor_rotation);
             auto diffMaxSensor = NormalizedDifference(ToRadians(maxAngle), sensor_rotation);

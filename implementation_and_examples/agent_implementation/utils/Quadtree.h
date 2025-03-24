@@ -945,7 +945,7 @@ namespace quadtree {
                                 //First calculate old pheromone, and use that to calculate new LConfidence. We do this to incorporate decay when adding.
                                 double  oldPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
                                 newNode.LConfidence = calculateOccupancyProbability(value.LConfidence, oldPheromone);
-                                newNode.visitedAtS = value.visitedAtS;
+                                newNode.visitedAtS = value.visitedAtS; //Is current time since observations are immediately updated
                             } else {
 //                                auto valuePheromone = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
 //                                auto cellPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence),

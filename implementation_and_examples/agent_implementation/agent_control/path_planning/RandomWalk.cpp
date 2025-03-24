@@ -29,7 +29,7 @@ void RandomWalk::randomWalk(Agent* agent, argos::CVector2 &targetVector) {
         int tries = 0;
         do{
             argos::CRadians randomAngle = (rand() % 360) * argos::CRadians::PI /
-                                          180; //TODO: Maybe away from average location of other agents?
+                                          180;
             argos::CVector2 subtargetVector = argos::CVector2(1, 0);
             subtargetVector.Rotate(randomAngle);
             subtargetVector.Normalize();
