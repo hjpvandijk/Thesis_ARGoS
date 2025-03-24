@@ -342,11 +342,11 @@
         <box id="box_84" size="2.0,2.0,0.5" movable="false">
             <body position="3.6188546322540556,6.489059342509774,0" orientation="65.0,0,0"/>
         </box>
-        <box id="spawn_box_0" size="0.8013862541673118,0.5170141740769565,0.5" movable="false">
-            <body position="-1.5708226920684547,-15.632344669673337,0" orientation="186.56880993172038,0,0"/>
+        <box id="spawn_box_0" size="0.3664638874731285,1.2083045973594573,0.5" movable="false">
+            <body position="-0.8896195245206014,-12.551806983603855,0" orientation="7.574057134572515,0,0"/>
         </box>
-        <box id="spawn_box_1" size="1.2217597847491233,0.3764964015080277,0.5" movable="false">
-            <body position="-13.847013907383852,7.05957684156062,0" orientation="11.732945745412223,0,0"/>
+        <box id="spawn_box_1" size="0.6759326439783108,1.9617339269126177,0.5" movable="false">
+            <body position="-5.108113730723245,-7.952281098858923,0" orientation="223.4286928087454,0,0"/>
         </box>
         <box id="spawn_box_2" size="4.033269445620962,0.6002493425814163,0.5" movable="false">
             <body position="-6.951887294330647,9.949496994402502,0" orientation="192.09386199995689,0,0"/>
@@ -494,24 +494,24 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-<!--        <qt-opengl autoplay="true">-->
-<!--            <user_functions-->
-<!--                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"-->
-<!--                    label="agent_vision_qtuser_functions_pipuck"/>-->
-<!--            <camera>-->
-<!--                <placements>-->
-<!--                    <placement index="0" position="0,0,60" look_at="0,0,0"-->
-<!--                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="45"/>-->
-<!--                </placements>-->
-<!--            </camera>-->
-<!--&lt;!&ndash;            <frame_grabbing directory="{{FRAME_PATH}}"&ndash;&gt;-->
-<!--&lt;!&ndash;                            base_name="frame"&ndash;&gt;-->
-<!--&lt;!&ndash;                            format="png"&ndash;&gt;-->
-<!--&lt;!&ndash;                            quality="50"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_grabbing="true"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_frame_size="1800x960\"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_frame_rate="6000"/>&ndash;&gt;-->
-<!--        </qt-opengl>-->
+        <!--        <qt-opengl autoplay="true">-->
+        <!--            <user_functions-->
+        <!--                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"-->
+        <!--                    label="agent_vision_qtuser_functions_pipuck"/>-->
+        <!--            <camera>-->
+        <!--                <placements>-->
+        <!--                    <placement index="0" position="0,0,60" look_at="0,0,0"-->
+        <!--                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="45"/>-->
+        <!--                </placements>-->
+        <!--            </camera>-->
+        <!--&lt;!&ndash;            <frame_grabbing directory="{{FRAME_PATH}}"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            base_name="frame"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            format="png"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            quality="50"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            headless_grabbing="true"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            headless_frame_size="1800x960\"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            headless_frame_rate="6000"/>&ndash;&gt;-->
+        <!--        </qt-opengl>-->
     </visualization>
 
 </argos-configuration>

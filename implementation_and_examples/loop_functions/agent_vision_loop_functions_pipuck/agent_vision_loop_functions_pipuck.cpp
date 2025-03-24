@@ -977,6 +977,16 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
                     #endif
                     agents_returning.push_back(pcFB->GetId());
                 }
+            } else if (agent->state == Agent::State::FINISHED_EXPLORING){
+                if (std::find(this->agents_finished_exploring.begin(), agents_finished_exploring.end(), pcFB->GetId()) == agents_finished_exploring.end()){
+                    #ifdef USING_CONFIDENCE_TREE
+                    //Export quadtree at point of return
+                    exportQuadtree("quadtree_finished_exploring_" + pcFB->GetId(), pcFB, agent);
+                    agents_finished_exploring.push_back(pcFB->GetId());
+                    #else
+                    exportMatrices("finished_exploring_" + pcFB->GetId(), pcFB, agent);
+                    #endif
+                }
             }
         } else {
             //If new agent done
@@ -999,7 +1009,7 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
 void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     double batteryUsage = agent->batteryManager.battery.getStateOfCharge();
     m_metrics.total_battery_usage[pcFB->GetId()] = (1.0-batteryUsage)*agent->config.BATTERY_CAPACITY; //In mAh
-    }
+}
 
 void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     //Only update if agent is in mission or returning from mission

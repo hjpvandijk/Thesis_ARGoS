@@ -164,6 +164,14 @@ void PiPuckHugo::readHeatmapFromFile(const std::string& filename, std::vector<st
     }
 }
 
+
+/**
+ * Makes sure the value is between 0 and 2m
+ * But ensures a lower-higher pattern so there are no big jumps in the results
+ * @param x
+ * @param m
+ * @return
+ */
 int mirrored_mod(int x, int m) {
     int q = std::floor(x / m);
     if (q % 2 == 0) {
@@ -204,21 +212,24 @@ void PiPuckHugo::ControlStep() {
         agentIdVal += static_cast<int>(c);
     }
     agentIdVal *= 1234; //Multiply with some number to offset the differences between agents.
+    auto positionSensorReading = m_pcPositioningSensor->GetReading();
+    const auto position = positionSensorReading.Position;
 
     for(int i = 0; i < num_sensors; i++){
         auto sensorReading = proxReadings[i];
         //Add real inaccuracy to the sensor readings if we are allowing noise.
-        sensorReading += agentObject->config.DISTANCE_SENSOR_NOISE_CM == 0 ? 0 : HC_SR04::getError(sensorReading);
-        double sensorNoiseM = 0.0;
-        double sensorNoiseRange = agentObject->config.DISTANCE_SENSOR_NOISE_CM * 100;
-        // Add noise to the sensor reading, if it is not the maximum range (nothing hit)
-        if(sensorReading != agentObject->config.DISTANCE_SENSOR_PROXIMITY_RANGE) sensorNoiseM = (sensorNoiseRange - (rand() % 2 * sensorNoiseRange)) * 0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
-        agentObject->setLastRangeReadings(i, sensorReading + sensorNoiseM);
+        auto simulatedSensorReading = sensorReading + (HC_SR04::getSimulatedMeasurement(sensorReading) - sensorReading)*agentObject->config.DISTANCE_SENSOR_NOISE_FACTOR;
+        double sensorNoiseRange = agentObject->config.DISTANCE_SENSOR_JITTER_CM * 100;
+
+        // Add noise to the sensor reading
+        double agentPersonalDistanceSensorNoise =  agentObject->config.DISTANCE_SENSOR_JITTER_CM != 0 ? (mirrored_mod((agentIdVal + int((position.GetX() - position.GetY())*100)), int(agentObject->config.DISTANCE_SENSOR_JITTER_CM*2)) - agentObject->config.DISTANCE_SENSOR_JITTER_CM) / 100.0 : 0;
+
+        double sensorNoiseM = (sensorNoiseRange - (rand() % 2 * sensorNoiseRange)) * 0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
+        simulatedSensorReading = std::min(2.0, simulatedSensorReading + sensorNoiseM + agentPersonalDistanceSensorNoise); //Maximum range is 2 meters
+
+        agentObject->setLastRangeReadings(i, simulatedSensorReading);
     }
 
-
-    auto positionSensorReading = m_pcPositioningSensor->GetReading();
-    const auto position = positionSensorReading.Position;
 
     // Simulate sensor readings with noise
 
@@ -261,7 +272,7 @@ void PiPuckHugo::ControlStep() {
     double direction_heatmap_value = this->directions_heatmap[heatmapX][heatmapY];
     CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
     //Magnitude, including jitter and agent-dependent noise
-    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapX][heatmapY] * agentObject->config.POSITION_NOISE_CM / 100.0;
+    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapX][heatmapY] * agentObject->config.POSITION_NOISE_CM / 103.3; //103.3 is the max error at full noise level.
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
     CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
     agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive

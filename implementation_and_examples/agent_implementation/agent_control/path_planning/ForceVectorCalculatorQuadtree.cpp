@@ -258,13 +258,14 @@ void mergeAdjacentFrontiers(const std::vector<std::pair<quadtree::Box, double>> 
  * @return
  */
 double calculateRegionVisitProbability(Agent* agent, std::map<Coordinate, std::tuple<std::vector<std::pair<quadtree::Box, double>>, double, double, double, double>>& region_summed_certainties_and_reach_time_battery, Coordinate coordinate, double denominator){
+    auto region = std::get<0>(region_summed_certainties_and_reach_time_battery[coordinate]);
     auto region_repulsion = std::get<1>(region_summed_certainties_and_reach_time_battery[coordinate]);
     auto distance = std::get<2>(region_summed_certainties_and_reach_time_battery[coordinate]);
 
     #ifdef BATTERY_MANAGEMENT_ENABLED
     auto reach_time = std::get<3>(region_summed_certainties_and_reach_time_battery[coordinate]);
     auto reach_battery = std::get<4>(region_summed_certainties_and_reach_time_battery[coordinate]);
-    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
                      std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance
                                 + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time
                                 + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
@@ -274,7 +275,7 @@ double calculateRegionVisitProbability(Agent* agent, std::map<Coordinate, std::t
 //               << agent->config.FRONTIER_PHEROMONE_M << " = " << std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) << " / " << std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery, agent->config.FRONTIER_PHEROMONE_M)
 //               << "= " << numerator << std::endl;
     #else
-    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+    auto numerator = std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
                      std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance, agent->config.FRONTIER_PHEROMONE_M);
     #endif
     //if numerator is infinite, return 1
@@ -297,12 +298,13 @@ double calculateRegionVisitProbabilityDenominator(Agent* agent, const std::map<C
 
     double denominator = 0.0;
     for (auto &it : region_summed_certainties_and_reach_time_battery) {
+        auto region = std::get<0>(it.second);
         auto region_repulsion = std::get<1>(it.second);
         auto distance = std::get<2>(it.second);
         #ifdef BATTERY_MANAGEMENT_ENABLED
         auto reach_time = std::get<3>(it.second);
         auto reach_battery = std::get<4>(it.second);
-        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
                        std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance
                                 + agent->config.FRONTIER_REACH_DURATION_WEIGHT * reach_time
                                 + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
@@ -315,7 +317,7 @@ double calculateRegionVisitProbabilityDenominator(Agent* agent, const std::map<C
 //                                       + agent->config.FRONTIER_REACH_BATTERY_WEIGHT*reach_battery
 //                                      , agent->config.FRONTIER_PHEROMONE_M) << std::endl;
         #else
-        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) /
+        denominator += std::pow(agent->config.FRONTIER_PHEROMONE_K + region_repulsion, -agent->config.FRONTIER_PHEROMONE_N) * std::pow(region.size(), agent->config.FRONTIER_PHEROMONE_L) /
                        std::pow(agent->config.FRONTIER_DISTANCE_WEIGHT * distance, agent->config.FRONTIER_PHEROMONE_M);
         #endif
     }
@@ -366,11 +368,12 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                // the average diagonal of the two boxes (ensuring adjacency)
 //                if (sqrt(pow(boxCenter.x - frontierCenter.x, 2) + pow(boxCenter.y - frontierCenter.y, 2)) <=
 //                    sqrt(2 * pow(frontierbox.getSize() * 0.5 + box.getSize() * 0.5, 2))) {
-//                    region.push_back({frontierbox, frontierpheromone}); // Add the frontier to the current region
+//                    region.emplace_back(frontierbox, frontierpheromone); // Add the frontier to the current region
 //                    added = true; // Mark the frontier as added
 //                    break; // Exit the loop since the frontier has been added to a region
 //                }
 //            }
+//            if (added) break; // Exit the loop since the frontier has been added to a region
 //        }
 //
 //        // If the frontier was not added to any existing region, create a new region with it
@@ -378,6 +381,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //            frontierRegions.push_back({{frontierbox, frontierpheromone}});
 //        }
 //    }
+//    truncateMaxRegions(frontierRegions, agent->config.MAX_FRONTIER_REGIONS);
     //Add the frontier region from the last best frontier to the options, if it is now out of range. To prevent unneccesary switching
     //If we haven't reached the frontier yet, add the region to the list of frontier regions
     if (!(agent->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT}) && (sqrt(pow(agent->currentBestFrontier.x - agent->position.x, 2) + pow(agent->currentBestFrontier.y - agent->position.y, 2)) > agent->config.FRONTIER_SEARCH_RADIUS)) {
@@ -457,7 +461,6 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 
 //        argos::LOG << "Frontier region_and_summed_certainty " << frontierRegionX << ", " << frontierRegionY << " with pheromonecurve " << pheromoneCurve << " has " << totalNumberOfCellsInRegion << " cells of which " << nUnknown << " unknown and " << nAmbiguous << " ambiguous" << std::endl;
 //        argos::LOG << "Average certainty: " << averagePheromoneCertainty << std::endl;
-        bool skipFrontier = false;
 
 //        //Skip too small areas
 //        if (totalNumberOfCellsInRegion <= 5){
@@ -465,7 +468,8 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //            argos::LOG << "Skipping frontier region_and_summed_certainty " << frontierRegionX << ", " << frontierRegionY
 //                       << " because it is too small" << std::endl;
 //        }
-#ifdef SEPARATE_FRONTIERS
+#if defined(SEPARATE_FRONTIERS) || defined(SKIP_UNREACHABLE_FRONTIERS)
+        bool skipFrontier = false;
         //        argos::LOG << "Checking frontier region " << frontierRegionX << ", " << frontierRegionY << std::endl;
 
         //If the frontier is mostly unknown, and if the frontier is close to our agent, skip it
@@ -476,6 +480,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 ////                       << " because it is close to our agent" << std::endl;
 //        } else {
             for (auto agentLocationTuple: agent->agentLocations) {
+#ifdef SEPARATE_FRONTIERS
                 if ((std::get<2>(agentLocationTuple.second) - agent->elapsed_ticks) / agent->ticks_per_second >
                     agent->config.AGENT_LOCATION_RELEVANT_S)
                     continue;
@@ -510,6 +515,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //                               << std::endl;
                     break;
                 }
+#endif
 //                }
 //            }
 #ifdef SKIP_UNREACHABLE_FRONTIERS
@@ -521,8 +527,9 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
             }
 #endif
         }
+    if (skipFrontier) continue;
 #endif
-        if (skipFrontier) continue;
+
 
 
         argos::CVector2 vectorToFrontier = argos::CVector2(frontierRegionX - agent->position.x,
@@ -561,6 +568,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     }
     double region_visit_probability_denominator = calculateRegionVisitProbabilityDenominator(agent, region_summed_certainties_and_reach_dist_time_battery);
 
+    int random = rand() % 100;
     double cumulative_probability = 0;
     for (const auto &region_and_summed_certainty: region_summed_certainties_and_reach_dist_time_battery) {
 //    Calculate the average position of the frontier region_and_summed_certainty
@@ -639,7 +647,6 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
 //#endif
 //        }
         cumulative_probability += region_visit_probability;
-        int random = rand() % 100;
 //        argos::LOG << "Random: " << random << " < " << cumulative_probability * 100 << std::endl;
         if (random < cumulative_probability * 100) { //Chance of choosing this region
 //            argos::LOG << "Selected frontier because of probability" << std::endl;
@@ -714,6 +721,8 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
         argos::CVector2 OC = argos::CVector2(box.getCenter().x - agent->position.x,
                                              box.getCenter().y - agent->position.y);
+        if (OC.Length() > agent->config.OBJECT_AVOIDANCE_RADIUS) continue;
+
         argos::CRadians Bq = argos::ASin(
                 std::min(agent->config.AGENT_SAFETY_RADIUS + agent->config.OBJECT_SAFETY_RADIUS, OC.Length()) / OC.Length());
         argos::CRadians Eta_q = OC.Angle();
@@ -775,105 +784,111 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
     }
 
-    //Block angles according to the distance sensors
-    for (int i = 0; i < agent->distance_sensors.size(); i++) {
-        argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
-        if (agent->distance_sensors[i].getDistance() < agent->config.OBJECT_AVOIDANCE_RADIUS) {
-            //Erase all angles 90 degrees to the left and right of the sensor
-            //12.5% to the left
-            argos::CDegrees minAngle = argos::CDegrees(int(ToDegrees(sensor_rotation - argos::CRadians::PI_OVER_SIX).GetValue())).SignedNormalize();
-            argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(sensor_rotation + argos::CRadians::PI_OVER_SIX).GetValue())).SignedNormalize();
-
-            if (maxAngle.GetValue() < minAngle.GetValue()) {
-                argos::CDegrees temp = minAngle;
-                minAngle = maxAngle;
-                maxAngle = temp;
-            }
-
-            auto diffMinSensor = NormalizedDifference(ToRadians(minAngle), sensor_rotation);
-            auto diffMaxSensor = NormalizedDifference(ToRadians(maxAngle), sensor_rotation);
-
-
-            if (diffMinSensor >= argos::CRadians(0) && diffMaxSensor <= argos::CRadians(0)) {
-                for (int a = 0; a < 60; a++) {
-                    auto angle = (minAngle - argos::CDegrees(a)).SignedNormalize();
-                    freeAngles.erase(argos::CDegrees(angle));
-                }
-            } else if (diffMinSensor <= argos::CRadians(0) && diffMaxSensor >= argos::CRadians(0)) {
-                for (int a = 0; a < 60; a++) {
-                    auto angle = (minAngle + argos::CDegrees(a)).SignedNormalize();
-                    freeAngles.erase(argos::CDegrees(angle));
-                }
-            } else {
-                assert(0);
-            }
-
-//            if (minAngle.GetValue() < 0 && maxAngle.GetValue() >= 0) {
+    //Shouldn't do this in base, because it is not in the paper
+//    //Block angles according to the distance sensors
+//    for (int i = 0; i < agent->distance_sensors.size(); i++) {
+//        //Only handle the forward sensor
+//        if (i != 0) continue;
+//        argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
+//        if (agent->distance_sensors[i].getDistance() < agent->config.OBJECT_AVOIDANCE_RADIUS/2) {
+//            //Erase all angles 90 degrees to the left and right of the sensor
+//            //12.5% to the left
+//            argos::CDegrees minAngle = argos::CDegrees(int(ToDegrees(sensor_rotation - argos::CRadians::PI_OVER_FOUR).GetValue())).SignedNormalize();
+//            argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(sensor_rotation + argos::CRadians::PI_OVER_FOUR).GetValue())).SignedNormalize();
+//
+//            if (maxAngle.GetValue() < minAngle.GetValue()) {
+//                argos::CDegrees temp = minAngle;
+//                minAngle = maxAngle;
+//                maxAngle = temp;
+//            }
+//            //Increase by 1 degree to make sure we don't miss any angles
+//            minAngle = argos::CDegrees(int(minAngle.GetValue()) - 1).SignedNormalize();
+//            maxAngle = argos::CDegrees(int(maxAngle.GetValue()) + 1).SignedNormalize();
+//
+//            auto diffMinSensor = NormalizedDifference(ToRadians(minAngle), sensor_rotation);
+//            auto diffMaxSensor = NormalizedDifference(ToRadians(maxAngle), sensor_rotation);
+//
+//
+//            if (diffMinSensor >= argos::CRadians(0) && diffMaxSensor <= argos::CRadians(0)) {
 //                for (int a = 0; a < 90; a++) {
 //                    auto angle = (minAngle - argos::CDegrees(a)).SignedNormalize();
 //                    freeAngles.erase(argos::CDegrees(angle));
 //                }
-//            } else if (minAngle.GetValue() >= 0 && maxAngle.GetValue() >= 0) {
-//                for (int a = 0; a < 90; a++) {
-//                    auto angle = (maxAngle + argos::CDegrees(a)).SignedNormalize();
-//                    freeAngles.erase(argos::CDegrees(angle));
-//                }
-//            } else if (minAngle.GetValue() < 0 && maxAngle.GetValue() < 0) {
+//            } else if (diffMinSensor <= argos::CRadians(0) && diffMaxSensor >= argos::CRadians(0)) {
 //                for (int a = 0; a < 90; a++) {
 //                    auto angle = (minAngle + argos::CDegrees(a)).SignedNormalize();
 //                    freeAngles.erase(argos::CDegrees(angle));
 //                }
 //            } else {
-//                for (int a = 0; a < 90; a++) {
-//                    auto angle = (maxAngle + argos::CDegrees(a)).SignedNormalize();
-//                    freeAngles.erase(argos::CDegrees(angle));
+//                assert(0);
+//            }
+//
+////            if (minAngle.GetValue() < 0 && maxAngle.GetValue() >= 0) {
+////                for (int a = 0; a < 90; a++) {
+////                    auto angle = (minAngle - argos::CDegrees(a)).SignedNormalize();
+////                    freeAngles.erase(argos::CDegrees(angle));
+////                }
+////            } else if (minAngle.GetValue() >= 0 && maxAngle.GetValue() >= 0) {
+////                for (int a = 0; a < 90; a++) {
+////                    auto angle = (maxAngle + argos::CDegrees(a)).SignedNormalize();
+////                    freeAngles.erase(argos::CDegrees(angle));
+////                }
+////            } else if (minAngle.GetValue() < 0 && maxAngle.GetValue() < 0) {
+////                for (int a = 0; a < 90; a++) {
+////                    auto angle = (minAngle + argos::CDegrees(a)).SignedNormalize();
+////                    freeAngles.erase(argos::CDegrees(angle));
+////                }
+////            } else {
+////                for (int a = 0; a < 90; a++) {
+////                    auto angle = (maxAngle + argos::CDegrees(a)).SignedNormalize();
+////                    freeAngles.erase(argos::CDegrees(angle));
+////                }
+////            }
+////            }
+////            //Erase all in between from freeAngles
+////            for (int a = int(minAngle.GetValue()); a < int(maxAngle.GetValue()); a++){
+////                freeAngles.erase(argos::CDegrees(a));
+////            }
+//        }
+//    }
+
+//Shouldn't do this in base, because it is not in the paper
+//    //If there are no free angles, see if there are any sensors that have no close intersection.
+//    if (freeAngles.empty()) {
+//        for (int i = 0; i < agent->distance_sensors.size(); i++) {
+//            argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
+//            if (agent->distance_sensors[i].getDistance() > agent->config.OBJECT_AVOIDANCE_RADIUS) {
+//                argos::CDegrees minAngle = argos::CDegrees(
+//                        int(ToDegrees(sensor_rotation - argos::CRadians::PI / 18.0).GetValue())).SignedNormalize();
+//                argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(
+//                        sensor_rotation + argos::CRadians::PI_OVER_SIX / 18.0).GetValue())).SignedNormalize();
+//
+//                if (maxAngle.GetValue() < minAngle.GetValue()) {
+//                    argos::CDegrees temp = minAngle;
+//                    minAngle = maxAngle;
+//                    maxAngle = temp;
+//                }
+//
+//                auto diffMinSensor = NormalizedDifference(ToRadians(minAngle), sensor_rotation);
+//                auto diffMaxSensor = NormalizedDifference(ToRadians(maxAngle), sensor_rotation);
+//
+//
+//                if (diffMinSensor >= argos::CRadians(0) && diffMaxSensor <= argos::CRadians(0)) {
+//                    for (int a = 0; a < 10; a++) {
+//                        auto angle = (minAngle - argos::CDegrees(a)).SignedNormalize();
+//                        freeAngles.insert(argos::CDegrees(angle));
+//                    }
+//                } else if (diffMinSensor <= argos::CRadians(0) && diffMaxSensor >= argos::CRadians(0)) {
+//                    for (int a = 0; a < 10; a++) {
+//                        auto angle = (minAngle + argos::CDegrees(a)).SignedNormalize();
+//                        freeAngles.insert(argos::CDegrees(angle));
+//                    }
+//                } else {
+//                    assert(0);
 //                }
 //            }
-//            }
-//            //Erase all in between from freeAngles
-//            for (int a = int(minAngle.GetValue()); a < int(maxAngle.GetValue()); a++){
-//                freeAngles.erase(argos::CDegrees(a));
-//            }
-        }
-    }
-
-
-    //If there are no free angles, see if there are any sensors that have no close intersection.
-    if (freeAngles.empty()) {
-        for (int i = 0; i < agent->distance_sensors.size(); i++) {
-            argos::CRadians sensor_rotation = agent->heading - i * argos::CRadians::PI_OVER_TWO;
-            if (agent->distance_sensors[i].getDistance() > agent->config.OBJECT_AVOIDANCE_RADIUS) {
-                argos::CDegrees minAngle = argos::CDegrees(
-                        int(ToDegrees(sensor_rotation - argos::CRadians::PI / 18.0).GetValue())).SignedNormalize();
-                argos::CDegrees maxAngle = argos::CDegrees(int(ToDegrees(
-                        sensor_rotation + argos::CRadians::PI_OVER_SIX / 18.0).GetValue())).SignedNormalize();
-
-                if (maxAngle.GetValue() < minAngle.GetValue()) {
-                    argos::CDegrees temp = minAngle;
-                    minAngle = maxAngle;
-                    maxAngle = temp;
-                }
-
-                auto diffMinSensor = NormalizedDifference(ToRadians(minAngle), sensor_rotation);
-                auto diffMaxSensor = NormalizedDifference(ToRadians(maxAngle), sensor_rotation);
-
-
-                if (diffMinSensor >= argos::CRadians(0) && diffMaxSensor <= argos::CRadians(0)) {
-                    for (int a = 0; a < 10; a++) {
-                        auto angle = (minAngle - argos::CDegrees(a)).SignedNormalize();
-                        freeAngles.insert(argos::CDegrees(angle));
-                    }
-                } else if (diffMinSensor <= argos::CRadians(0) && diffMaxSensor >= argos::CRadians(0)) {
-                    for (int a = 0; a < 10; a++) {
-                        auto angle = (minAngle + argos::CDegrees(a)).SignedNormalize();
-                        freeAngles.insert(argos::CDegrees(angle));
-                    }
-                } else {
-                    assert(0);
-                }
-            }
-        }
-    }
+//        }
+//    }
     agent->freeAnglesVisualization.clear();
     auto closestFreeAngle = *freeAngles.begin();
     CustomComparator customComparator(0, ToDegrees(agent->heading).GetValue(), ToDegrees(targetAngle).GetValue());

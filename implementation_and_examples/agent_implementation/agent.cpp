@@ -165,8 +165,7 @@ void Agent::readInfraredSensor() {
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
-                               float Psensor) {
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox) {
     double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
     if (dist < this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
@@ -202,11 +201,10 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
     for (int i=0; i<linePoints.size(); i++){
         auto point = linePoints[i];
         if (!objectBox.contains(Coordinate{point.x, point.y})) { //Don't add a coordinate in the objectBox as free
-            double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
-            double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
-                       0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
-//            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
-                       //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+            double p_distance_reading = 1 - double(i)*step_size_avg * sensor_reading_distance_probability;
+            double p = (this->config.P_FREE - 0.5) * p_distance_reading + 0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+            //            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
             this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
                                 elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         } else {
@@ -220,7 +218,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor) {
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
 //    double x = coordinate1.x;
 //    double y = coordinate1.y;
 //    double dx = coordinate2.x - coordinate1.x;
@@ -239,16 +237,16 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
 //        y += stepY;
 //    }
     double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
-
+    if (dist < this->quadtree->getResolution())
+        return;
     std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
                                                                                     coordinate2);
     double step_size_avg = dist / linePoints.size();
     for (int i=0; i<linePoints.size(); i++){
         auto point = linePoints[i];
-        double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
-        double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
-                   0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
-//        argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+        double p_distance_reading = 1 - double(i)*step_size_avg * sensor_reading_distance_probability;
+        double p = (this->config.P_FREE - 0.5) * p_distance_reading +0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+        //        argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
         //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
         this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
                             elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
@@ -302,12 +300,19 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
  * Add occupied object location to the quadtree
  * @param objectCoordinate
  */
-quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) const {
+quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate) const {
     //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+    auto dist_to_object = sqrt(pow(this->position.x - objectCoordinate.x, 2) + pow(this->position.y - objectCoordinate.y, 2));
+
+    double p_distance_reading = 1 - dist_to_object * sensor_reading_distance_probability;
+    double p = 0.5-(0.5-this->config.P_OCCUPIED) * p_distance_reading ; //Increasingly more certain the closer to the agent, as the sensor reading is more accurate
     quadtree::Box objectBox = this->quadtree->add(
-            Coordinate{objectCoordinate.x + 0.0000000001, objectCoordinate.y + 0.0000000001}, this->config.P_OCCUPIED /
-                                                                                              Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
+            Coordinate{objectCoordinate.x + 0.0000000001, objectCoordinate.y + 0.0000000001}, p,
             elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+#ifdef CLOSE_SMALL_AREAS
+    if (objectBox.getSize() != 0) // If the box is not the zero (not added)
+        checkIfAgentFitsBetweenObstacles(objectBox);
+#endif
     return objectBox;
 }
 #else
@@ -332,8 +337,6 @@ void Agent::checkForObstacles() {
     for (int sensor_index = 0; sensor_index < Agent::num_sensors; sensor_index++) {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->distance_sensors[sensor_index].getDistance() < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
-
-            float sensor_probability = this->config.DISTANCE_SENSOR_NOISE_CM == 0 ? 1.0 : HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
 
             double opposite = argos::Sin(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
             double adjacent = argos::Cos(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
@@ -376,12 +379,12 @@ void Agent::checkForObstacles() {
                     addedObjectAtAgentLocation = true;
                 }
                 #ifdef USING_CONFIDENCE_TREE
-                quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
+                quadtree::Box objectBox = addObjectLocation(object);
                 if (objectBox.size != 0) {
                     if (!addedObjectAtAgentLocation)
-                        addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
+                        addFreeAreaBetween(this->position, object, objectBox);
                 } else {
-                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
+                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, objectBox);
                 }
                 #else
                 addObjectLocation(object);
@@ -389,7 +392,7 @@ void Agent::checkForObstacles() {
                 #endif
             } else {
                 #ifdef USING_CONFIDENCE_TREE
-                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
+                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
                 #else
                 if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
                 #endif
@@ -1489,7 +1492,8 @@ void Agent::loadConfig(const std::string& config_file) {
 //
     this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();
     this->config.ORIENTATION_JITTER_DEGREES = config_yaml["sensors"]["orientation_jitter"].as<double>();
-    this->config.DISTANCE_SENSOR_NOISE_CM = config_yaml["sensors"]["distance_sensor_noise"].as<double>();
+    this->config.DISTANCE_SENSOR_JITTER_CM = config_yaml["sensors"]["distance_sensor_jitter"].as<double>();
+    this->config.DISTANCE_SENSOR_NOISE_FACTOR = config_yaml["sensors"]["distance_sensor_noise_factor"].as<double>();
     this->config.POSITION_NOISE_CM = config_yaml["sensors"]["position_noise"].as<double>();
     this->config.POSITION_JITTER_CM = config_yaml["sensors"]["position_jitter"].as<double>();
     this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
@@ -1519,6 +1523,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.FRONTIER_PHEROMONE_K = config_yaml["forces"]["frontier_fitness"]["k"].as<double>();
     this->config.FRONTIER_PHEROMONE_N = config_yaml["forces"]["frontier_fitness"]["n"].as<double>();
     this->config.FRONTIER_PHEROMONE_M = config_yaml["forces"]["frontier_fitness"]["m"].as<double>();
+    this->config.FRONTIER_PHEROMONE_L = config_yaml["forces"]["frontier_fitness"]["l"].as<double>();
 
 
     this->config.P_FREE = config_yaml["confidence"]["p_free"].as<double>();

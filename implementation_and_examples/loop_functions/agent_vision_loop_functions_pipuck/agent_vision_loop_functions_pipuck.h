@@ -44,6 +44,8 @@ public:
 
     std::vector<std::string> agents_relayed_map;
     std::vector<std::string> agents_returning;
+    std::vector<std::string> agents_finished_exploring;
+
 
     bool experimentFinished = false;
     float longest_mission_time_s = 0;

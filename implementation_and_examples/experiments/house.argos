@@ -170,18 +170,18 @@
         <box id="box_10" size="0.055,0.08,0.5" movable="false">
             <body position="1.08,3.6475,0" orientation="90.0,0,0"/>
         </box>
-<!--        <box id="box_11" size="0.07,0.66,0.5" movable="false">-->
-<!--            <body position="2.6,3.65,0" orientation="90.0,0,0"/>-->
-<!--        </box>-->
-<!--        <box id="box_12" size="0.045,0.92,0.5" movable="false">-->
-<!--            <body position="2.9075,4.095,0" orientation="-0.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_11" size="0.07,0.66,0.5" movable="false">-->
+        <!--            <body position="2.6,3.65,0" orientation="90.0,0,0"/>-->
+        <!--        </box>-->
+        <!--        <box id="box_12" size="0.045,0.92,0.5" movable="false">-->
+        <!--            <body position="2.9075,4.095,0" orientation="-0.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_13" size="0.465,0.66,0.5" movable="false">
             <body position="5.6225,4.23,0" orientation="-0.0,0,0"/>
         </box>
-<!--        <box id="box_14" size="1.775,2.24,0.5" movable="false">-->
-<!--            <body position="4.725,2.9325,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_14" size="1.775,2.24,0.5" movable="false">-->
+        <!--            <body position="4.725,2.9325,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_15" size="0.7,0.445,0.5" movable="false">
             <body position="5.6175,1.61,0" orientation="-90.0,0,0"/>
         </box>
@@ -191,21 +191,21 @@
         <box id="box_17" size="1.345,0.55,0.5" movable="false">
             <body position="2.8225,0.9,0" orientation="-0.0,0,0"/>
         </box>
-<!--        <box id="box_18" size="0.095,0.68,0.5" movable="false">-->
-<!--            <body position="3.4825,0.845,0" orientation="-180.0,0,0"/>-->
-<!--        </box>-->
-<!--        <box id="box_19" size="0.87,0.28,0.5" movable="false">-->
-<!--            <body position="4.36,1.03,0" orientation="-0.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_18" size="0.095,0.68,0.5" movable="false">-->
+        <!--            <body position="3.4825,0.845,0" orientation="-180.0,0,0"/>-->
+        <!--        </box>-->
+        <!--        <box id="box_19" size="0.87,0.28,0.5" movable="false">-->
+        <!--            <body position="4.36,1.03,0" orientation="-0.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_20" size="0.63,0.26,0.5" movable="false">
             <body position="5.7,0.49,0" orientation="-90.0,0,0"/>
         </box>
         <box id="box_21" size="0.85,2.35,0.5" movable="false">
             <body position="4.675,-0.665,0" orientation="-90.0,0,0"/>
         </box>
-<!--        <box id="box_22" size="0.955,0.125,0.5" movable="false">-->
-<!--            <body position="3.4925,-0.6575,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_22" size="0.955,0.125,0.5" movable="false">-->
+        <!--            <body position="3.4925,-0.6575,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_23" size="0.62,2.17,0.5" movable="false">
             <body position="2.385,-0.945,0" orientation="-90.0,0,0"/>
         </box>
@@ -221,21 +221,21 @@
         <box id="box_27" size="0.905,0.465,0.5" movable="false">
             <body position="-5.5675,-0.8125,0" orientation="-90.0,0,0"/>
         </box>
-<!--        <box id="box_28" size="0.445,0.55,0.5" movable="false">-->
-<!--            <body position="-3.36,1.3775,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
-<!--        <box id="box_29" size="0.445,0.555,0.5" movable="false">-->
-<!--            <body position="-2.2525,1.3775,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_28" size="0.445,0.55,0.5" movable="false">-->
+        <!--            <body position="-3.36,1.3775,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
+        <!--        <box id="box_29" size="0.445,0.555,0.5" movable="false">-->
+        <!--            <body position="-2.2525,1.3775,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_30" size="0.55,0.46,0.5" movable="false">
             <body position="-1.45,0.535,0" orientation="-90.0,0,0"/>
         </box>
-<!--        <box id="box_31" size="0.44,0.54,0.5" movable="false">-->
-<!--            <body position="-2.24,-0.28,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
-<!--        <box id="box_32" size="0.435,0.545,0.5" movable="false">-->
-<!--            <body position="-3.3575,-0.2775,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_31" size="0.44,0.54,0.5" movable="false">-->
+        <!--            <body position="-2.24,-0.28,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
+        <!--        <box id="box_32" size="0.435,0.545,0.5" movable="false">-->
+        <!--            <body position="-3.3575,-0.2775,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_33" size="1.03,2.015,0.5" movable="false">
             <body position="-2.7725,0.55,0" orientation="-90.0,0,0"/>
         </box>
@@ -257,15 +257,15 @@
         <box id="box_39" size="0.165,3.84,0.5" movable="false">
             <body position="-3.89,-4.6675,0" orientation="90.0,0,0"/>
         </box>
-<!--        <box id="box_40" size="0.985,0.585,0.5" movable="false">-->
-<!--            <body position="-0.0525,-2.0225,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_40" size="0.985,0.585,0.5" movable="false">-->
+        <!--            <body position="-0.0525,-2.0225,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_41" size="6.075,0.22,0.5" movable="false">
             <body position="5.915,1.7075,0" orientation="90.0,0,0"/>
         </box>
-<!--        <box id="box_42" size="1.13,1.87,0.5" movable="false">-->
-<!--            <body position="-3.63,-2.98,0" orientation="-90.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_42" size="1.13,1.87,0.5" movable="false">-->
+        <!--            <body position="-3.63,-2.98,0" orientation="-90.0,0,0"/>-->
+        <!--        </box>-->
         <cylinder id="circle_0" radius="0.375" height="0.5" temperature="0" movable="false">
             <body position="0.285,-0.62,0" orientation="0,0,0"/>
         </cylinder>
@@ -275,31 +275,31 @@
         <cylinder id="circle_2" radius="0.18200274723201296" height="0.5" temperature="0" movable="false">
             <body position="5.54,0.495,0" orientation="0,0,0"/>
         </cylinder>
-<!--        <cylinder id="circle_4" radius="0.16278820596099705" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-2.695,-2.44,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_6" radius="0.18788294228055935" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-2.68,-3.425,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_8" radius="0.2150581316760657" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-4.565,-2.46,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_9" radius="0.2516445906432324" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-4.545,-3.415,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_10" radius="0.6028474102125678" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-2.7,-2.96,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_12" radius="0.5707889277132134" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-4.555,-2.96,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
+        <!--        <cylinder id="circle_4" radius="0.16278820596099705" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-2.695,-2.44,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_6" radius="0.18788294228055935" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-2.68,-3.425,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_8" radius="0.2150581316760657" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-4.565,-2.46,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_9" radius="0.2516445906432324" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-4.545,-3.415,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_10" radius="0.6028474102125678" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-2.7,-2.96,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_12" radius="0.5707889277132134" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-4.555,-2.96,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
 
         <box id="box_43" size="1.05,2.44,0.5" movable="false">
             <body position="4.72,-0.775,0" orientation="90.0,0,0"/>
         </box>
-<!--        <box id="box_44" size="0.592717062945883,0.9565693911055277,0.5" movable="false">-->
-<!--            <body position="-0.7361802273161936,-3.724863733231332,0" orientation="113.08061721534379,0,0"/>-->
-<!--        </box>-->
+        <!--        <box id="box_44" size="0.592717062945883,0.9565693911055277,0.5" movable="false">-->
+        <!--            <body position="-0.7361802273161936,-3.724863733231332,0" orientation="113.08061721534379,0,0"/>-->
+        <!--        </box>-->
 
 
         <box id="box_50" size="0.99,0.605,0.5" movable="false">
@@ -329,27 +329,27 @@
         <box id="box_58" size="0.985,0.14,0.5" movable="false">
             <body position="3.495,-0.7275,0" orientation="-90.0,0,0"/>
         </box>
-<!--        <cylinder id="circle_62" radius="0.5475" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-2.71,-2.945,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_66" radius="0.5475" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-4.355,-2.955,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_68" radius="0.16" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-4.335,-2.51,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_614" radius="0.16" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-4.345,-3.41,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_616" radius="0.16" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-2.71,-2.515,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <cylinder id="circle_617" radius="0.16" height="0.5" temperature="0" movable="false">-->
-<!--            <body position="-2.69,-3.42,0" orientation="0,0,0"/>-->
-<!--        </cylinder>-->
-<!--        <box id="box_60" size="1.1,1.815,0.5" movable="false">-->
-<!--            <body position="-3.5625,-2.965,0" orientation="90.0,0,0"/>-->
-<!--        </box>-->
+        <!--        <cylinder id="circle_62" radius="0.5475" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-2.71,-2.945,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_66" radius="0.5475" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-4.355,-2.955,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_68" radius="0.16" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-4.335,-2.51,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_614" radius="0.16" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-4.345,-3.41,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_616" radius="0.16" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-2.71,-2.515,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <cylinder id="circle_617" radius="0.16" height="0.5" temperature="0" movable="false">-->
+        <!--            <body position="-2.69,-3.42,0" orientation="0,0,0"/>-->
+        <!--        </cylinder>-->
+        <!--        <box id="box_60" size="1.1,1.815,0.5" movable="false">-->
+        <!--            <body position="-3.5625,-2.965,0" orientation="90.0,0,0"/>-->
+        <!--        </box>-->
         <box id="box_61" size="0.6026756369743251,0.9600520819205591,0.5" movable="false">
             <body position="-0.8970044483020502,-3.6493501139199314,0" orientation="-67.97694450318875,0,0"/>
         </box>
@@ -382,32 +382,30 @@
             <body position="-3.385,-2.845,0" orientation="0,0,0"/>
         </cylinder>
 
-        <!-- Spawnable boxes, randomly generated: 8 boxes, length min 0.1, max  1.5, length min 0.05, max 0.75 -->
         <box id="spawn_box_0" size="0.8396709060646268,0.20409605027101113,0.5" movable="false">
             <body position="1.7549901175055571,2.2140992666948756,0" orientation="325.70087575377016,0,0"/>
         </box>
         <box id="spawn_box_1" size="0.36793984070215235,0.7332223246404739,0.5" movable="false">
             <body position="3.649642774893858,3.5206041250056703,0" orientation="230.00555304619888,0,0"/>
         </box>
-        <box id="spawn_box_2" size="1.3475425310094278,0.29973391674425454,0.5" movable="false">
-            <body position="0.690404189722781,4.527643796629688,0" orientation="45.887207156816594,0,0"/>
+        <box id="spawn_box_2" size="0.25484264489982256,1.239294153944091,0.5" movable="false">
+            <body position="-5.312747216525051,-3.476155508350425,0" orientation="-141.88172363063694,0,0"/>
         </box>
-        <box id="spawn_box_3" size="1.3788751049689358,0.34345613949661397,0.5" movable="false">
+        <box id="spawn_box_3" size="0.1955155893237905,0.7710382610480494,0.5" movable="false">
+            <body position="-4.611358284272496,2.126482338099243,0" orientation="-9.70665240933971,0,0"/>
+        </box>
+        <box id="spawn_box_4" size="1.3788751049689358,0.34345613949661397,0.5" movable="false">
             <body position="-1.8426403019792799,-2.1109742497768798,0" orientation="137.62632987215986,0,0"/>
         </box>
-        <box id="spawn_box_4" size="1.115307071808511,0.43760280492240183,0.5" movable="false">
+        <box id="spawn_box_5" size="1.115307071808511,0.43760280492240183,0.5" movable="false">
             <body position="-1.2983052061684444,2.5931073756241587,0" orientation="207.60258605264985,0,0"/>
         </box>
-        <box id="spawn_box_5" size="1.387088147486205,0.3764055239380532,0.5" movable="false">
-            <body position="-4.899823266336925,2.3955757728758478,0" orientation="255.5448360866139,0,0"/>
+        <box id="spawn_box_6" size="0.2406715367096475,0.7197569034055873,0.5" movable="false">
+            <body position="0.6082575282308653,3.4546314303638646,0" orientation="-101.62216796356957,0,0"/>
         </box>
-        <box id="spawn_box_6" size="0.32708579646514946,0.40308923531741025,0.5" movable="false">
-            <body position="3.1674644543060646,-0.7857580777248756,0" orientation="352.7952068433491,0,0"/>
+        <box id="spawn_box_7" size="0.27910549147395847,0.6490377492873585,0.5" movable="false">
+            <body position="4.951767359050445,-0.21743086053412525,0" orientation="-142.51214410305278,0,0"/>
         </box>
-        <box id="spawn_box_7" size="0.31402894571466744,0.29292415094818225,0.5" movable="false">
-            <body position="-3.9936175353366674,-1.453236419617327,0" orientation="25.866393338283615,0,0"/>
-        </box>
-
 
 
         <pipuck id="pipuck1" wifi_medium="wifi">
@@ -523,24 +521,24 @@
         $ argos3 -q visualizations
     -->
     <visualization>
-<!--        <qt-opengl autoplay="false">-->
-<!--            <user_functions-->
-<!--                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"-->
-<!--                    label="agent_vision_qtuser_functions_pipuck"/>-->
-<!--            <camera>-->
-<!--                <placements>-->
-<!--                    <placement index="0" position="0,0,60" look_at="0,0,0"-->
-<!--                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="103"/>-->
-<!--                </placements>-->
-<!--            </camera>-->
-<!--&lt;!&ndash;            <frame_grabbing directory="{{FRAME_PATH}}"&ndash;&gt;-->
-<!--&lt;!&ndash;                            base_name="frame"&ndash;&gt;-->
-<!--&lt;!&ndash;                            format="png"&ndash;&gt;-->
-<!--&lt;!&ndash;                            quality="50"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_grabbing="true"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_frame_size="1800x960\"&ndash;&gt;-->
-<!--&lt;!&ndash;                            headless_frame_rate="6000"/>&ndash;&gt;-->
-<!--        </qt-opengl>-->
+        <!--        <qt-opengl autoplay="false">-->
+        <!--            <user_functions-->
+        <!--                    library="build/loop_functions/agent_vision_loop_functions_pipuck/libagent_vision_loop_functions_pipuck"-->
+        <!--                    label="agent_vision_qtuser_functions_pipuck"/>-->
+        <!--            <camera>-->
+        <!--                <placements>-->
+        <!--                    <placement index="0" position="0,0,60" look_at="0,0,0"-->
+        <!--                               up="0.721522,-3.4075e-17,0.692391" lens_focal_length="103"/>-->
+        <!--                </placements>-->
+        <!--            </camera>-->
+        <!--&lt;!&ndash;            <frame_grabbing directory="{{FRAME_PATH}}"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            base_name="frame"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            format="png"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            quality="50"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            headless_grabbing="true"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            headless_frame_size="1800x960\"&ndash;&gt;-->
+        <!--&lt;!&ndash;                            headless_frame_rate="6000"/>&ndash;&gt;-->
+        <!--        </qt-opengl>-->
     </visualization>
 
 </argos-configuration>

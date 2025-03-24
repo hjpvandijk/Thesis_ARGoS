@@ -59,7 +59,8 @@ public:
         double MAP_EXCHANGE_INTERVAL_S;
         double TIME_SYNC_INTERVAL_S;
 
-        double DISTANCE_SENSOR_NOISE_CM;
+        double DISTANCE_SENSOR_JITTER_CM;
+        double DISTANCE_SENSOR_NOISE_FACTOR;
         double ORIENTATION_NOISE_DEGREES;
         double ORIENTATION_JITTER_DEGREES;
         double POSITION_NOISE_CM;
@@ -79,6 +80,7 @@ public:
         double FRONTIER_PHEROMONE_K;
         double FRONTIER_PHEROMONE_N;
         double FRONTIER_PHEROMONE_M;
+        double FRONTIER_PHEROMONE_L;
         #endif
 
         double FRONTIER_SEARCH_RADIUS;
@@ -296,9 +298,9 @@ private:
     void checkMissionEnd();
 
     #ifdef USING_CONFIDENCE_TREE
-    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
-    void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
-    void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor);
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox);
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
     #else
     void addObjectLocation(Coordinate objectCoordinate);
     void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2);
