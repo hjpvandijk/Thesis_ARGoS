@@ -906,7 +906,7 @@ namespace quadtree {
 
                 //If the box size is the minimum size we allow (corresponding to finest mapping level),
                 // then we only contain a single QuadNode. Update the occupancy of this cell to the most important occupancy.
-                if (box.size <= RESOLUTION) {
+                if (std::abs(box.size - RESOLUTION) < 1e-6) { //If the box is the smallest resolution (account for floating point / rounding errors)
                     QuadNode newNode = QuadNode();
 //                    newNode.coordinate = value.coordinate;
                     newNode.coordinate = box.getCenter();
@@ -957,8 +957,14 @@ namespace quadtree {
                                 auto valuePheromone = calculatePheromone(value.visitedAtS, P_value, currentTimeS);
                                 auto alpha_compensated = valuePheromone > 0.5 ? (valuePheromone - 0.5) * ALPHA_RECEIVE + 0.5 : 0.5 - (0.5-valuePheromone) * (ALPHA_RECEIVE);
                                 double  oldPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                                newNode.LConfidence = calculateOccupancyProbability(L(oldPheromone), alpha_compensated);
+                                auto combinedL = calculateOccupancyProbability(L(oldPheromone), alpha_compensated);
+                                auto combinedP = P(combinedL);
                                 newNode.visitedAtS = std::max(cell->quadNode.visitedAtS, value.visitedAtS);
+                                //Reverse calculate LConfidence from combined P, so we have the correct pheromone value at the set visited time.
+                                auto Pconfidenceval = reversePheromone(newNode.visitedAtS, combinedP, currentTimeS);
+                                //Cap the LConfidence value between 0 and 1, as it is a probability.
+                                newNode.LConfidence = L(std::min(std::max((Pconfidenceval), 0.000001), 0.999999));
+
                             }
                             double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
                                                                   currentTimeS);
@@ -1045,11 +1051,18 @@ namespace quadtree {
 //                            }
 //                            cell->quadNode = newNode;
 //                            returnBox = box;
+                        //I don't think we ever enter this case, as a non-leaf node will have occupancy ANY.
                         if (cell->quadNode.occupancy == FREE || cell->quadNode.occupancy == OCCUPIED || cell->quadNode.occupancy == AMBIGUOUS) {
                             if (value.visitedAtS > cell->quadNode.visitedAtS) { //Only combine if the newly received value is more recent
                                 double  oldPheromone = calculatePheromone(cell->quadNode.visitedAtS, P(cell->quadNode.LConfidence), currentTimeS);
-                                newNode.LConfidence = calculateOccupancyProbability(value.LConfidence, oldPheromone); //Calculate the new confidence, use old pheromone value so we take into account time decay
-                                newNode.visitedAtS = value.visitedAtS;
+                                auto valuePheromone = calculatePheromone(value.visitedAtS, P(value.LConfidence), currentTimeS);
+
+                                auto combinedL = calculateOccupancyProbability(L(valuePheromone), oldPheromone); //Calculate the new confidence, use old pheromone value so we take into account time decay
+                                newNode.visitedAtS = std::max(value.visitedAtS, cell->quadNode.visitedAtS);
+                                auto PConfidenceval = reversePheromone(newNode.visitedAtS, P(combinedL), currentTimeS);
+                                //Cap the confidence value between 0.000001 and 0.999999, as the L function is not defined outside of this range.
+                                newNode.LConfidence = L(std::min(std::max((PConfidenceval), 0.000001), 0.999999));
+
                                 double pheromone = calculatePheromone(newNode.visitedAtS, P(newNode.LConfidence),
                                                                       currentTimeS);
                                 Occupancy occ = AMBIGUOUS;
@@ -1163,9 +1176,9 @@ namespace quadtree {
 
                         auto averagePheromone = PheromoneSum / 4.0;
                         auto PConfidenceAtTimeAndPheromone = reversePheromone(maxVisitedTime, averagePheromone, currentTimeS);
-                        //Cap at l_max and l_min, as rounding errors can occur.
-//                        cell->quadNode.LConfidence = std::max(std::min(L(PConfidenceAtTimeAndPheromone), l_max), l_min);
-                        cell->quadNode.LConfidence = (L(PConfidenceAtTimeAndPheromone));
+                        //Cap at l_max and l_min. Shouldn't be necessary since it is average and any child's pheromone should be within bounds.
+                        cell->quadNode.LConfidence = std::max(std::min(L(PConfidenceAtTimeAndPheromone), l_max), l_min);
+//                        cell->quadNode.LConfidence = (L(PConfidenceAtTimeAndPheromone));
 //                        double pheromone = calculatePheromone(maxVisitedTime, P(cell->quadNode.LConfidence), currentTimeS);
                         for (auto &child: cell->children) {
 //                            PConfidenceSum += P(child->quadNode.LConfidence);
