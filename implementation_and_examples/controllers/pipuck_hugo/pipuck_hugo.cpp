@@ -272,7 +272,7 @@ void PiPuckHugo::ControlStep() {
     double direction_heatmap_value = this->directions_heatmap[heatmapX][heatmapY];
     CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
     //Magnitude, including jitter and agent-dependent noise
-    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapX][heatmapY] * agentObject->config.POSITION_NOISE_CM / 100.0;
+    double error_mean_heatmap_value = this->error_mean_heatmap[heatmapX][heatmapY] * agentObject->config.POSITION_NOISE_CM / 103.3; //103.3 is the max error at full noise level.
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
     CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
     agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
