@@ -254,6 +254,10 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
     auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
     //In case the target is on the edge, we will add a small offset to the target, away from the start, so the raytracing method selects the correct cell
     auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
+    //If target with offset is now on the edge of a cell, do it the other way
+    if (std::fmod(target_with_offset.x, box_size) == 0 || std::fmod(target_with_offset.y, box_size) == 0) {
+        target_with_offset = Coordinate{target.x - (start.x - target.x) / 1000, target.y - (start.y - target.y) / 1000};
+    }
     //Find the intersection with the quadtree
     auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
 
