@@ -104,7 +104,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
 
 
-    argos::LOG << "combined tree size: " << m_cAgVisLF.combinedQuadTree.size() << std::endl;
+//    argos::LOG << "combined tree size: " << m_cAgVisLF.combinedQuadTree.size() << std::endl;
 
     for (std::tuple<quadtree::Box, double> boxesAndPheromone: m_cAgVisLF.combinedQuadTree) {
         quadtree::Box box = std::get<0>(boxesAndPheromone);

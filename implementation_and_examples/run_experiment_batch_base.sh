@@ -6,7 +6,7 @@ cd ..
 
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
-CONFIG_DIR="./agent_implementation/configs/try"
+CONFIG_DIR="./agent_implementation/configs/fsr_mfr_mrl"
 OTHER_CONFIG_DIRS=() #("./agent_implementation/configs/comm_range_and_loss")
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
@@ -23,25 +23,36 @@ EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.ar
 #CONFIGS=("n_3_m_2_5_cellratio0_75_noise.yaml" "n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5.yaml" "n_3_m_2_5_cellratio0_75_noise_object_safety_0_3.yaml")
 #CONFIGS=("p_sensor_1.yaml")
 CONFIGS=(
-"end_time_{END_TIME}_noise_0_wifi_range_15_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_20_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_99999_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_20_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_99999_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_20_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_20_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_99999_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_20_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_99999_evaporation_time_100.yaml"
+"BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_20_evaporation_time_100.yaml"
 )
 
 
 
 
-PARALLEL_JOBS=1
+PARALLEL_JOBS=7
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
 #MAX_AGENTS=15
 #MIN_AGENTS=15
 
-#AGENT_CONFIGS=(15 10 6 4 2)
-AGENT_CONFIGS=(15)
+AGENT_CONFIGS=(15 10 6 4 2)
+# AGENT_CONFIGS=(15)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=1
+N_REPEATED_EXPERIMENTS=3
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0

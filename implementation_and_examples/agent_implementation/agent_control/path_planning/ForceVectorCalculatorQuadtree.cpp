@@ -562,7 +562,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
         auto [powerUsage, duration] = agent->batteryManager.estimateMotionPowerUsage(agent, relative_route);
         region_summed_certainties_and_reach_dist_time_battery[{frontierRegionX, frontierRegionY}] = std::make_tuple(region, region_repulsion, distance, duration, powerUsage);
 #else
-        region_summed_certainties_and_reach_dist_time_battery[{frontierRegionX, frontierRegionY}] = std::make_tuple(region, region_repulsion, distance, 0, 0);
+        region_summed_certainties_and_reach_dist_time_battery[{frontierRegionX, frontierRegionY}] = std::make_tuple(region, region_repulsion, distance, 0, 0); //TODO: WHY HERE SIGABRT SOMETIMES?
 #endif
         region_routes[{frontierRegionX, frontierRegionY}] = {route_to_frontier, wall_following_direction};
     }

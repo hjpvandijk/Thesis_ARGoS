@@ -1519,7 +1519,7 @@ void Agent::loadConfig(const std::string& config_file) {
 //    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
 
     #ifdef USING_CONFIDENCE_TREE
-    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
+//    this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
     this->config.FRONTIER_PHEROMONE_K = config_yaml["forces"]["frontier_fitness"]["k"].as<double>();
     this->config.FRONTIER_PHEROMONE_N = config_yaml["forces"]["frontier_fitness"]["n"].as<double>();
     this->config.FRONTIER_PHEROMONE_M = config_yaml["forces"]["frontier_fitness"]["m"].as<double>();
