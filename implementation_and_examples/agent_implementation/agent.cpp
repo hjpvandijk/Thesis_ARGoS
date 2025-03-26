@@ -834,7 +834,7 @@ void Agent::sendQuadtreeToCloseAgents() {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
             if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
-                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
+                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + (rand() % 400 - 200)/100.0f) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
                 break; //We know we have to broadcast the quadtree, so we can break
             }
@@ -865,7 +865,7 @@ void Agent::sendQuadtreeToCloseAgents() {
 
 void Agent::timeSyncWithCloseAgents() {
     if (this->elapsed_ticks - this->timeSynchronizer.getLastSyncAttempt() >=
-        (this->config.TIME_SYNC_INTERVAL_S + (rand() % 400 - 200)/100) * this->ticks_per_second) { //Randomize the time sync interval a bit (between -2 and +2 seconds)
+        (this->config.TIME_SYNC_INTERVAL_S + (rand() % 400 - 200)/100.0f) * this->ticks_per_second) { //Randomize the time sync interval a bit (between -2 and +2 seconds)
         for (const auto &agentLocationPair: this->agentLocations) {
             double lastReceivedTick = std::get<2>(agentLocationPair.second);
             //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init

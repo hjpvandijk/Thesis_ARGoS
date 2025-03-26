@@ -65,8 +65,8 @@ motor:
   stall_current: 1.5
   stall_torque: 0.8
 physical:
-  robot_diameter: 0.08
-  robot_inter_wheel_distance: 0.0656
+  robot_diameter: 0.0724
+  robot_inter_wheel_distance: 0.0565
   robot_weight: 0.4
   robot_wheel_radius: 0.0205
 quadtree:

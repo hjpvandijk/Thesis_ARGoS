@@ -117,7 +117,7 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
     //Estimate how long it will take the agent to travel the path
 
     auto max_speed_turn_rad_s =
-            agent->differential_drive.max_speed_turn / 0.0565f; //0.0565 is inter-wheel distance in meters
+            agent->differential_drive.max_speed_turn / this->robot_inter_wheel_distance_m; //0.0565 is inter-wheel distance in meters (pipuck)
 
     float totalMotorPowerUsage = 0;
     float totalDuration = 0;
@@ -340,7 +340,6 @@ void MotionSystemBatteryManager::calculateVoltageAtSpeed(float speed_m_s) {
     } else {
         this->voltage_at_operating_speed = voltage_at_speed_using_3v;
     }
-
     this->no_load_rpm_at_voltage = 120.0f + (250.0f - 120.0f) * (this->voltage_at_operating_speed - 3.0f) / 3.0f;
     this->no_load_current_at_voltage = 0.15f + (0.16f - 0.15f) * (this->voltage_at_operating_speed - 3.0f) / 3.0f;
     //Assume polynomial relationship between stall current and voltage (based on data)

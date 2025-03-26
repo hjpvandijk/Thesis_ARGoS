@@ -11,7 +11,7 @@ public:
     float deceleration;
 
     //Rad/s
-    float max_speed_turn;
+    float max_speed_turn; //Per wheel
     float turn_acceleration;
     float turn_deceleration;
 
