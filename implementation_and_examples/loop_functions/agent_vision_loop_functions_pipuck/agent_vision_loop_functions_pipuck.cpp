@@ -11,7 +11,7 @@
 /****************************************/
 /****************************************/
 
-#define VISUALS
+//#define VISUALS
 
 /*
  * To reduce the number of waypoints stored in memory,

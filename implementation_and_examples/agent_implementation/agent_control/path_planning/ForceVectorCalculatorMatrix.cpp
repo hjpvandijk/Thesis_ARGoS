@@ -543,7 +543,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     //Own fix:
     //If there is no best frontier region, return a zero vector
     if (bestFrontierRegionCenter.x == MAXFLOAT) {
-        assert(0 && "No best frontier region found");
+//        assert(0 && "No best frontier region found");
         return {0, 0};
     }
 
