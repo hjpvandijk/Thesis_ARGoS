@@ -876,6 +876,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename) {
     for (auto & it : m_tCoverageMatrix) {
         for (int i = 0; i < it.second.size(); i++) {
             for (int j = 0; j < it.second[0].size(); j++) {
+                if (it.second[i][j] == 0) continue; //Skip empty cells, only export visited cells to save space
 //                if (it.second[i][j] == -1 && m_tObstacleMatrix[it.first][i][j] == -1) continue; //Skip empty cells
                 coverageMatrixFile << it.first->GetId() << ",";
                 auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
@@ -895,6 +896,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename) {
     for (auto & it : m_tObstacleMatrix) {
         for (int i = 0; i < it.second.size(); i++) {
             for (int j = 0; j < it.second[0].size(); j++) {
+                if (it.second[i][j] == 0) continue; //Skip empty cells, only export visited cells to save space
 //                if (it.second[i][j] == -1 && m_tCoverageMatrix[it.first][i][j] == -1) continue;
                 obstacleMatrixFile << it.first->GetId() << ",";
                 auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
