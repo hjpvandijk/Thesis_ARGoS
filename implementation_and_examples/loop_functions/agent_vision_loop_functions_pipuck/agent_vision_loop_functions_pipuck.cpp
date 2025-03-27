@@ -498,8 +498,6 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
             }
         }
 
-        if (pcFB->GetId()=="pipuck1")
-            argos::LOG << "[" << pcFB->GetId() << "] Average total certainty: " << total_certainty/total_boxes<< std::endl;
         double average_total_certainty = total_certainty / total_boxes;
         double average_free_certainty = free_certainty / free_boxes;
         double average_occupied_certainty = occupied_certainty / occupied_boxes;
