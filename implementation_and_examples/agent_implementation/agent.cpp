@@ -237,7 +237,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
             auto coord = Coordinate{point.x, point.y};
             while(Algorithms::is_multiple(coord.x, this->quadtree->getResolution()) || Algorithms::is_multiple(coord.y, this->quadtree->getResolution())){
-                coord = Coordinate{coord.x + 0.0000000001, coord.y + 0.0000000001};
+                coord = Coordinate{coord.x + 0.000001, coord.y + 0.000001};
             }
             this->quadtree->add(coord, p,
                                 elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
