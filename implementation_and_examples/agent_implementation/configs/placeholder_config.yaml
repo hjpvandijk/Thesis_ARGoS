@@ -11,7 +11,7 @@ battery:
   voltage: 6.0 # Battery voltage in volts
 motor:
   stall_current: 1.5 # Motor stall current in A
-  stall_torque: 0.8 # Motor stall torque in Nm
+  stall_torque: 0.8 # Motor stall torque in kg.cm
   no_load_rpm: 250 # Max rpm of the motor with no load
   no_load_current: 0.16 # Motor no load current in A
 control:
