@@ -349,7 +349,7 @@ public:
     double sensor_reading_distance_probability;
 
 private:
-    void loadConfig(const std::string& config_file);
+    void loadConfig(const std::string& config_file, double rootbox_size);
 
 
     void checkForObstacles();

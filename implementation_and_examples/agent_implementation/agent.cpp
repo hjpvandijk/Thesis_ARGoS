@@ -14,7 +14,9 @@
 
 
 Agent::Agent(std::string id, double rootbox_size, const std::string& config_file) {
-    loadConfig(config_file);
+    auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
+
+    loadConfig(config_file, box.size);
     this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
@@ -23,7 +25,6 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
-    auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
     this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED_THRESHOLD,
                                                           this->config.P_MAX, this->config.P_MIN,
                                                           this->config.ALPHA_RECEIVE,
@@ -32,11 +33,11 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
                                                           this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF,
                                                           this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF);
-    //Calculate smallest box size
     double smallestBoxSize = box.size;
     while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
         smallestBoxSize /= 2;
     }
+
     this->quadtree->setResolution(smallestBoxSize);
     #ifdef WALL_FOLLOWING_ENABLED
     this->wallFollower = WallFollower();
@@ -1208,7 +1209,7 @@ void Agent::checkMissionEnd() {
     }
 }
 
-void Agent::loadConfig(const std::string& config_file) {
+void Agent::loadConfig(const std::string& config_file, double rootbox_size) {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
     this->config.MISSION_END_TIME_S = config_yaml["mission"]["end_time"].as<float>();
@@ -1221,9 +1222,9 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
-    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() +
+    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_radius"].as<double>() +
                                        config_yaml["control"]["agent_safety_radius_margin"].as<double>();
-    this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
+
     this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
@@ -1255,8 +1256,6 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
     this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();
     this->config.AGENT_ALIGNMENT_RADIUS = config_yaml["forces"]["agent_alignment_radius"].as<double>();
-    this->config.OBJECT_AVOIDANCE_RADIUS = this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS +
-                                           config_yaml["forces"]["object_avoidance_radius_margin"].as<double>();
 
     this->config.VIRTUAL_WALL_AVOIDANCE_WEIGHT = config_yaml["forces"]["virtual_wall_avoidance_weight"].as<double>();
     this->config.AGENT_COHESION_WEIGHT = config_yaml["forces"]["agent_cohesion_weight"].as<double>();
@@ -1288,6 +1287,16 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
     this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();
     this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
+
+    //Calculate smallest box size
+    double smallestBoxSize = rootbox_size;
+    while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
+        smallestBoxSize /= 2;
+    }
+    this->config.OBJECT_SAFETY_RADIUS = smallestBoxSize * config_yaml["control"]["object_safety_factor"].as<double>();
+    this->config.OBJECT_AVOIDANCE_RADIUS = this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS +
+                                           config_yaml["forces"]["object_avoidance_radius_margin"].as<double>();
+
 
     this->config.BATTERY_CAPACITY = config_yaml["battery"]["capacity"].as<double>();
     this->config.BATTERY_VOLTAGE = config_yaml["battery"]["voltage"].as<double>();

@@ -26,7 +26,7 @@ control:
     frontier_reach_distance: 1
     frontier_switch_interval: 5
     target_feasibility_check_interval: 10
-  object_safety_radius: 0.2
+  object_safety_factor: 1
   path_planning:
     max_route_length: 99999
   separate_frontiers:
@@ -65,8 +65,8 @@ motor:
   stall_current: 1.5
   stall_torque: 0.8
 physical:
-  robot_diameter: 0.0724
   robot_inter_wheel_distance: 0.0565
+  robot_radius: 0.0362
   robot_weight: 0.4
   robot_wheel_radius: 0.0205
 quadtree:
