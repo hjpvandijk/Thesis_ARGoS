@@ -219,10 +219,6 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
 
 }
 
-bool is_multiple(double a, double b, double epsilon = 1e-10) {
-    double remainder = fmod(a, b);
-    return (std::fabs(remainder) < epsilon || std::fabs(remainder - b) < epsilon);
-}
 
 /**
  * Checks if the line from the agent to the target is free from obstacles
@@ -255,20 +251,10 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
         return {2, nullptr, -1, Coordinate{0,0}};
     }
 
-    //Because start is on an edge, we will add a small offset to the start, towards the target, so the raytracing method selects the correct cell
-    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
-    //If target with offset is now on the edge of a cell, do it the other way
-    if (is_multiple(start_with_offset.x, box_size) == 0 || is_multiple(start_with_offset.y, box_size) == 0) {
-        start_with_offset = Coordinate{start.x - (target.x - start.x) / 1000, start.y - (target.y - start.y) / 1000};
-    }
-    //In case the target is on the edge, we will add a small offset to the target, away from the start, so the raytracing method selects the correct cell
-    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
-    //If target with offset is now on the edge of a cell, do it the other way
-    if (is_multiple(target_with_offset.x, box_size) == 0 || is_multiple(target_with_offset.y, box_size) == 0) {
-        target_with_offset = Coordinate{target.x - (start.x - target.x) / 1000, target.y - (start.y - target.y) / 1000};
-    }
+
+
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
 
     if (intersection_cell != nullptr) {
         //If we intersect the same cell, the line is going through the cell, so the direction is not free
@@ -334,21 +320,9 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
 }
 
 int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, double box_size, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const{
-    //Small offset towards the target, so the raytracing method selects the correct cell
-    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
 
-    //If target with offset is now on the edge of a cell, do it the other way
-    if (is_multiple(start_with_offset.x, box_size) == 0 || is_multiple(start_with_offset.y, box_size) == 0) {
-        start_with_offset = Coordinate{start.x - (target.x - start.x) / 1000, start.y - (target.y - start.y) / 1000};
-    }
-    //Small offset towards the start, so the raytracing method selects the correct cell
-    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
-    //If target with offset is now on the edge of a cell, do it the other way
-    if (is_multiple(target_with_offset.x, box_size) == 0 || is_multiple(target_with_offset.y, box_size) == 0) {
-        target_with_offset = Coordinate{target.x - (start.x - target.x) / 1000, target.y - (start.y - target.y) / 1000};
-    }
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
 
     if (intersection_cell != nullptr) {
         if (intersection_cell->neighbors[intersection_edge] != nullptr) return 0; //If the intersection edge has a neighbor on it, it is a raytracing accuracy mistake, so the direction is not free

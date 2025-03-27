@@ -234,8 +234,12 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
             double p_distance_reading = 1 - double(i)*step_size_avg * sensor_reading_distance_probability;
             double p = (this->config.P_FREE - 0.5) * p_distance_reading + 0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
             //            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
-                       //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-            this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+           //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+            auto coord = Coordinate{point.x, point.y};
+            while(Algorithms::is_multiple(coord.x, this->quadtree->getResolution()) || Algorithms::is_multiple(coord.y, this->quadtree->getResolution())){
+                coord = Coordinate{coord.x + 0.0000000001, coord.y + 0.0000000001};
+            }
+            this->quadtree->add(coord, p,
                                 elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         } else {
             break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
@@ -278,7 +282,11 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
         double p = (this->config.P_FREE - 0.5) * p_distance_reading +0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
         //        argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
         //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-        this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+        auto coord = Coordinate{point.x, point.y};
+        while(Algorithms::is_multiple(coord.x, this->quadtree->getResolution()) || Algorithms::is_multiple(coord.y, this->quadtree->getResolution())){
+            coord = Coordinate{coord.x + 0.000001, coord.y + 0.000001};
+        }
+        this->quadtree->add(coord, p,
                             elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
     }
 }
@@ -345,9 +353,11 @@ quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate) const {
 
     double p_distance_reading = 1 - dist_to_object * sensor_reading_distance_probability;
     double p = 0.5-(0.5-this->config.P_OCCUPIED) * p_distance_reading ; //Increasingly more certain the closer to the agent, as the sensor reading is more accurate
-    quadtree::Box objectBox = this->quadtree->add(
-            Coordinate{objectCoordinate.x + 0.0000000001, objectCoordinate.y + 0.0000000001}, p,
-            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+    auto coord = Coordinate{objectCoordinate.x, objectCoordinate.y};
+    while(Algorithms::is_multiple(coord.x, this->quadtree->getResolution()) || Algorithms::is_multiple(coord.y, this->quadtree->getResolution())){
+        coord = Coordinate{coord.x + 0.000001, coord.y + 0.000001};
+    }
+    quadtree::Box objectBox = this->quadtree->add( coord, p, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
     if (objectBox.getSize() != 0) // If the box is not the zero (not added)
         checkIfAgentFitsBetweenObstacles(objectBox);

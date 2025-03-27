@@ -79,13 +79,9 @@ bool PathFollower::rayTraceQuadtreeOccupiedIntersection(Agent* agent, Coordinate
 //        x += stepX;
 //        y += stepY;
 //    }
-    //Small offset towards the start, so the raytracing method selects the correct cell
-    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
-    //Small offset towards the start, so the raytracing method selects the correct cell
-    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
 
-    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent, start_with_offset,
-                                                                                    target_with_offset);
+    std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent, start,
+                                                                                    target);
     for (const auto& point: linePoints) {
         auto cell_and_box = agent->quadtree->getCellandBoxFromCoordinate(point);
         auto cell = cell_and_box.first;
