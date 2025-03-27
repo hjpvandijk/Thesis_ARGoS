@@ -462,30 +462,44 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
     auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED_EXPLORING && cController.agentObject->state != Agent::State::MAP_RELAYED;
-
+    double resolution = cController.agentObject->quadtree->getResolution();
         //Update certainty over time at every interval, if mission has started
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
         double total_certainty = 0;
+        double total_certainty_areacompensated = 0;
         int total_boxes = 0;
+        double total_box_area = 0;
         double free_certainty = 0;
+        double free_certainty_areacompensated = 0;
         int free_boxes = 0;
+        double free_box_area = 0;
         double occupied_certainty = 0;
+        double occupied_certainty_areacompensated = 0;
         int occupied_boxes = 0;
-
+        double occupied_box_area = 0;
 
         for (auto & it : tree) {
+            auto box = std::get<0>(it);
             auto pheromone = std::get<1>(it);
             total_certainty += std::abs(pheromone-0.5);
+            total_certainty_areacompensated += std::abs(pheromone-0.5) * box.getSize()*box.getSize();
             total_boxes++;
-            if (pheromone > 0.5) {
+            total_box_area += box.getSize() * box.getSize();
+            if (pheromone >= 0.5) {
                 free_certainty += pheromone;
+                free_certainty_areacompensated += pheromone * box.getSize()*box.getSize();
                 free_boxes++;
-            } else if (pheromone <= 0.5) {
+                free_box_area += box.getSize() * box.getSize();
+            } else if (pheromone < 0.5) {
                 occupied_certainty += pheromone;
+                occupied_certainty_areacompensated += pheromone * box.getSize()*box.getSize();
                 occupied_boxes++;
+                occupied_box_area += box.getSize() * box.getSize();
             }
         }
 
+        if (pcFB->GetId()=="pipuck1")
+            argos::LOG << "[" << pcFB->GetId() << "] Average total certainty: " << total_certainty/total_boxes<< std::endl;
         double average_total_certainty = total_certainty / total_boxes;
         double average_free_certainty = free_certainty / free_boxes;
         double average_occupied_certainty = occupied_certainty / occupied_boxes;
@@ -497,6 +511,16 @@ void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, cons
         m_metrics.average_total_certainty_over_time[pcFB->GetId()].push_back(average_total_certainty);
         m_metrics.average_free_pheromone_over_time[pcFB->GetId()].push_back(average_free_certainty);
         m_metrics.average_occupied_pheromone_over_time[pcFB->GetId()].push_back(average_occupied_certainty);
+
+        double average_total_certainty_areacompensated = total_certainty_areacompensated / total_box_area;
+        double average_free_certainty_areacompensated = free_certainty_areacompensated / free_box_area;
+        double average_occupied_certainty_areacompensated = occupied_certainty_areacompensated / occupied_box_area;
+
+        m_metrics.average_total_certainty_over_time_areacompensated[pcFB->GetId()].push_back(average_total_certainty_areacompensated);
+        m_metrics.average_free_pheromone_over_time_areacompensated[pcFB->GetId()].push_back(average_free_certainty_areacompensated);
+        m_metrics.average_occupied_pheromone_over_time_areacompensated[pcFB->GetId()].push_back(average_occupied_certainty_areacompensated);
+
+
     }
 
 }
@@ -614,6 +638,48 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         certaintyFile << "\n";
     }
     certaintyFile.close();
+
+    //Export certainty over time (average, free, occupied) area compensated
+    std::ofstream certaintyAreaCompensatedFile;
+    certaintyAreaCompensatedFile.open(metric_path_str + "/certainty_area_compensated.csv");
+    certaintyAreaCompensatedFile << "tick,";
+    for (auto & it : m_metrics.average_total_certainty_over_time_areacompensated) {
+        certaintyAreaCompensatedFile << "all_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_free_pheromone_over_time_areacompensated) {
+        certaintyAreaCompensatedFile << "free_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_occupied_pheromone_over_time_areacompensated) {
+        certaintyAreaCompensatedFile << "occupied_" << it.first << ",";
+    }
+    certaintyAreaCompensatedFile << "\n";
+
+    //Get the size of the largest certainty vector
+    int max_certainty_area_compensated_list_size = 0;
+    for (auto & it : m_metrics.average_total_certainty_over_time_areacompensated) {
+        max_certainty_area_compensated_list_size = std::max(max_certainty_area_compensated_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_certainty_area_compensated_list_size; i++) {
+        certaintyAreaCompensatedFile << (i+1)*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.average_total_certainty_over_time_areacompensated) {
+            if (i < it.second.size())
+                certaintyAreaCompensatedFile << it.second[i] << ",";
+            else certaintyAreaCompensatedFile << ",";
+        }
+        for (auto & it : m_metrics.average_free_pheromone_over_time_areacompensated) {
+            if (i < it.second.size())
+                certaintyAreaCompensatedFile << it.second[i] << ",";
+            else certaintyAreaCompensatedFile << ",";
+        }
+        for (auto & it : m_metrics.average_occupied_pheromone_over_time_areacompensated) {
+            if (i < it.second.size())
+                certaintyAreaCompensatedFile << it.second[i] << ",";
+            else certaintyAreaCompensatedFile << ",";
+        }
+        certaintyAreaCompensatedFile << "\n";
+    }
+    certaintyAreaCompensatedFile.close();
 
     //Export number of cells and leaves
     std::ofstream numberOfCellsAndLeavesFile;

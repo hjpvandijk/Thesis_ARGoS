@@ -21,6 +21,9 @@ public:
         std::map<std::string, std::vector<double>> average_total_certainty_over_time; //Per agent, total certainty
         std::map<std::string, std::vector<double>> average_free_pheromone_over_time; //Per agent, certainty of presumed free space
         std::map<std::string, std::vector<double>> average_occupied_pheromone_over_time; //Per agent, certainty of presumed occupied space
+        std::map<std::string, std::vector<double>> average_total_certainty_over_time_areacompensated; //Per agent, total certainty
+        std::map<std::string, std::vector<double>> average_free_pheromone_over_time_areacompensated; //Per agent, certainty of presumed free space
+        std::map<std::string, std::vector<double>> average_occupied_pheromone_over_time_areacompensated; //Per agent, certainty of presumed occupied space
         std::map<std::string, std::vector<std::pair<int, int>>> number_of_cells_and_leaves_over_time; //Per agent, Total number of cells, number of leaf nodes
 
         std::map<std::string, double> total_traveled_path; //Per agent
@@ -33,7 +36,7 @@ public:
     };
 
     std::map<CPiPuckEntity*, bool> currently_colliding;
-    int coverage_update_tick_interval = 160; //at 16 ticks/second, this is every 16 seconds
+    int coverage_update_tick_interval = 160; //at 16 ticks/second, this is every 10 seconds
     std::map<CPiPuckEntity*, Coordinate> previous_positions;
     int nAgentsDone = 0;
     std::map<std::string, Coordinate> deployment_positions;
