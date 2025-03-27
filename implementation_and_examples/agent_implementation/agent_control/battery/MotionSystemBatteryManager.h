@@ -9,13 +9,13 @@ class Agent;
 
 class MotionSystemBatteryManager {
 public:
-    MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A);
+    MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_kg_cm, float no_load_rpm, float stall_current_A, float no_load_current_A);
     MotionSystemBatteryManager() = default;
 
     float EstimateMotorPowerUsage(Agent *agent, float forces[], float forceDurations[]);
     std::tuple<float, float> estimateMotorPowerUsageAndDurationFromPastMovement(Agent *agent, argos::CVector2 prevMovement, argos::CVector2 movement, float time);
 
-    std::tuple<float, float> estimateMotorPowerUsageAndDuration(Agent* agent, std::vector<argos::CVector2> relativePath);
+    std::tuple<float, float> estimateMotorPowerUsageAndDuration(Agent* agent, std::vector<argos::CVector2> & relativePath);
 
     float getMaxAchievableSpeed() const;
 

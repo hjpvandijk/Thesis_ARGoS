@@ -4,14 +4,14 @@
 
 MotionSystemBatteryManager::MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m,
                                                        float robot_inter_wheel_distance_m,
-                                                       float stall_torque_Nm,
+                                                       float stall_torque_kg_cm,
                                                        float no_load_rpm, float stall_current_A,
                                                        float no_load_current_A) {
     this->robot_weight_kg = robot_weight_kg;
     this->robot_wheel_radius_m = robot_wheel_radius_m;
     this->robot_inter_wheel_distance_m = robot_inter_wheel_distance_m;
     this->rolling_force_without_acceleration_N = rolling_resistance_coefficient * robot_weight_kg * 9.81f;
-    this->stall_torque_kg_cm = stall_torque_Nm;
+    this->stall_torque_kg_cm = stall_torque_kg_cm;
     this->no_load_rpm = no_load_rpm;
     this->stall_current_A = stall_current_A;
     this->no_load_current_A = no_load_current_A;
@@ -26,9 +26,9 @@ void MotionSystemBatteryManager::calculateForces(float (& forces)[6], Agent* age
     float accelerationForce = robot_weight_kg * agent->differential_drive.acceleration; //In Newtons
     float decelerationForce = robot_weight_kg * agent->differential_drive.deceleration; //In Newtons
     float turnAccelerationForce =
-            momentOfInertia * agent->differential_drive.turn_acceleration / robot_wheel_radius_m; //In Newtons
+           2 * momentOfInertia * agent->differential_drive.turn_acceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
     float turnDecelerationForce =
-            momentOfInertia * agent->differential_drive.turn_deceleration / robot_wheel_radius_m; //In Newtons
+            2 *momentOfInertia * agent->differential_drive.turn_deceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
 
     float totalForceDuringAcceleration = rolling_force_without_acceleration_N + accelerationForce; //In Newtons
     float totalForceDuringDeceleration = rolling_force_without_acceleration_N + decelerationForce; //In Newtons
@@ -50,9 +50,9 @@ void MotionSystemBatteryManager::calculateForcesPastMovement(float acceleration,
     float accelerationForce = robot_weight_kg * acceleration; //In Newtons
     float decelerationForce = robot_weight_kg * deceleration; //In Newtons
     float turnAccelerationForce =
-            momentOfInertia * turnAcceleration / robot_wheel_radius_m; //In Newtons
+            2 * momentOfInertia * turnAcceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
     float turnDecelerationForce =
-            momentOfInertia * turnDeceleration / robot_wheel_radius_m; //In Newtons
+            2 * momentOfInertia * turnDeceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
 
     float totalForceDuringAcceleration = rolling_force_without_acceleration_N + accelerationForce; //In Newtons
     float totalForceDuringDeceleration = rolling_force_without_acceleration_N + decelerationForce; //In Newtons
@@ -115,7 +115,7 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float forces[]
 }
 
 std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndDuration(Agent *agent,
-                                                                                        std::vector<argos::CVector2> relativePath) {
+                                                                                        std::vector<argos::CVector2> & relativePath) {
     //Estimate how long it will take the agent to travel the path
 
     auto max_speed_turn_rad_s =
@@ -143,11 +143,11 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
         argos::CVector2 vector = relativePath[i];
         float distance = vector.Length(); //In meters
         float turnAngle = std::abs(
-                vector.Angle().GetValue()); //In Radians, we assume both directions yield the same power usage
+                vector.Angle().GetValue()); //In Radians, we assume both directions yield the same power usage. This angle is relative to the previous vector
         bool cameToAStop = false;
         if (turnAngle > agent->config.TURN_THRESHOLD_DEGREES) cameToAStop = true;
         bool willComeToAStop = false;
-        if (i < relativePath.size()-2){
+        if (i < relativePath.size()-1){ //If we are not at the end of the path
             argos::CVector2 nextVector = relativePath[i+1];
             float nextTurnAngle = std::abs(nextVector.Angle().GetValue());
             if (nextTurnAngle > agent->config.TURN_THRESHOLD_DEGREES) willComeToAStop = true;

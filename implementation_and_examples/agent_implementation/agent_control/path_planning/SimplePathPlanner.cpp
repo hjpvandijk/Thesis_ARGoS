@@ -72,15 +72,23 @@ std::tuple<int, std::vector<argos::CVector2>, double> SimplePathPlanner::getRout
     return {wall_following_direction, relativeRoute, route_length};
 }
 
+/**
+ * Relative route, this means every edge is relative to the previous edge. So the difference in angle. Length is the same.
+ * @param route
+ * @param agent_heading
+ * @return
+ */
 std::vector<argos::CVector2> SimplePathPlanner::coordinateRouteToRelativeVectors(const std::vector<std::pair<Coordinate, Coordinate>> & route, argos::CRadians agent_heading) const {
     std::vector<argos::CVector2> relative_vectors;
     for (int i = 0; i < route.size(); i++) {
         auto [begin, end] = route[i];
         if (i==0) {
-            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-agent_heading));
+            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-agent_heading)); //First edge is relative to the agent's heading
         } else {
-            auto prev = relative_vectors.rbegin();
-            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-prev->Angle()));
+            auto prev = route[i-1];
+            auto prev_vector = argos::CVector2(prev.second.x - prev.first.x, prev.second.y - prev.first.y);
+            auto prev_angle = prev_vector.Angle();
+            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(prev_angle)); //Other edges are relative to the previous edge
         }
     }
     return relative_vectors;
