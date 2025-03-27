@@ -271,19 +271,8 @@ public:
     double sensor_reading_distance_probability;
 
 private:
-    void loadConfig(const std::string& config_file);
+    void loadConfig(const std::string& config_file, double rootbox_size);
     void checkForObstacles();
-
-//    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-//    argos::CVector2 getVirtualWallAvoidanceVector() const;
-//    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
-//    argos::CVector2 calculateAgentCohesionVector();
-//    argos::CVector2 calculateAgentAvoidanceVector();
-//    argos::CVector2 calculateAgentAlignmentVector();
-//    argos::CVector2 calculateUnexploredFrontierVector();
-    #ifndef USING_CONFIDENCE_TREE
-    std::vector<std::pair<int, int>> getFrontierCells(double currentTimeS, double searchRadius);
-    #endif
 
     std::vector<std::string> messages;
 

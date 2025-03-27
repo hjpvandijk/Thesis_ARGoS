@@ -2,10 +2,10 @@ mission:
   end_time: -1 # The time in seconds when the mission ends
   end_battery_level: 0 # The battery level in percent when the mission ends
 physical:
-  robot_diameter: 0.08 # Agent diameter in meters
+  robot_radius: 0.0362 # Agent diameter in meters
   robot_weight: 0.4 # Agent weight in kg
   robot_wheel_radius: 0.0205 # Agent wheel radius in meters
-  robot_inter_wheel_distance: 0.0656 # Agent inter-wheel distance in meters
+  robot_inter_wheel_distance: 0.0565 # Agent inter-wheel distance in meters
 battery:
   capacity: 1000 # Battery capacity in mAh
   voltage: 6.0 # Battery voltage in volts
@@ -18,7 +18,7 @@ control:
   turn_threshold: 15 # The min angle difference in degrees between the desired and current orientation to start turning
   turn_speed_ratio: 0.1 # The ratio of the maximum speed of the motors to use when turning
   360_degrees_steps: 360 # The number of steps we divide the 360 degrees in when deciding the free directions
-  object_safety_radius: 0.2 # The safety radius around an object in meters
+  object_safety_factor: 1 # The factor to multiply the resolution with to determine the safety radius around an object
   agent_safety_radius_margin: 0.1 # The margin around the agent's safety radius in meters
 #  disallow_frontier_switching:
 #    frontier_reach_distance: 1 # The distance in meters when we consider a frontier reached

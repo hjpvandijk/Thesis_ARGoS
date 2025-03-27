@@ -16,7 +16,7 @@
 #include <yaml-cpp/yaml.h>
 
 Agent::Agent(std::string id, double rootbox_size, const std::string& config_file) {
-    loadConfig(config_file);
+    loadConfig(config_file, rootbox_size);
     this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
@@ -92,6 +92,7 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     #ifdef USING_CONFIDENCE_TREE
     this->sensor_reading_distance_probability = (1-this->config.P_AT_MAX_SENSOR_RANGE) / this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
     #endif
+    this->deployment_location_reach_distance = this->config.FRONTIER_DIST_UNTIL_REACHED;
 }
 
 
@@ -394,7 +395,7 @@ void Agent::checkForObstacles() {
                     if (!addedObjectAtAgentLocation)
                         addFreeAreaBetween(this->position, object, objectBox);
                 } else {
-                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, objectBox);
+                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
                 }
                 #else
                 addObjectLocation(object);
@@ -1060,14 +1061,14 @@ void Agent::sendQuadtreeToCloseAgents() {
     double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = getTimeFromAgentLocation(agentLocationPair.first);
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
-            if (!this->agentMapSent.count(agentLocationPair.first) ||
-                this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] >
-                        (this->config.MAP_EXCHANGE_INTERVAL_S + (rand() % 400 - 200)/100) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
+            if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
+                this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
+                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + (rand() % 400 - 200)/100.0f) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
                 break; //We know we have to broadcast the quadtree, so we can break
             }
@@ -1079,12 +1080,12 @@ void Agent::sendQuadtreeToCloseAgents() {
 
     //Update the exchange time for all agents within range
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = getTimeFromAgentLocation(agentLocationPair.first);
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
-            oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
-            this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
+            oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
+            this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
 
         }
     }
@@ -1393,7 +1394,7 @@ void Agent::parseMessages() {
 
             }
             #endif
-        } else if (messageContent.at(0) == 'V') {
+        } else if (messageContent[0] == 'V') {
             std::string vectorString = messageContent.substr(2);
             std::string delimiter = ":";
             size_t speedPos = 0;
@@ -1477,7 +1478,7 @@ void Agent::checkMissionEnd() {
     }
 }
 
-void Agent::loadConfig(const std::string& config_file) {
+void Agent::loadConfig(const std::string& config_file, double rootbox_size) {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
     this->config.ROBOT_WEIGHT = config_yaml["physical"]["robot_weight"].as<float>();
@@ -1490,8 +1491,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
-    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
-    this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
+    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_radius"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
 //    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
 //#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //    this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
@@ -1544,7 +1544,7 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
     this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
     this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
-    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_occupied_threshold"].as<float>();
     this->config.P_MAX = config_yaml["confidence"]["p_max"].as<float>();
     this->config.P_MIN = config_yaml["confidence"]["p_min"].as<float>();
     this->config.P_AT_MAX_SENSOR_RANGE = config_yaml["confidence"]["p_at_max_sensor_range"].as<float>();
@@ -1560,7 +1560,19 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.COVERAGE_MATRIX_EVAPORATION_TIME_S = config_yaml["map"]["coverage_evaporation_time"].as<double>();
     this->config.OBSTACLE_MATRIX_EVAPORATION_TIME_S = config_yaml["map"]["obstacle_evaporation_time"].as<double>();
     #endif
-//    this->config.QUADTREE_EVAPORATION_TIME_S = config_yaml["quadtree"]["evaporation_time"].as<double>();
+
+    //Calculate smallest box size
+    double smallestBoxSize = rootbox_size;
+    #ifdef USING_CONFIDENCE_TREE
+    while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
+    #else
+    while (smallestBoxSize > this->config.COVERAGE_MATRIX_RESOLUTION) {
+    #endif
+        smallestBoxSize /= 2;
+    }
+    this->config.OBJECT_SAFETY_RADIUS = smallestBoxSize * config_yaml["control"]["object_safety_factor"].as<double>();
+    this->config.OBJECT_AVOIDANCE_RADIUS = this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS +
+                                           config_yaml["forces"]["object_avoidance_radius_margin"].as<double>();//    this->config.QUADTREE_EVAPORATION_TIME_S = config_yaml["quadtree"]["evaporation_time"].as<double>();
 //    this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
 //    this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();
 //    this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
