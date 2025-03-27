@@ -39,7 +39,7 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
     //Check if we have sent a message to this agent recently
 
     int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.QUADTREE_EXCHANGE_INTERVAL_S); //How many full exchange periods fit into the period
-    float remaining = seconds - nExchangeIntervalsInPeriod * agent->config.QUADTREE_EXCHANGE_INTERVAL_S;
+    double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.QUADTREE_EXCHANGE_INTERVAL_S;
 
     //If the agent has sent a message to this agent recently, we will probably send a message soon
     //Else we will probably not send a message soon
