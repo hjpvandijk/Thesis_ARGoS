@@ -1,6 +1,7 @@
 #include "PheromoneMatrix.h"
 #include <algorithm>
 #include <argos3/core/utility/logging/argos_log.h>
+#include <cassert>
 
 PheromoneMatrix::PheromoneMatrix(double real_width, double real_height, double resolution, double evaporationTime) {
     this->x_min = 0- real_width / 2;
@@ -118,6 +119,9 @@ double PheromoneMatrix::calculatePheromone(double visitedTimeS, double currentTi
         return 0;
     }
     double pheromone = 1.0 -  std::min((currentTimeS - visitedTimeS) / EvaporationTime, 1.0);
+    if (pheromone < 0 || pheromone > 1) {
+        argos::LOGERR << "Pheromone value is not between 0 and 1: " << pheromone << " with visitedTimeS: " << visitedTimeS << " and currentTimeS: " << currentTimeS << std::endl;
+    }
     return pheromone;
 }
 

@@ -13,6 +13,7 @@ class Agent;
 
 class Algorithms {
 public:
+    static bool is_multiple(double a, double b,  double epsilon = 1e-10);
     static std::vector<Coordinate> Amanatides_Woo_Voxel_Traversal(Agent *agent, Coordinate coordinate1, Coordinate coordinate2);
 
 };

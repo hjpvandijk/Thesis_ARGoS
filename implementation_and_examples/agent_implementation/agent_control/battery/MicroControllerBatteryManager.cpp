@@ -70,7 +70,7 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
     int nObstacleNodes = agent->obstacleMatrix->getWidth() * agent->obstacleMatrix->getHeight();
     int nCoverageNodes = agent->coverageMatrix->getWidth() * agent->coverageMatrix->getHeight();
     //Calculage amount of messages we will send
-    int nNodesPerMessage = agent->coverageMatrix->nodesPerMessage;//TODO: This value isn't used in the matrix to string yet
+    int nNodesPerMessage = agent->coverageMatrix->nodesPerMessage;
     int nMessages = std::floor((nObstacleNodes+nCoverageNodes) / nNodesPerMessage);
     int remainingNodes = (nObstacleNodes+nCoverageNodes) - nMessages * nNodesPerMessage;
     #endif

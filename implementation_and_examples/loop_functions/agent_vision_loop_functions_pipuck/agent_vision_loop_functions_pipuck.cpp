@@ -925,6 +925,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename, CPiPuckEnti
     for (int i = 0; i < coverageMatrixForExport.size(); i++) {
         for (int j = 0; j < coverageMatrixForExport[0].size(); j++) {
             if (coverageMatrixForExport[i][j] == -1 && obstacleMatrixForExport[i][j] == -1) continue;
+            if (coverageMatrixForExport[i][j] == 0) continue; //Skip empty cells, only export visited cells to save space
             coverageMatrixFile << agent->id << ",";
             auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
             coverageMatrixFile << realCoords.x<< ",";
@@ -942,6 +943,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename, CPiPuckEnti
     for (int i = 0; i < obstacleMatrixForExport.size(); i++) {
         for (int j = 0; j < obstacleMatrixForExport[0].size(); j++) {
             if (obstacleMatrixForExport[i][j] == -1 && coverageMatrixForExport[i][j] == -1) continue;
+            if (obstacleMatrixForExport[i][j] == 0) continue; //Skip empty cells, only export visited cells to save space
             obstacleMatrixFile << agent->id << ",";
             auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
             obstacleMatrixFile << realCoords.x<< ",";

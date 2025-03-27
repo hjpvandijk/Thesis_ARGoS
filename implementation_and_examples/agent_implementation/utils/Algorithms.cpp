@@ -7,7 +7,19 @@
 #include "agent_implementation/agent.h"
 
 /**
- * Adapted from https://www.cse.yorku.ca/~amana/research/grid.pdf?utm_source=chatgpt.com
+ * Checks if a is a multiple of b, with a small epsilon
+ * @param a
+ * @param b
+ * @param epsilon
+ * @return
+ */
+bool Algorithms::is_multiple(double a, double b, double epsilon) {
+    double remainder = fmod(a, b);
+    return (std::fabs(remainder) < epsilon || std::fabs(std::fabs(remainder) - b) < epsilon);
+}
+
+/**
+ * Adapted from https://www.cse.yorku.ca/~amana/research/grid.pdf?
  * @param agent
  * @param coordinate1
  * @param coordinate2
@@ -19,6 +31,23 @@ std::vector<Coordinate> Algorithms::Amanatides_Woo_Voxel_Traversal(Agent* agent,
     #else
     double box_size = agent->obstacleMatrix->getResolution();
     #endif
+    //Because coordinate1 is on an edge, we will add a small offset to the coordinate1, towards the coordinate2, so the raytracing method selects the correct cell
+    while (is_multiple(coordinate1.x, box_size) || is_multiple(coordinate1.y, box_size)) {
+        auto addx = 0.000001;
+        if (coordinate2.x < coordinate1.x) addx = -0.000001;
+        auto addy = 0.000001;
+        if (coordinate2.y < coordinate1.y) addy = -0.000001;
+        coordinate1 = Coordinate{coordinate1.x + addx, coordinate1.y + addy};
+    }
+    //In case the coordinate2 is on the edge, we will add a small offset to the coordinate2, away from the coordinate1, so the raytracing method selects the correct cell
+    while (is_multiple(coordinate2.x, box_size) || is_multiple(coordinate2.y, box_size)) {
+        auto addx = 0.000001;
+        if (coordinate1.x < coordinate2.x) addx = -0.000001;
+        auto addy = 0.000001;
+        if (coordinate1.y < coordinate2.y) addy = -0.000001;
+        coordinate2 = Coordinate{coordinate2.x + addx, coordinate2.y + addy};
+    }
+
     std::vector<Coordinate> points;
 
     double x1 = coordinate1.x;
@@ -47,7 +76,7 @@ std::vector<Coordinate> Algorithms::Amanatides_Woo_Voxel_Traversal(Agent* agent,
         if (tMaxX < tMaxY) {
             tMaxX += tDeltaX;
             x += stepX;
-        } else {
+        }  else {
             tMaxY += tDeltaY;
             y += stepY;
         }

@@ -20,12 +20,12 @@ void TimeSynchronizer::initTimeSync(Agent* initiating_agent){
 //        agentSyncs.erase(agent_id);
 //    }
 //    if (agentSyncs.empty()) {
-    //determine t_txi
-    int t_TXi = initiating_agent->elapsed_ticks;
-    //Broadcast t_txi
-    initiating_agent->broadcastMessage(t_TXiMessage(t_TXi));
+        //determine t_txi
+        int t_TXi = initiating_agent->elapsed_ticks;
+        //Broadcast t_txi
+        initiating_agent->broadcastMessage(t_TXiMessage(t_TXi));
 //    lastSyncAttempts[other_agent_id] = agent->elapsed_ticks; //Store the time we have synced with this agent
-    lastSyncAttemptTick = initiating_agent->elapsed_ticks;
+        lastSyncAttemptTick = initiating_agent->elapsed_ticks;
 //    }
 
 }
@@ -37,16 +37,16 @@ void TimeSynchronizer::initTimeSync(Agent* initiating_agent){
  */
 void TimeSynchronizer::respondToTimeSync(std::string sender_id, Agent *receiving_agent, int t_TXi) {
 //    if (agentSyncs.empty()) {
-    if (agentSyncs.find(sender_id) == agentSyncs.end()) { //If we have no active sync with this agent
-        //Insert the new sync, and set the t_TXi and t_RXj
-        int t_RXj = receiving_agent->elapsed_ticks;
-        int t_TXj = t_RXj;
-        agentSyncs.insert({sender_id, {t_TXj, 0, t_TXi, t_RXj}}); //Here, __j is ours, __i is the other agent's
-        //Send back t_txi, t_rxj, t_txj
-        //Also sending back t_txi so they know to which of their messages we responded.
-        receiving_agent->sendMessage(t_TXi_t_RXj_t_TXjMessage(t_TXi, t_RXj, t_TXj), sender_id);
+        if (agentSyncs.find(sender_id) == agentSyncs.end()) { //If we have no active sync with this agent
+            //Insert the new sync, and set the t_TXi and t_RXj
+            int t_RXj = receiving_agent->elapsed_ticks;
+            int t_TXj = t_RXj;
+            agentSyncs.insert({sender_id, {t_TXj, 0, t_TXi, t_RXj}}); //Here, __j is ours, __i is the other agent's
+            //Send back t_txi, t_rxj, t_txj
+            //Also sending back t_txi so they know to which of their messages we responded.
+            receiving_agent->sendMessage(t_TXi_t_RXj_t_TXjMessage(t_TXi, t_RXj, t_TXj), sender_id);
 
-    }
+        }
 //    }
 }
 
@@ -131,7 +131,7 @@ void TimeSynchronizer::calculateCompensation(const std::string& other_agent_id, 
     assert(agent_compensation == 0);
 
 //    if (agent_compensation != 0) {
-    this->compensations[other_agent_id] = agent_compensation;
+        this->compensations[other_agent_id] = agent_compensation;
 
 //        argos::LOG << "t_TXi: " << t_TXi << " t_RXj: " << t_RXj << " t_TXj: " << t_TXj << " t_RXi: " << t_RXi
 //                   << std::endl;
