@@ -20,7 +20,8 @@ MotionSystemBatteryManager::MotionSystemBatteryManager(float robot_weight_kg, fl
 }
 
 void MotionSystemBatteryManager::calculateForces(float (& forces)[6], Agent* agent) const {
-    float momentOfInertia = 0.5f * robot_weight_kg * 0.0362f * 0.0362f; //In kg.m^2 , 0.0362 is the robot radius
+    //(assuming equal weight distribution over the robot)
+    float momentOfInertia = 0.5f * robot_weight_kg * agent->config.ROBOT_RADIUS * agent->config.ROBOT_RADIUS; //In kg.m^2 , 0.0362 is the robot radius
 
     float accelerationForce = robot_weight_kg * agent->differential_drive.acceleration; //In Newtons
     float decelerationForce = robot_weight_kg * agent->differential_drive.deceleration; //In Newtons
@@ -43,7 +44,8 @@ void MotionSystemBatteryManager::calculateForces(float (& forces)[6], Agent* age
 }
 
 void MotionSystemBatteryManager::calculateForcesPastMovement(float acceleration, float deceleration, float turnAcceleration, float turnDeceleration, float (& forces)[6], Agent* agent) const {
-    float momentOfInertia = 0.5f * robot_weight_kg * 0.0362f * 0.0362f; //In kg.m^2 , 0.0362 is the robot radius
+    //(assuming equal weight distribution over the robot)
+    float momentOfInertia = 0.5f * robot_weight_kg * agent->config.ROBOT_RADIUS * agent->config.ROBOT_RADIUS; //In kg.m^2 , 0.0362 is the robot radius
 
     float accelerationForce = robot_weight_kg * acceleration; //In Newtons
     float decelerationForce = robot_weight_kg * deceleration; //In Newtons
@@ -237,8 +239,11 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
     double averageTurnSpeed = turnAngle / time;
 //    argos::LOG << turnAngle << "/" << time << "=" << averageTurnSpeed << std::endl;
 
-    float acceleration = (averageSpeed - prevMovement.Length()) / time;
-    float turnAcceleration = (averageTurnSpeed - prevMovement.Angle().GetValue()) / time;
+    double averageSpeedPrev = prevMovement.Length() / time;
+    double averageTurnSpeedPrev = prevMovement.Angle().GetValue() / time;
+
+    float acceleration = (averageSpeed - averageSpeedPrev) / time;
+    float turnAcceleration = (averageTurnSpeed - averageTurnSpeedPrev) / time;
     float deceleration = 0;
     float turnDeceleration = 0;
 

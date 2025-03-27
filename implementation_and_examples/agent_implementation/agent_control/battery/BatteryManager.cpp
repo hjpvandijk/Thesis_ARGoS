@@ -31,7 +31,6 @@ std::tuple<float, float> BatteryManager::estimateTotalPowerUsage(Agent* agent, s
 }
 
 std::tuple<float, float> BatteryManager::calculateTotalPowerUsageFromMovement(Agent* agent, argos::CVector2 prevMovement, argos::CVector2 movement){
-
     auto [motionSystemPowerUsage, pathFollowingDurationS] = motionSystemBatteryManager.estimateMotorPowerUsageAndDurationFromPastMovement(agent, prevMovement, movement, 1.0f/agent->ticks_per_second); //In Wh
     auto motionSystemPowerUsageAtVoltage = motionSystemPowerUsage / battery.voltage * 1000.0f;//In mAh
 

@@ -77,7 +77,7 @@ public:
     RandomWalk randomWalker;
 #endif
     struct Config {
-//        double ROBOT_DIAMETER;
+        double ROBOT_RADIUS;
         float ROBOT_WEIGHT;
         float ROBOT_WHEEL_RADIUS;
         float ROBOT_INTER_WHEEL_DISTANCE;

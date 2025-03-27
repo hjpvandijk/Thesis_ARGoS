@@ -1231,7 +1231,9 @@ void Agent::loadConfig(const std::string& config_file, double rootbox_size) {
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
-    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_radius"].as<double>() +
+
+    this->config.ROBOT_RADIUS = config_yaml["physical"]["robot_radius"].as<double>();
+    this->config.AGENT_SAFETY_RADIUS = this->config.ROBOT_RADIUS +
                                        config_yaml["control"]["agent_safety_radius_margin"].as<double>();
 
     this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
