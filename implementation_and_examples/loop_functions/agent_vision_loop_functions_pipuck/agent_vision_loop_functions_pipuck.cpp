@@ -11,7 +11,7 @@
 /****************************************/
 /****************************************/
 
-#define VISUALS
+//#define VISUALS
 
 /*
  * To reduce the number of waypoints stored in memory,
@@ -174,13 +174,48 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     int seed_int = seed ? std::stoi(seed) : 0;
     srand(seed_int);
 
+    std::vector<int> spawn_times_from_seed;
+
+
     const char* average_inter_spawn_time_s = std::getenv("AVERAGE_INTER_SPAWN_TIME");
     float average_inter_spawn_time = std::stof(average_inter_spawn_time_s);
     this->spawn_rate = average_inter_spawn_time_s ? 1.0f /  average_inter_spawn_time: 10.0f;
     argos::LOG << "Average inter spawn time: " << average_inter_spawn_time << std::endl;
 
+    //Make sure the inter spawn times are the same as in main.
+    if (average_inter_spawn_time == 100) {
+        if (seed_int == 1) {
+            spawn_times_from_seed = {2934, 3736, 6181, 8743, 12625, 12977, 13630, 15969, 16489, 17780};
+        } else if (seed_int == 2) {
+            spawn_times_from_seed = {1931, 4585, 4733, 4940, 5625, 6501, 8426, 8535, 9951, 11598};
+        } else if (seed_int == 3) {
+            spawn_times_from_seed = {1318,1725,2524,3463,3999,4249,5575,8775,12387,12806};
+        } else if (seed_int == 4) {
+            spawn_times_from_seed = {3971,4201,4540,5021,5406,6120,6991,8689,9034,9627};
+        } else if (seed_int == 5) {
+            spawn_times_from_seed = {513,589,8472,8605,8860,8992,9518,10470,11573,15163};
+        } else {
+            assert(0 && "SEED not from 1-5");
+        }
+    } else if (average_inter_spawn_time == 180) {
+        if (seed_int == 1) {
+            spawn_times_from_seed = {5281,6725,11126,15738,22726,23359,24534,28744,29681,32006};
+        } else if (seed_int == 2) {
+            spawn_times_from_seed = {3476,8254,8521,8894,10127,11705,15170,15367,17917,20883};
+        } else if (seed_int == 3) {
+            spawn_times_from_seed = {2373,3107,4545,6235,7201,7651,10038,15798,22299,23054};
+        } else if (seed_int == 4) {
+            spawn_times_from_seed = {7149,7563,8174,9041,9735,11021,12588,15645,16267,17334};
+        } else if (seed_int == 5) {
+            spawn_times_from_seed = {925,1062,15253,15493,15953,16192,17140,18853,20839,27302};
+        } else {
+            assert(0 && "SEED not from 1-5");
+        }
+    }
+
     CSpace::TMapPerType &boxMap = GetSpace().GetEntitiesByType("box");
     double prev_spawn_time = 0.0f;
+    int i=0;
     for (auto &it: boxMap) {
         CBoxEntity *box = any_cast<CBoxEntity *>(it.second);
         if (box->GetId().find("spawn_box") != std::string::npos) {
@@ -189,7 +224,8 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
                 auto copybox = new CBoxEntity(box->GetId(), box->GetEmbodiedEntity().GetOriginAnchor().Position,
                                               box->GetEmbodiedEntity().GetOriginAnchor().Orientation, false,
                                               box->GetSize(), 1.0f);
-                int spawn_time_ticks = int(calculateSpawnTime(this->spawn_rate) * ticksPerSecond) + prev_spawn_time;
+//                int spawn_time_ticks = int(calculateSpawnTime(this->spawn_rate) * ticksPerSecond) + prev_spawn_time;
+                int spawn_time_ticks = spawn_times_from_seed[i];
                 prev_spawn_time = spawn_time_ticks;
                 this->spawn_boxes.push_back(*copybox);
                 this->spawn_times.push_back(spawn_time_ticks);
@@ -197,8 +233,11 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
                 delete copybox;
             }
             RemoveEntity(*box);
+            i++;
         }
     }
+
+    assert(i<=spawn_times_from_seed.size() && "More spawn boxes than spawn times");
 
     const char* metric_path = std::getenv("METRIC_PATH");
     if (metric_path) {
