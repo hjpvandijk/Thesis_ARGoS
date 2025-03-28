@@ -41,6 +41,7 @@ public:
     std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
     struct Config {
+        double ROBOT_RADIUS;
         float ROBOT_WEIGHT;
         float ROBOT_WHEEL_RADIUS;
         float ROBOT_INTER_WHEEL_DISTANCE;

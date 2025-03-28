@@ -610,7 +610,7 @@ bool ForceVectorCalculator::calculateObjectAvoidanceAngle(Agent* agent, argos::C
 
             auto cellValue = agent->obstacleMatrix->getByIndex(x, y, agent->elapsed_ticks / agent->ticks_per_second);
 
-            if (cellValue == 0) continue;
+            if (cellValue == 0) continue; //Not an occupied cell
 
 
             argos::CVector2 OC = argos::CVector2(cellCenter.x - agent->position.x,
@@ -736,7 +736,7 @@ void ForceVectorCalculator::checkAvoidAndNormalizeVectors(ForceVectorCalculator:
 //Global definition of frontier cell:
 //A cell is a frontier iff:
 //1. Occupancy  == 1
-//2. There is a 8 Moore neighbor, of which occupancy == 0
+//2. There is an 8 Moore neighbor, of which occupancy == 0
 
 std::vector<std::pair<int, int>> ForceVectorCalculator::getFrontierCells(Agent* agent, double currentTimeS, double searchRadius) {
     std::vector<std::pair<int, int>> frontierCells;

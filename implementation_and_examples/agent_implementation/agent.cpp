@@ -334,6 +334,9 @@ quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate) const {
 void Agent::addObjectLocation(Coordinate objectCoordinate) {
     this->obstacleMatrix->update(objectCoordinate, elapsed_ticks/ticks_per_second);
     //Then set the same cell in the coverage matrix to -1
+    //"The obstacle matrix has the same size as the coverage
+    //matrix . If the cell (x, y) is an obstacle, its value in will
+    //always be 0." from Dynamic frontier-led swarming
     this->coverageMatrix->reset(objectCoordinate);
 }
 #endif
@@ -1366,6 +1369,9 @@ void Agent::parseMessages() {
                 } else {
                     this->obstacleMatrix->updateByIndex(i, j, value);
                     //If we have an obstacle, reset the corresponding coverage matrix cell
+                    //"The obstacle matrix has the same size as the coverage
+                    //matrix . If the cell (x, y) is an obstacle, its value in will
+                    //always be 0." - From the paper Dynamic Frontier-Led Swarming
                     if (value != -1){
                         auto realObstacleCoordinate = this->obstacleMatrix->getRealCoordinateFromIndex(i, j);
                         this->coverageMatrix->reset(realObstacleCoordinate);
@@ -1491,7 +1497,9 @@ void Agent::loadConfig(const std::string& config_file, double rootbox_size) {
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
-    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_radius"].as<double>() + config_yaml["control"]["agent_safety_radius_margin"].as<double>();
+    this->config.ROBOT_RADIUS = config_yaml["physical"]["robot_radius"].as<double>();
+    this->config.AGENT_SAFETY_RADIUS = this->config.ROBOT_RADIUS +
+                                       config_yaml["control"]["agent_safety_radius_margin"].as<double>();
 //    this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
 //#ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
 //    this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();

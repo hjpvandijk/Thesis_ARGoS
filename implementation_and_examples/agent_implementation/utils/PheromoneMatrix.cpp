@@ -20,7 +20,7 @@ PheromoneMatrix::PheromoneMatrix(double real_width, double real_height, double r
     this->width = int(real_width / this->resolution);
     this->height = int(real_height / this->resolution);
     this->EvaporationTime = evaporationTime;
-    //Create the matrix and set all values to 0
+    //Create the matrix and set all values to 0, column major order
     this->matrix = std::vector<std::vector<double>>(this->width, std::vector<double>(this->height, -1));
 }
 
@@ -83,6 +83,7 @@ void PheromoneMatrix::resetByIndex(int x, int y) {
 //    this->matrix[x_int][y_int] = std::max(this->matrix[x_int][y_int], value);
 //}
 
+//Column major order
 double PheromoneMatrix::get(double x, double y, double currentTimeS) {
     //Get the value of the matrix at the given coordinates
     int x_int = int((x - this->x_min) / this->resolution);
@@ -151,7 +152,7 @@ std::array<double, 9> PheromoneMatrix::MooreNeighbors(int x, int y, double curre
     //If the neighbor is inside the matrix and has a pheromone value of 0, it is considered unknown
     //If the neighbor is inside the matrix and has a pheromone value > 0, it is considered explored
 
-    std::array<double, 9> neighbors; //Index = (k+1) + 3*(l+1)
+    std::array<double, 9> neighbors{}; //Index = (k+1) + 3*(l+1)
 
     for (int k = -1; k <= 1; k++) {
         for (int l = -1; l <= 1; l++) {

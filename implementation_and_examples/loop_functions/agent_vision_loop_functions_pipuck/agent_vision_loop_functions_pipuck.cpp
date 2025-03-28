@@ -29,25 +29,6 @@ std::chrono::time_point start = std::chrono::system_clock::now();
 
 std::chrono::time_point end = std::chrono::system_clock::now();
 
-
-
-///**
-// * Get the coordinates in all occupied boxes of the quadtrees a given agent
-// * @param pcFB
-// * @param agent
-// */
-//void CAgentVisionLoopFunctions::findAndPushObjectCoordinates(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
-//    std::vector<quadtree::QuadNode> occupiedNodes = agent->quadtree->queryOccupied(agent->position,
-//                                                                                   agent->PROXIMITY_RANGE * 2.0);
-//
-//    for (auto node: occupiedNodes) {
-//        Coordinate nodePos = node.coordinate.FromOwnToArgos();
-//        CVector3 pos = CVector3(nodePos.x, nodePos.y, 0.03f);
-//        m_tObjectCoordinates[pcFB].push_back(pos);
-//    }
-//
-//}
-
 /**
  * Get the coordinates of all other agents, received through messages
  * @param pcFB
@@ -92,7 +73,7 @@ void CAgentVisionLoopFunctions::pushQuadTreeIfTime(CPiPuckEntity *pcFB, const st
  */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTime);
-    m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
+//    m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
     m_tQuadTree[pcFB] = boxesAndPheromones;
 }
@@ -154,6 +135,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
@@ -161,8 +143,8 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         auto simple_radio = &(dynamic_cast<argos::CSimpleRadioEquippedEntity*>(radio_entity))->GetRadio(0);
         simple_radio->SetRange(agent->config.WIFI_RANGE_M);
 
+        assert(agent->ticks_per_second == ticksPerSecond);
 
-        agent->ticks_per_second = ticksPerSecond;
         #ifndef USING_CONFIDENCE_TREE
         real_x_min = - agent->coverageMatrix->getRealWidth()/ 2;
         real_y_min = - agent->coverageMatrix->getRealHeight()/ 2;
@@ -180,6 +162,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         deployment_positions[pcFB->GetId()] = agentRealPosition;
     }
+
     this->m_metrics = metrics();
     this->m_metrics.map_observation_count_total.resize(map_cols, std::vector<int>(map_rows, 0));
     this->m_metrics.map_observation_count = std::map<std::string, std::vector<std::vector<int>>>();
@@ -465,6 +448,7 @@ void CAgentVisionLoopFunctions::PostStep() {
             pushMatrices(pcFB, agent);
             #endif
         }
+        exportMetricsAndMaps();
         experimentFinished = true;
     }
 
@@ -611,7 +595,7 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
 
         for (int i = 0; i < coverageMatrix.size(); i++) {
             for (int j = 0; j < coverageMatrix[i].size(); j++) {
-                if (coverageMatrix[i][j] > 0) { //Will be -1 when not visited or covered by obstacle matrix
+                if (coverageMatrix[i][j] > 0) { //Will be 0 when not visited or covered by obstacle matrix
                     covered_area += cController.agentObject->coverageMatrix->getResolution() *
                                     cController.agentObject->coverageMatrix->getResolution();
                 }
@@ -620,7 +604,7 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
 
         for (int i = 0; i < obstacleMatrix.size(); i++) {
             for (int j = 0; j < obstacleMatrix[i].size(); j++) {
-                if (obstacleMatrix[i][j] > 0) { //Will be -1 when not visited
+                if (obstacleMatrix[i][j] > 0) { //Will be 0 when not visited
                     covered_area += cController.agentObject->obstacleMatrix->getResolution() *
                                     cController.agentObject->obstacleMatrix->getResolution();
                 }
@@ -913,7 +897,6 @@ void CAgentVisionLoopFunctions::exportQuadtree(std::string filename) {
     quadTreeFile.close();
 }
 
-
 void CAgentVisionLoopFunctions::exportQuadtree(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     pushQuadTree(pcFB, agent);
     //Export quadtree of each agent
@@ -990,7 +973,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename, CPiPuckEnti
     coverageMatrixFile << "agent_id,x,y,coverage_pheromone,size\n";
     for (int i = 0; i < coverageMatrixForExport.size(); i++) {
         for (int j = 0; j < coverageMatrixForExport[0].size(); j++) {
-            if (coverageMatrixForExport[i][j] == -1 && obstacleMatrixForExport[i][j] == -1) continue;
+//            if (coverageMatrixForExport[i][j] == -1 && obstacleMatrixForExport[i][j] == -1) continue;
             if (coverageMatrixForExport[i][j] == 0) continue; //Skip empty cells, only export visited cells to save space
             coverageMatrixFile << agent->id << ",";
             auto realCoords = getRealCoordinateFromIndex(i, j, coverageMatrixResolution);
@@ -1008,7 +991,7 @@ void CAgentVisionLoopFunctions::exportMatrices(std::string filename, CPiPuckEnti
     obstacleMatrixFile << "agent_id,x,y,obstacle_pheromone,size\n";
     for (int i = 0; i < obstacleMatrixForExport.size(); i++) {
         for (int j = 0; j < obstacleMatrixForExport[0].size(); j++) {
-            if (obstacleMatrixForExport[i][j] == -1 && coverageMatrixForExport[i][j] == -1) continue;
+//            if (obstacleMatrixForExport[i][j] == -1 && coverageMatrixForExport[i][j] == -1) continue;
             if (obstacleMatrixForExport[i][j] == 0) continue; //Skip empty cells, only export visited cells to save space
             obstacleMatrixFile << agent->id << ",";
             auto realCoords = getRealCoordinateFromIndex(i, j, obstacleMatrixResolution);
@@ -1052,10 +1035,10 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
                     #ifdef USING_CONFIDENCE_TREE
                     //Export quadtree at point of return
                     exportQuadtree("quadtree_finished_exploring_" + pcFB->GetId(), pcFB, agent);
-                    agents_finished_exploring.push_back(pcFB->GetId());
                     #else
                     exportMatrices("finished_exploring_" + pcFB->GetId(), pcFB, agent);
                     #endif
+                    agents_finished_exploring.push_back(pcFB->GetId());
                 }
             }
         } else {
@@ -1146,8 +1129,6 @@ void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, 
         argos::CRadians sensor_rotation = agentRealHeading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (agent->distance_sensors[sensor_index].getDistance() < agent->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
-//            float sensor_probability = HC_SR04::getProbability(agent->distance_sensors[sensor_index].getDistance());
-
             double opposite = argos::Sin(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
             double adjacent = argos::Cos(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
 
@@ -1198,14 +1179,6 @@ void CAgentVisionLoopFunctions::observeAreaBetween(Coordinate coordinate1, Coord
 //        y += stepY;
 //    }
 
-    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
-    #ifdef USING_CONFIDENCE_TREE
-    if (dist < agent->quadtree->getResolution())
-        return;
-    #else
-    if (dist < agent->coverageMatrix->getResolution())
-        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
-    #endif
     std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent.get(), coordinate1,
                                                                                     coordinate2);
     for (int i=0; i<linePoints.size(); i++){
@@ -1237,9 +1210,7 @@ bool CAgentVisionLoopFunctions::IsExperimentFinished() {
     return experimentFinished;
 }
 
-
 void CAgentVisionLoopFunctions::PostExperiment() {
-    exportMetricsAndMaps();
     end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end-start;
