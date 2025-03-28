@@ -236,8 +236,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
             i++;
         }
     }
-
-    assert(i<=spawn_times_from_seed.size() && "More spawn boxes than spawn times");
+    if (average_inter_spawn_time != 0) assert(i<=spawn_times_from_seed.size() && "More spawn boxes than spawn times");
 
     const char* metric_path = std::getenv("METRIC_PATH");
     if (metric_path) {
