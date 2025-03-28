@@ -334,10 +334,11 @@ quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate) const {
 void Agent::addObjectLocation(Coordinate objectCoordinate) {
     this->obstacleMatrix->update(objectCoordinate, elapsed_ticks/ticks_per_second);
     //Then set the same cell in the coverage matrix to -1
-    //"The obstacle matrix has the same size as the coverage
-    //matrix . If the cell (x, y) is an obstacle, its value in will
+    //"The obstacle matrix Mo has the same size as the coverage
+    //matrix M. If the cell (x, y) is an obstacle, its value in M will
     //always be 0." from Dynamic frontier-led swarming
     this->coverageMatrix->reset(objectCoordinate);
+
 }
 #endif
 
@@ -1365,6 +1366,9 @@ void Agent::parseMessages() {
                 int i = int(indices.x);
                 int j = int(indices.y);
                 if (coverage) {
+                    //If there is already an observed obstacle there, we don't update the coverage matrix
+                    if (this->obstacleMatrix->getByIndex(i, j, this->elapsed_ticks/this->ticks_per_second) > 0)
+                        continue;
                     this->coverageMatrix->updateByIndex(i, j, value);
                 } else {
                     this->obstacleMatrix->updateByIndex(i, j, value);
@@ -1372,7 +1376,7 @@ void Agent::parseMessages() {
                     //"The obstacle matrix has the same size as the coverage
                     //matrix . If the cell (x, y) is an obstacle, its value in will
                     //always be 0." - From the paper Dynamic Frontier-Led Swarming
-                    if (value != -1){
+                    if (this->obstacleMatrix->getByIndex(i, j, this->elapsed_ticks/this->ticks_per_second) > 0) {
                         auto realObstacleCoordinate = this->obstacleMatrix->getRealCoordinateFromIndex(i, j);
                         this->coverageMatrix->reset(realObstacleCoordinate);
                     }
@@ -1522,7 +1526,7 @@ void Agent::loadConfig(const std::string& config_file, double rootbox_size) {
 ////
     this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
     this->config.FRONTIER_CELL_RATIO = config_yaml["forces"]["frontier_cell_ratio"].as<double>();
-    this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
+//    this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
     this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
     this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();
     this->config.AGENT_ALIGNMENT_RADIUS = config_yaml["forces"]["agent_alignment_radius"].as<double>();

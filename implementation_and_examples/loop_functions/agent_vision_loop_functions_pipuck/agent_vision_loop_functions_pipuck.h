@@ -19,6 +19,9 @@ public:
         std::map<std::string, double> mission_time; //Per agent
         std::map<std::string, double> distance_to_deployment_site;
         std::map<std::string, std::vector<double>> coverage_over_time; //Per agent
+        #ifndef USING_CONFIDENCE_TREE
+        std::map<std::string, std::vector<double>> coverage_over_time_disregarding_evaporation; //Per agent
+        #endif
         #ifdef USING_CONFIDENCE_TREE
         std::map<std::string, std::vector<double>> average_total_certainty_over_time; //Per agent, total certainty
         std::map<std::string, std::vector<double>> average_free_pheromone_over_time; //Per agent, certainty of presumed free space

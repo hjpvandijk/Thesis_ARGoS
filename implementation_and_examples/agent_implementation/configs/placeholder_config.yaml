@@ -2,7 +2,7 @@ mission:
   end_time: -1 # The time in seconds when the mission ends
   end_battery_level: 0 # The battery level in percent when the mission ends
 physical:
-  robot_radius: 0.0362 # Agent diameter in meters
+  robot_radius: 0.0362 # Agent radius in meters
   robot_weight: 0.4 # Agent weight in kg
   robot_wheel_radius: 0.0205 # Agent wheel radius in meters
   robot_inter_wheel_distance: 0.0565 # Agent inter-wheel distance in meters
@@ -11,7 +11,7 @@ battery:
   voltage: 6.0 # Battery voltage in volts
 motor:
   stall_current: 1.5 # Motor stall current in A
-  stall_torque: 0.8 # Motor stall torque in Nm
+  stall_torque: 0.8 # Motor stall torque in kg.cm
   no_load_rpm: 250 # Max rpm of the motor with no load
   no_load_current: 0.16 # Motor no load current in A
 control:
@@ -42,13 +42,13 @@ forces:
   frontier_cell_ratio: 1.0 # The ratio of the frontier cells to the total number of cells in the frontier
   max_frontier_regions: -1 # The maximum number of frontier regions
   agent_avoidance_radius: 0.5 # The radius in meters around the agent to avoid other agents
-  agent_cohesion_radius: 0 #1.5 # The radius in meters around the agent to cohere with other agents
-  agent_alignment_radius: 0 #1.5 # The radius in meters around the agent to align with other agents
+  agent_cohesion_radius: 1.5 # The radius in meters around the agent to cohere with other agents
+  agent_alignment_radius: 1.5 # The radius in meters around the agent to align with other agents
   object_avoidance_radius_margin: 0.1 # The margin around the object's safety radius in meters (to be added to agent_safety_radius + object_safety_radius))
   virtual_wall_avoidance_weight: 0 #1.1 # The weight of the virtual wall avoidance force
   agent_cohesion_weight: 0 #0.23 # The weight of the agent cohesion force
   agent_avoidance_weight: 1.15 # The weight of the agent avoidance force
-  agent_alignment_weight: 0.5 # The weight of the agent alignment force
+  agent_alignment_weight: 0 #0.5 # The weight of the agent alignment force
   target_weight: 0.3 # The weight of the target (frontier or subtarget) force
   frontier_fitness:
     distance_weight: 1 # The weight of the euclidean distance to the target in the fitness function

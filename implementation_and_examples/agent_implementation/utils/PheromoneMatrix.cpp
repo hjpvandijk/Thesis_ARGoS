@@ -218,7 +218,15 @@ std::vector<std::vector<double>> PheromoneMatrix::getMatrixPheromones(double cur
     for (int i = 0; i < this->width; i++) {// ?? CHECK WIDTH AND HEIGHT I J ??
         std::vector<double> row;
         for (int j = 0; j < this->height; j++) {
-            row.push_back(calculatePheromone(this->matrix[i][j], currentTimeS));
+            auto matrix_visited_time = this->matrix[i][j];
+            auto pheromone = calculatePheromone(matrix_visited_time, currentTimeS);
+            if (pheromone > 0) {
+                row.push_back(pheromone);
+            } else if (matrix_visited_time != -1) { //Pheromone is 0, but the cell is visited at some point
+                row.push_back(-1); //If the cell is visited but the pheromone is 0, it is considered unknown, but export it anyway so we can see benefit of that information
+            } else {
+                row.push_back(0); //If the cell is not visited, it is considered unknown
+            }
         }
         pheromones.push_back(row);
     }

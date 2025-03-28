@@ -250,6 +250,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         for (int j = 0; j < m_cAgVisLF.coverageMatrixHeight; j++) {
             double pheromone = m_cAgVisLF.coverageMatrix[i][j];
             if (pheromone == 0) continue;
+            if (pheromone == -1) continue; //Not for visualization.
 
 //            Coordinate cellCoordinate = m_cAgVisLF.combinedCoverageMatrix.getRealCoordinateFromIndex(i, j).FromOwnToArgos();
             Coordinate cellCoordinate = m_cAgVisLF.getRealCoordinateFromIndex(i, j, m_cAgVisLF.coverageMatrixResolution);
@@ -294,6 +295,7 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 //            argos::LOG << "i: " << i << " j: " << j << std::endl;
             double pheromone = m_cAgVisLF.obstacleMatrix[i][j];
             if (pheromone == 0) continue;
+            if (pheromone == -1) continue; //Not for visualization.
 //            argos::LOG << "visitedTimeS: " << visitedTimeS << " currentTimeS: " << currentTimeS << " pheromone: " << pheromone << std::endl;
 
 //            Coordinate cellCoordinate = m_cAgVisLF.combinedCoverageMatrix.getRealCoordinateFromIndex(i, j).FromOwnToArgos();
@@ -333,27 +335,27 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
 
     }
 
-//    for (auto &it:  m_cAgVisLF.m_tAgentFrontierRegions) {
-//        if (it.first->GetId() == "pipuck1") {
-//            std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
-//                                          CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
-//            int i = 0;
-//            for (auto frontierRegion: it.second) {
-//                //Assign a differnet color to every frontierRegion
-//                CColor color = colors[i];
-//                for (auto frontier: frontierRegion) {
-//                    Coordinate frontierCoordinateArgos = frontier.FromOwnToArgos();
-//                    CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.05f);
-//
-//                    DrawBox(frontierCoordinate, CQuaternion(),
-//                            CVector3(m_cAgVisLF.coverageMatrixResolution, m_cAgVisLF.coverageMatrixResolution, 0),
-//                            color);
-//                }
-//                i++;
-//                if (i > colors.size()) i = 0;
-//            }
-//        }
-//    }
+    for (auto &it:  m_cAgVisLF.m_tAgentFrontierRegions) {
+        if (it.first->GetId() == "pipuck1") {
+            std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
+                                          CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
+            int i = 0;
+            for (auto frontierRegion: it.second) {
+                //Assign a differnet color to every frontierRegion
+                CColor color = colors[i];
+                for (auto frontier: frontierRegion) {
+                    Coordinate frontierCoordinateArgos = frontier.FromOwnToArgos();
+                    CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.05f);
+
+                    DrawBox(frontierCoordinate, CQuaternion(),
+                            CVector3(m_cAgVisLF.coverageMatrixResolution, m_cAgVisLF.coverageMatrixResolution, 0),
+                            color);
+                }
+                i++;
+                if (i > colors.size()) i = 0;
+            }
+        }
+    }
 
     for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
         CRadians heading = m_cAgVisLF.m_tAgentHeadings[agentheading.first];

@@ -11,7 +11,7 @@
 /****************************************/
 /****************************************/
 
-//#define VISUALS
+#define VISUALS
 
 /*
  * To reduce the number of waypoints stored in memory,
@@ -400,7 +400,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         auto obstacleMatrixOfAgent = m_tObstacleMatrix[it.first];
 
 //#ifdef VISUALS
-        if(it.first->GetId() == "pipuck2"){
+        if(it.first->GetId() == "pipuck1"){
             coverageMatrix = it.second;
             coverageMatrixWidth = coverageMatrix.size();
             coverageMatrixHeight = coverageMatrix[0].size(); // columns;
@@ -591,6 +591,7 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
 
         double covered_area = 0;
+        double covered_area_disregarding_evaporation = 0;
 
 
         for (int i = 0; i < coverageMatrix.size(); i++) {
@@ -598,25 +599,35 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
                 if (coverageMatrix[i][j] > 0) { //Will be 0 when not visited or covered by obstacle matrix
                     covered_area += cController.agentObject->coverageMatrix->getResolution() *
                                     cController.agentObject->coverageMatrix->getResolution();
+                } else if (coverageMatrix[i][j] == -1) { //Covered at some point but evaporated
+                    covered_area_disregarding_evaporation += cController.agentObject->coverageMatrix->getResolution() *
+                                    cController.agentObject->coverageMatrix->getResolution();
                 }
             }
         }
-
+        assert(cController.agentObject->coverageMatrix->getResolution() == cController.agentObject->obstacleMatrix->getResolution()); //Should be the same for these assertions and calculations to be correct
         for (int i = 0; i < obstacleMatrix.size(); i++) {
             for (int j = 0; j < obstacleMatrix[i].size(); j++) {
                 if (obstacleMatrix[i][j] > 0) { //Will be 0 when not visited
+//                    argos::LOG << "coverageMatrix: " << coverageMatrix[i][j] << " obstacleMatrix: " << obstacleMatrix[i][j] << std::endl;
+                    assert(coverageMatrix[i][j] == 0); //Should not be covered by both obstacle and coverage matrix
                     covered_area += cController.agentObject->obstacleMatrix->getResolution() *
+                                    cController.agentObject->obstacleMatrix->getResolution();
+                } else if (obstacleMatrix[i][j] == -1) { //Covered at some point but evaporated
+                    if (coverageMatrix[i][j] > 0 || coverageMatrix[i][j] == -1) //Only count if not covered by coverage matrix as otherwise it would be counted twice
+                        continue;
+                    covered_area_disregarding_evaporation += cController.agentObject->obstacleMatrix->getResolution() *
                                     cController.agentObject->obstacleMatrix->getResolution();
                 }
             }
         }
 
 
-        double coverage = covered_area;
 //        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
 
 
-        m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
+        m_metrics.coverage_over_time[pcFB->GetId()].push_back(covered_area);
+        m_metrics.coverage_over_time_disregarding_evaporation[pcFB->GetId()].push_back(covered_area_disregarding_evaporation);
     }
 }
 
@@ -692,6 +703,33 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         coverageFile << "\n";
     }
     coverageFile.close();
+
+
+    //Export coverage disregarding evaporation over time
+    std::ofstream coverageDisregardingEvaporationFile;
+    coverageDisregardingEvaporationFile.open(metric_path_str + "/coverage_disregarding_evaporation.csv");
+    coverageDisregardingEvaporationFile << "tick,";
+    for (auto & it : m_metrics.coverage_over_time_disregarding_evaporation) {
+        coverageDisregardingEvaporationFile << it.first << ",";
+    }
+    coverageDisregardingEvaporationFile << "\n";
+
+    //Get the size of the largest coverage vector
+    int max_coverage_list_disregarding_evaporation_size = 0;
+    for (auto & it : m_metrics.coverage_over_time_disregarding_evaporation) {
+        max_coverage_list_disregarding_evaporation_size = std::max(max_coverage_list_disregarding_evaporation_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_coverage_list_disregarding_evaporation_size; i++) {
+        coverageDisregardingEvaporationFile << (i+1)*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.coverage_over_time_disregarding_evaporation) {
+            if (i < it.second.size())
+                coverageDisregardingEvaporationFile << it.second[i] << ",";
+            else coverageDisregardingEvaporationFile << ",";
+        }
+        coverageDisregardingEvaporationFile << "\n";
+    }
+    coverageDisregardingEvaporationFile.close();
 
 
 
