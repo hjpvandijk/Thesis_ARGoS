@@ -7,7 +7,7 @@ cd ..
 # Directory containing ARGoS3 experiment files
 EXPERIMENT_DIR="./experiments"
 CONFIG_DIR="./agent_implementation/configs/noise"
-OTHER_CONFIG_DIRS=("./agent_implementation/configs/fsr_mfr_mrl")
+OTHER_CONFIG_DIRS=()
 LOG_DIR="./logs"
 ARGOSEXEC="argos3"
 
@@ -16,18 +16,20 @@ mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
 #EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
-EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos")
+EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
 #CONFIGS=("config_bigger_safety_n_1.yaml" "config_bigger_safety_range.yaml" "config_bigger_safety_n_3.yaml")
 #CONFIGS=("n_3_m_2_5_cellratio0_75_noise.yaml" "n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5.yaml" "n_3_m_2_5_cellratio0_75_noise_object_safety_0_3.yaml")
 #CONFIGS=("p_sensor_1.yaml")
 CONFIGS=(
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_5_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_1_5_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
-        )
+"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
+"AAVFIX_end_time_{END_TIME}_noise_0_5_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
+"AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
+"AAVFIX_end_time_{END_TIME}_noise_1_5_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
+)
+
+
 
 
 PARALLEL_JOBS=7
@@ -51,15 +53,22 @@ n_failed_experiments=0
 
 for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
- SEED=$r #1,2
-#SEED=$((r+2)) #3
+ SEED=$r #1,2,3
+#SEED=$((r+2)) #
 # SEED=$((r+3)) #4,5
+
+#  echo "Seed: $SEED"
   export SEED
 
   # Iterate over each experiment file
   for EXPERIMENT in "${EXPERIMENTS[@]}"; do
       EXP_PATH="$EXPERIMENT_DIR/$EXPERIMENT"
       export EXPERIMENT
+
+      #readarray -t completed_experiments_this_map < <(tr -d '\r' < "../completed_experiments_${EXPERIMENT%.argos}.csv")
+      #echo "completed experiments size: ${#completed_experiments_this_map[@]}"
+      
+      readarray -t completed_experiments_this_map_fromzip < <(tr -d '\r' < "../completed_in_zip/completed_experiments_unique_${EXPERIMENT%.argos}.csv")
 
 
       for CONFIG_FILE in "${CONFIGS[@]}"; do
@@ -136,7 +145,8 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
   #            for AVERAGE_INTER_SPAWN_TIME in {120..20..0} # for loop from 300 to 30 with step 30
               for AVERAGE_INTER_SPAWN_TIME in "${AVERAGE_INTER_SPAWN_TIMES[@]}"
               do
-#                echo "Number of running jobs: $(pgrep -c -u $USER $ARGOSEXEC)"
+                echo "Jobs started: $n_experiments_started, jobs already exist: $n_experiments_already_exist : $((n_experiments_started+n_experiments_already_exist))/$n_total_experiments_to_run"
+
                 #Wait if we have more than PARALLEL_JOBS jobs running
                 while [ $(pgrep -c -u $USER $ARGOSEXEC) -ge $PARALLEL_JOBS ]; do
                     sleep 1
@@ -144,6 +154,26 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 export AVERAGE_INTER_SPAWN_TIME
 
                 METRIC_PATH="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/spawn_time_${AVERAGE_INTER_SPAWN_TIME}/${REMAINING_AGENTS}_agents/S${SEED}"
+
+                #if metric path in completed_experiments
+                #for completed_experiment in "${completed_experiments_this_map[@]}"; do
+                #  if [[ "$completed_experiment" == "$METRIC_PATH" ]]; then
+                #    echo "Experiment already exists in completed_experiments: $METRIC_PATH"
+                #    n_experiments_already_exist=$((n_experiments_already_exist+1))
+                #    continue 2
+                #  fi
+                #done
+                
+                #if metric path in completed_experiments from zip
+                METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
+                for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
+                  if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
+                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
+                    n_experiments_already_exist=$((n_experiments_already_exist+1))
+                    continue 2
+                  fi
+                done
+
                 #if it already exists, skip this experiment
                 if [ -d "$METRIC_PATH" ]; then
 #                  #if "certainty.csv" exists, skip this experiment
@@ -186,8 +216,6 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 pids[$PID]="$SEED|$EXPERIMENT|$CONFIG_FILE|$AVERAGE_INTER_SPAWN_TIME|$REMAINING_AGENTS|$LOGFILE"
                 n_experiments_started=$((n_experiments_started+1))
                 total_jobs_started_and_exist=$((n_experiments_started+n_experiments_already_exist))
-                echo "Jobs started: $n_experiments_started, jobs already exist: $n_experiments_already_exist : $total_jobs_started_and_exist/$n_total_experiments_to_run"
-
               done
         done
 
