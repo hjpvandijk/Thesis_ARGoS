@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 
 # Read the CSV file
-data = pd.read_csv('implementation_and_examples/experiment_results/house_tilted/config__alignment0__cohesion__0_1/spawn_time_0/10_agents/map_observation_count.csv')
+# data = pd.read_csv('implementation_and_examples/experiment_results/house/AAVFIX_end_time_400_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999/spawn_time_0/2_agents/S1/map_observation_count.csv')
+data = pd.read_csv('/home/hugo/Documents/experiment_results/house/AAVFIX_end_time_400_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999/spawn_time_0/2_agents/S1/map_observation_count.csv')
+
 #get the column titles
 values = [entry for entry in data.columns if entry not in ['x', 'y']]
 # Pivot the data to create a matrix for the heatmap

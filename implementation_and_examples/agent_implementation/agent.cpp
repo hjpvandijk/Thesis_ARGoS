@@ -751,10 +751,49 @@ void Agent::calculateNextPosition() {
                                        this->deploymentLocation.y - this->position.y);
 
         //If we are close to the deployment location, we have returned, we can stop
-        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
+        if (targetVector.Length() <= this->deployment_location_reach_distance) {
             this->state = State::FINISHED_EXPLORING;
+        } else {
+            //If we are getting closer to the deployment location, we can decrease the distance to reach it, 1cm at a time
+            if (targetVector.Length() < this->min_distance_to_deployment_location) {
+                this->deployment_location_reach_distance = std::max(this->deployment_location_reach_distance - 0.01, 0.1);
+                this->min_distance_to_deployment_location = targetVector.Length();
+            } //If we are not getting closer, we can increase the distance to reach it, 0.2cm at a time
+            else {
+                this->deployment_location_reach_distance += 0.002;
+            }
+
+            //Set our current best 'frontier' to the deployment location
+            if (!(this->currentBestFrontier == this->deploymentLocation)) {
+                this->currentBestFrontier = this->deploymentLocation;
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+
+#ifdef PATH_PLANNING_ENABLED
+                periodic_check_required = true;
+#endif
+            }
+#ifdef PATH_PLANNING_ENABLED
+            if (periodic_check_required) {
+                this->route_to_best_frontier.clear();
+                this->pathPlanner.getRoute(this, this->position, deploymentLocation, this->route_to_best_frontier);
+                if (this->route_to_best_frontier.empty()) { //If there is no route to the deployment location, we reset the current best frontier
+                    this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+                }
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+
+            }
+#endif
+#if defined SKIP_UNREACHABLE_FRONTIERS && defined RANDOM_WALK_WHEN_NO_FRONTIERS
+            if (frontierEvaluator.avoidingCoordinate(this, this->deploymentLocation)) {
+                this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+            }
+            if (randomWalker.randomWalking && randomWalker.randomWalkedFarEnough(this)) {
+                //Force reset of frontier avoidance
+                this->frontierEvaluator.resetFrontierAvoidance(this, {0,0});
+            }
+#endif
         }
-    }
+    } else assert(0 && "Shouldn't be in any other state");
 #endif
 #if defined(RANDOM_WALK_WHEN_NO_FRONTIERS) || defined(PATH_PLANNING_ENABLED)
     bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};

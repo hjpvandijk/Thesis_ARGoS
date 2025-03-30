@@ -348,7 +348,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 //        argos::LOG << "Updating coverage and certainty for " << it.first->GetId() << std::endl;
         updateCoverage(it.first, it.second);
         updateCertainty(it.first, it.second);
-        if(it.first->GetId()=="pipuck9") combinedQuadTree = it.second;
+        if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
     }
 //    std::vector<std::tuple<quadtree::Box, float, double>> boxesAndConfidenceAndTicks = combinedTree->getAllBoxes();
 

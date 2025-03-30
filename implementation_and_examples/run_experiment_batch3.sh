@@ -15,7 +15,7 @@ ARGOSEXEC="argos3"
 mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
-EXPERIMENTS=("museum.argos" "museum_tilted.argos")
+EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos")
 #EXPERIMENTS=("museum.argos" "museum_tilted.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
@@ -23,18 +23,18 @@ EXPERIMENTS=("museum.argos" "museum_tilted.argos")
 #CONFIGS=("n_3_m_2_5_cellratio0_75_noise.yaml" "n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5.yaml" "n_3_m_2_5_cellratio0_75_noise_object_safety_0_3.yaml")
 #CONFIGS=("p_sensor_1.yaml")
 CONFIGS=(
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_30.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_20_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_20_evaporation_time_100_max_route_length_30.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_99999_evaporation_time_100_max_route_length_30.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_20_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_20_evaporation_time_100_max_route_length_30.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_99999_evaporation_time_100_max_route_length_30.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_20_evaporation_time_100_max_route_length_99999.yaml"
-        "AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_20_evaporation_time_100_max_route_length_30.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_30.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_20_evaporation_time_100_max_route_length_99999.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_20_evaporation_time_100_max_route_length_30.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_99999_evaporation_time_100_max_route_length_30.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_20_evaporation_time_100_max_route_length_99999.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_max_frontier_regions_20_evaporation_time_100_max_route_length_30.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_99999_evaporation_time_100_max_route_length_30.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_20_evaporation_time_100_max_route_length_99999.yaml"
+        #"AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_max_frontier_regions_20_evaporation_time_100_max_route_length_30.yaml"
         "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_99999.yaml"
         "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_99999_evaporation_time_100_max_route_length_30.yaml"
         "AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_max_frontier_regions_20_evaporation_time_100_max_route_length_99999.yaml"
@@ -52,7 +52,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=3
+PARALLEL_JOBS=7
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -63,7 +63,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=2
+N_REPEATED_EXPERIMENTS=3
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -75,7 +75,11 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
 #if r is 1, seed is 3, if r is 2, seed is 5
 #if [ $r -eq 1 ]; then
- SEED=$r #1,2
+#  SEED=3
+#else
+#  SEED=5
+#fi
+ SEED=$r #1
 
 #  echo "Seed: $SEED"
   export SEED
@@ -123,7 +127,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 
           sed "s|{{CONFIG_PATH}}|${CONFIG_PATH}|g" "$EXP_PATH" > "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
 
-          
+
 	   # Define the target directory and file paths
 	   TARGET_DIR="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
 	   TARGET_FILE="$TARGET_DIR$CONFIG_FILE"
@@ -185,14 +189,14 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 #done
                 
                 #if metric path in completed_experiments from zip
-                METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
-                for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
-                  if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
-                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
-                    n_experiments_already_exist=$((n_experiments_already_exist+1))
-                    continue 2
-                  fi
-                done
+                #METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
+                #for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
+                #  if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
+                #    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
+                #    n_experiments_already_exist=$((n_experiments_already_exist+1))
+                #    continue 2
+                #  fi
+                #done
 
                 #if it already exists, skip this experiment
                 if [ -d "$METRIC_PATH" ]; then
@@ -207,7 +211,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                   fi
                 fi
 
-		
+
 
 		# Check if the directory exists, and create it if it doesn't
 		if [ ! -d "$TARGET_DIR" ]; then

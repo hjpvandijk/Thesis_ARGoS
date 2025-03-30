@@ -16,7 +16,7 @@ mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
 #EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
-EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos")
+EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
 #CONFIGS=("config_bigger_safety_n_1.yaml" "config_bigger_safety_range.yaml" "config_bigger_safety_n_3.yaml")
@@ -32,7 +32,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=7
+PARALLEL_JOBS=5
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15

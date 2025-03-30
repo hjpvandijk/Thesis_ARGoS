@@ -4,16 +4,37 @@ import matplotlib.patches as patches
 import numpy as np
 import csv
 
-actual_arena_width = 9.5
-actual_arena_height = 12
-actual_arena = patches.Rectangle((-actual_arena_width / 2, -actual_arena_height / 2), actual_arena_width, actual_arena_height, linewidth=0, edgecolor='r', facecolor='blue', alpha=0.5)
+# map = "museum"
 
-def read_arena_boxes(filename):
+# if map == 'house':
+#     actual_arena_width = 9.5
+#     actual_arena_height = 12
+# if map == 'house_tilted':
+#     actual_arena_width = 13
+#     actual_arena_height = 14.6
+# if map == 'office':
+#     actual_arena_width = 20
+#     actual_arena_height = 10.2
+# if map == 'office_tilted':
+#     actual_arena_width = 22.2
+#     actual_arena_height = 16.4
+# if map == 'museum':
+#     actual_arena_width = 30
+#     actual_arena_height = 30
+# if map == 'museum_tilted':
+#     actual_arena_width = 33
+#     actual_arena_height = 33
+# actual_arena = patches.Rectangle((-actual_arena_width / 2, -actual_arena_height / 2), actual_arena_width, actual_arena_height, linewidth=0, edgecolor='r', facecolor='blue', alpha=0.5)
+
+def read_arena_boxes(filename, include_spawn_boxes):
     tree = ET.parse(filename)
     root = tree.getroot()
     arena = root.find('arena')
     boxes = []
     for box in arena.findall('box'):
+        id = box.get('id')
+        if not include_spawn_boxes and id.startswith('spawn'):
+            continue
         size = box.get('size').split(',')
         position = box.find('body').get('position').split(',')
         orientation = box.find('body').get('orientation').split(',')
@@ -147,8 +168,7 @@ def check_circle_rectangle_overlap(circle, rectangle):
     # Check if the closest point is inside the circle
     return distance <= circle_radius
 
-def plot_arena(arena_boxes, arena_cylinders):
-    fig, ax = plt.subplots()
+def plot_arena(arena_boxes, arena_cylinders, ax):
 
     arena_rectangles = []
     for arena_box in arena_boxes:
@@ -176,19 +196,26 @@ def plot_arena(arena_boxes, arena_cylinders):
         ax.add_patch(circle)
 
     ax.set_aspect('equal', 'box')
-    plt.xlim(-actual_arena_width / 2, actual_arena_width / 2)
-    plt.ylim(-actual_arena_height / 2, actual_arena_height / 2)
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.title('Plotted Arena')
+    # plt.xlim(-actual_arena_width / 2, actual_arena_width / 2)
+    # plt.ylim(-actual_arena_height / 2, actual_arena_height / 2)
+    # # plt.xlabel('X-axis')
+    # # plt.ylabel('Y-axis')
+    # # plt.title('Plotted Arena')
+    
+    # #remove x and y axis
+    # plt.axis('off')
 
-    plt.grid(True)
-    plt.show()
+
+    # plt.grid(False)
+    # # plt.show()
+    # plt.savefig(map+'_map.png', dpi=600, transparent=True)
 
 
+# fig, ax = plt.subplots()
 
-# Usage
-arena_boxes = read_arena_boxes('implementation_and_examples/experiments/house.argos')
-arena_cylinders = read_arena_cylinders('implementation_and_examples/experiments/house.argos')
 
-plot_arena(arena_boxes, arena_cylinders)
+# path = 'implementation_and_examples/experiments/'+map+'.argos'
+# arena_boxes = read_arena_boxes(path, False)
+# arena_cylinders = read_arena_cylinders(path)
+
+# plot_arena(arena_boxes, arena_cylinders,ax)

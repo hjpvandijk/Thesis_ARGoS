@@ -9,7 +9,7 @@ noise_full_orientation = 8
 noise_full_orientation_jitter = 5
 noise_distance_jitter = 10
 
-active = "fsr_mfr_mrl"
+active = "noise"
 
 prefix = "AAVFIX_"
 
@@ -114,7 +114,7 @@ elif active == "noise":
     options = {
         "mission.end_time": [400, 600, 1000],
         "noise": [0, 0.5, 1, 1.5],
-        "communication.wifi_range": [15],
+        "communication.wifi_range": [99999],
         "communication.message_loss_probability": [0],
         "forces.frontier_search_radius" : [99999],
         "forces.max_frontier_regions" : [99999],

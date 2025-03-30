@@ -76,7 +76,7 @@ completed_experiments_per_zip = {}
 non_completed_experiments_all = {}
 completed_total = 0
 non_completed_total = 0
-usb_drive = '/media/hugo/Philips_main/'
+usb_drive = '/media/hugo/Philips_main/CLARE/'
 #for all files in the usb drive
 for file in os.listdir(usb_drive):
     if file.endswith(".zip"):
@@ -135,12 +135,26 @@ for exp in non_completed_but_completed:
         if exp in map_exp:
             map_exp.remove(exp)
 
+for i in range (len(non_completed_unique.items())):
+    #if the set is empty, remove it
+    if len(list(non_completed_unique.values())[i]) == 0:
+        del list(non_completed_unique.keys())[i]
+
 print("total non completed but completed: ", n_non_completed_but_completed)
 print("so actual non completed: ", non_completed_total - n_non_completed_but_completed)
 
 #create 'completed_in_zip' directory
 if not os.path.exists('completed_in_zip'):
     os.makedirs('completed_in_zip')
+
+#empty the directory
+for file in os.listdir('completed_in_zip'):
+    #if it is a directory
+    if os.path.isdir(f'completed_in_zip/{file}'):
+        for f in os.listdir(f'completed_in_zip/{file}'):
+            os.remove(f'completed_in_zip/{file}/{f}')
+    else:
+        os.remove(f'completed_in_zip/{file}')
 
 # export the list of certainty files to a csv file
 for outer_dir, files in completed_unique.items():

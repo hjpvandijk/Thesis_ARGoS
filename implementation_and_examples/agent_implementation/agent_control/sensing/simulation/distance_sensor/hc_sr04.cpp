@@ -7,15 +7,15 @@
 #include "hc_sr04.h"
 
 
-float HC_SR04::getError(float distance) {
-    //-0,0272*x + -5,43E-03
-
-    float a = -0.0272;
-    float b = -5.43e-3;
-    float error = a + b * distance;
-
-    return error;
-}
+//float HC_SR04::getError(float distance) {
+//    //-0,0272*x + -5,43E-03
+//
+//    float a = -0.0272;
+//    float b = -5.43e-3;
+//    float error = a * distance + b;
+//
+//    return error;
+//}
 
 /**
  * According to data from
