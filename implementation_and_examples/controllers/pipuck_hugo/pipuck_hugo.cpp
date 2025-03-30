@@ -295,12 +295,9 @@ void PiPuckHugo::ControlStep() {
     CRadians error_direction_offset = CRadians(direction_heatmap_value) + orientationJitter + agentPersonalOrientationNoiseRad;
     //Magnitude, including jitter and agent-dependent noise
     double error_mean_heatmap_value = this->error_mean_heatmap[heatmapX][heatmapY] * agentObject->config.POSITION_NOISE_CM / 103.3; //103.3 is the max error at full noise level.
-    argos::LOG << this->error_mean_heatmap[heatmapX][heatmapY] << " * " << agentObject->config.POSITION_NOISE_CM << " / 103.3" << std::endl;
     double error_magnitude = error_mean_heatmap_value + positionJitter + agentPersonalPositionNoise;
     CVector2 position_error_vector = CVector2(error_magnitude, 0).Rotate(error_direction_offset);
     agentObject->setPosition(-position.GetY() + position_error_vector.GetX(), position.GetX() + position_error_vector.GetY()); // X and Y are swapped in the positioning sensor, and we want left to be negative and right to be positive
-    argos::LOG << "error magnitude: " << error_mean_heatmap_value << "m" << " position jitter: " << positionJitter << "m" << " agent personal position noise: " << agentPersonalPositionNoise << "m" << std::endl;
-    argos::LOG << "for heatmapX: " << heatmapX << " and heatmapY: " << heatmapY << std::endl;
 
     //Simulate orientation (IMU) estimation offset
     double orientation_offset_heatmap_value = this->orientation_offset_heatmap[heatmapX][heatmapY]*agentObject->config.ORIENTATION_NOISE_DEGREES;
