@@ -15,7 +15,7 @@ ARGOSEXEC="argos3"
 mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
-EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
+EXPERIMENTS=("museum.argos" "museum_tilted.argos")
 #EXPERIMENTS=("museum.argos" "museum_tilted.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
@@ -52,7 +52,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=7
+PARALLEL_JOBS=3
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -63,7 +63,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=3
+N_REPEATED_EXPERIMENTS=2
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -75,11 +75,7 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
 #if r is 1, seed is 3, if r is 2, seed is 5
 #if [ $r -eq 1 ]; then
-#  SEED=3
-#else
-#  SEED=5
-#fi
- SEED=$r #1
+ SEED=$r #1,2
 
 #  echo "Seed: $SEED"
   export SEED
@@ -127,10 +123,10 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 
           sed "s|{{CONFIG_PATH}}|${CONFIG_PATH}|g" "$EXP_PATH" > "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
 
-          #Copy the config file into the metric path
-          mkdir -p "experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
-          cp "$CONFIG_PATH" "experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
-
+          
+	   # Define the target directory and file paths
+	   TARGET_DIR="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
+	   TARGET_FILE="$TARGET_DIR$CONFIG_FILE"
 
           for i in $(seq 1 $((N_AGENTS))); do
             ORIENTATION=$(shuf -i 0-360 -n 1 --random-source=<(openssl enc -aes-256-ctr -pbkdf2 -pass pass:$((SEED * i)) -nosalt < /dev/zero 2>/dev/null))
@@ -210,6 +206,26 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                     rm -rf "$METRIC_PATH"/*
                   fi
                 fi
+
+		
+
+		# Check if the directory exists, and create it if it doesn't
+		if [ ! -d "$TARGET_DIR" ]; then
+		    mkdir -p "$TARGET_DIR"
+		fi
+
+		# Check if the file already exists at the target location
+		if [ -f "$TARGET_FILE" ]; then
+		    echo "Config file already exists at $TARGET_FILE"
+		else
+		    # Check if the original config file exists, and copy it if it does
+		    if [ -f "$CONFIG_PATH" ]; then
+			cp "$CONFIG_PATH" "$TARGET_DIR"
+			echo "Config file copied to $TARGET_DIR"
+		    else
+			echo "Config file does not exist at $CONFIG_PATH"
+		    fi
+		fi
 
 
 
