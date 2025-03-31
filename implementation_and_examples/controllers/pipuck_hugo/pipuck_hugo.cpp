@@ -18,7 +18,7 @@ PiPuckHugo::PiPuckHugo() :
         agentObject(nullptr)
 //   m_pcRangeAndBearingActuator(NULL),
 //   m_pcRangeAndBearingSensor(NULL),
-   {}
+{}
 
 /****************************************/
 /****************************************/
@@ -78,9 +78,9 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     experiment_name = experiment_name.substr(0, experiment_name.size() - 6);
     if (experiment_name.find("tilted") != std::string::npos) {
         tilted = true;
+        //Remove _tilted
+        experiment_name = experiment_name.substr(0, experiment_name.size() - 7);
     }
-    //Remove _tilted
-    experiment_name = experiment_name.substr(0, experiment_name.size() - 7);
 
     double width_m;
     double height_m;
@@ -142,6 +142,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 //}
 
 void PiPuckHugo::readHeatmapFromFile(const std::string& filename, std::vector<std::vector<double>> & heatmap) {
+    argos::LOG << "Reading heatmap from file: " << filename << std::endl;
     std::ifstream file(filename);
     std::string line;
     int row_index = 0;
@@ -203,7 +204,10 @@ Coordinate RotateCoordinateBy20Degrees(const Coordinate& coord) {
  * @return
  */
 double generateGaussianNoise(double mean, double stddev) {
-    double u1 = static_cast<double>(rand()) / RAND_MAX;
+    double u1;
+    do {
+        u1 = static_cast<double>(rand()) / RAND_MAX;
+    } while (u1 == 0.0);  // Ensure u1 is strictly greater than 0
     double u2 = static_cast<double>(rand()) / RAND_MAX;
     double z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);  // Generate standard normal value
     return mean + z0 * stddev;  // Scale to desired mean and standard deviation
