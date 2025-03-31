@@ -78,9 +78,9 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
     experiment_name = experiment_name.substr(0, experiment_name.size() - 6);
     if (experiment_name.find("tilted") != std::string::npos) {
         tilted = true;
+        //Remove _tilted
+        experiment_name = experiment_name.substr(0, experiment_name.size() - 7);
     }
-    //Remove _tilted
-    experiment_name = experiment_name.substr(0, experiment_name.size() - 7);
 
     double width_m;
     double height_m;
@@ -92,7 +92,7 @@ void PiPuckHugo::Init(TConfigurationNode &t_node) {
 
     } else if(experiment_name.find("office") != std::string::npos) {
         width_m = 20;
-        height_m = 10;
+        height_m = 10.2;
         this->non_tilted_map_width = width_m;
         this->non_tilted_map_height = height_m;
     } else if (experiment_name.find("museum") != std::string::npos) {
@@ -145,6 +145,7 @@ void PiPuckHugo::readHeatmapFromFile(const std::string& filename, std::vector<st
     std::ifstream file(filename);
     std::string line;
     int row_index = 0;
+    int max_cols = 0;
     assert(file.good());
     while (std::getline(file, line) && row_index < heatmap.size()) {
         double value;
@@ -161,6 +162,7 @@ void PiPuckHugo::readHeatmapFromFile(const std::string& filename, std::vector<st
         }
 
         row_index++;
+        max_cols = std::max(max_cols, col_index);
     }
 }
 
@@ -194,7 +196,18 @@ Coordinate RotateCoordinateBy20Degrees(const Coordinate& coord) {
     return Coordinate{rotated_vector.GetX(), rotated_vector.GetY()};
 }
 
-
+/**
+ * Box-Muller transform to generate Gaussian noise
+ * @param mean
+ * @param stddev
+ * @return
+ */
+double generateGaussianNoise(double mean, double stddev) {
+    double u1 = static_cast<double>(rand()) / RAND_MAX;
+    double u2 = static_cast<double>(rand()) / RAND_MAX;
+    double z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);  // Generate standard normal value
+    return mean + z0 * stddev;  // Scale to desired mean and standard deviation
+}
 
 /****************************************/
 /****************************************/
@@ -219,12 +232,17 @@ void PiPuckHugo::ControlStep() {
         auto sensorReading = proxReadings[i];
         //Add real inaccuracy to the sensor readings if we are allowing noise.
         auto simulatedSensorReading = sensorReading + (HC_SR04::getSimulatedMeasurement(sensorReading) - sensorReading)*agentObject->config.DISTANCE_SENSOR_NOISE_FACTOR;
-        double sensorNoiseRange = agentObject->config.DISTANCE_SENSOR_JITTER_CM * 100;
+        double sensorNoiseRange = agentObject->config.DISTANCE_SENSOR_JITTER_CM / 100.0; //Convert to meters
 
         // Add noise to the sensor reading
         double agentPersonalDistanceSensorNoise =  agentObject->config.DISTANCE_SENSOR_JITTER_CM != 0 ? (mirrored_mod((agentIdVal + int((position.GetX() - position.GetY())*100)), int(agentObject->config.DISTANCE_SENSOR_JITTER_CM*2)) - agentObject->config.DISTANCE_SENSOR_JITTER_CM) / 100.0 : 0;
 
-        double sensorNoiseM = (sensorNoiseRange - (rand() % 2 * sensorNoiseRange)) * 0.0001 ; // Random number between -1 and 1 cm (= 0.01 m), to simulate sensor noise
+//        double sensorNoiseM = (sensorNoiseRange - (rand() % 2 * sensorNoiseRange)) * 0.01 ;
+
+        //95% of data lies within the first two standard deviations (µ ± 2σ)
+        double distance_std_dev_cm = sensorNoiseRange / 2;
+
+        double sensorNoiseM = generateGaussianNoise(0, distance_std_dev_cm );
         simulatedSensorReading = std::min(2.0, simulatedSensorReading + sensorNoiseM + agentPersonalDistanceSensorNoise); //Maximum range is 2 meters
 
         agentObject->setLastRangeReadings(i, simulatedSensorReading);
@@ -242,7 +260,9 @@ void PiPuckHugo::ControlStep() {
 
     // Orientation jitter
     double orientationJitterRange = agentObject->config.ORIENTATION_JITTER_DEGREES;
-    argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
+//    argos::CRadians orientationJitter = ToRadians(CDegrees((orientationJitterRange - ((double(rand() % 200) / 100.0) * orientationJitterRange)))); ; // Random number between -orientationJitterRange and orientationJitterRange rad, to simulate sensor noise
+    double orientation_std_dev = orientationJitterRange /2;
+    CRadians orientationJitter = ToRadians(CDegrees(generateGaussianNoise(0, orientation_std_dev))); //Normal distribution with mean 0 and std deviation orientation_std_dev
 
     //Position noise
     //Agent-dependent noise
@@ -250,7 +270,9 @@ void PiPuckHugo::ControlStep() {
 //    argos::LOG << "Agent personal position noise: " << agentPersonalPositionNoise << std::endl;
     //Position jitter
     double positionJitterRange = agentObject->config.POSITION_JITTER_CM / 100.0;
-    double positionJitter = (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
+//    double positionJitter = (positionJitterRange - ((double(rand() % 200) / 100.0) * positionJitterRange)); // Random number between -positionJitterRange and positionJitterRange m, to simulate sensor noise
+    double position_std_dev = positionJitterRange / 2;
+    double positionJitter = generateGaussianNoise(0, position_std_dev); //Normal distribution with mean 0 and std deviation position_std_dev
 
     auto positionx_ourcoordinatesystem = -position.GetY();
     auto positiony_ourcoordinatesystem = position.GetX();
