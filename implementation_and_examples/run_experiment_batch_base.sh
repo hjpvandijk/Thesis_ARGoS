@@ -34,7 +34,7 @@ CONFIGS=(
 
 
 
-PARALLEL_JOBS=1
+PARALLEL_JOBS=4
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -43,10 +43,9 @@ N_AGENTS=15
 
 AGENT_CONFIGS=(15 10 6 4 2)
 
-#AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
-AVERAGE_INTER_SPAWN_TIMES=(0)
+AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=2
+N_REPEATED_EXPERIMENTS=5
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -106,9 +105,9 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 
           sed "s|{{CONFIG_PATH}}|${CONFIG_PATH}|g" "$EXP_PATH" > "temp_${CONFIG_FILE%.yaml}_S${SEED}_${EXPERIMENT}"
 
-          #Copy the config file into the metric path
-          mkdir -p "experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
-          cp "$CONFIG_PATH" "experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
+           # Define the target directory and file paths
+	   TARGET_DIR="experiment_results/${EXPERIMENT%.argos}/${CONFIG_FILE%.yaml}/"
+	   TARGET_FILE="$TARGET_DIR$CONFIG_FILE"
 
 
           for i in $(seq 1 $((N_AGENTS))); do
@@ -168,14 +167,14 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 #done
                 
 #                if metric path in completed_experiments from zip
-                METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
-                for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
-                  if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
-                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
-                    n_experiments_already_exist=$((n_experiments_already_exist+1))
-                    continue 2
-                  fi
-                done
+               # METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
+               # for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
+               #   if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
+               #     echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
+               #     n_experiments_already_exist=$((n_experiments_already_exist+1))
+               #     continue 2
+               #   fi
+               # done
 
                 #if it already exists, skip this experiment
                 if [ -d "$METRIC_PATH" ]; then
@@ -189,6 +188,24 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                     rm -rf "$METRIC_PATH"/*
                   fi
                 fi
+                
+                # Check if the directory exists, and create it if it doesn't
+		if [ ! -d "$TARGET_DIR" ]; then
+		    mkdir -p "$TARGET_DIR"
+		fi
+
+		# Check if the file already exists at the target location
+		if [ -f "$TARGET_FILE" ]; then
+		    echo "Config file already exists at $TARGET_FILE"
+		else
+		    # Check if the original config file exists, and copy it if it does
+		    if [ -f "$CONFIG_PATH" ]; then
+			cp "$CONFIG_PATH" "$TARGET_DIR"
+			echo "Config file copied to $TARGET_DIR"
+		    else
+			echo "Config file does not exist at $CONFIG_PATH"
+		    fi
+		fi
 
 
 
