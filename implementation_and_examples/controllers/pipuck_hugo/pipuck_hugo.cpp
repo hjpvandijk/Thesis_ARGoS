@@ -203,7 +203,10 @@ Coordinate RotateCoordinateBy20Degrees(const Coordinate& coord) {
  * @return
  */
 double generateGaussianNoise(double mean, double stddev) {
-    double u1 = static_cast<double>(rand()) / RAND_MAX;
+    double u1;
+    do {
+        u1 = static_cast<double>(rand()) / RAND_MAX;
+    } while (u1 == 0.0);  // Ensure u1 is strictly greater than 0
     double u2 = static_cast<double>(rand()) / RAND_MAX;
     double z0 = sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);  // Generate standard normal value
     return mean + z0 * stddev;  // Scale to desired mean and standard deviation
