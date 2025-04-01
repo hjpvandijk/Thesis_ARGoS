@@ -49,7 +49,7 @@ CONFIGS=(
 )
 
 
-PARALLEL_JOBS=4
+PARALLEL_JOBS=5
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -70,8 +70,8 @@ n_failed_experiments=0
 
 for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
-#SEED=$r #1
-SEED $((r+2))
+SEED=$r #1
+#SEED=$((r+2))
 #  echo "Seed: $SEED"
   export SEED
 
