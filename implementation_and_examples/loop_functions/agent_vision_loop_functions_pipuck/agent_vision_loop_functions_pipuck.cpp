@@ -185,29 +185,29 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     //Make sure the inter spawn times are the same as in main.
     if (average_inter_spawn_time == 100) {
         if (seed_int == 1) {
-            spawn_times_from_seed = {2934, 3736, 6181, 8743, 12625, 12977, 13630, 15969, 16489, 17780};
+            spawn_times_from_seed = {2934,3736,6181,8743,12625,12977,13630,15969,16489,17780,18818,20403};
         } else if (seed_int == 2) {
-            spawn_times_from_seed = {1931, 4585, 4733, 4940, 5625, 6501, 8426, 8535, 9951, 11598};
+            spawn_times_from_seed = {1931,4585,4733,4940,5625,6501,8426,8535,9951,11598,19065,19625};
         } else if (seed_int == 3) {
-            spawn_times_from_seed = {1318,1725,2524,3463,3999,4249,5575,8775,12387,12806};
+            spawn_times_from_seed = {1318,1725,2524,3463,3999,4249,5575,8775,12387,12806,12812,13799};
         } else if (seed_int == 4) {
-            spawn_times_from_seed = {3971,4201,4540,5021,5406,6120,6991,8689,9034,9627};
+            spawn_times_from_seed = {3971,4201,4540,5021,5406,6120,6991,8689,9034,9627,10758,10952};
         } else if (seed_int == 5) {
-            spawn_times_from_seed = {513,589,8472,8605,8860,8992,9518,10470,11573,15163};
+            spawn_times_from_seed = {513,589,8472,8605,8860,8992,9518,10470,11573,15163,15188,15701};
         } else {
             assert(0 && "SEED not from 1-5");
         }
     } else if (average_inter_spawn_time == 180) {
         if (seed_int == 1) {
-            spawn_times_from_seed = {5281,6725,11126,15738,22726,23359,24534,28744,29681,32006};
+            spawn_times_from_seed = {5281,6725,11126,15738,22726,23359,24534,28744,29681,32006,33874,36728};
         } else if (seed_int == 2) {
-            spawn_times_from_seed = {3476,8254,8521,8894,10127,11705,15170,15367,17917,20883};
+            spawn_times_from_seed = {3476,8254,8521,8894,10127,11705,15170,15367,17917,20883,34325,35334};
         } else if (seed_int == 3) {
-            spawn_times_from_seed = {2373,3107,4545,6235,7201,7651,10038,15798,22299,23054};
+            spawn_times_from_seed = {2373,3107,4545,6235,7201,7651,10038,15798,22299,23054,23065,24842};
         } else if (seed_int == 4) {
-            spawn_times_from_seed = {7149,7563,8174,9041,9735,11021,12588,15645,16267,17334};
+            spawn_times_from_seed = {7149,7563,8174,9041,9735,11021,12588,15645,16267,17334,19370,19720};
         } else if (seed_int == 5) {
-            spawn_times_from_seed = {925,1062,15253,15493,15953,16192,17140,18853,20839,27302};
+            spawn_times_from_seed = {925,1062,15253,15493,15953,16192,17140,18853,20839,27302,27347,28271};
         } else {
             assert(0 && "SEED not from 1-5");
         }
