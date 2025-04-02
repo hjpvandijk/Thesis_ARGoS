@@ -6,7 +6,7 @@ from zipfile import ZipFile, Path
 
 # n_completed_experiments = 0
 
-def check_certainty_csv(zip_file):
+def check_coverage_csv(zip_file):
     with ZipFile(zip_file, "r") as zf:
         certainty_files = {}
         non_completed_experiments = {}
@@ -24,7 +24,7 @@ def check_certainty_csv(zip_file):
         # Iterate through directories
         for root in directories:
             # Check if 'certainty.csv' exists in the current directory
-            csv_path = f"{root}/certainty.csv"
+            csv_path = f"{root}/coverage.csv"
             if csv_path in all_files:
                 # print("csv_path: ", csv_path)
                 # Read the file's content
@@ -85,7 +85,7 @@ for file in os.listdir(usb_drive):
             continue
         zip_file = usb_drive + file
         print("checking zip file: ", zip_file)
-        certainty_files, non_completed_experiments = check_certainty_csv(zip_file)
+        certainty_files, non_completed_experiments = check_coverage_csv(zip_file)
         for outer_dir, files in certainty_files.items():
             if outer_dir not in completed_experiments:
                 completed_experiments[outer_dir] = []
