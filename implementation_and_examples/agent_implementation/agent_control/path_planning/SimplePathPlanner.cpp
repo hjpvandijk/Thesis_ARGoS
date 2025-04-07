@@ -7,11 +7,11 @@
 #ifdef PATH_PLANNING_ENABLED
 
 std::tuple<int, std::vector<argos::CVector2>, double> SimplePathPlanner::getRoute(Agent* agent, Coordinate start, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route) const {
-    srand(target.x * 100 + target.y * 100);
+//    srand(target.x * 100 + target.y * 100);
     int wall_following_direction;
     std::vector<argos::CVector2> relativeRoute;
     double route_length = 0;
-     if (sqrt (pow(target.x - this->current_target.x, 2) + pow(target.y - this->current_target.y, 2)) < 2){
+     if (agent->state != Agent::State::RETURNING && sqrt (pow(target.x - this->current_target.x, 2) + pow(target.y - this->current_target.y, 2)) < 2){
         wall_following_direction = this->current_wall_following_direction;
         getRouteSections(agent, start, target, this->current_wall_following_direction, false, route);
         relativeRoute = agent->pathPlanner.coordinateRouteToRelativeVectors(route, agent->heading);
@@ -72,15 +72,23 @@ std::tuple<int, std::vector<argos::CVector2>, double> SimplePathPlanner::getRout
     return {wall_following_direction, relativeRoute, route_length};
 }
 
+/**
+ * Relative route, this means every edge is relative to the previous edge. So the difference in angle. Length is the same.
+ * @param route
+ * @param agent_heading
+ * @return
+ */
 std::vector<argos::CVector2> SimplePathPlanner::coordinateRouteToRelativeVectors(const std::vector<std::pair<Coordinate, Coordinate>> & route, argos::CRadians agent_heading) const {
     std::vector<argos::CVector2> relative_vectors;
     for (int i = 0; i < route.size(); i++) {
         auto [begin, end] = route[i];
         if (i==0) {
-            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-agent_heading));
+            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-agent_heading)); //First edge is relative to the agent's heading
         } else {
-            auto prev = relative_vectors.rbegin();
-            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(-prev->Angle()));
+            auto prev = route[i-1];
+            auto prev_vector = argos::CVector2(prev.second.x - prev.first.x, prev.second.y - prev.first.y);
+            auto prev_angle = prev_vector.Angle();
+            relative_vectors.emplace_back(argos::CVector2(end.x - begin.x, end.y - begin.y).Rotate(prev_angle)); //Other edges are relative to the previous edge
         }
     }
     return relative_vectors;
@@ -139,6 +147,12 @@ std::vector<std::pair<Coordinate, Coordinate>> SimplePathPlanner::getRouteSectio
     return route;
 }
 
+const double epsilon = 1e-6;
+
+auto isApproximatelyEqual(const Coordinate& a, const Coordinate& b) {
+    return std::abs(a.x - b.x) < epsilon && std::abs(a.y - b.y) < epsilon;
+};
+
 void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::Cell * cell, double box_size, int edge_index, Coordinate target, std::vector<std::pair<Coordinate, Coordinate>> & route, int wall_following_direction, bool switched_direction) const {
     //If the route is longer than allowed, return an empty route.
     if (agent->state != Agent::State::RETURNING && route.size() > agent->config.MAX_ROUTE_LENGTH){
@@ -173,26 +187,28 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
         auto cBoxTopLeft = Coordinate{c->quadNode.coordinate.x - box_size / 2,
                                       c->quadNode.coordinate.y + box_size / 2};
         auto cBox = quadtree::Box(cBoxTopLeft, box_size);
-        auto [start_edge, end_edge] = getEdgeCoordinates(cBox, e);
-        if (start_edge == end_last_edge || end_edge ==
-                                           end_last_edge) { //Only use the edge that is connected to the point we are at (end point of last edge)
-            if (end_last_edge == end_edge) {
-                //Flip start and end
-                std::swap(start_edge, end_edge);
+            std::pair<Coordinate, Coordinate> edge_coordinates = getEdgeCoordinates(cBox, e);
+            auto& start_edge = edge_coordinates.first;
+            auto& end_edge = edge_coordinates.second;
+            if (isApproximatelyEqual(start_edge, end_last_edge) || isApproximatelyEqual(end_edge, end_last_edge)) { // Only use the edge that is connected to the point we are at (end point of last edge)
+                if (isApproximatelyEqual(end_last_edge, end_edge)) {
+                    //Flip start and end
+                    std::swap(start_edge, end_edge);
+                }
+                auto mid_edge = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
+                //If the edge (either way) is not already in the route, and the distance to the edge is the largest, save the cell and edge
+                if (std::find_if(route.begin(), route.end(), [&](const std::pair<Coordinate, Coordinate>& edge) {
+                    return (isApproximatelyEqual(edge.first, start_edge) && isApproximatelyEqual(edge.second, end_edge)) ||
+                           (isApproximatelyEqual(edge.first, end_edge) && isApproximatelyEqual(edge.second, start_edge)) ||
+                           (isApproximatelyEqual(edge.first, start_edge) && isApproximatelyEqual(edge.second, mid_edge)) ||
+                           (isApproximatelyEqual(edge.first, end_edge) && isApproximatelyEqual(edge.second, mid_edge));
+                }) == route.end()) {
+                    bestCell = c;
+                    bestEdgeIndex = e;
+                    bestEdgeStart = start_edge;
+                    bestEdgeEnd = end_edge;
+                }
             }
-            auto mid_edge = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
-            //If the edge (either way) is not already in the route, and the distance to the edge is the largest, save the cell and edge
-            if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) == route.end() &&
-                std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) == route.end() &&
-                std::find(route.begin(), route.end(), std::pair{start_edge, mid_edge}) == route.end() &&
-                std::find(route.begin(), route.end(), std::pair{end_edge, mid_edge}) == route.end() //&&
-                ) {
-                bestCell = c;
-                bestEdgeIndex = e;
-                bestEdgeStart = start_edge;
-                bestEdgeEnd = end_edge;
-            }
-        }
     }
     //TODO: What if we can't find a new edge to go to? We should trace to the target, and go the other direction as in the route
     if (bestCell != nullptr) {
@@ -210,6 +226,7 @@ void SimplePathPlanner::getWallFollowingRoute(Agent* agent, quadtree::Quadtree::
     }
 
 }
+
 
 /**
  * Checks if the line from the agent to the target is free from obstacles
@@ -242,12 +259,10 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
         return {2, nullptr, -1, Coordinate{0,0}};
     }
 
-    //Because start is on an edge, we will add a small offset to the start, towards the target, so the raytracing method selects the correct cell
-    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
-    //In case the target is on the edge, we will add a small offset to the target, away from the start, so the raytracing method selects the correct cell
-    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
+
+
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
 
     if (intersection_cell != nullptr) {
         //If we intersect the same cell, the line is going through the cell, so the direction is not free
@@ -255,16 +270,16 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
         if (intersection_cell == cell || intersection_cell->neighbors[intersection_edge] != nullptr)
             return {0, nullptr, -1, Coordinate{0,0}};
 
-        auto [start_edge_intersection, end_edge_intersection] = getEdgeCoordinates(intersection_box, intersection_edge);
+        std::pair<Coordinate, Coordinate> edge_coordinates = getEdgeCoordinates(intersection_box, intersection_edge);
+        auto& start_edge_intersection = edge_coordinates.first;
+        auto& end_edge_intersection = edge_coordinates.second;
         auto mid_edge_intersection = Coordinate{(start_edge_intersection.x + end_edge_intersection.x) / 2, (start_edge_intersection.y + end_edge_intersection.y) / 2};
-        if (std::find(route.begin(), route.end(), std::pair{start_edge_intersection, end_edge_intersection}) !=
-            route.end() ||
-            std::find(route.begin(), route.end(), std::pair{end_edge_intersection, start_edge_intersection}) !=
-            route.end() ||
-                std::find(route.begin(), route.end(), std::pair{mid_edge_intersection, start_edge_intersection}) !=
-                route.end() ||
-                std::find(route.begin(), route.end(), std::pair{mid_edge_intersection, end_edge_intersection}) !=
-                route.end() ) { //Can't go back to edge already in route
+        if (std::find_if(route.begin(), route.end(), [&](const std::pair<Coordinate, Coordinate>& edge) {
+            return (isApproximatelyEqual(edge.first, start_edge_intersection) && isApproximatelyEqual(edge.second, end_edge_intersection)) ||
+                   (isApproximatelyEqual(edge.first, end_edge_intersection) && isApproximatelyEqual(edge.second, start_edge_intersection)) ||
+                   (isApproximatelyEqual(edge.first, mid_edge_intersection) && isApproximatelyEqual(edge.second, start_edge_intersection)) ||
+                   (isApproximatelyEqual(edge.first, mid_edge_intersection) && isApproximatelyEqual(edge.second, end_edge_intersection));
+        }) != route.end()) {
             return {0, nullptr, -1, Coordinate{0,0}};
         }
         if (distance_to_intersection > box_size / 2){
@@ -277,9 +292,9 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
             route.emplace_back(mid_last_edge, mid_edge_intersection);
 
             //If the intersection edge is connected to the last edge, we can go directly to the edge
-            if (end_last_edge == start_edge_intersection) {
+            if (isApproximatelyEqual(end_last_edge, start_edge_intersection)) {
                 route.emplace_back(mid_edge_intersection, end_edge_intersection);
-            } else if (end_last_edge == end_edge_intersection) {
+            } else if (isApproximatelyEqual(end_last_edge, end_edge_intersection)) {
                 route.emplace_back(mid_edge_intersection, start_edge_intersection);
             } else {
 
@@ -313,27 +328,32 @@ std::tuple<int, quadtree::Quadtree::Cell *, int, Coordinate> SimplePathPlanner::
 }
 
 int SimplePathPlanner::directionToTargetFree(Agent* agent, Coordinate start, double box_size, Coordinate target, const std::vector<std::pair<Coordinate, Coordinate>> & route) const{
-    //Small offset towards the target, so the raytracing method selects the correct cell
-    auto start_with_offset = Coordinate{start.x + (target.x - start.x) / 1000, start.y + (target.y - start.y) / 1000};
-    //Small offset towards the start, so the raytracing method selects the correct cell
-    auto target_with_offset = Coordinate{target.x + (start.x - target.x) / 1000, target.y + (start.y - target.y) / 1000};
 
     //Find the intersection with the quadtree
-    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start_with_offset, target_with_offset);
+    auto [intersection_cell, intersection_box, intersection_edge, distance_to_intersection] = rayTraceQuadtreeOccupiedIntersection(agent, start, target);
 
     if (intersection_cell != nullptr) {
         if (intersection_cell->neighbors[intersection_edge] != nullptr) return 0; //If the intersection edge has a neighbor on it, it is a raytracing accuracy mistake, so the direction is not free
-        auto [start_edge, end_edge] = getEdgeCoordinates(intersection_box, intersection_edge);
+        std::pair<Coordinate, Coordinate> edge_coordinates = getEdgeCoordinates(intersection_box, intersection_edge);
+        auto& start_edge = edge_coordinates.first;
+        auto& end_edge = edge_coordinates.second;
         auto mid_edge = Coordinate{(start_edge.x + end_edge.x) / 2, (start_edge.y + end_edge.y) / 2};
-        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) !=
-            route.end() ||
-            std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) !=
-            route.end() ||
-            std::find(route.begin(), route.end(), std::pair{mid_edge, start_edge}) !=
-            route.end() ||
-            std::find(route.begin(), route.end(), std::pair{mid_edge, end_edge}) !=
-            route.end()) { //Can't go back to edge already in route
+//        if (std::find(route.begin(), route.end(), std::pair{start_edge, end_edge}) !=
+//            route.end() ||
+//            std::find(route.begin(), route.end(), std::pair{end_edge, start_edge}) !=
+//            route.end() ||
+//            std::find(route.begin(), route.end(), std::pair{mid_edge, start_edge}) !=
+//            route.end() ||
+//            std::find(route.begin(), route.end(), std::pair{mid_edge, end_edge}) !=
+//            route.end()) { //Can't go back to edge already in route
+        if (std::find_if(route.begin(), route.end(), [&](const std::pair<Coordinate, Coordinate>& edge) {
+            return (isApproximatelyEqual(edge.first, start_edge) && isApproximatelyEqual(edge.second, end_edge)) ||
+                   (isApproximatelyEqual(edge.first, end_edge) && isApproximatelyEqual(edge.second, start_edge)) ||
+                   (isApproximatelyEqual(edge.first, mid_edge) && isApproximatelyEqual(edge.second, start_edge)) ||
+                   (isApproximatelyEqual(edge.first, mid_edge) && isApproximatelyEqual(edge.second, end_edge));
+        }) != route.end()) {
             return 0;
+
         }
         if (distance_to_intersection > box_size / 2) return 1;
         

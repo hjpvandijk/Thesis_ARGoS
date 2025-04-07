@@ -2,8 +2,8 @@
 #include "agent.h"
 
 
-BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_Nm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity) : microControllerBatteryManager() {
-    this->motionSystemBatteryManager = MotionSystemBatteryManager(robot_weight_kg, robot_wheel_radius_m, robot_inter_wheel_distance_m, stall_torque_Nm, no_load_rpm, stall_current_A, no_load_current_A);
+BatteryManager::BatteryManager(float robot_weight_kg, float robot_wheel_radius_m, float robot_inter_wheel_distance_m, float stall_torque_kg_cm, float no_load_rpm, float stall_current_A, float no_load_current_A, float battery_voltage, float battery_capacity) : microControllerBatteryManager() {
+    this->motionSystemBatteryManager = MotionSystemBatteryManager(robot_weight_kg, robot_wheel_radius_m, robot_inter_wheel_distance_m, stall_torque_kg_cm, no_load_rpm, stall_current_A, no_load_current_A);
 //    this->microControllerBatteryManager = MicroControllerBatteryManager();
 
     battery = Battery{battery_voltage, battery_capacity, battery_capacity};
@@ -31,7 +31,6 @@ std::tuple<float, float> BatteryManager::estimateTotalPowerUsage(Agent* agent, s
 }
 
 std::tuple<float, float> BatteryManager::calculateTotalPowerUsageFromMovement(Agent* agent, argos::CVector2 prevMovement, argos::CVector2 movement){
-
     auto [motionSystemPowerUsage, pathFollowingDurationS] = motionSystemBatteryManager.estimateMotorPowerUsageAndDurationFromPastMovement(agent, prevMovement, movement, 1.0f/agent->ticks_per_second); //In Wh
     auto motionSystemPowerUsageAtVoltage = motionSystemPowerUsage / battery.voltage * 1000.0f;//In mAh
 

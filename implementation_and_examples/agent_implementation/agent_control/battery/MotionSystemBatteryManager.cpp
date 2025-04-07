@@ -4,14 +4,14 @@
 
 MotionSystemBatteryManager::MotionSystemBatteryManager(float robot_weight_kg, float robot_wheel_radius_m,
                                                        float robot_inter_wheel_distance_m,
-                                                       float stall_torque_Nm,
+                                                       float stall_torque_kg_cm,
                                                        float no_load_rpm, float stall_current_A,
                                                        float no_load_current_A) {
     this->robot_weight_kg = robot_weight_kg;
     this->robot_wheel_radius_m = robot_wheel_radius_m;
     this->robot_inter_wheel_distance_m = robot_inter_wheel_distance_m;
     this->rolling_force_without_acceleration_N = rolling_resistance_coefficient * robot_weight_kg * 9.81f;
-    this->stall_torque_kg_cm = stall_torque_Nm;
+    this->stall_torque_kg_cm = stall_torque_kg_cm;
     this->no_load_rpm = no_load_rpm;
     this->stall_current_A = stall_current_A;
     this->no_load_current_A = no_load_current_A;
@@ -20,14 +20,15 @@ MotionSystemBatteryManager::MotionSystemBatteryManager(float robot_weight_kg, fl
 }
 
 void MotionSystemBatteryManager::calculateForces(float (& forces)[6], Agent* agent) const {
-    float momentOfInertia = 0.5f * robot_weight_kg * 0.0362f * 0.0362f; //In kg.m^2 , 0.0362 is the robot radius
+    //(assuming equal weight distribution over the robot)
+    float momentOfInertia = 0.5f * robot_weight_kg * agent->config.ROBOT_RADIUS * agent->config.ROBOT_RADIUS; //In kg.m^2 , 0.0362 is the robot radius
 
     float accelerationForce = robot_weight_kg * agent->differential_drive.acceleration; //In Newtons
     float decelerationForce = robot_weight_kg * agent->differential_drive.deceleration; //In Newtons
     float turnAccelerationForce =
-            momentOfInertia * agent->differential_drive.turn_acceleration / robot_wheel_radius_m; //In Newtons
+           2 * momentOfInertia * agent->differential_drive.turn_acceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
     float turnDecelerationForce =
-            momentOfInertia * agent->differential_drive.turn_deceleration / robot_wheel_radius_m; //In Newtons
+            2 *momentOfInertia * agent->differential_drive.turn_deceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
 
     float totalForceDuringAcceleration = rolling_force_without_acceleration_N + accelerationForce; //In Newtons
     float totalForceDuringDeceleration = rolling_force_without_acceleration_N + decelerationForce; //In Newtons
@@ -43,14 +44,15 @@ void MotionSystemBatteryManager::calculateForces(float (& forces)[6], Agent* age
 }
 
 void MotionSystemBatteryManager::calculateForcesPastMovement(float acceleration, float deceleration, float turnAcceleration, float turnDeceleration, float (& forces)[6], Agent* agent) const {
-    float momentOfInertia = 0.5f * robot_weight_kg * 0.0362f * 0.0362f; //In kg.m^2 , 0.0362 is the robot radius
+    //(assuming equal weight distribution over the robot)
+    float momentOfInertia = 0.5f * robot_weight_kg * agent->config.ROBOT_RADIUS * agent->config.ROBOT_RADIUS; //In kg.m^2 , 0.0362 is the robot radius
 
     float accelerationForce = robot_weight_kg * acceleration; //In Newtons
     float decelerationForce = robot_weight_kg * deceleration; //In Newtons
     float turnAccelerationForce =
-            momentOfInertia * turnAcceleration / robot_wheel_radius_m; //In Newtons
+            2 * momentOfInertia * turnAcceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
     float turnDecelerationForce =
-            momentOfInertia * turnDeceleration / robot_wheel_radius_m; //In Newtons
+            2 * momentOfInertia * turnDeceleration / agent->config.ROBOT_INTER_WHEEL_DISTANCE; //In Newtons
 
     float totalForceDuringAcceleration = rolling_force_without_acceleration_N + accelerationForce; //In Newtons
     float totalForceDuringDeceleration = rolling_force_without_acceleration_N + decelerationForce; //In Newtons
@@ -113,11 +115,11 @@ MotionSystemBatteryManager::EstimateMotorPowerUsage(Agent *agent, float forces[]
 }
 
 std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndDuration(Agent *agent,
-                                                                                        std::vector<argos::CVector2> relativePath) {
+                                                                                        std::vector<argos::CVector2> & relativePath) {
     //Estimate how long it will take the agent to travel the path
 
     auto max_speed_turn_rad_s =
-            agent->differential_drive.max_speed_turn / 0.0565f; //0.0565 is inter-wheel distance in meters
+            agent->differential_drive.max_speed_turn / this->robot_inter_wheel_distance_m; //0.0565 is inter-wheel distance in meters (pipuck)
 
     float totalMotorPowerUsage = 0;
     float totalDuration = 0;
@@ -141,11 +143,11 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
         argos::CVector2 vector = relativePath[i];
         float distance = vector.Length(); //In meters
         float turnAngle = std::abs(
-                vector.Angle().GetValue()); //In Radians, we assume both directions yield the same power usage
+                vector.Angle().GetValue()); //In Radians, we assume both directions yield the same power usage. This angle is relative to the previous vector
         bool cameToAStop = false;
         if (turnAngle > agent->config.TURN_THRESHOLD_DEGREES) cameToAStop = true;
         bool willComeToAStop = false;
-        if (i < relativePath.size()-2){
+        if (i < relativePath.size()-1){ //If we are not at the end of the path
             argos::CVector2 nextVector = relativePath[i+1];
             float nextTurnAngle = std::abs(nextVector.Angle().GetValue());
             if (nextTurnAngle > agent->config.TURN_THRESHOLD_DEGREES) willComeToAStop = true;
@@ -237,8 +239,11 @@ std::tuple<float, float> MotionSystemBatteryManager::estimateMotorPowerUsageAndD
     double averageTurnSpeed = turnAngle / time;
 //    argos::LOG << turnAngle << "/" << time << "=" << averageTurnSpeed << std::endl;
 
-    float acceleration = (averageSpeed - prevMovement.Length()) / time;
-    float turnAcceleration = (averageTurnSpeed - prevMovement.Angle().GetValue()) / time;
+    double averageSpeedPrev = prevMovement.Length() / time;
+    double averageTurnSpeedPrev = prevMovement.Angle().GetValue() / time;
+
+    float acceleration = (averageSpeed - averageSpeedPrev) / time;
+    float turnAcceleration = (averageTurnSpeed - averageTurnSpeedPrev) / time;
     float deceleration = 0;
     float turnDeceleration = 0;
 
@@ -317,7 +322,6 @@ void MotionSystemBatteryManager::calculateVoltageAtSpeed(float speed_m_s) {
     float torque_at_speed = rolling_force_without_acceleration_N * robot_wheel_radius_m * 10.1971621f; //In kg.cm
     float torque_per_motor = torque_at_speed / 2; //In kg.cm
 
-    //TODO: set values through config file
     float speed_at_torque_at_3V = 120.0f * (1-torque_per_motor/0.4); //In RPM @ 3V: no-load rpm * (1 - torque/stall torque);
     float speed_at_torque_at_4_5V = 185.0f * (1-torque_per_motor/0.6); //In RPM @ 4.5V: no-load rpm * (1 - torque/stall torque);
     float speed_at_torque_at_6V = 250.0f * (1-torque_per_motor/0.8); //In RPM @ 6V: no-load rpm * (1 - torque/stall torque);
@@ -341,7 +345,6 @@ void MotionSystemBatteryManager::calculateVoltageAtSpeed(float speed_m_s) {
     } else {
         this->voltage_at_operating_speed = voltage_at_speed_using_3v;
     }
-
     this->no_load_rpm_at_voltage = 120.0f + (250.0f - 120.0f) * (this->voltage_at_operating_speed - 3.0f) / 3.0f;
     this->no_load_current_at_voltage = 0.15f + (0.16f - 0.15f) * (this->voltage_at_operating_speed - 3.0f) / 3.0f;
     //Assume polynomial relationship between stall current and voltage (based on data)

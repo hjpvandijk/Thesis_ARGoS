@@ -77,7 +77,7 @@ public:
     RandomWalk randomWalker;
 #endif
     struct Config {
-//        double ROBOT_DIAMETER;
+        double ROBOT_RADIUS;
         float ROBOT_WEIGHT;
         float ROBOT_WHEEL_RADIUS;
         float ROBOT_INTER_WHEEL_DISTANCE;
@@ -96,7 +96,8 @@ public:
         double QUADTREE_EXCHANGE_INTERVAL_S;
         double TIME_SYNC_INTERVAL_S;
 
-        double DISTANCE_SENSOR_NOISE_CM;
+        double DISTANCE_SENSOR_JITTER_CM;
+        double DISTANCE_SENSOR_NOISE_FACTOR;
         double ORIENTATION_NOISE_DEGREES;
         double ORIENTATION_JITTER_DEGREES;
         double POSITION_NOISE_CM;
@@ -114,9 +115,14 @@ public:
         double FRONTIER_REACH_BATTERY_WEIGHT;
         double FRONTIER_REACH_DURATION_WEIGHT;
         double FRONTIER_PHEROMONE_WEIGHT;
+        double FRONTIER_PHEROMONE_K;
+        double FRONTIER_PHEROMONE_N;
+        double FRONTIER_PHEROMONE_M;
+        double FRONTIER_PHEROMONE_L;
 
         double FRONTIER_SEARCH_RADIUS;
-        int MAX_FRONTIER_CELLS;
+//        int MAX_FRONTIER_CELLS;
+        double FRONTIER_CELL_RATIO;
         int MAX_FRONTIER_REGIONS;
         double AGENT_COHESION_RADIUS;
         double AGENT_AVOIDANCE_RADIUS;
@@ -126,6 +132,7 @@ public:
 
         #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S;
+        float FRONTIER_SWITCH_INTERVAL_S;
         bool FEASIBILITY_CHECK_ONLY_ROUTE;
         #endif
 
@@ -142,6 +149,8 @@ public:
         float ALPHA_RECEIVE;
         float P_FREE_THRESHOLD;
         float P_OCCUPIED_THRESHOLD;
+        float P_MAX;
+        float P_MIN;
         float P_AT_MAX_SENSOR_RANGE;
 
         double QUADTREE_RESOLUTION;
@@ -187,6 +196,8 @@ public:
     argos::CVector2 force_vector;
 
     Coordinate deploymentLocation;
+    double min_distance_to_deployment_location = MAXFLOAT;
+    double deployment_location_reach_distance;
 
 
     Agent() {}
@@ -246,13 +257,14 @@ public:
 
 
 
-    double ticks_per_second = 30;
+    double ticks_per_second = 16; //Needs to be double to prevent parsing necessity when doing elapsed ticks/ticks_per_second
 
     enum class State {
         NO_MISSION,
         EXPLORING,
         RETURNING,
-        FINISHED
+        FINISHED_EXPLORING,
+        MAP_RELAYED
     };
 
     State state = State::NO_MISSION;
@@ -292,6 +304,7 @@ public:
 //    double FRONTIER_DIST_UNTIL_REACHED = OBJECT_AVOIDANCE_RADIUS;
 //    float PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = 5.0;
     int last_feasibility_check_tick = 0;
+    int last_frontier_switch_tick = 0;
 #endif
 
 #ifdef SEPARATE_FRONTIERS
@@ -336,12 +349,12 @@ public:
     double sensor_reading_distance_probability;
 
 private:
-    void loadConfig(const std::string& config_file);
+    void loadConfig(const std::string& config_file, double rootbox_size);
 
 
     void checkForObstacles();
 
-    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
+//    void checkIfAgentFitsBetweenObstacles(quadtree::Box obstacleBox) const;
 
     bool isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const;
 
@@ -353,10 +366,10 @@ private:
     void checkMissionEnd();
 
 
-    quadtree::Box addObjectLocation(Coordinate objectCoordinate, float Psensor) const;
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, float Psensor);
-    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox, float Psensor);
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox);
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+//    void addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox);
     void addOccupiedAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
 
     bool frontierPheromoneEvaporated();

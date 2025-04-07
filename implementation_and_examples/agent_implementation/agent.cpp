@@ -14,7 +14,9 @@
 
 
 Agent::Agent(std::string id, double rootbox_size, const std::string& config_file) {
-    loadConfig(config_file);
+    auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
+
+    loadConfig(config_file, box.size);
     this->id = std::move(id);
     this->position = {0.0, 0.0};
     this->heading = argos::CRadians(0);
@@ -23,18 +25,19 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->swarm_vector = argos::CVector2(0, 0);
     this->force_vector = argos::CVector2(0, 1);
     this->messages = std::vector<std::string>(0);
-    auto box = quadtree::Box(-rootbox_size/2, rootbox_size/2, rootbox_size);
-    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED,
+    this->quadtree = std::make_unique<quadtree::Quadtree>(box, this->config.P_FREE_THRESHOLD, this->config.P_OCCUPIED_THRESHOLD,
+                                                          this->config.P_MAX, this->config.P_MIN,
+                                                          this->config.ALPHA_RECEIVE,
                                                           this->config.QUADTREE_RESOLUTION,
                                                           this->config.QUADTREE_EVAPORATION_TIME_S,
                                                           this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR,
                                                           this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF,
                                                           this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF);
-    //Calculate smallest box size
     double smallestBoxSize = box.size;
     while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
         smallestBoxSize /= 2;
     }
+
     this->quadtree->setResolution(smallestBoxSize);
     #ifdef WALL_FOLLOWING_ENABLED
     this->wallFollower = WallFollower();
@@ -66,14 +69,18 @@ Agent::Agent(std::string id, double rootbox_size, const std::string& config_file
     this->pathFollower = PathFollower();
 #endif
 #ifdef SKIP_UNREACHABLE_FRONTIERS
-    this->frontierEvaluator = FrontierEvaluator();
+    this->frontierEvaluator = FrontierEvaluator(5*this->ticks_per_second); //5 seconds
+#endif
+#ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
+    this->randomWalker = RandomWalk(5*this->ticks_per_second); //5 seconds
 #endif
     this->sensor_reading_distance_probability = (1-this->config.P_AT_MAX_SENSOR_RANGE) / this->config.DISTANCE_SENSOR_PROXIMITY_RANGE;
+
+    this->deployment_location_reach_distance = this->config.FRONTIER_DIST_UNTIL_REACHED;
 }
 
 
 void Agent::setPosition(double new_x, double new_y) {
-    argos::RLOG << "Setting position in agent to (" << new_x << ", " << new_y << ")" << std::endl;
     this->position = {new_x, new_y};
 }
 
@@ -138,59 +145,57 @@ void Agent::readInfraredSensor() {
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
-                                               float Psensor) {
-    if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
-        this->quadtree->getResolution())
-        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
-//    if (objectBox.size > 0) return;
-
-    double x = coordinate1.x;
-    double y = coordinate1.y;
-    double dx = coordinate2.x - coordinate1.x;
-    double dy = coordinate2.y - coordinate1.y;
-    double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getResolution();
-    int nSteps = std::ceil(distance / stepSize);
-    double stepX = dx / nSteps;
-    double stepY = dy / nSteps;
-
-    for (int s = 0; s < nSteps; s++) {
-        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
-            double p = (this->config.P_FREE * Psensor - 0.5) * (1 - double(s) / double(nSteps)) +
-                       0.5; //Increasingly more uncertain the further away from the agent
-            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-            this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, p, elapsed_ticks / ticks_per_second,
-                                elapsed_ticks / ticks_per_second);
-        } else {
-            break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
-        }
-        x += stepX;
-        y += stepY;
-    }
-
-//    x += stepX;
-//    y += stepY;
+//void Agent::addFreeAreaBetweenAndOccupiedAfter(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox) {
+//    if (sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2)) <
+//        this->quadtree->getResolution())
+//        return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
+////    if (objectBox.size > 0) return;
 //
-//    double occ_probability = this->P_FREE / Psensor;
-//    for(int s = 1; s <= 2; s++){ //Add slight occupied confidence to the two steps after the object
-//        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as more occupied
-//            double p = (0.5-occ_probability) * (double(s)/double(10)) + occ_probability; //Increasingly more uncertain the further away from the agent
-//            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x;
+//    double dy = coordinate2.y - coordinate1.y;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->quadtree->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    for (int s = 0; s < nSteps; s++) {
+//        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as free
+//            double p = (this->config.P_FREE - 0.5) * (1 - double(s) / double(nSteps)) +
+//                       0.5; //Increasingly more uncertain the further away from the agent
+//            //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+//            this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, p, elapsed_ticks / ticks_per_second,
+//                                elapsed_ticks / ticks_per_second);
+//        } else {
+//            break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
 //        }
 //        x += stepX;
 //        y += stepY;
-//
 //    }
-}
+//
+////    x += stepX;
+////    y += stepY;
+////
+////    double occ_probability = this->P_FREE / Psensor;
+////    for(int s = 1; s <= 2; s++){ //Add slight occupied confidence to the two steps after the object
+////        if (!objectBox.contains(Coordinate{x, y})) { //Don't add a coordinate in the objectBox as more occupied
+////            double p = (0.5-occ_probability) * (double(s)/double(10)) + occ_probability; //Increasingly more uncertain the further away from the agent
+////            this->quadtree->add(Coordinate{x, y}, p, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+////        }
+////        x += stepX;
+////        y += stepY;
+////
+////    }
+//}
 
 /**
  * Add free (unoccupied) coordinates between two coordinates
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox,
-                               float Psensor) {
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, quadtree::Box objectBox) {
     double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
     if (dist < this->quadtree->getResolution())
         return; //If the distance between the coordinates is smaller than the smallest box size, don't add anything
@@ -226,12 +231,15 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
     for (int i=0; i<linePoints.size(); i++){
         auto point = linePoints[i];
         if (!objectBox.contains(Coordinate{point.x, point.y})) { //Don't add a coordinate in the objectBox as free
-            double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
-            double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
-                       0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
-//            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
-                       //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-            this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+            double p_distance_reading = 1 - double(i)*step_size_avg * sensor_reading_distance_probability;
+            double p = (this->config.P_FREE - 0.5) * p_distance_reading + 0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+            //            argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+           //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+            auto coord = Coordinate{point.x, point.y};
+            while(Algorithms::is_multiple(coord.x, this->quadtree->getResolution()) || Algorithms::is_multiple(coord.y, this->quadtree->getResolution())){
+                coord = Coordinate{coord.x + 0.000001, coord.y + 0.000001};
+            }
+            this->quadtree->add(coord, p,
                                 elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
         } else {
             break; //If the coordinate is in the objectBox, stop adding free coordinates, because it should be the end of the ray
@@ -244,7 +252,7 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, q
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, float Psensor) {
+void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2) {
 //    double x = coordinate1.x;
 //    double y = coordinate1.y;
 //    double dx = coordinate2.x - coordinate1.x;
@@ -263,18 +271,22 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
 //        y += stepY;
 //    }
     double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
-
+    if (dist < this->quadtree->getResolution())
+        return;
     std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(this, coordinate1,
                                                                                     coordinate2);
     double step_size_avg = dist / linePoints.size();
     for (int i=0; i<linePoints.size(); i++){
         auto point = linePoints[i];
-        double p_distance_reading = this->config.P_AT_MAX_SENSOR_RANGE - double(i)*step_size_avg * sensor_reading_distance_probability + this->config.P_AT_MAX_SENSOR_RANGE;
-        double p = (this->config.P_FREE - 0.5) * p_distance_reading * Psensor +
-                   0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
-//        argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
+        double p_distance_reading = 1 - double(i)*step_size_avg * sensor_reading_distance_probability;
+        double p = (this->config.P_FREE - 0.5) * p_distance_reading +0.5; //Increasingly more uncertain the further away from the agent, as error can increase with position and orientation estimation inaccuracies.
+        //        argos::LOG << "P = " << p << "with " << i << "/" << linePoints.size() << std::endl;
         //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-        this->quadtree->add(Coordinate{point.x + 0.0000000001, point.y + 0.0000000001}, p,
+        auto coord = Coordinate{point.x, point.y};
+        while(Algorithms::is_multiple(coord.x, this->quadtree->getResolution()) || Algorithms::is_multiple(coord.y, this->quadtree->getResolution())){
+            coord = Coordinate{coord.x + 0.000001, coord.y + 0.000001};
+        }
+        this->quadtree->add(coord, p,
                             elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
     }
 }
@@ -284,63 +296,68 @@ void Agent::addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2, f
  * @param coordinate1
  * @param coordinate2
  */
-void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate2) const {
-    double x = coordinate1.x;
-    double y = coordinate1.y;
-    double dx = coordinate2.x - coordinate1.x;
-    double dy = coordinate2.y - coordinate1.y;
-    double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getResolution();
-    int nSteps = std::ceil(distance / stepSize);
-    double stepX = dx / nSteps;
-    double stepY = dy / nSteps;
+//void Agent::addOccupiedAreaBetween(Coordinate coordinate1, Coordinate coordinate2) const {
+//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x;
+//    double dy = coordinate2.y - coordinate1.y;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->quadtree->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    for (int s = 0; s < nSteps - 1; s++) {
+//        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
+//        this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, this->config.P_OCCUPIED,
+//                            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+//        x += stepX;
+//        y += stepY;
+//    }
+//}
 
-    for (int s = 0; s < nSteps - 1; s++) {
-        //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-        this->quadtree->add(Coordinate{x + 0.0000000001, y + 0.0000000001}, this->config.P_OCCUPIED,
-                            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
-        x += stepX;
-        y += stepY;
-    }
-}
-
-bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const {
-    double x = coordinate1.x;
-    double y = coordinate1.y;
-    double dx = coordinate2.x - coordinate1.x -
-                0.02; // Subtract a small margin to detecting boxes the coordinates belong to
-    double dy = coordinate2.y - coordinate1.y - 0.02;
-    double distance = sqrt(dx * dx + dy * dy);
-    double stepSize = this->quadtree->getResolution();
-    int nSteps = std::ceil(distance / stepSize);
-    double stepX = dx / nSteps;
-    double stepY = dy / nSteps;
-
-    x += stepX * 0.1; // Add a small margin to detecting boxes the coordinates belong to
-    y += stepY * 0.1; // Add a small margin to detecting boxes the coordinates belong to
-
-
-    for (int s = 1; s < nSteps; s++) {
-        if (this->quadtree->getOccupancyFromCoordinate(Coordinate{x, y}) == quadtree::Occupancy::OCCUPIED) {
-            return true;
-        }
-        x += stepX;
-        y += stepY;
-    }
-    return false;
-}
+//bool Agent::isObstacleBetween(Coordinate coordinate1, Coordinate coordinate2) const {
+//    double x = coordinate1.x;
+//    double y = coordinate1.y;
+//    double dx = coordinate2.x - coordinate1.x -
+//                0.02; // Subtract a small margin to detecting boxes the coordinates belong to
+//    double dy = coordinate2.y - coordinate1.y - 0.02;
+//    double distance = sqrt(dx * dx + dy * dy);
+//    double stepSize = this->quadtree->getResolution();
+//    int nSteps = std::ceil(distance / stepSize);
+//    double stepX = dx / nSteps;
+//    double stepY = dy / nSteps;
+//
+//    x += stepX * 0.1; // Add a small margin to detecting boxes the coordinates belong to
+//    y += stepY * 0.1; // Add a small margin to detecting boxes the coordinates belong to
+//
+//
+//    for (int s = 1; s < nSteps; s++) {
+//        if (this->quadtree->getOccupancyFromCoordinate(Coordinate{x, y}) == quadtree::Occupancy::OCCUPIED) {
+//            return true;
+//        }
+//        x += stepX;
+//        y += stepY;
+//    }
+//    return false;
+//}
 
 
 /**
  * Add occupied object location to the quadtree
  * @param objectCoordinate
  */
-quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate, float Psensor) const {
+quadtree::Box Agent::addObjectLocation(Coordinate objectCoordinate) const {
     //Add small margin to the x and y in case we are exactly on the corner of a box, due to the perfection of a simulated map.
-    quadtree::Box objectBox = this->quadtree->add(
-            Coordinate{objectCoordinate.x + 0.0000000001, objectCoordinate.y + 0.0000000001}, this->config.P_OCCUPIED /
-                                                                                              Psensor, //Divided by sensor accuracy probability (so higher resulting probability) as maybe the object is not there
-            elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
+    auto dist_to_object = sqrt(pow(this->position.x - objectCoordinate.x, 2) + pow(this->position.y - objectCoordinate.y, 2));
+
+    double p_distance_reading = 1 - dist_to_object * sensor_reading_distance_probability;
+    double p = 0.5-(0.5-this->config.P_OCCUPIED) * p_distance_reading ; //Increasingly more certain the closer to the agent, as the sensor reading is more accurate
+    auto coord = Coordinate{objectCoordinate.x, objectCoordinate.y};
+    while(Algorithms::is_multiple(coord.x, this->quadtree->getResolution()) || Algorithms::is_multiple(coord.y, this->quadtree->getResolution())){
+        coord = Coordinate{coord.x + 0.000001, coord.y + 0.000001};
+    }
+    quadtree::Box objectBox = this->quadtree->add( coord, p, elapsed_ticks / ticks_per_second, elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
     if (objectBox.getSize() != 0) // If the box is not the zero (not added)
         checkIfAgentFitsBetweenObstacles(objectBox);
@@ -359,11 +376,8 @@ void Agent::checkForObstacles() {
         argos::CRadians sensor_rotation = this->heading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (this->distance_sensors[sensor_index].getDistance() < this->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
-            float sensor_probability = HC_SR04::getProbability(this->distance_sensors[sensor_index].getDistance());
-
             double opposite = argos::Sin(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
             double adjacent = argos::Cos(sensor_rotation) * this->distance_sensors[sensor_index].getDistance();
-
 
             Coordinate object = {this->position.x + adjacent, this->position.y + opposite};
             //If the detected object is actually another agent, add it as a free area
@@ -379,7 +393,7 @@ void Agent::checkForObstacles() {
 
                 //If detected object and another agent are not close, add the object as an obstacle
                 if (objectToAgent.Length() <= this->quadtree->getResolution()) {
-                    close_to_other_agent = true; //TODO: Due to confidence, can maybe omit this check
+                    close_to_other_agent = true;
                 }
             }
             //Only add the object as an obstacle if it is not close to another agent
@@ -388,15 +402,15 @@ void Agent::checkForObstacles() {
                     this->quadtree->getResolution()) {
                     addedObjectAtAgentLocation = true;
                 }
-                quadtree::Box objectBox = addObjectLocation(object, sensor_probability);
+                quadtree::Box objectBox = addObjectLocation(object);
                 if (objectBox.size != 0) {
                     if (!addedObjectAtAgentLocation)
-                        addFreeAreaBetween(this->position, object, objectBox, sensor_probability);
+                        addFreeAreaBetween(this->position, object, objectBox);
                 } else {
-                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
+                    if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
                 }
             } else {
-                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object, sensor_probability);
+                if (!addedObjectAtAgentLocation) addFreeAreaBetween(this->position, object);
             }
 
 
@@ -417,151 +431,151 @@ void Agent::checkForObstacles() {
  * If the agent does not fit, set that area as an obstacle.
  * @param objectCoordinate
  */
-void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
-    Coordinate objectCoordinate = objectBox.getCenter();
-    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
-                                                                                  3.0 *
-                                                                                  this->config.OBJECT_AVOIDANCE_RADIUS,
-                                                                                  this->elapsed_ticks /
-                                                                                  this->ticks_per_second);
-    //For each box, that is not the checked object, check if the agent fits between the object and the box
-    for (auto box: occupiedBoxes) {
-        if (box.contains(objectCoordinate)) {
-            continue;
-        }
+//void Agent::checkIfAgentFitsBetweenObstacles(quadtree::Box objectBox) const {
+//    Coordinate objectCoordinate = objectBox.getCenter();
+//    std::vector<quadtree::Box> occupiedBoxes = this->quadtree->queryOccupiedBoxes(objectCoordinate,
+//                                                                                  3.0 *
+//                                                                                  this->config.OBJECT_AVOIDANCE_RADIUS,
+//                                                                                  this->elapsed_ticks /
+//                                                                                  this->ticks_per_second);
+//    //For each box, that is not the checked object, check if the agent fits between the object and the box
+//    for (auto box: occupiedBoxes) {
+//        if (box.contains(objectCoordinate)) {
+//            continue;
+//        }
+//
+//        Coordinate objectCorner{};
+//        std::vector<Coordinate> objectEdges = {};
+//        Coordinate boxCorner{};
+//        std::vector<Coordinate> boxEdges = {};
+//
+//        //Check which direction the object is compared to the occupied box, and check the distance between the correct corners
+//        auto center = box.getCenter();
+//
+//        // West
+//        if (objectCoordinate.x < center.x) {
+//            //Just West
+//            if (objectCoordinate.y == center.y) {
+//                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+//                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+//
+//                boxCorner = Coordinate{box.getBottom(), box.left};
+//                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+//            }
+//                // North West
+//            else if (objectCoordinate.y > center.y) {
+//                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+//                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+//                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+//
+//                boxCorner = Coordinate{box.top, box.left};
+//                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+//                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+//            }
+//                // South West
+//            else if (objectCoordinate.y < center.y) {
+//                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
+//                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
+//                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+//
+//                boxCorner = Coordinate{box.getBottom(), box.left};
+//                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
+//                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+//            }
+//                // Not in any direction
+//            else {
+//                continue;
+//            }
+//        }
+//            // East
+//        else if (objectCoordinate.x > center.x) {
+//            //Just East
+//            if (objectCoordinate.y == center.y) {
+//                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
+//                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+//
+//                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+//                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+//            }
+//                // North East
+//            else if (objectCoordinate.y > center.y) {
+//                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
+//                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+//                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+//
+//                boxCorner = Coordinate{box.top, box.getRight()};
+//                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+//                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+//            }
+//                // South East
+//            else if (objectCoordinate.y < center.y) {
+//                objectCorner = Coordinate{objectBox.top, objectBox.left};
+//                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
+//                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+//
+//                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+//                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
+//                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+//            }
+//                // Not in any direction
+//            else {
+//                continue;
+//            }
+//        } else if (objectCoordinate.x == center.x) {
+//            //Just North
+//            if (objectCoordinate.y > center.y) {
+//                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
+//                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
+//
+//                boxCorner = Coordinate{box.top, box.getRight()};
+//                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
+//            }
+//                //Just South
+//            else if (objectCoordinate.y < center.y) {
+//                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
+//                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
+//
+//                boxCorner = Coordinate{box.getBottom(), box.getRight()};
+//                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
+//            }
+//                // Not in any direction
+//            else {
+//                continue;
+//            }
+//        }
+//            // Not in any direction
+//        else {
+//            continue;
+//        }
+//
+//        double distance = sqrt(pow(objectCorner.x - boxCorner.x, 2) + pow(objectCorner.y - boxCorner.y, 2));
+//        if (distance < 0.01) { // If they are adjacent (with a small margin)
+//            continue;
+//        } else if (distance <
+//                   this->config.OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
+//            //Add the area between the object and the box as occupied if there is no occupied area between already
+//            bool areaFree = true;
+//            for (int edge_count = 0; edge_count < objectEdges.size(); edge_count++) {
+//                if (isObstacleBetween(objectEdges[edge_count], boxEdges[edge_count])) {
+//                    areaFree = false;
+//                }
+//            }
+//            if (areaFree) {
+//                addOccupiedAreaBetween(objectCoordinate, box.getCenter());
+//            }
+//
+//        }
+//    }
+//}
 
-        Coordinate objectCorner{};
-        std::vector<Coordinate> objectEdges = {};
-        Coordinate boxCorner{};
-        std::vector<Coordinate> boxEdges = {};
 
-        //Check which direction the object is compared to the occupied box, and check the distance between the correct corners
-        auto center = box.getCenter();
-
-        // West
-        if (objectCoordinate.x < center.x) {
-            //Just West
-            if (objectCoordinate.y == center.y) {
-                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
-                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
-
-                boxCorner = Coordinate{box.getBottom(), box.left};
-                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
-            }
-                // North West
-            else if (objectCoordinate.y > center.y) {
-                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
-                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
-                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
-
-                boxCorner = Coordinate{box.top, box.left};
-                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
-                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
-            }
-                // South West
-            else if (objectCoordinate.y < center.y) {
-                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
-                objectEdges.push_back(Coordinate{objectBox.getRight(), objectBox.getCenter().y});
-                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
-
-                boxCorner = Coordinate{box.getBottom(), box.left};
-                boxEdges.push_back(Coordinate{box.left, box.getCenter().y});
-                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
-            }
-                // Not in any direction
-            else {
-                continue;
-            }
-        }
-            // East
-        else if (objectCoordinate.x > center.x) {
-            //Just East
-            if (objectCoordinate.y == center.y) {
-                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
-                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
-
-                boxCorner = Coordinate{box.getBottom(), box.getRight()};
-                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
-            }
-                // North East
-            else if (objectCoordinate.y > center.y) {
-                objectCorner = Coordinate{objectBox.getBottom(), objectBox.left};
-                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
-                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
-
-                boxCorner = Coordinate{box.top, box.getRight()};
-                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
-                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
-            }
-                // South East
-            else if (objectCoordinate.y < center.y) {
-                objectCorner = Coordinate{objectBox.top, objectBox.left};
-                objectEdges.push_back(Coordinate{objectBox.left, objectBox.getCenter().y});
-                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
-
-                boxCorner = Coordinate{box.getBottom(), box.getRight()};
-                boxEdges.push_back(Coordinate{box.getRight(), box.getCenter().y});
-                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
-            }
-                // Not in any direction
-            else {
-                continue;
-            }
-        } else if (objectCoordinate.x == center.x) {
-            //Just North
-            if (objectCoordinate.y > center.y) {
-                objectCorner = Coordinate{objectBox.getBottom(), objectBox.getRight()};
-                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.getBottom()});
-
-                boxCorner = Coordinate{box.top, box.getRight()};
-                boxEdges.push_back(Coordinate{box.getCenter().x, box.top});
-            }
-                //Just South
-            else if (objectCoordinate.y < center.y) {
-                objectCorner = Coordinate{objectBox.top, objectBox.getRight()};
-                objectEdges.push_back(Coordinate{objectBox.getCenter().x, objectBox.top});
-
-                boxCorner = Coordinate{box.getBottom(), box.getRight()};
-                boxEdges.push_back(Coordinate{box.getCenter().x, box.getBottom()});
-            }
-                // Not in any direction
-            else {
-                continue;
-            }
-        }
-            // Not in any direction
-        else {
-            continue;
-        }
-
-        double distance = sqrt(pow(objectCorner.x - boxCorner.x, 2) + pow(objectCorner.y - boxCorner.y, 2));
-        if (distance < 0.01) { // If they are adjacent (with a small margin)
-            continue;
-        } else if (distance <
-                   this->config.OBJECT_AVOIDANCE_RADIUS) { // If the agent does not fit between the object and the box
-            //Add the area between the object and the box as occupied if there is no occupied area between already
-            bool areaFree = true;
-            for (int edge_count = 0; edge_count < objectEdges.size(); edge_count++) {
-                if (isObstacleBetween(objectEdges[edge_count], boxEdges[edge_count])) {
-                    areaFree = false;
-                }
-            }
-            if (areaFree) {
-                addOccupiedAreaBetween(objectCoordinate, box.getCenter());
-            }
-
-        }
-    }
-}
-
-
-bool Agent::frontierPheromoneEvaporated() {
-    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getResolution() / 2.0,
-                                 this->elapsed_ticks / this->ticks_per_second,
-                                 this->config.MAX_FRONTIER_CELLS); //Update pheromone of frontier cell
-    if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
-    return false;
-}
+//bool Agent::frontierPheromoneEvaporated() {
+//    quadtree->queryFrontierBoxes(this->currentBestFrontier, quadtree->getResolution() / 2.0,
+//                                 this->elapsed_ticks / this->ticks_per_second,
+//                                 this->config.MAX_FRONTIER_CELLS); //Update pheromone of frontier cell
+//    if (quadtree->isCoordinateUnknownOrAmbiguous(this->currentBestFrontier)) return true;
+//    return false;
+//}
 
 void Agent::calculateNextPosition() {
     //Inspired by boids algorithm:
@@ -601,14 +615,18 @@ void Agent::calculateNextPosition() {
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
         //If the agent is close to the frontier and is heading towards it, or if it is within object avoidance radius to the frontier.
         //So we don't 'reach' frontiers through walls.
-        bool frontierReached = false;
+        bool allow_frontier_switch = false;
         if (!(this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT})) {
             argos::CVector2 agentFrontierVector = argos::CVector2(this->currentBestFrontier.x - this->position.x,
                                                            this->currentBestFrontier.y - this->position.y);
-            frontierReached = agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
-              NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() <
-              this->config.TURN_THRESHOLD_DEGREES * 2 ||
-                    agentFrontierVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS;
+            bool frontier_switch_period_elapsed = (this->elapsed_ticks - this->last_frontier_switch_tick) >
+                                                   this->ticks_per_second * this->config.FRONTIER_SWITCH_INTERVAL_S;
+            //If the agent is close to the frontier and is somewhat heading towards it AMD switch interval has passed, or if it is within object avoidance radius to the frontier.
+            //We have the switch interval to avoid reselecting checking for niew frontiers too quickly, and maybe landing on the same frontier again. (computationally expensive)
+            //When we are within object avoidance radius, we will probably select a new frontier soon, so interval not needed.
+            allow_frontier_switch = frontier_switch_period_elapsed && ((agentFrontierVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED &&
+              NormalizedDifference(this->targetHeading, agentFrontierVector.Angle()).GetValue() < //Use target vector here as we need to check if our intended heading is close to the frontier. Meaning we have determined we are free to move on that direction.
+              this->config.TURN_THRESHOLD_DEGREES * 2) || agentFrontierVector.Length() <= this->config.OBJECT_AVOIDANCE_RADIUS);
         }
 
         //If the current best frontier is not set
@@ -622,10 +640,10 @@ void Agent::calculateNextPosition() {
             #ifdef SKIP_UNREACHABLE_FRONTIERS
             //Or if we are avoiding the frontier
             frontierEvaluator.avoidingAgentTarget(this) ||
-            #endif
-            //Or we have reached the frontier
-            frontierReached
-            #ifdef PATH_PLANNING_ENABLED
+#endif
+            //Or are allowed to switch frontiers based on the distance to the current frontier and the time since the last switch
+            allow_frontier_switch
+#ifdef PATH_PLANNING_ENABLED
             //Or if it is time for a periodic check, and we are not only checking the route
             || (periodic_check_required &&
                 !this->config.FEASIBILITY_CHECK_ONLY_ROUTE)
@@ -637,11 +655,14 @@ void Agent::calculateNextPosition() {
             if (wallFollower.wallFollowingDirection == 0) {
                 //Find new frontier
                 targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+                this->last_frontier_switch_tick = this->elapsed_ticks;
             }
 #else
             //Find new frontier
             targetVector = ForceVectorCalculator::calculateUnexploredFrontierVector(this);
             this->last_feasibility_check_tick = this->elapsed_ticks;
+            this->last_frontier_switch_tick = this->elapsed_ticks;
 #endif
         }
 #ifdef PATH_PLANNING_ENABLED
@@ -659,6 +680,7 @@ void Agent::calculateNextPosition() {
             }
 #endif
             this->last_feasibility_check_tick = this->elapsed_ticks;
+            this->last_frontier_switch_tick = this->elapsed_ticks;
 
         }
 #endif
@@ -667,9 +689,17 @@ void Agent::calculateNextPosition() {
                                        this->deploymentLocation.y - this->position.y);
 
         //If we are close to the deployment location, we have returned, we can stop
-        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->state = State::FINISHED;
+        if (targetVector.Length() <= this->deployment_location_reach_distance) {
+            this->state = State::FINISHED_EXPLORING;
         } else {
+            //If we are getting closer to the deployment location, we can decrease the distance to reach it, 1cm at a time
+            if (targetVector.Length() < this->min_distance_to_deployment_location) {
+                this->deployment_location_reach_distance = std::max(this->deployment_location_reach_distance - 0.01, 0.1);
+                this->min_distance_to_deployment_location = targetVector.Length();
+            } //If we are not getting closer, we can increase the distance to reach it, 0.2cm at a time
+            else {
+                this->deployment_location_reach_distance += 0.002;
+            }
 
             //Set our current best 'frontier' to the deployment location
             if (!(this->currentBestFrontier == this->deploymentLocation)) {
@@ -688,10 +718,21 @@ void Agent::calculateNextPosition() {
                     this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
                 }
                 this->last_feasibility_check_tick = this->elapsed_ticks;
+
+            }
+#endif
+#if defined SKIP_UNREACHABLE_FRONTIERS && defined RANDOM_WALK_WHEN_NO_FRONTIERS
+            if (frontierEvaluator.avoidingCoordinate(this, this->deploymentLocation)) {
+                this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+            }
+            if (randomWalker.randomWalking && randomWalker.randomWalkedFarEnough(this)) {
+                //Force reset of frontier avoidance
+                this->frontierEvaluator.resetFrontierAvoidance(this, {0,0});
             }
 #endif
         }
-    }
+
+    } else assert(0 && "Shouldn't be in any other state");
 
 
 #else
@@ -710,10 +751,49 @@ void Agent::calculateNextPosition() {
                                        this->deploymentLocation.y - this->position.y);
 
         //If we are close to the deployment location, we have returned, we can stop
-        if (targetVector.Length() <= this->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->state = State::FINISHED;
+        if (targetVector.Length() <= this->deployment_location_reach_distance) {
+            this->state = State::FINISHED_EXPLORING;
+        } else {
+            //If we are getting closer to the deployment location, we can decrease the distance to reach it, 1cm at a time
+            if (targetVector.Length() < this->min_distance_to_deployment_location) {
+                this->deployment_location_reach_distance = std::max(this->deployment_location_reach_distance - 0.01, 0.1);
+                this->min_distance_to_deployment_location = targetVector.Length();
+            } //If we are not getting closer, we can increase the distance to reach it, 0.2cm at a time
+            else {
+                this->deployment_location_reach_distance += 0.002;
+            }
+
+            //Set our current best 'frontier' to the deployment location
+            if (!(this->currentBestFrontier == this->deploymentLocation)) {
+                this->currentBestFrontier = this->deploymentLocation;
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+
+#ifdef PATH_PLANNING_ENABLED
+                periodic_check_required = true;
+#endif
+            }
+#ifdef PATH_PLANNING_ENABLED
+            if (periodic_check_required) {
+                this->route_to_best_frontier.clear();
+                this->pathPlanner.getRoute(this, this->position, deploymentLocation, this->route_to_best_frontier);
+                if (this->route_to_best_frontier.empty()) { //If there is no route to the deployment location, we reset the current best frontier
+                    this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+                }
+                this->last_feasibility_check_tick = this->elapsed_ticks;
+
+            }
+#endif
+#if defined SKIP_UNREACHABLE_FRONTIERS && defined RANDOM_WALK_WHEN_NO_FRONTIERS
+            if (frontierEvaluator.avoidingCoordinate(this, this->deploymentLocation)) {
+                this->currentBestFrontier = Coordinate{MAXFLOAT, MAXFLOAT};
+            }
+            if (randomWalker.randomWalking && randomWalker.randomWalkedFarEnough(this)) {
+                //Force reset of frontier avoidance
+                this->frontierEvaluator.resetFrontierAvoidance(this, {0,0});
+            }
+#endif
         }
-    }
+    } else assert(0 && "Shouldn't be in any other state");
 #endif
 #if defined(RANDOM_WALK_WHEN_NO_FRONTIERS) || defined(PATH_PLANNING_ENABLED)
     bool noTarget = this->currentBestFrontier == Coordinate{MAXFLOAT, MAXFLOAT};
@@ -751,7 +831,7 @@ void Agent::calculateNextPosition() {
                                                                                   total_vector,
                                                                                   false);//targetVector.Length() == 0);
 #ifdef SKIP_UNREACHABLE_FRONTIERS
-    if (this->state == State::EXPLORING)
+//    if (this->state == State::EXPLORING)
         frontierEvaluator.skipIfFrontierUnreachable(this, objectAvoidanceAngle, total_vector);
 #endif
     //If there is not a free angle to move to, do not move
@@ -797,22 +877,34 @@ void Agent::sendQuadtreeToCloseAgents() {
 
     for (const auto &agentLocationPair: this->agentLocations) {
         double lastReceivedTick = std::get<2>(agentLocationPair.second);
-        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), send the quadtree
+        //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
             if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
                 this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
-                this->config.QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + (rand() % 400 - 200)/100.0f) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
-                //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
-                oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
-                this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //Store the time we have sent the quadtree to this agent
+                break; //We know we have to broadcast the quadtree, so we can break
             }
         }
     }
 
+
     if (!sendQuadtree) return; //If we don't need to send the quadtree to any agent, return
+
+    //Update the exchange time for all agents within range
+    for (const auto &agentLocationPair: this->agentLocations) {
+        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
+            this->config.AGENT_LOCATION_RELEVANT_S) {
+            //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
+            oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
+            this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
+
+        }
+    }
+
     this->quadtree->toStringVector(&quadTreeToStrings, oldest_exchange/this->ticks_per_second);
     for (const std::string &str: quadTreeToStrings) {
         broadcastMessage("M:" + str);
@@ -822,7 +914,7 @@ void Agent::sendQuadtreeToCloseAgents() {
 
 void Agent::timeSyncWithCloseAgents() {
     if (this->elapsed_ticks - this->timeSynchronizer.getLastSyncAttempt() >=
-        (this->config.TIME_SYNC_INTERVAL_S + rand() % 4 - 2) * this->ticks_per_second) {
+        (this->config.TIME_SYNC_INTERVAL_S + (rand() % 400 - 200)/100.0f) * this->ticks_per_second) { //Randomize the time sync interval a bit (between -2 and +2 seconds)
         for (const auto &agentLocationPair: this->agentLocations) {
             double lastReceivedTick = std::get<2>(agentLocationPair.second);
             //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range), broadcast time sync init
@@ -843,18 +935,42 @@ void Agent::startMission() {
 }
 
 void Agent::doStep() {
-    broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
-    sendQuadtreeToCloseAgents();
-    argos::CVector2 velocity = {1,0};
-    velocity.Rotate(this->heading);
-    broadcastMessage(
-            "V:" + std::to_string(velocity.GetX()) + ";" + std::to_string(velocity.GetY()));
-    timeSyncWithCloseAgents();
+    if (this->state != State::NO_MISSION) { //Don't do anything before mission
+        broadcastMessage("C:" + this->position.toString() + "|" + this->currentBestFrontier.toString());
+        sendQuadtreeToCloseAgents();
+        argos::CVector2 velocity = {1, 0};
+        velocity.Rotate(this->heading);
+        broadcastMessage(
+                "V:" + std::to_string(velocity.GetX()) + ";" + std::to_string(velocity.GetY()));
+        timeSyncWithCloseAgents();
 
-    checkMessages();
-    if (this->state == State::NO_MISSION|| this->state == State::FINISHED) {
+        checkMessages();
+    }
+    if (this->state == State::NO_MISSION || this->state == State::FINISHED_EXPLORING || this->state == State::MAP_RELAYED) {
         //Do nothing
         this->differential_drive.stop();
+        if (this->state == State::FINISHED_EXPLORING) {
+            //If we are finished exploring, and any other agent is within communication range, and we have exchanged recently, we are fully done.
+            bool map_relayed = false;
+            if (this->agentLocations.empty()) map_relayed = true; //Have never encountered another agent, so we assume there are no others
+            for (const auto &agentLocationPair: this->agentLocations) {
+                double lastReceivedTick = std::get<2>(agentLocationPair.second);
+                //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
+                if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second < this->config.AGENT_LOCATION_RELEVANT_S) {
+                    //If we have sent the quadtree to this agent in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, we assume we have received it back
+                    //So we are done
+                    if (this->agentQuadtreeSent.count(agentLocationPair.first) &&
+                        this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] <
+                        this->config.QUADTREE_EXCHANGE_INTERVAL_S * this->ticks_per_second) {
+                        map_relayed = true;
+                        break;
+                    }
+                }
+            }
+            if (map_relayed) {
+                this->state = State::MAP_RELAYED;
+            }
+        }
     } else { //Exploring or returning
         if (this->elapsed_ticks >= this->ticks_per_second) { //Wait one second before starting, allowing initial communication
             checkForObstacles();
@@ -882,12 +998,14 @@ void Agent::doStep() {
                     this->differential_drive.turnLeft();
                 }
             }
+        }
 
-            //Check if the mission has ended, and if so, we will return to the deployment location
-            checkMissionEnd();
-        }
+    }
+    if (this->state != State::NO_MISSION) { //Don't update ticks before mission has started.
+        //Check if the mission has ended, and if so, we will return to the deployment location
+        checkMissionEnd();
         this->elapsed_ticks++;
-        }
+    }
 }
 
 
@@ -1043,7 +1161,7 @@ void Agent::parseMessages() {
             }
             while (std::getline(ss, chunk, '|')) {
                 quadtree::QuadNode newQuadNode = quadNodeFromString(chunk);
-                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode, config.ALPHA_RECEIVE,
+                quadtree::Box addedBox = this->quadtree->addFromOther(newQuadNode,
                                                              elapsed_ticks / ticks_per_second);
 #ifdef CLOSE_SMALL_AREAS
                 if (newQuadNode.occupancy == quadtree::OCCUPIED && addedBox.getSize() != 0) // If the box is not the zero (not added)
@@ -1115,23 +1233,31 @@ std::vector<std::string> Agent::getMessages() {
  * Either due to time or battery level
  */
 void Agent::checkMissionEnd() {
-    if (this->state == State::RETURNING) {
+    if (this->state == State::RETURNING || this->state == State::FINISHED_EXPLORING) {
         //If we have are returning to the deployment location, but we are taking over double the time at which we return, we have failed (finished).
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S * 2.0f) {
-            this->state = State::FINISHED;
+            this->state = State::MAP_RELAYED;
         }
-    } else if (this->state == State::NO_MISSION || this->state == State::FINISHED) return;
+    } else if (this->state == State::NO_MISSION  || this->state == State::MAP_RELAYED){
+      return;
+    }
     else {
         auto charge = this->batteryManager.battery.getStateOfCharge() * 100.0;
         if (this->elapsed_ticks / this->ticks_per_second > this->config.MISSION_END_TIME_S) {
             this->state = State::RETURNING;
+            this->config.AGENT_ALIGNMENT_WEIGHT = 0.0;
+            this->min_distance_to_deployment_location = sqrt(pow(this->deploymentLocation.x - this->position.x, 2) +
+                                                             pow(this->deploymentLocation.y - this->position.y, 2));
         } else if (charge < this->config.MISSION_END_BATTERY_LEVEL) {
             this->state = State::RETURNING;
+            this->config.AGENT_ALIGNMENT_WEIGHT = 0.0;
+            this->min_distance_to_deployment_location = sqrt(pow(this->deploymentLocation.x - this->position.x, 2) +
+                                                             pow(this->deploymentLocation.y - this->position.y, 2));
         }
     }
 }
 
-void Agent::loadConfig(const std::string& config_file) {
+void Agent::loadConfig(const std::string& config_file, double rootbox_size) {
     YAML::Node config_yaml = YAML::LoadFile(config_file);
 
     this->config.MISSION_END_TIME_S = config_yaml["mission"]["end_time"].as<float>();
@@ -1144,12 +1270,15 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.TURN_THRESHOLD_DEGREES = config_yaml["control"]["turn_threshold"].as<double>();
     this->config.TURNING_SPEED_RATIO = config_yaml["control"]["turn_speed_ratio"].as<float>();
     this->config.STEPS_360_DEGREES = config_yaml["control"]["360_degrees_steps"].as<double>();
-    this->config.AGENT_SAFETY_RADIUS = config_yaml["physical"]["robot_diameter"].as<double>() +
+
+    this->config.ROBOT_RADIUS = config_yaml["physical"]["robot_radius"].as<double>();
+    this->config.AGENT_SAFETY_RADIUS = this->config.ROBOT_RADIUS +
                                        config_yaml["control"]["agent_safety_radius_margin"].as<double>();
-    this->config.OBJECT_SAFETY_RADIUS = config_yaml["control"]["object_safety_radius"].as<double>();
+
     this->config.FRONTIER_DIST_UNTIL_REACHED = config_yaml["control"]["disallow_frontier_switching"]["frontier_reach_distance"].as<double>();
 #ifdef DISALLOW_FRONTIER_SWITCHING_UNTIL_REACHED
     this->config.PERIODIC_FEASIBILITY_CHECK_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["target_feasibility_check_interval"].as<float>();
+    this->config.FRONTIER_SWITCH_INTERVAL_S = config_yaml["control"]["disallow_frontier_switching"]["frontier_switch_interval"].as<float>();
     this->config.FEASIBILITY_CHECK_ONLY_ROUTE = config_yaml["control"]["disallow_frontier_switching"]["feasibility_check_only_route"].as<bool>();
 #endif
 #if defined(SEPARATE_FRONTIERS) || defined(SKIP_UNREACHABLE_FRONTIERS)
@@ -1164,19 +1293,19 @@ void Agent::loadConfig(const std::string& config_file) {
 
     this->config.ORIENTATION_NOISE_DEGREES = config_yaml["sensors"]["orientation_noise"].as<double>();
     this->config.ORIENTATION_JITTER_DEGREES = config_yaml["sensors"]["orientation_jitter"].as<double>();
-    this->config.DISTANCE_SENSOR_NOISE_CM = config_yaml["sensors"]["distance_sensor_noise"].as<double>();
+    this->config.DISTANCE_SENSOR_JITTER_CM = config_yaml["sensors"]["distance_sensor_jitter"].as<double>();
+    this->config.DISTANCE_SENSOR_NOISE_FACTOR = config_yaml["sensors"]["distance_sensor_noise_factor"].as<double>();
     this->config.POSITION_NOISE_CM = config_yaml["sensors"]["position_noise"].as<double>();
     this->config.POSITION_JITTER_CM = config_yaml["sensors"]["position_jitter"].as<double>();
     this->config.DISTANCE_SENSOR_PROXIMITY_RANGE = config_yaml["sensors"]["distance_sensor_range"].as<double>();
 //
     this->config.FRONTIER_SEARCH_RADIUS = config_yaml["forces"]["frontier_search_radius"].as<double>();
-    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
+//    this->config.MAX_FRONTIER_CELLS = config_yaml["forces"]["max_frontier_cells"].as<int>();
+    this->config.FRONTIER_CELL_RATIO = config_yaml["forces"]["frontier_cell_ratio"].as<double>();
     this->config.MAX_FRONTIER_REGIONS = config_yaml["forces"]["max_frontier_regions"].as<int>();
     this->config.AGENT_AVOIDANCE_RADIUS = config_yaml["forces"]["agent_avoidance_radius"].as<double>();
     this->config.AGENT_COHESION_RADIUS = config_yaml["forces"]["agent_cohesion_radius"].as<double>();
     this->config.AGENT_ALIGNMENT_RADIUS = config_yaml["forces"]["agent_alignment_radius"].as<double>();
-    this->config.OBJECT_AVOIDANCE_RADIUS = this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS +
-                                           config_yaml["forces"]["object_avoidance_radius_margin"].as<double>();
 
     this->config.VIRTUAL_WALL_AVOIDANCE_WEIGHT = config_yaml["forces"]["virtual_wall_avoidance_weight"].as<double>();
     this->config.AGENT_COHESION_WEIGHT = config_yaml["forces"]["agent_cohesion_weight"].as<double>();
@@ -1189,12 +1318,18 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.FRONTIER_REACH_BATTERY_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_battery_weight"].as<double>();
     this->config.FRONTIER_REACH_DURATION_WEIGHT = config_yaml["forces"]["frontier_fitness"]["reach_duration_weight"].as<double>();
     this->config.FRONTIER_PHEROMONE_WEIGHT = config_yaml["forces"]["frontier_fitness"]["pheromone_weight"].as<double>();
+    this->config.FRONTIER_PHEROMONE_K = config_yaml["forces"]["frontier_fitness"]["k"].as<double>();
+    this->config.FRONTIER_PHEROMONE_N = config_yaml["forces"]["frontier_fitness"]["n"].as<double>();
+    this->config.FRONTIER_PHEROMONE_M = config_yaml["forces"]["frontier_fitness"]["m"].as<double>();
+    this->config.FRONTIER_PHEROMONE_L = config_yaml["forces"]["frontier_fitness"]["l"].as<double>();
 
     this->config.P_FREE = config_yaml["confidence"]["p_free"].as<double>();
     this->config.P_OCCUPIED = config_yaml["confidence"]["p_occupied"].as<double>();
     this->config.ALPHA_RECEIVE = config_yaml["confidence"]["alpha_receive"].as<float>();
     this->config.P_FREE_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
-    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_free_threshold"].as<float>();
+    this->config.P_OCCUPIED_THRESHOLD = config_yaml["confidence"]["p_occupied_threshold"].as<float>();
+    this->config.P_MAX = config_yaml["confidence"]["p_max"].as<float>();
+    this->config.P_MIN = config_yaml["confidence"]["p_min"].as<float>();
     this->config.P_AT_MAX_SENSOR_RANGE = config_yaml["confidence"]["p_at_max_sensor_range"].as<float>();
 
     this->config.QUADTREE_RESOLUTION = config_yaml["quadtree"]["resolution"].as<double>();
@@ -1202,6 +1337,16 @@ void Agent::loadConfig(const std::string& config_file) {
     this->config.QUADTREE_EVAPORATED_PHEROMONE_FACTOR = config_yaml["quadtree"]["evaporated_pheromone_factor"].as<double>();
     this->config.QUADTREE_MERGE_MAX_VISITED_TIME_DIFF = config_yaml["quadtree"]["merge_max_visited_time_difference"].as<double>();
     this->config.QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF = config_yaml["quadtree"]["merge_max_confidence_diff"].as<double>();
+
+    //Calculate smallest box size
+    double smallestBoxSize = rootbox_size;
+    while (smallestBoxSize > this->config.QUADTREE_RESOLUTION) {
+        smallestBoxSize /= 2;
+    }
+    this->config.OBJECT_SAFETY_RADIUS = smallestBoxSize * config_yaml["control"]["object_safety_factor"].as<double>();
+    this->config.OBJECT_AVOIDANCE_RADIUS = this->config.AGENT_SAFETY_RADIUS + this->config.OBJECT_SAFETY_RADIUS +
+                                           config_yaml["forces"]["object_avoidance_radius_margin"].as<double>();
+
 
     this->config.BATTERY_CAPACITY = config_yaml["battery"]["capacity"].as<double>();
     this->config.BATTERY_VOLTAGE = config_yaml["battery"]["voltage"].as<double>();

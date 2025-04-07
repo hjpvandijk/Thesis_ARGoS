@@ -1,6 +1,7 @@
 #include <argos3/plugins/robots/pi-puck/control_interface/ci_pipuck_rangefinders_sensor.h>
 #include <argos3/plugins/simulator/physics_engines/dynamics2d/dynamics2d_model.h> // Include the correct header
 #include<argos3/plugins/robots/generic/simulator/simple_radios_default_actuator.h>
+#include <cmath>
 #include <set>
 #include "agent_vision_loop_functions_pipuck.h"
 #include "controllers/pipuck_hugo/pipuck_hugo.h"
@@ -8,6 +9,8 @@
 #include <chrono>
 #include <sys/stat.h>
 #include <cstdlib>  // for getenv()
+
+//#define VISUALS
 
 /****************************************/
 /****************************************/
@@ -67,12 +70,32 @@ void CAgentVisionLoopFunctions::findAndPushOtherAgentCoordinates(CPiPuckEntity *
  * @param pcFB
  * @param agent
  */
+void CAgentVisionLoopFunctions::pushQuadTreeIfTime(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
+    #ifndef VISUALS
+    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED_EXPLORING && agent->state != Agent::State::MAP_RELAYED;
+    //Only have to update the quadtree every coverage_update_tick_interval ticks
+    if (inMission && agent->elapsed_ticks % coverage_update_tick_interval == 0){
+    #endif
+        pushQuadTree(pcFB, agent);
+    #ifndef VISUALS
+    }
+    #endif
+}
+
+
+/**
+ * Get all the boxes and their occupancy from the quadtree of a given agent
+ * @param pcFB
+ * @param agent
+ */
 void CAgentVisionLoopFunctions::pushQuadTree(CPiPuckEntity *pcFB, const std::shared_ptr<Agent>& agent) {
     std::vector<std::tuple<quadtree::Box, double>> boxesAndPheromones = agent->quadtree->getAllBoxes(globalElapsedTime);
     m_tNeighborPairs[pcFB] = agent->quadtree->getAllNeighborPairs();
 
     m_tQuadTree[pcFB] = boxesAndPheromones;
+
 }
+
 
 /****************************************/
 /****************************************/
@@ -82,6 +105,8 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
      * Go through all the robots in the environment
      * and create an entry in the waypoint map for each of them
      */
+    start = std::chrono::system_clock::now();
+
     /* Get the map of all pi-pucks from the space */
     CSpace::TMapPerType &tFBMap = GetSpace().GetEntitiesByType("pipuck");
     //Get ticks per second
@@ -92,6 +117,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     for (auto & it : tFBMap) {
         /* Create a pointer to the current pi-puck */
         CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
@@ -99,7 +125,7 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
         auto simple_radio = &(dynamic_cast<argos::CSimpleRadioEquippedEntity*>(all))->GetRadio(0);
         simple_radio->SetRange(agent->config.WIFI_RANGE_M);
 
-        agent->ticks_per_second = ticksPerSecond;
+        assert(agent->ticks_per_second == ticksPerSecond);
 
         currently_colliding[pcFB] = false;
         previous_positions[pcFB] = Coordinate{MAXFLOAT, MAXFLOAT};
@@ -108,9 +134,6 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
 
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         deployment_positions[pcFB->GetId()] = agentRealPosition;
-
-        longest_mission_time_s = std::max(longest_mission_time_s, agent->config.MISSION_END_TIME_S);
-
     }
 
     this->m_metrics = metrics();
@@ -119,7 +142,54 @@ void CAgentVisionLoopFunctions::Init(TConfigurationNode &t_tree) {
     for (const auto& it : tFBMap) {
         this->m_metrics.map_observation_count[it.first] = std::vector<std::vector<int>>(map_cols, std::vector<int>(map_rows, 0));
     }
+
+    const char* seed = std::getenv("SEED");
+    int seed_int = seed ? std::stoi(seed) : 0;
+    srand(seed_int);
+
+    const char* average_inter_spawn_time_s = std::getenv("AVERAGE_INTER_SPAWN_TIME");
+    float average_inter_spawn_time = std::stof(average_inter_spawn_time_s);
+    this->spawn_rate = average_inter_spawn_time_s ? 1.0f /  average_inter_spawn_time: 10.0f;
+    argos::LOG << "Average inter spawn time: " << average_inter_spawn_time << std::endl;
+
+    CSpace::TMapPerType &boxMap = GetSpace().GetEntitiesByType("box");
+    double prev_spawn_time = 0.0f;
+    for (auto &it: boxMap) {
+        CBoxEntity *box = any_cast<CBoxEntity *>(it.second);
+        if (box->GetId().find("spawn_box") != std::string::npos) {
+            argos::LOG << "Found spawn box: " << box->GetId() << std::endl;
+            if (average_inter_spawn_time > 0) { //If the spawn time is 0, don't spawn any boxes
+                auto copybox = new CBoxEntity(box->GetId(), box->GetEmbodiedEntity().GetOriginAnchor().Position,
+                                              box->GetEmbodiedEntity().GetOriginAnchor().Orientation, false,
+                                              box->GetSize(), 1.0f);
+                int spawn_time_ticks = int(calculateSpawnTime(this->spawn_rate) * ticksPerSecond) + prev_spawn_time;
+                prev_spawn_time = spawn_time_ticks;
+                this->spawn_boxes.push_back(*copybox);
+                this->spawn_times.push_back(spawn_time_ticks);
+                argos::LOG << "Spawn time: " << spawn_time_ticks << std::endl;
+                delete copybox;
+            }
+            RemoveEntity(*box);
+        }
+    }
+
+    const char* metric_path = std::getenv("METRIC_PATH");
+    if (metric_path) {
+        //Remove ".argos"
+        this->metric_path_str = metric_path;
+        this->metric_path_str = metric_path_str.substr(0, metric_path_str.find_last_of('.'));
+    }
+
+
+
+
 }
+
+double CAgentVisionLoopFunctions::calculateSpawnTime(double spawn_rate){
+    auto val = -std::log(1.0f - (float(rand()-1)/float(RAND_MAX))) / spawn_rate;
+    return val;
+}
+
 
 /**
  * Clear all the vectors
@@ -138,13 +208,13 @@ void CAgentVisionLoopFunctions::Reset() {
 }
 
 void CAgentVisionLoopFunctions::PreStep() {
-    start = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = start-end;
-
-
-    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
-               << std::endl;
+//    start = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds = start-end;
+//
+//
+//    argos::LOG << "time between step: " << (elapsed_seconds.count()*1000) << "ms"
+//               << std::endl;
 
 }
 
@@ -153,19 +223,19 @@ void CAgentVisionLoopFunctions::PreStep() {
  * Get the coordinates of all agents and objects in the environment
  */
 void CAgentVisionLoopFunctions::PostStep() {
-    auto temp_end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
-
-    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
-               << std::endl;
-
-    end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = end-start;
-
-    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
-              << std::endl;
+//    auto temp_end = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds_btwn = temp_end - end;
+//
+//    argos::LOG << "time between post_step: " << (elapsed_seconds_btwn.count()*1000) << "ms"
+//               << std::endl;
+//
+//    end = std::chrono::system_clock::now();
+//
+//    std::chrono::duration<double> elapsed_seconds = end-start;
+//
+//    argos::LOG << "step time: " << (elapsed_seconds.count()*1000) << "ms"
+//              << std::endl;
 
 
     /* Get the map of all pi-pucks from the space */
@@ -189,6 +259,8 @@ void CAgentVisionLoopFunctions::PostStep() {
 
         m_tAgentElapsedTicks[pcFB] = agent->elapsed_ticks/agent->ticks_per_second;
         globalElapsedTime = agent->elapsed_ticks / agent->ticks_per_second;
+        #ifdef VISUALS
+
 
         Coordinate bestFrontier = agent->currentBestFrontier.FromOwnToArgos();
         CVector3 bestFrontierPos = CVector3(bestFrontier.x, bestFrontier.y, 0.1f);
@@ -218,9 +290,8 @@ void CAgentVisionLoopFunctions::PostStep() {
         CVector3 agentPos = CVector3(pos.x, pos.y, 0.03f);
         m_tAgentCoordinates[pcFB] = agentPos;
         m_tAgentHeadings[pcFB] = Coordinate::OwnHeadingToArgos(agent->heading);
-        pushQuadTree(pcFB, agent);
 
-//        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
+        m_tAgentFrontiers[pcFB] = agent->current_frontiers;
         m_tAgentFrontierRegions[pcFB] = agent->current_frontier_regions;
 
 //        m_tAgentFreeAngles[pcFB] = agent->freeAngles;
@@ -228,13 +299,21 @@ void CAgentVisionLoopFunctions::PostStep() {
             m_tAgentFreeAngles[pcFB].insert(ToDegrees(Coordinate::OwnHeadingToArgos(ToRadians(angle))));
         }
 
-//#ifdef BATTERY_MANAGEMENT_ENABLED
-        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
-//#endif
+
 
 
         m_tAgentRoute[pcFB] = agent->route_to_best_frontier;
 
+        m_tAgentDeploymentReachDist[pcFB] = agent->deployment_location_reach_distance;
+        m_tAgentDeploymentSite[pcFB] = agent->deploymentLocation.FromOwnToArgos();
+        #endif
+        //#ifdef BATTERY_MANAGEMENT_ENABLED
+        m_tAgentBatteryLevels[pcFB] = agent->batteryManager.battery.getStateOfCharge() * 100.0f;
+//#endif
+
+        pushQuadTreeIfTime(pcFB, agent);
+
+        updateNumberOfCellsAndLeaves(pcFB, agent);
         updateCollisions(pcFB);
         updateTraveledPathLength(pcFB, agent);
         updateBatteryUsage(pcFB, agent);
@@ -263,9 +342,10 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            node.occupancy = occ;
 ////            if (node.occupancy == quadtree::ANY || node.occupancy == quadtree::UNKNOWN)
 ////                continue;
-//            node.visitedAtS = visitedTimeS;
+//            node.visitedAtS = visitedTimeS;d
 //            combinedTree->add(node);
 //        }
+//        argos::LOG << "Updating coverage and certainty for " << it.first->GetId() << std::endl;
         updateCoverage(it.first, it.second);
         updateCertainty(it.first, it.second);
         if(it.first->GetId()=="pipuck1") combinedQuadTree = it.second;
@@ -274,7 +354,7 @@ void CAgentVisionLoopFunctions::PostStep() {
 
 //    combinedQuadTree = boxesAndConfidenceAndTicks;
 
-//    CSpace::TMapPerType& theMap = GetSpace().GetEntitiesByType("box");
+
 //    for(auto spawnObj: spawnableObjects) {
 //        int spawn_time = std::get<2>(spawnObj);
 //        if(loop_function_steps == spawn_time) {
@@ -285,16 +365,49 @@ void CAgentVisionLoopFunctions::PostStep() {
 //            box.release(); // Release ownership after adding to the space
 //        }
 //    }
-//
+
+//    argos::LOG << "Spawn boxes size: " << this->spawn_boxes.size() << std::endl;
+    if (!this->spawn_boxes.empty()) {
+        auto spawn_time_front = this->spawn_times.front();
+        if (loop_function_steps >= spawn_time_front) {
+            argos::LOG << "Spawn box at: " << loop_function_steps << std::endl;
+            argos::LOG << "Spawning box at " << spawn_time_front << std::endl;
+            auto box = this->spawn_boxes.front();
+            auto newBox = new CBoxEntity(box.GetId(), box.GetEmbodiedEntity().GetOriginAnchor().Position, box.GetEmbodiedEntity().GetOriginAnchor().Orientation, false, box.GetSize(), 1.0f);
+//            argos::LOG << "Spawning box " << box.GetId() << " at " << box.GetEmbodiedEntity().GetOriginAnchor().Position << std::endl;
+            AddEntity(*newBox);
+            this->spawn_times.pop_front();
+            this->spawn_boxes.pop_front();
+        }
+    }
 
     //If a new agent is done, update the metrics and maps
     if (allAgentsDone(tFBMap)) {
-        updateAgentsFinishedTime(tFBMap);
         checkReturnToDeploymentSite(tFBMap);
+        //Update quadtree for the last time
+        for (auto & it : tFBMap) {
+            CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
+            auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
+            std::shared_ptr<Agent> agent = cController.agentObject;
+            pushQuadTree(pcFB, agent);
+        }
         exportMetricsAndMaps();
+        experimentFinished = true;
     }
 
     loop_function_steps++;
+}
+
+void CAgentVisionLoopFunctions::updateNumberOfCellsAndLeaves(argos::CPiPuckEntity *pcFB,
+                                                             const std::shared_ptr<Agent> &agent) {
+    //Get controller
+    auto inMission = agent->state != Agent::State::NO_MISSION && agent->state != Agent::State::FINISHED_EXPLORING && agent->state != Agent::State::MAP_RELAYED;
+    //Update coverage over time at every interval, if mission has started
+//    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
+    if (inMission && agent->elapsed_ticks % coverage_update_tick_interval == 0) {
+        this->m_metrics.number_of_cells_and_leaves_over_time[pcFB->GetId()].push_back(std::make_pair(agent->quadtree->numberOfCells,
+                                                                          agent->quadtree->numberOfLeafNodes));
+    }
 }
 
 void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
@@ -321,14 +434,15 @@ void CAgentVisionLoopFunctions::updateCollisions(CPiPuckEntity *pcFB) {
 void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double >>& tree) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED_EXPLORING && cController.agentObject->state != Agent::State::MAP_RELAYED;
     //Update coverage over time at every interval, if mission has started
+//    argos::LOG << "Updating coverage for " << pcFB->GetId() << " which is inmission: " << inMission << std::endl;
     if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
+//        argos::LOG << "Updating coverage for " << pcFB->GetId() << std::endl;
 
         double covered_area = 0;
 
 
-        //TODO: Consider irreachible area
         for (auto &it: tree) {
             quadtree::Box box = std::get<0>(it);
 
@@ -336,8 +450,8 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
             covered_area += box_size * box_size;
         }
 
-        double coverage = covered_area / (cController.map_width * cController.map_height);
-        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
+        double coverage = covered_area;
+//        argos::LOG << "[" << pcFB->GetId() << "] Coverage: " << coverage << std::endl;
 
 
         m_metrics.coverage_over_time[pcFB->GetId()].push_back(coverage);
@@ -347,42 +461,64 @@ void CAgentVisionLoopFunctions::updateCoverage(argos::CPiPuckEntity *pcFB, const
 void CAgentVisionLoopFunctions::updateCertainty(argos::CPiPuckEntity *pcFB, const std::vector<std::tuple<quadtree::Box, double>> &tree) {
     //Get controller
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED;
-
+    auto inMission = cController.agentObject->state != Agent::State::NO_MISSION && cController.agentObject->state != Agent::State::FINISHED_EXPLORING && cController.agentObject->state != Agent::State::MAP_RELAYED;
+    double resolution = cController.agentObject->quadtree->getResolution();
         //Update certainty over time at every interval, if mission has started
-        if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
+    if (inMission && cController.agentObject->elapsed_ticks % coverage_update_tick_interval == 0){
         double total_certainty = 0;
+        double total_certainty_areacompensated = 0;
         int total_boxes = 0;
+        double total_box_area = 0;
         double free_certainty = 0;
+        double free_certainty_areacompensated = 0;
         int free_boxes = 0;
+        double free_box_area = 0;
         double occupied_certainty = 0;
+        double occupied_certainty_areacompensated = 0;
         int occupied_boxes = 0;
-
+        double occupied_box_area = 0;
 
         for (auto & it : tree) {
+            auto box = std::get<0>(it);
             auto pheromone = std::get<1>(it);
             total_certainty += std::abs(pheromone-0.5);
+            total_certainty_areacompensated += std::abs(pheromone-0.5) * box.getSize()*box.getSize();
             total_boxes++;
-            if (pheromone > 0.5) {
+            total_box_area += box.getSize() * box.getSize();
+            if (pheromone >= 0.5) {
                 free_certainty += pheromone;
+                free_certainty_areacompensated += pheromone * box.getSize()*box.getSize();
                 free_boxes++;
-            } else if (pheromone <= 0.5) {
+                free_box_area += box.getSize() * box.getSize();
+            } else if (pheromone < 0.5) {
                 occupied_certainty += pheromone;
+                occupied_certainty_areacompensated += pheromone * box.getSize()*box.getSize();
                 occupied_boxes++;
+                occupied_box_area += box.getSize() * box.getSize();
             }
         }
 
         double average_total_certainty = total_certainty / total_boxes;
         double average_free_certainty = free_certainty / free_boxes;
         double average_occupied_certainty = occupied_certainty / occupied_boxes;
-        argos::LOG << "[" << pcFB->GetId() << "] Average total certainty: " << average_total_certainty << std::endl;
-        argos::LOG << "[" << pcFB->GetId() << "] Average free certainty: " << average_free_certainty << std::endl;
-        argos::LOG << "[" << pcFB->GetId() << "] Average occupied certainty: " << average_occupied_certainty << std::endl;
+//        argos::LOG << "[" << pcFB->GetId() << "] Average total certainty: " << average_total_certainty << std::endl;
+//        argos::LOG << "[" << pcFB->GetId() << "] Average free certainty: " << average_free_certainty << std::endl;
+//        argos::LOG << "[" << pcFB->GetId() << "] Average occupied certainty: " << average_occupied_certainty << std::endl;
 
 
         m_metrics.average_total_certainty_over_time[pcFB->GetId()].push_back(average_total_certainty);
         m_metrics.average_free_pheromone_over_time[pcFB->GetId()].push_back(average_free_certainty);
         m_metrics.average_occupied_pheromone_over_time[pcFB->GetId()].push_back(average_occupied_certainty);
+
+        double average_total_certainty_areacompensated = total_certainty_areacompensated / total_box_area;
+        double average_free_certainty_areacompensated = free_certainty_areacompensated / free_box_area;
+        double average_occupied_certainty_areacompensated = occupied_certainty_areacompensated / occupied_box_area;
+
+        m_metrics.average_total_certainty_over_time_areacompensated[pcFB->GetId()].push_back(average_total_certainty_areacompensated);
+        m_metrics.average_free_pheromone_over_time_areacompensated[pcFB->GetId()].push_back(average_free_certainty_areacompensated);
+        m_metrics.average_occupied_pheromone_over_time_areacompensated[pcFB->GetId()].push_back(average_occupied_certainty_areacompensated);
+
+
     }
 
 }
@@ -407,22 +543,17 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
     }
 
-    std::string experiment_name_str = "experiment";
-    const char* experiment_name = std::getenv("EXPERIMENT");
-    if (experiment_name) {
-        //Remove ".argos"
-        experiment_name_str = experiment_name;
-        experiment_name_str = experiment_name_str.substr(0, experiment_name_str.find_last_of('.'));
-    }
 
-    if (mkdir(("experiment_results/" + experiment_name_str).c_str(), 0777) == -1) {
+    if (mkdir(metric_path_str.c_str(), 0777) == -1) {
         std::cerr << "Error :  " << strerror(errno) << std::endl;
     }
+
+    argos::LOG << "Exporting metrics and maps to " << metric_path_str << std::endl;
 
 
     //Export metrics
     std::ofstream metricsFile;
-    metricsFile.open("experiment_results/" + experiment_name_str + "/metrics.csv");
+    metricsFile.open( metric_path_str + "/metrics.csv");
     metricsFile << "n_agent_agent_collisions,";
     metricsFile << "n_agent_obstacle_collisions\n";
     metricsFile << m_metrics.n_agent_agent_collisions << ",";
@@ -430,24 +561,31 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     metricsFile.close();
 
     //Export agent returned to deployment site
-    std::ofstream returnedToDeploymentSiteFile;
-    returnedToDeploymentSiteFile.open("experiment_results/" + experiment_name_str + "/returned_to_deployment_site.csv");
-    returnedToDeploymentSiteFile << "agent_id,returned_to_deployment_site\n";
-    for (auto & it : m_metrics.returned_to_deployment_site) {
-        returnedToDeploymentSiteFile << it.first << "," << it.second << "\n";
+    std::ofstream distanceToDeploymentSiteFile;
+    distanceToDeploymentSiteFile.open(metric_path_str + "/distance_to_deployment_site.csv");
+    distanceToDeploymentSiteFile << "agent_id,distance_to_deployment_site\n";
+    for (auto & it : m_metrics.distance_to_deployment_site) {
+        distanceToDeploymentSiteFile << it.first << "," << it.second << "\n";
     }
-    returnedToDeploymentSiteFile.close();
+    distanceToDeploymentSiteFile.close();
 
     //Export coverage over time
     std::ofstream coverageFile;
-    coverageFile.open("experiment_results/" + experiment_name_str + "/coverage.csv");
-    coverageFile << "time_s,";
+    coverageFile.open(metric_path_str + "/coverage.csv");
+    coverageFile << "tick,";
     for (auto & it : m_metrics.coverage_over_time) {
         coverageFile << it.first << ",";
     }
     coverageFile << "\n";
-    for (int i = 0; i < m_metrics.coverage_over_time.begin()->second.size(); i++) {
-        coverageFile << i*coverage_update_tick_interval << ",";
+
+    //Get the size of the largest coverage vector
+    int max_coverage_list_size = 0;
+    for (auto & it : m_metrics.coverage_over_time) {
+        max_coverage_list_size = std::max(max_coverage_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_coverage_list_size; i++) {
+        coverageFile << (i+1)*coverage_update_tick_interval << ",";
         for (auto & it : m_metrics.coverage_over_time) {
             if (i < it.second.size())
                 coverageFile << it.second[i] << ",";
@@ -457,9 +595,123 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     coverageFile.close();
 
+    //Export certainty over time (average, free, occupied)
+    std::ofstream certaintyFile;
+    certaintyFile.open(metric_path_str + "/certainty.csv");
+    certaintyFile << "tick,";
+    for (auto & it : m_metrics.average_total_certainty_over_time) {
+        certaintyFile << "all_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_free_pheromone_over_time) {
+        certaintyFile << "free_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_occupied_pheromone_over_time) {
+        certaintyFile << "occupied_" << it.first << ",";
+    }
+    certaintyFile << "\n";
+
+    //Get the size of the largest certainty vector
+    int max_certainty_list_size = 0;
+    for (auto & it : m_metrics.average_total_certainty_over_time) {
+        max_certainty_list_size = std::max(max_certainty_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_certainty_list_size; i++) {
+        certaintyFile << (i+1)*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.average_total_certainty_over_time) {
+            if (i < it.second.size())
+                certaintyFile << it.second[i] << ",";
+            else certaintyFile << ",";
+        }
+        for (auto & it : m_metrics.average_free_pheromone_over_time) {
+            if (i < it.second.size())
+                certaintyFile << it.second[i] << ",";
+            else certaintyFile << ",";
+        }
+        for (auto & it : m_metrics.average_occupied_pheromone_over_time) {
+            if (i < it.second.size())
+                certaintyFile << it.second[i] << ",";
+            else certaintyFile << ",";
+        }
+        certaintyFile << "\n";
+    }
+    certaintyFile.close();
+
+    //Export certainty over time (average, free, occupied) area compensated
+    std::ofstream certaintyAreaCompensatedFile;
+    certaintyAreaCompensatedFile.open(metric_path_str + "/certainty_area_compensated.csv");
+    certaintyAreaCompensatedFile << "tick,";
+    for (auto & it : m_metrics.average_total_certainty_over_time_areacompensated) {
+        certaintyAreaCompensatedFile << "all_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_free_pheromone_over_time_areacompensated) {
+        certaintyAreaCompensatedFile << "free_" << it.first << ",";
+    }
+    for (auto & it : m_metrics.average_occupied_pheromone_over_time_areacompensated) {
+        certaintyAreaCompensatedFile << "occupied_" << it.first << ",";
+    }
+    certaintyAreaCompensatedFile << "\n";
+
+    //Get the size of the largest certainty vector
+    int max_certainty_area_compensated_list_size = 0;
+    for (auto & it : m_metrics.average_total_certainty_over_time_areacompensated) {
+        max_certainty_area_compensated_list_size = std::max(max_certainty_area_compensated_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_certainty_area_compensated_list_size; i++) {
+        certaintyAreaCompensatedFile << (i+1)*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.average_total_certainty_over_time_areacompensated) {
+            if (i < it.second.size())
+                certaintyAreaCompensatedFile << it.second[i] << ",";
+            else certaintyAreaCompensatedFile << ",";
+        }
+        for (auto & it : m_metrics.average_free_pheromone_over_time_areacompensated) {
+            if (i < it.second.size())
+                certaintyAreaCompensatedFile << it.second[i] << ",";
+            else certaintyAreaCompensatedFile << ",";
+        }
+        for (auto & it : m_metrics.average_occupied_pheromone_over_time_areacompensated) {
+            if (i < it.second.size())
+                certaintyAreaCompensatedFile << it.second[i] << ",";
+            else certaintyAreaCompensatedFile << ",";
+        }
+        certaintyAreaCompensatedFile << "\n";
+    }
+    certaintyAreaCompensatedFile.close();
+
+    //Export number of cells and leaves
+    std::ofstream numberOfCellsAndLeavesFile;
+    numberOfCellsAndLeavesFile.open(metric_path_str + "/number_of_cells_and_leaves.csv");
+    numberOfCellsAndLeavesFile << "tick,";
+    for (auto & it : m_metrics.number_of_cells_and_leaves_over_time) {
+        numberOfCellsAndLeavesFile << "cells_" << it.first << ",";
+        numberOfCellsAndLeavesFile << "leaves_" << it.first << ",";
+    }
+    numberOfCellsAndLeavesFile << "\n";
+
+    //Get the size of the largest number of cells and leaves vector
+    int max_cells_and_leaves_list_size = 0;
+    for (auto & it : m_metrics.number_of_cells_and_leaves_over_time) {
+        max_cells_and_leaves_list_size = std::max(max_cells_and_leaves_list_size, int(it.second.size()));
+    }
+
+    for (int i = 0; i < max_cells_and_leaves_list_size; i++) {
+        numberOfCellsAndLeavesFile << (i+1)*coverage_update_tick_interval << ",";
+        for (auto & it : m_metrics.number_of_cells_and_leaves_over_time) {
+            if (i < it.second.size())
+                numberOfCellsAndLeavesFile << it.second[i].first << ",";
+            else numberOfCellsAndLeavesFile << ",";
+            if (i < it.second.size())
+                numberOfCellsAndLeavesFile << it.second[i].second << ",";
+            else numberOfCellsAndLeavesFile << ",";
+        }
+        numberOfCellsAndLeavesFile << "\n";
+    }
+    numberOfCellsAndLeavesFile.close();
+
     //Export traveled path length
     std::ofstream traveledPathFile;
-    traveledPathFile.open("experiment_results/" + experiment_name_str + "/traveled_path.csv");
+    traveledPathFile.open(metric_path_str + "/traveled_path.csv");
     traveledPathFile << "agent_id,traveled_path\n";
     for (auto & it : m_metrics.total_traveled_path) {
         traveledPathFile << it.first << "," << it.second << "\n";
@@ -468,32 +720,18 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export battery usage
     std::ofstream batteryUsageFile;
-    batteryUsageFile.open("experiment_results/" + experiment_name_str + "/battery_usage.csv");
+    batteryUsageFile.open(metric_path_str + "/battery_usage.csv");
     batteryUsageFile << "agent_id,battery_usage\n";
     for (auto & it : m_metrics.total_battery_usage) {
         batteryUsageFile << it.first << "," << it.second << "\n";
     }
     batteryUsageFile.close();
 
-    //Export quadtree of each agent
-    std::ofstream quadTreeFile;
-    quadTreeFile.open("experiment_results/" + experiment_name_str + "/quadtree.csv");
-    quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
-    for (auto & it : m_tQuadTree) {
-        for (auto & box: it.second) {
-            quadTreeFile << it.first->GetId() << ",";
-            quadTreeFile << std::get<0>(box).getCenter().x << ",";
-            quadTreeFile << std::get<0>(box).getCenter().y << ",";
-            quadTreeFile << std::get<0>(box).getSize() << ",";
-            quadTreeFile << std::get<1>(box) << ",";
-            quadTreeFile << "\n";
-        }
-    }
-    quadTreeFile.close();
+    exportQuadtree("quadtree_all_done");
 
     //Export map observation count
     std::ofstream mapObservationCountFile;
-    mapObservationCountFile.open("experiment_results/" + experiment_name_str + "/map_observation_count.csv");
+    mapObservationCountFile.open(metric_path_str + "/map_observation_count.csv");
     mapObservationCountFile << "x,y,observation_count_total,";
     for (auto & it : m_metrics.map_observation_count) {
         mapObservationCountFile << it.first << ",";
@@ -514,22 +752,62 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
 
     //Export sent and received bytes
     std::ofstream bytesSentReceivedFile;
-    bytesSentReceivedFile.open("experiment_results/" + experiment_name_str + "/bytes_sent_received.csv");
+    bytesSentReceivedFile.open(metric_path_str + "/bytes_sent_received.csv");
     bytesSentReceivedFile << "agent_id,bytes_sent,bytes_received\n";
     for (auto & it : m_metrics.bytes_sent_received) {
         bytesSentReceivedFile << it.first << "," << it.second.first << "," << it.second.second << "\n";
     }
     bytesSentReceivedFile.close();
 
+
+
     //Export mission time
     std::ofstream missionTimeFile;
-    missionTimeFile.open("experiment_results/" + experiment_name_str + "/mission_time.csv");
+    missionTimeFile.open(metric_path_str + "/mission_time.csv");
     missionTimeFile << "agent_id,mission_time\n";
     for (auto & it : m_metrics.mission_time) {
         missionTimeFile << it.first << "," << it.second << "\n";
     }
     missionTimeFile.close();
 
+}
+
+void CAgentVisionLoopFunctions::exportQuadtree(std::string filename) {
+    //Export quadtree of each agent
+    std::ofstream quadTreeFile;
+    quadTreeFile.open(this->metric_path_str + "/" + filename + ".csv");
+    quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
+    for (auto & it : m_tQuadTree) {
+        for (auto & box: it.second) {
+            quadTreeFile << it.first->GetId() << ",";
+            quadTreeFile << std::get<0>(box).getCenter().x << ",";
+            quadTreeFile << std::get<0>(box).getCenter().y << ",";
+            quadTreeFile << std::get<0>(box).getSize() << ",";
+            quadTreeFile << std::get<1>(box) << ",";
+            quadTreeFile << "\n";
+        }
+    }
+    quadTreeFile.close();
+}
+
+void CAgentVisionLoopFunctions::exportQuadtree(std::string filename, CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
+    pushQuadTree(pcFB, agent);
+    //Export quadtree of each agent
+    std::ofstream quadTreeFile;
+    quadTreeFile.open(this->metric_path_str + "/" + filename + ".csv");
+    quadTreeFile << "agent_id,box_x,box_y,box_size,pheromone\n";
+
+    auto quadTree = m_tQuadTree[pcFB];
+
+    for (auto & box: quadTree) {
+        quadTreeFile << agent->id << ",";
+        quadTreeFile << std::get<0>(box).getCenter().x << ",";
+        quadTreeFile << std::get<0>(box).getCenter().y << ",";
+        quadTreeFile << std::get<0>(box).getSize() << ",";
+        quadTreeFile << std::get<1>(box) << ",";
+        quadTreeFile << "\n";
+    }
+    quadTreeFile.close();
 }
 
 /**
@@ -545,41 +823,43 @@ bool CAgentVisionLoopFunctions::allAgentsDone(CSpace::TMapPerType &tFBMap){
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         std::shared_ptr<Agent> agent = cController.agentObject;
 
-        if (agent->state != Agent::State::FINISHED){
+        if (agent->state != Agent::State::MAP_RELAYED){
             allAgentsDone = false;
-        }
-    }
-    experimentFinished = allAgentsDone; //If all agents are done, the experiment is finished
-    return experimentFinished;
-}
-
-
-void CAgentVisionLoopFunctions::updateAgentsFinishedTime(CSpace::TMapPerType &tFBMap) {
-    for (auto & it : tFBMap) {
-        /* Create a pointer to the current pi-puck */
-        CPiPuckEntity *pcFB = any_cast<CPiPuckEntity *>(it.second);
-        auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
-        std::shared_ptr<Agent> agent = cController.agentObject;
-        if (agent->state == Agent::State::FINISHED){
-            //If no value yet
-            if (m_metrics.mission_time.find(pcFB->GetId()) == m_metrics.mission_time.end()){
+            if (agent->state == Agent::State::RETURNING){
+                if (std::find(this->agents_returning.begin(), agents_returning.end(), pcFB->GetId()) == agents_returning.end()){
+                    //Export quadtree at point of return
+                    exportQuadtree("quadtree_returning_" + pcFB->GetId(), pcFB, agent);
+                    agents_returning.push_back(pcFB->GetId());
+                }
+            } else if (agent->state == Agent::State::FINISHED_EXPLORING){
+                if (std::find(this->agents_finished_exploring.begin(), agents_finished_exploring.end(), pcFB->GetId()) == agents_finished_exploring.end()){
+                    //Export quadtree at point of return
+                    exportQuadtree("quadtree_finished_exploring_" + pcFB->GetId(), pcFB, agent);
+                    agents_finished_exploring.push_back(pcFB->GetId());
+                }
+            }
+        } else {
+            //If new agent done
+            if (std::find(this->agents_relayed_map.begin(), agents_relayed_map.end(), pcFB->GetId()) == agents_relayed_map.end()){
+                exportQuadtree("quadtree_map_relayed_" + pcFB->GetId(), pcFB, agent);
+                agents_relayed_map.push_back(pcFB->GetId());
                 m_metrics.mission_time[pcFB->GetId()] = agent->elapsed_ticks / agent->ticks_per_second;
             }
         }
-
     }
-
+    return allAgentsDone;
 }
+
 
 
 void CAgentVisionLoopFunctions::updateBatteryUsage(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     double batteryUsage = agent->batteryManager.battery.getStateOfCharge();
-    m_metrics.total_battery_usage[pcFB->GetId()] = (1.0-batteryUsage)*100.0;
+    m_metrics.total_battery_usage[pcFB->GetId()] = (1.0-batteryUsage)*agent->config.BATTERY_CAPACITY; //In mAh
 }
 
 void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, const std::shared_ptr<Agent> &agent) {
     //Only update if agent is in mission or returning from mission
-    if (agent->state == Agent::State::NO_MISSION || agent->state == Agent::State::FINISHED) return;
+    if (agent->state == Agent::State::NO_MISSION || agent->state == Agent::State::FINISHED_EXPLORING || agent->state == Agent::State::MAP_RELAYED) return;
     auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
 
     Coordinate agentRealPosition = cController.getActualAgentPosition();
@@ -642,8 +922,6 @@ void CAgentVisionLoopFunctions::updateCellObservationCount(CPiPuckEntity *pcFB, 
         argos::CRadians sensor_rotation = agentRealHeading - sensor_index * argos::CRadians::PI_OVER_TWO;
         if (agent->distance_sensors[sensor_index].getDistance() < agent->config.DISTANCE_SENSOR_PROXIMITY_RANGE) {
 
-            float sensor_probability = HC_SR04::getProbability(agent->distance_sensors[sensor_index].getDistance());
-
             double opposite = argos::Sin(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
             double adjacent = argos::Cos(sensor_rotation) * agent->distance_sensors[sensor_index].getDistance();
 
@@ -689,10 +967,6 @@ void CAgentVisionLoopFunctions::observeAreaBetween(Coordinate coordinate1, Coord
 //        y += stepY;
 //    }
 
-    double dist = sqrt(pow(coordinate1.x - coordinate2.x, 2) + pow(coordinate1.y - coordinate2.y, 2));
-    if (dist < agent->quadtree->getResolution())
-        return;
-
     std::vector<Coordinate> linePoints = Algorithms::Amanatides_Woo_Voxel_Traversal(agent.get(), coordinate1,
                                                                                     coordinate2);
     for (int i=0; i<linePoints.size(); i++){
@@ -714,12 +988,9 @@ void CAgentVisionLoopFunctions::checkReturnToDeploymentSite(CSpace::TMapPerType 
         auto &cController = dynamic_cast<PiPuckHugo &>(pcFB->GetControllableEntity().GetController());
         Coordinate agentRealPosition = cController.getActualAgentPosition();
         //Check if agent is within 1m from deployment position
-        if (sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
-                 pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2)) <= cController.agentObject->config.FRONTIER_DIST_UNTIL_REACHED) {
-            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = true;
-        } else {
-            this->m_metrics.returned_to_deployment_site[pcFB->GetId()] = false;
-        }
+        auto distance = sqrt(pow(agentRealPosition.x - this->deployment_positions[pcFB->GetId()].x, 2) +
+                             pow(agentRealPosition.y - this->deployment_positions[pcFB->GetId()].y, 2));
+        this->m_metrics.distance_to_deployment_site[pcFB->GetId()] = distance;
     }
 }
 
@@ -728,6 +999,12 @@ bool CAgentVisionLoopFunctions::IsExperimentFinished() {
 }
 
 void CAgentVisionLoopFunctions::PostExperiment() {
+    end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = end-start;
+
+    argos::LOG << "Experiment time: " << (elapsed_seconds.count()) << "s : " << elapsed_seconds.count()/60.0 << "min" << std::endl;
+    argos::LOG.Flush();
     exit(0);
 }
 

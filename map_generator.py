@@ -2,10 +2,17 @@ import tkinter as tk
 from tkinter import simpledialog, filedialog
 from PIL import Image, ImageTk
 import math
+import random
 
-canvas_width = 2000*2
-canvas_height = 1020*2
-meter_pixels = 100*2
+map_width_m = 20
+map_height_m = 10.2
+meter_pixels = 200
+
+canvas_width = int(map_width_m * meter_pixels)
+canvas_height = int(map_height_m * meter_pixels)
+
+only_vertical_or_horizontal = True
+only_45_degrees = False
 
 class DrawApp:
     def __init__(self, root):
@@ -13,6 +20,7 @@ class DrawApp:
         self.root.title("Drawing Shapes")
 
         self.canvas = tk.Canvas(root, bg="white", width=canvas_width, height=canvas_height)
+        
         self.canvas.pack()
 
         self.rect = None
@@ -74,6 +82,9 @@ class DrawApp:
 
         self.undo_button = tk.Button(root, text="Undo", command=self.undo_last_shape)
         self.undo_button.pack(side=tk.LEFT)
+
+        self.draw_random_boxes_button = tk.Button(root, text="Draw Random Boxes", command=lambda: self.create_random_boxes(8, 0.1, 1.5))
+        self.draw_random_boxes_button.pack(side=tk.LEFT)
 
     def draw_grid(self):
         for i in range(0, canvas_width, meter_pixels):
@@ -144,12 +155,32 @@ class DrawApp:
 
     def on_mouse_drag(self, event):
         if self.is_drawing_line:
-            #only do vertical or horizontal lines
-            if abs(event.x - self.start_x) > abs(event.y - self.start_y):
-                end_x = event.x
-                end_y = self.start_y
+            if only_vertical_or_horizontal:
+                #only do vertical or horizontal lines
+                if abs(event.x - self.start_x) > abs(event.y - self.start_y):
+                    end_x = event.x
+                    end_y = self.start_y
+                else:
+                    end_x = self.start_x
+                    end_y = event.y
+            elif only_45_degrees:
+                #only do 45 degree lines
+                diff_x = event.x - self.start_x
+                diff_y = event.y - self.start_y
+                if diff_x >= 0 and diff_y >= 0:
+                    end_x = self.start_x + max(abs(diff_x), abs(diff_y))
+                    end_y = self.start_y + max(abs(diff_x), abs(diff_y))
+                elif diff_x < 0 and diff_y >= 0:
+                    end_x = self.start_x - max(abs(diff_x), abs(diff_y))
+                    end_y = self.start_y + max(abs(diff_x), abs(diff_y))
+                elif diff_x >= 0 and diff_y < 0:
+                    end_x = self.start_x + max(abs(diff_x), abs(diff_y))
+                    end_y = self.start_y - max(abs(diff_x), abs(diff_y))
+                elif diff_x < 0 and diff_y < 0:
+                    end_x = self.start_x - max(abs(diff_x), abs(diff_y))
+                    end_y = self.start_y - max(abs(diff_x), abs(diff_y))
             else:
-                end_x = self.start_x
+                end_x = event.x
                 end_y = event.y
             self.canvas.coords(self.line, self.start_x, self.start_y, end_x, end_y)
 
@@ -170,14 +201,31 @@ class DrawApp:
 
     def on_button_release(self, event):
         if self.is_drawing_line:
-            if abs(event.x - self.start_x) > abs(event.y - self.start_y):
-                self.end_x = event.x
-                self.end_y = self.start_y
+            if only_vertical_or_horizontal:
+                if abs(event.x - self.start_x) > abs(event.y - self.start_y):
+                    self.end_x = event.x
+                    self.end_y = self.start_y
+                else:
+                    self.end_x = self.start_x
+                    self.end_y = event.y
+            elif only_45_degrees:
+                diff_x = event.x - self.start_x
+                diff_y = event.y - self.start_y
+                if diff_x >= 0 and diff_y >= 0:
+                    self.end_x = self.start_x + max(abs(diff_x), abs(diff_y))
+                    self.end_y = self.start_y + max(abs(diff_x), abs(diff_y))
+                elif diff_x < 0 and diff_y >= 0:
+                    self.end_x = self.start_x - max(abs(diff_x), abs(diff_y))
+                    self.end_y = self.start_y + max(abs(diff_x), abs(diff_y))
+                elif diff_x >= 0 and diff_y < 0:
+                    self.end_x = self.start_x + max(abs(diff_x), abs(diff_y))
+                    self.end_y = self.start_y - max(abs(diff_x), abs(diff_y))
+                elif diff_x < 0 and diff_y < 0:
+                    self.end_x = self.start_x - max(abs(diff_x), abs(diff_y))
+                    self.end_y = self.start_y - max(abs(diff_x), abs(diff_y))
             else:
-                self.end_x = self.start_x
+                self.end_x = event.x
                 self.end_y = event.y
-            #self.end_x = event.x
-            #self.end_y = event.y
             if (self.start_x, self.start_y) != (self.end_x, self.end_y):
                 self.is_drawing_line = False
                 self.is_drawing_box = True
@@ -235,7 +283,6 @@ class DrawApp:
             xml = f'''<box id="{box_id}" size="{xml_size}" movable="false">
     <body position="{xml_position}" orientation="{xml_orientation}"/>
 </box>'''
-
             self.shapes.append(xml)
             print(xml)
 
@@ -270,6 +317,51 @@ class DrawApp:
 
         self.circle = None
         # self.set_circle = False
+
+    def create_random_boxes(self, n, min_size, max_size):
+        for _ in range(n):
+            width = random.uniform(min_size, max_size) * meter_pixels
+            length = random.uniform(min_size/2, max_size/2) * meter_pixels
+            angle = random.uniform(0, 360)
+
+            center_x = random.uniform(0, canvas_width)
+            center_y = random.uniform(0, canvas_height)
+
+            dx = math.cos(math.radians(angle))
+            dy = math.sin(math.radians(angle))
+
+            perp_dx = -dy * width / 2
+            perp_dy = dx * width / 2
+
+            x1 = center_x - length / 2 * dx - perp_dx
+            y1 = center_y - length / 2 * dy - perp_dy
+            x2 = center_x + length / 2 * dx - perp_dx
+            y2 = center_y + length / 2 * dy - perp_dy
+            x3 = center_x + length / 2 * dx + perp_dx
+            y3 = center_y + length / 2 * dy + perp_dy
+            x4 = center_x - length / 2 * dx + perp_dx
+            y4 = center_y - length / 2 * dy + perp_dy
+
+            rect = self.canvas.create_polygon(x1, y1, x2, y2, x3, y3, x4, y4, outline="black", fill="")
+            self.shape_ids.append(rect)
+
+            arena_x = (center_x - canvas_width / 2) / meter_pixels
+            arena_y = -(center_y - canvas_height / 2) / meter_pixels
+
+            box_id = f"box_{self.box_counter}"
+            xml_size = f"{width / meter_pixels},{length / meter_pixels},0.5"
+            xml_position = f"{arena_y},{-arena_x},0"
+            xml_orientation = f"{angle},0,0"
+
+            xml = f'''<box id="{box_id}" size="{xml_size}" movable="false">
+        <body position="{xml_position}" orientation="{xml_orientation}"/>
+    </box>'''
+
+            self.shapes.append(xml)
+            print(xml)
+
+            self.box_counter += 1
+
 
     def undo_last_shape(self):
         if self.shapes and self.shape_ids:

@@ -11,13 +11,18 @@ class Agent;
 class RandomWalk {
 #ifdef RANDOM_WALK_WHEN_NO_FRONTIERS
 public:
+    RandomWalk() = default;
+    RandomWalk(int maxTicksSamePosition) : maxTicksSamePosition(maxTicksSamePosition) {}
+
     void randomWalk(Agent* agent, argos::CVector2 &targetVector);
     bool randomWalkedFarEnough(Agent* agent);
     bool randomWalking = false;
 
 private:
-    const float farEnoughDistance = 0.5;
+    float farEnoughDistance = 0.5;
     Coordinate walkStart;
+    int ticksWalkStart = 0;
+    int maxTicksSamePosition = 150;
 
 #endif
 };

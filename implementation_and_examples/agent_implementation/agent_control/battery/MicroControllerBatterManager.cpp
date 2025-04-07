@@ -13,7 +13,7 @@ float MicroControllerBatteryManager::estimateCommunicationConsumption(Agent* age
 
     //Calculate the time we are not using RF
     float idleTimeS = seconds - transmitTimeS - receiveTimeS;
-    float idlePowerUsage_mAh = idleTimeS * this->modemSleepConsumption240MHz_ma / 3600.0f; //In mAh
+    float idlePowerUsage_mAh = idleTimeS * this->regularOperation_250MHz_mA / 3600.0f; //In mAh
 
     return transmitPower + receivePower + idlePowerUsage_mAh;
 }
@@ -43,6 +43,7 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
 
     //If the agent has sent a message to this agent recently, we will probably send a message soon
     //Else we will probably not send a message soon
+    //So heuristics based on previous exchanges
 
     int amountOfTransmits = 0;
 

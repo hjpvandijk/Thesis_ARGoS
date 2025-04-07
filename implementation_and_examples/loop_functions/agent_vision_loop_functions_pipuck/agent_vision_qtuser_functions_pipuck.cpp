@@ -27,8 +27,18 @@ double calculatePheromone(double visitedTime, double PConfidence, double current
 
 void CAgentVisionQTUserFunctions::DrawInWorld() {
 
+    for (auto & it : m_cAgVisLF.m_tAgentDeploymentReachDist) {
+        Coordinate pos = m_cAgVisLF.m_tAgentDeploymentSite.at(it.first);
+        CVector3 vectorPos = CVector3(pos.x, pos.y, 0.02f);
+        auto radius = it.second;
+        //Draw a non-filled circle
+        DrawCircle(vectorPos, CQuaternion(), radius, CColor::RED, false);
+    }
+
+
+
     for (auto & m_tCell : m_cAgVisLF.m_tNeighborPairs) {
-        if (m_tCell.first->GetId() != "pipuck1") continue;
+        if (m_tCell.first->GetId() != "pipuck4") continue;
         for (std::tuple<Coordinate, Coordinate> neighborPair: m_tCell.second) {
             Coordinate neighbor1 = std::get<0>(neighborPair);
             Coordinate neighbor2 = std::get<1>(neighborPair);
@@ -59,27 +69,40 @@ void CAgentVisionQTUserFunctions::DrawInWorld() {
         }
     }
 
-//    /* Go through all the robot waypoints and draw them */
-//    for (auto & m_tAgentFrontierRegions : m_cAgVisLF.m_tAgentFrontierRegions) {
-//        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
-//                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE};
-//        if (m_tAgentFrontierRegions.first->GetId() != "pipuck1") continue;
-//        int i = 0;
-//        for (auto frontierRegions: m_tAgentFrontierRegions.second) {
-//            //Assign a differnet color to every frontierRegion
-//            CColor color = colors[i];
-//            for (auto [frontier, pheromone]: frontierRegions) {
-//                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
-//                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+//    for (auto &agentFrontiers: m_cAgVisLF.m_tAgentFrontiers) {
+//        if (agentFrontiers.first->GetId() != "pipuck6") continue;
+//        for (auto [frontier, pheromone]: agentFrontiers.second) {
+//            Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+//            CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
 //
-//                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
-//                        color);
-//            }
-//            i++;
-//            if (i > colors.size()) i = 0;
-//
+//            DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+//                    CColor::PURPLE);
 //        }
 //    }
+
+////    /* Go through all the robot waypoints and draw them */
+    for (auto & m_tAgentFrontierRegions : m_cAgVisLF.m_tAgentFrontierRegions) {
+        std::vector<CColor> colors = {CColor::BROWN, CColor::CYAN, CColor::MAGENTA, CColor::YELLOW, CColor::ORANGE,
+                                      CColor::GRAY80, CColor::WHITE, CColor::BLACK, CColor::BLUE, CColor::GRAY10, CColor::GRAY20, CColor::GRAY30, CColor::GRAY40, CColor::GRAY50, CColor::GRAY60, CColor::GRAY70, CColor::GRAY80, CColor::GRAY90};
+        if (m_tAgentFrontierRegions.first->GetId() != "pipuck9") continue;
+        int i = 0;
+        for (auto frontierRegions: m_tAgentFrontierRegions.second) {
+            //Assign a differnet color to every frontierRegion
+            CColor color = colors[i];
+            for (auto [frontier, pheromone]: frontierRegions) {
+                Coordinate frontierCoordinateArgos = frontier.getCenter().FromOwnToArgos();
+                CVector3 frontierCoordinate = CVector3(frontierCoordinateArgos.x, frontierCoordinateArgos.y, 0.02f);
+
+                DrawBox(frontierCoordinate, CQuaternion(), CVector3(frontier.getSize(), frontier.getSize(), 0),
+                        color);
+//                DrawText(frontierCoordinate - CVector3(0.05,-0.05,0), std::to_string(frontier.getCenter().x) + " " + std::to_string(frontier.getCenter().y), CColor::BLACK);
+
+            }
+            i++;
+            if (i > colors.size()) i = 0;
+
+        }
+    }
 
 for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
     CRadians heading = m_cAgVisLF.m_tAgentHeadings[agentheading.first];
@@ -107,8 +130,8 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
             argos::CRadians angle_rad = ToRadians(angle);
 
             //Get the end of the ray
-            CVector3 ray_end = CVector3(agent_pos.GetX() + 0.48*cos(angle_rad.GetValue()),
-                                        agent_pos.GetY() + 0.48*sin(angle_rad.GetValue()), 0.02f);
+            CVector3 ray_end = CVector3(agent_pos.GetX() + 0.28*cos(angle_rad.GetValue()),
+                                        agent_pos.GetY() + 0.28*sin(angle_rad.GetValue()), 0.02f);
 
             CRay3 ray = CRay3(agent_pos, ray_end);
             DrawRay(ray, CColor::BLUE);
@@ -120,7 +143,7 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
 
 
 
-    argos::LOG << "combined tree size: " << m_cAgVisLF.combinedQuadTree.size() << std::endl;
+    // argos::LOG << "combined tree size: " << m_cAgVisLF.combinedQuadTree.size() << std::endl;
 
     for (std::tuple<quadtree::Box, double> boxesAndPheromone: m_cAgVisLF.combinedQuadTree) {
         quadtree::Box box = std::get<0>(boxesAndPheromone);
@@ -172,9 +195,16 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
 //        DrawText(pos, std::to_string(pheromone), CColor::BLACK);
 //        //Also write the coordinates in the box
 //        DrawText(pos - CVector3(0.05,-0.05,0), std::to_string(box.getCenter().x) + " " + std::to_string(box.getCenter().y), CColor::BLACK);
-
+//        auto p_free_threshold = 0.7;
+//        auto p_occupied_threshold= 0.3;
+//        if (pheromone >= p_free_threshold) {
+//            DrawText(pos - CVector3(0.05,-0.05,0), "FREE", CColor::BLACK);
+//        } else if (pheromone <= p_occupied_threshold) {
+//            DrawText(pos - CVector3(0.05,-0.05,0), "OCCUPIED", CColor::BLACK);
+//        } else {
+//            DrawText(pos - CVector3(0.05,-0.05,0), "AMBIGUOUS", CColor::BLACK);
+//        }
     }
-
 
 
     for (auto & it : m_cAgVisLF.m_tAgentBestFrontierCoordinate) {
@@ -221,6 +251,8 @@ for (auto & agentheading : m_cAgVisLF.m_tAgentHeadings) {
         DrawText(it.second + CVector3(0.1,0.1,0.1), std::to_string(batteryLevel) + '%', CColor::BLACK);
 //#endif
     }
+
+
 
 
 }

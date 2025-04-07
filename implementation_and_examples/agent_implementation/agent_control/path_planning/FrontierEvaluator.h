@@ -13,13 +13,16 @@ public:
     std::vector<Coordinate> avoidingCoordinates;
 
     //If the agent is counts this many ticks without a direction to the target, it will skip the target
-    int MAX_COUNT_NO_DIRECTION = 150;
+    int MAX_COUNT_NO_DIRECTION = 80;
 
     //Count the number of ticks the agent has no direction to the target
     int countNoDirectionToTarget = 0;
 
+    int cantMoveAngle = 89;
+
 
     FrontierEvaluator() = default;
+    FrontierEvaluator(int max_count_no_direction);
     FrontierEvaluator(int closest_coordinate_hit_count_before_decreasing_confidence, int max_ticks_no_direction);
 
     void resetFrontierAvoidance(Agent* agent, argos::CVector2 unexploredFrontierVector);
