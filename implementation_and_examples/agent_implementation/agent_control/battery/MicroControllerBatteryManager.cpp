@@ -13,7 +13,7 @@ float MicroControllerBatteryManager::estimateCommunicationConsumption(Agent* age
 
     //Calculate the time we are not using RF
     float idleTimeS = seconds - transmitTimeS - receiveTimeS;
-    float idlePowerUsage_mAh = idleTimeS * this->modemSleepConsumption240MHz_ma / 3600.0f; //In mAh
+    float idlePowerUsage_mAh = idleTimeS * this->regularOperation_250MHz_mA / 3600.0f; //In mAh
 
     return transmitPower + receivePower + idlePowerUsage_mAh;
 }
@@ -38,19 +38,19 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
 
     //Check if we have sent a message to this agent recently
 
-    int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.MATRIX_EXCHANGE_INTERVAL_S); //How many full exchange periods fit into the period
-    double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.MATRIX_EXCHANGE_INTERVAL_S;
+    int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.MAP_EXCHANGE_INTERVAL_S); //How many full exchange periods fit into the period
+    double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.MAP_EXCHANGE_INTERVAL_S;
 
     //If the agent has sent a message to this agent recently, we will probably send a message soon
     //Else we will probably not send a message soon
 
     int amountOfTransmits = 0;
 
-    for (auto &agentQuadtree : agent->agentMatrixSent) {
-        if(agentQuadtree.second - agent->elapsed_ticks <= agent->config.MATRIX_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have sent a message recently
+    for (auto &agentQuadtree : agent->agentMapSent) {
+        if(agentQuadtree.second - agent->elapsed_ticks <= agent->config.MAP_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have sent a message recently
             amountOfTransmits += nExchangeIntervalsInPeriod; //We will exchange nExchangeIntervalsInPeriod times with this agent
             if (agentQuadtree.second - agent->elapsed_ticks +
-                agent->config.MATRIX_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will exchange soon
+                agent->config.MAP_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will exchange soon
                 amountOfTransmits++; //We are actually exchanging once more.
             }
         }
@@ -58,13 +58,22 @@ std::pair<float, float> MicroControllerBatteryManager::estimateTransmitConsumpti
 
     }
 
+    #ifdef USING_CONFIDENCE_TREE
+    //Amount of nodes to exchange
+    int nNodes = agent->quadtree->numberOfLeafNodes; //It is unknown how many nodes will be added in next 'seconds' so we will use the current amount of nodes
+    //Calculage amount of messages we will send
+    int nNodesPerMessage = agent->quadtree->numberOfNodesPerMessage;
+    int nMessages = std::floor(nNodes / nNodesPerMessage);
+    int remainingNodes = nNodes - nMessages * nNodesPerMessage;
+    #else
     //Amount of nodes to exchange
     int nObstacleNodes = agent->obstacleMatrix->getWidth() * agent->obstacleMatrix->getHeight();
     int nCoverageNodes = agent->coverageMatrix->getWidth() * agent->coverageMatrix->getHeight();
     //Calculage amount of messages we will send
-    int nNodesPerMessage = agent->coverageMatrix->nodesPerMessage;//TODO: This value isn't used in the matrix to string yet
+    int nNodesPerMessage = agent->coverageMatrix->nodesPerMessage;
     int nMessages = std::floor((nObstacleNodes+nCoverageNodes) / nNodesPerMessage);
     int remainingNodes = (nObstacleNodes+nCoverageNodes) - nMessages * nNodesPerMessage;
+    #endif
     //Calculate size of messages
     int messageSize = nNodesPerMessage * this->bytesPerNode + this->targetSenderIDBytes;
     int remainingMessageSize = remainingNodes * this->bytesPerNode + this->targetSenderIDBytes;
@@ -89,19 +98,19 @@ std::pair<float, float> MicroControllerBatteryManager::estimateReceiveConsumptio
     float totalReceiveTimeS = 0;
 
     for (auto &agentLocation : agent->agentLocations) { // We assume agent location is received in (roughly) the same tick as the quadtree messages
-        int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.MATRIX_EXCHANGE_INTERVAL_S);
-        double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.MATRIX_EXCHANGE_INTERVAL_S;
+        int nExchangeIntervalsInPeriod = std::floor( seconds/agent->config.MAP_EXCHANGE_INTERVAL_S);
+        double remaining = seconds - nExchangeIntervalsInPeriod * agent->config.MAP_EXCHANGE_INTERVAL_S;
 
         int amountOfReceives = 0;
-        if(agentLocation.second.second - agent->elapsed_ticks <= agent->config.MATRIX_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
+        if(agent->getTimeFromAgentLocation(agentLocation.first) - agent->elapsed_ticks <= agent->config.MAP_EXCHANGE_INTERVAL_S * agent->ticks_per_second) { //If we have received a message from this agent recently
             amountOfReceives += nExchangeIntervalsInPeriod; //We will exchange nExchangeIntervalsInPeriod times with this agent
-            if ((agentLocation.second.second) - agent->elapsed_ticks +
-                agent->config.MATRIX_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will (probably) receive soon
+            if (agent->getTimeFromAgentLocation(agentLocation.first) - agent->elapsed_ticks +
+                agent->config.MAP_EXCHANGE_INTERVAL_S * agent->ticks_per_second <= remaining) { //If we will (probably) receive soon
                 amountOfReceives++; //We are actually exchanging once more.
             }
         }
 
-        int previousNBytesReceived = agent->agentMatrixBytesReceived[agentLocation.first]; //Amount of bytes we received from this agent previously (we use this for the calculation)
+        int previousNBytesReceived = agent->agentMapBytesReceived[agentLocation.first]; //Amount of bytes we received from this agent previously (we use this for the calculation)
         float timeToReceiveS = float(previousNBytesReceived) * 8.0f / (this->wifiTransferSpeed_Mbps * 1000000.0f); //Time to receive the message
         float quadtreeExchangePowerUsage_mAh = timeToReceiveS * this->wifiReceiveConsumption_mA / 3600.0f; //In mAh, Power usage to receive the message
         totalReceivePowerUsage_mAh += quadtreeExchangePowerUsage_mAh * float(amountOfReceives); //Power usage to receive all the quadtree messages from this agent added to the total

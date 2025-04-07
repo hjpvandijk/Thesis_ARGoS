@@ -4,13 +4,19 @@ include_directories(${CMAKE_SOURCE_DIR}/libraries)  # Parent directory of cereal
 
 # Define the library
 add_library(agent_implementation SHARED
+        feature_config.h
         agent.h
         agent.cpp
-        config.yaml
-        coordinate.h
-        coordinate.cpp
-        PheromoneMatrix.cpp
-        PheromoneMatrix.h
+        configs
+        utils/coordinate.h
+        utils/coordinate.cpp
+        utils/Quadtree.h
+        utils/Box.h
+        utils/CustomComparator.h
+        utils/Algorithms.h
+        utils/Algorithms.cpp
+        utils/PheromoneMatrix.h
+        utils/PheromoneMatrix.cpp
         agent_control/sensing/simulation/distance_sensor/hc_sr04.h
         agent_control/sensing/simulation/distance_sensor/hc_sr04.cpp
         agent_control/motion/simulation/DifferentialDrive.h
@@ -25,6 +31,10 @@ add_library(agent_implementation SHARED
         agent_control/communication/simulation/Radio.cpp
         agent_control/communication/TimeSynchronizer.h
         agent_control/communication/TimeSynchronizer.cpp
+        agent_control/path_planning/ForceVectorCalculatorMatrix.h
+        agent_control/path_planning/ForceVectorCalculatorMatrix.cpp
+        agent_control/path_planning/ForceVectorCalculatorQuadtree.h
+        agent_control/path_planning/ForceVectorCalculatorQuadtree.cpp
 )
 
 # Link directories (if you have specific libraries to link against)
