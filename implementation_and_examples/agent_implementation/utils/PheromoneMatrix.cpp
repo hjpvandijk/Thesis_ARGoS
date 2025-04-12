@@ -36,6 +36,11 @@ void PheromoneMatrix::update(double x, double y, double visitedTimeS) {
     int x_int = int((x - this->x_min)/ this->resolution);
     int y_int = int((y - this->y_min)/ this->resolution);
 
+    if(!(x_int >= 0 && x_int < this->width) || !(y_int >= 0 && y_int < this->height)){
+        //Ignore it, outside area due to noise
+        return;
+    }
+
     //Take the maximum of the current value and the new value
     this->matrix[x_int][y_int] = std::max(this->matrix[x_int][y_int], visitedTimeS);
 }
@@ -45,11 +50,19 @@ void PheromoneMatrix::update(Coordinate coordinate, double visitedTimeS) {
     int x_int = int((coordinate.x - this->x_min) / this->resolution);
     int y_int = int((coordinate.y - this->y_min)/ this->resolution);
 
+    if(!(x_int >= 0 && x_int < this->width) || !(y_int >= 0 && y_int < this->height)){
+        //Ignore it, outside area due to noise
+        return;
+    }
     //Take the maximum of the current value and the new value
     this->matrix[x_int][y_int] = std::max(this->matrix[x_int][y_int], visitedTimeS);
 }
 
 void PheromoneMatrix::updateByIndex(int x, int y, double visitedTimeS) {
+    if(!(x >= 0 && x< this->width) || !(y >= 0 && y< this->height)){
+        //Ignore it, outside area due to noise
+        return;
+    }
     //Update the value of the matrix at the given coordinates
     this->matrix[x][y] = std::max(this->matrix[x][y], visitedTimeS);
 }
@@ -85,14 +98,23 @@ void PheromoneMatrix::resetByIndex(int x, int y) {
 
 //Column major order
 double PheromoneMatrix::get(double x, double y, double currentTimeS) {
+
     //Get the value of the matrix at the given coordinates
     int x_int = int((x - this->x_min) / this->resolution);
     int y_int = int((y - this->y_min)/ this->resolution);
+    if(!(x_int >= 0 && x_int < this->width) || !(y_int >= 0 && y_int < this->height)){
+        //Outside area due to noise
+        return 0;
+    }
     double visitedTimeS = this->matrix[x_int][y_int];
     return calculatePheromone(visitedTimeS, currentTimeS);
 }
 
 double PheromoneMatrix::getByIndex(int x, int y, double currentTimeS) {
+    if(!(x >= 0 && x < this->width) || !(y >= 0 && y < this->height)){
+        //Outside area due to noise
+        return 0;
+    }
     //Get the value of the matrix at the given coordinates
     double visitedTimeS = this->matrix[x][y];
     return calculatePheromone(visitedTimeS, currentTimeS);

@@ -488,6 +488,7 @@ void CAgentVisionLoopFunctions::PostStep() {
         }
         exportMetricsAndMaps();
         experimentFinished = true;
+        argos::LOG << "set experiment finished to true" << std::endl;
     }
 
     loop_function_steps++;
@@ -742,7 +743,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
     }
     coverageFile.close();
 
-
+    #ifndef USING_CONFIDENCE_TREE
     //Export coverage disregarding evaporation over time
     std::ofstream coverageDisregardingEvaporationFile;
     coverageDisregardingEvaporationFile.open(metric_path_str + "/coverage_disregarding_evaporation.csv");
@@ -768,7 +769,7 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         coverageDisregardingEvaporationFile << "\n";
     }
     coverageDisregardingEvaporationFile.close();
-
+    #endif
 
 
     #ifdef USING_CONFIDENCE_TREE
@@ -951,6 +952,8 @@ void CAgentVisionLoopFunctions::exportMetricsAndMaps() {
         missionTimeFile << it.first << "," << it.second << "\n";
     }
     missionTimeFile.close();
+
+    argos::LOG << "Done exporting metrics and maps to " << metric_path_str << std::endl;
 
 }
 

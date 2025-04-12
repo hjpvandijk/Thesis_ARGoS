@@ -1065,14 +1065,14 @@ void Agent::sendQuadtreeToCloseAgents() {
     double oldest_exchange = MAXFLOAT;
 
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        double lastReceivedTick = getTimeFromAgentLocation(agentLocationPair.first);
         //If we have received the location of this agent in the last AGENT_LOCATION_RELEVANT_DURATION_S seconds (so it is probably within communication range)
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //If we have not sent the quadtree to this agent yet in the past QUADTREE_EXCHANGE_INTERVAL_S seconds, send it
-            if (!this->agentQuadtreeSent.count(agentLocationPair.first) ||
-                this->elapsed_ticks - this->agentQuadtreeSent[agentLocationPair.first] >
-                        (this->config.QUADTREE_EXCHANGE_INTERVAL_S + (rand() % 400 - 200)/100.0f) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
+            if (!this->agentMapSent.count(agentLocationPair.first) ||
+                this->elapsed_ticks - this->agentMapSent[agentLocationPair.first] >
+                        (this->config.MAP_EXCHANGE_INTERVAL_S + (rand() % 400 - 200)/100.0f) * this->ticks_per_second) { //Randomize the quadtree exchange interval a bit (between -2 and +2 seconds)
                 sendQuadtree = true; //We need to send the quadtree to at least one agent
                 break; //We know we have to broadcast the quadtree, so we can break
             }
@@ -1084,12 +1084,12 @@ void Agent::sendQuadtreeToCloseAgents() {
 
     //Update the exchange time for all agents within range
     for (const auto &agentLocationPair: this->agentLocations) {
-        double lastReceivedTick = std::get<2>(agentLocationPair.second);
+        double lastReceivedTick = getTimeFromAgentLocation(agentLocationPair.first);
         if ((this->elapsed_ticks - lastReceivedTick) / this->ticks_per_second <
             this->config.AGENT_LOCATION_RELEVANT_S) {
             //Find the oldest exchange, so we broadcast the quadtree with info that the agent of the oldest exchange has not received yet.
-            oldest_exchange = std::min(oldest_exchange, this->agentQuadtreeSent[agentLocationPair.first]);
-            this->agentQuadtreeSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
+            oldest_exchange = std::min(oldest_exchange, this->agentMapSent[agentLocationPair.first]);
+            this->agentMapSent[agentLocationPair.first] = this->elapsed_ticks; //We will be sending, so update the time we have sent the quadtree to this agent
 
         }
     }

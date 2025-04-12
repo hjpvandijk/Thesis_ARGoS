@@ -350,7 +350,7 @@ argos::CVector2 ForceVectorCalculator::calculateUnexploredFrontierVector(Agent* 
     // Initialize an empty vector of vectors to store frontier regions
     std::vector<std::vector<std::pair<quadtree::Box, double>>> frontierRegions = {};
 
-    mergeAdjacentFrontiers(frontiers, frontierRegions, agent->config.MAX_FRONTIER_REGIONS);
+    mergeAdjacentFrontiers(frontiers, frontierRegions, 99999);
 
 
 //// Iterate over each frontier box to merge adjacent ones into regions

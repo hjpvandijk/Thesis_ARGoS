@@ -16,25 +16,25 @@ mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
 #EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
-EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos")
+EXPERIMENTS=("house.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
 #CONFIGS=("config_bigger_safety_n_1.yaml" "config_bigger_safety_range.yaml" "config_bigger_safety_n_3.yaml")
 #CONFIGS=("n_3_m_2_5_cellratio0_75_noise.yaml" "n_3_m_2_5_cellratio0_75_noise_agent_avoidance_0_5.yaml" "n_3_m_2_5_cellratio0_75_noise_object_safety_0_3.yaml")
 #CONFIGS=("p_sensor_1.yaml")
 CONFIGS=(
-        "BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100.yaml"
-        "BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_evaporation_time_100.yaml"
-        "BASE_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_evaporation_time_100.yaml"
-        "BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100.yaml"
-        "BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_evaporation_time_100.yaml"
-        "BASE_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_evaporation_time_100.yaml"
+        "BASEQT_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100.yaml"
+        "BASEQT_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_evaporation_time_100.yaml"
+        "BASEQT_AAVFIX_end_time_{END_TIME}_noise_0_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_evaporation_time_100.yaml"
+        "BASEQT_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_99999_evaporation_time_100.yaml"
+        "BASEQT_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_15_evaporation_time_100.yaml"
+        "BASEQT_AAVFIX_end_time_{END_TIME}_noise_1_wifi_range_99999_message_loss_probability_0_frontier_search_radius_5_evaporation_time_100.yaml"
         )
 
 
 
 
-PARALLEL_JOBS=4
+PARALLEL_JOBS=5
 declare -A pids  # Associative array to store PIDs and their related info
 
 N_AGENTS=15
@@ -167,14 +167,14 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
                 #done
                 
 #                if metric path in completed_experiments from zip
-               # METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
-               # for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
-               #   if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
-               #     echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
-               #     n_experiments_already_exist=$((n_experiments_already_exist+1))
-               #     continue 2
-               #   fi
-               # done
+                METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
+                for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
+                  if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
+                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
+                    n_experiments_already_exist=$((n_experiments_already_exist+1))
+                    continue 2
+                  fi
+                done
 
                 #if it already exists, skip this experiment
                 if [ -d "$METRIC_PATH" ]; then

@@ -507,7 +507,7 @@
 
 
         <pipuck id="pipuck1" wifi_medium="wifi">
-            <body position="-4.5,9.6,0" orientation="PIPUCK1_ORIENTATION,0,0"/>
+            <body position="-4.5,9.6,0" orientation="{{PIPUCK1_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck2" wifi_medium="wifi">
