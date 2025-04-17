@@ -400,7 +400,7 @@
             <body position="1.9708000159565808,7.208796955602615,0" orientation="0,0,0"/>
         </cylinder>
         <pipuck id="pipuck1" wifi_medium="wifi">
-            <body position="-7.512010169463007,7.481958514579211,0" orientation="PIPUCK1_ORIENTATION,0,0"/>
+            <body position="-7.512010169463007,7.481958514579211,0" orientation="{{PIPUCK1_ORIENTATION}},0,0"/>
             <controller config="ppc"/>
         </pipuck>
         <pipuck id="pipuck2" wifi_medium="wifi">
