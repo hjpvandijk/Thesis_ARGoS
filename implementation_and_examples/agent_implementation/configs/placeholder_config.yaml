@@ -44,7 +44,7 @@ forces:
   agent_avoidance_radius: 0.5 # The radius in meters around the agent to avoid other agents
   agent_cohesion_radius: 1.5 # The radius in meters around the agent to cohere with other agents
   agent_alignment_radius: 1 # The radius in meters around the agent to align with other agents
-  object_avoidance_radius_margin: 0.1 # The margin around the object's safety radius in meters (to be added to agent_safety_radius + object_safety_radius))
+  object_avoidance_radius_margin: 0.3 # The margin around the object's safety radius in meters (to be added to agent_safety_radius + object_safety_radius))
   virtual_wall_avoidance_weight: 0 #1.1 # The weight of the virtual wall avoidance force
   agent_cohesion_weight: 0 # The weight of the agent cohesion force
   agent_avoidance_weight: 1.15 # The weight of the agent avoidance force
