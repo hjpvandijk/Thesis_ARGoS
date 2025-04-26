@@ -28,11 +28,11 @@ control:
   turn_threshold: 15
 forces:
   agent_alignment_radius: 1.5
-  agent_alignment_weight: 0
+  agent_alignment_weight: 0.5
   agent_avoidance_radius: 0.5
   agent_avoidance_weight: 1.15
   agent_cohesion_radius: 1.5
-  agent_cohesion_weight: 0
+  agent_cohesion_weight: 0.23
   frontier_cell_ratio: 1.0
   frontier_fitness:
     distance_weight: 1
@@ -41,7 +41,7 @@ forces:
     m: 2.5
     n: 3
     size_weight: 0.1
-  frontier_search_radius: 99999
+  frontier_search_radius: 15
   max_frontier_regions: -1
   object_avoidance_radius_margin: 0.1
   target_weight: 0.3
@@ -53,7 +53,7 @@ map:
   obstacle_resolution: 0.28
 mission:
   end_battery_level: 0
-  end_time: 1000
+  end_time: 400
 motor:
   no_load_current: 0.16
   no_load_rpm: 250
