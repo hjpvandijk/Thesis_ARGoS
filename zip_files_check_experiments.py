@@ -26,6 +26,7 @@ def check_certainty_csv(zip_file):
             # Check if 'certainty.csv' exists in the current directory
             csv_path = f"{root}/certainty.csv"
             if csv_path in all_files:
+                # print("csv_path: ", csv_path)
                 # Read the file's content
                 with zf.open(csv_path) as f:
                     df = pd.read_csv(f)
@@ -76,31 +77,33 @@ completed_experiments_per_zip = {}
 non_completed_experiments_all = {}
 completed_total = 0
 non_completed_total = 0
-usb_drive = '/media/hugo/Philips_main/CLARE/'
+usb_drive_dirs = ['/media/hugo/Philips_main/CLARE_wallfollowing/']
 #for all files in the usb drive
-for file in os.listdir(usb_drive):
-    if file.endswith(".zip"):
-        if file =='experiment_results_afternoon_11-03.zip':
+for usb_drive in usb_drive_dirs:
+    for file in os.listdir(usb_drive):
+        if file.endswith(".zip"):
+            if file =='experiment_results_afternoon_11-03.zip':
+                continue
+            zip_file = usb_drive + file
+            print("checking zip file: ", zip_file)
+            certainty_files, non_completed_experiments = check_certainty_csv(zip_file)
+            for outer_dir, files in certainty_files.items():
+                if outer_dir not in completed_experiments:
+                    completed_experiments[outer_dir] = []
+                completed_experiments[outer_dir].extend(files)
+                if zip_file not in completed_experiments_per_zip:
+                    completed_experiments_per_zip[zip_file] = {}
+                if outer_dir not in completed_experiments_per_zip[zip_file]:
+                    completed_experiments_per_zip[zip_file][outer_dir] = []
+                completed_experiments_per_zip[zip_file][outer_dir].extend(files)
+                completed_total += len(files)
+            for outer_dir, files in non_completed_experiments.items():
+                if outer_dir not in non_completed_experiments_all:
+                    non_completed_experiments_all[outer_dir] = []
+                non_completed_experiments_all[outer_dir].extend(files)
+                non_completed_total += len(files)
+        if non_completed_total > 0:
             continue
-        zip_file = usb_drive + file
-        certainty_files, non_completed_experiments = check_certainty_csv(zip_file)
-        for outer_dir, files in certainty_files.items():
-            if outer_dir not in completed_experiments:
-                completed_experiments[outer_dir] = []
-            completed_experiments[outer_dir].extend(files)
-            if zip_file not in completed_experiments_per_zip:
-                completed_experiments_per_zip[zip_file] = {}
-            if outer_dir not in completed_experiments_per_zip[zip_file]:
-                completed_experiments_per_zip[zip_file][outer_dir] = []
-            completed_experiments_per_zip[zip_file][outer_dir].extend(files)
-            completed_total += len(files)
-        for outer_dir, files in non_completed_experiments.items():
-            if outer_dir not in non_completed_experiments_all:
-                non_completed_experiments_all[outer_dir] = []
-            non_completed_experiments_all[outer_dir].extend(files)
-            non_completed_total += len(files)
-    if non_completed_total > 0:
-        continue
 
 print("total completed experiments: ", completed_total)
 print("total non completed experiments: ", non_completed_total)
