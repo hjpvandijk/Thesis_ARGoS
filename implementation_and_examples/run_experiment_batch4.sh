@@ -15,7 +15,7 @@ ARGOSEXEC="argos3"
 mkdir -p "$LOG_DIR"
 
 # List of experiment files (modify as needed)
-EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos")
+EXPERIMENTS=("house.argos" "house_tilted.argos" "office.argos" "office_tilted.argos" "museum.argos" "museum_tilted.argos")
 # EXPERIMENTS=("museum.argos" "museum_tilted.argos")
 #EXPERIMENTS=("museum_tilted.argos")
 #CONFIGS=("config__alignment0_1__cohesion__0.yaml" "config__alignment0_1__cohesion__0_1.yaml" "config__alignment0__cohesion__0.yaml" "config__alignment0__cohesion__0_1.yaml")
@@ -49,7 +49,7 @@ AGENT_CONFIGS=(15 10 6 4 2)
 
 AVERAGE_INTER_SPAWN_TIMES=(0 100 180)
 
-N_REPEATED_EXPERIMENTS=5
+N_REPEATED_EXPERIMENTS=3
 
 n_total_experiments_to_run=$((N_REPEATED_EXPERIMENTS*${#EXPERIMENTS[@]}*${#CONFIGS[@]}*${#AGENT_CONFIGS[@]}*${#AVERAGE_INTER_SPAWN_TIMES[@]}))
 n_experiments_started=0
@@ -60,8 +60,8 @@ n_failed_experiments=0
 for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #  echo "Running repeated experiment $r"
 #if r is 1, seed is 3, if r is 2, seed is 5
-SEED=$r #1,2
-# SEED=$((r+2)) #3,4,5
+SEED=$r #1,2, 3
+# SEED=$((r+3)) #4,5
 #  echo "Seed: $SEED"
   export SEED
 

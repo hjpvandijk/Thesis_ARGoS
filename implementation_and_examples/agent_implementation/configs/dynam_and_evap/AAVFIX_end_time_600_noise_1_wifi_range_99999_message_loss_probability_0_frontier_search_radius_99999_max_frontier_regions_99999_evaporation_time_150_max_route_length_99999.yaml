@@ -7,7 +7,7 @@ communication:
   message_loss_probability: 0
   quadtree_exchange_interval: 15
   time_sync_interval: 5
-  wifi_range: 15
+  wifi_range: 99999
   wifi_speed: 10
 confidence:
   alpha_receive: 0.6
@@ -53,12 +53,12 @@ forces:
     size_weight: 0
   frontier_search_radius: 99999
   max_frontier_regions: 99999
-  object_avoidance_radius_margin: 0.1
+  object_avoidance_radius_margin: 0.3
   target_weight: 0.3
   virtual_wall_avoidance_weight: 0
 mission:
   end_battery_level: 0
-  end_time: 1000
+  end_time: 600
 motor:
   no_load_current: 0.16
   no_load_rpm: 250
@@ -76,10 +76,10 @@ quadtree:
   merge_max_visited_time_difference: 5
   resolution: 0.28
 sensors:
-  distance_sensor_jitter: 0
-  distance_sensor_noise_factor: 0
+  distance_sensor_jitter: 10
+  distance_sensor_noise_factor: 1
   distance_sensor_range: 2
-  orientation_jitter: 0
-  orientation_noise: 0
-  position_jitter: 0
-  position_noise: 0.0
+  orientation_jitter: 5
+  orientation_noise: 8
+  position_jitter: 10
+  position_noise: 103.3
