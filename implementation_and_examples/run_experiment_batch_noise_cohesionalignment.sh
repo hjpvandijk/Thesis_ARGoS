@@ -171,6 +171,11 @@ for r in $(seq 1 $((N_REPEATED_EXPERIMENTS))); do
 #                if metric path in completed_experiments from zip
                METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS=$(echo "$METRIC_PATH" | sed 's/experiment_results\///')
                for completed_experiment in "${completed_experiments_this_map_fromzip[@]}"; do
+                # replace 'BASEQT_AAVFIXcohesionalignment' with 'BASE_AAVFIXcohesionalignment'
+                  completed_experiment=$(echo "$completed_experiment" | sed 's/BASEQT_AAVFIXcohesionalignment/BASE_AAVFIXcohesionalignment/g')
+                  # replace 'max_frontier_regions_99999_' with ''
+                  completed_experiment=$(echo "$completed_experiment" | sed 's/max_frontier_regions_99999_//g')
+
                  if [[ "$completed_experiment" == "$METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS" ]]; then
                    echo "Experiment already exists in completed_experiments from zip: $METRIC_PATH_WITHOUT_EXPERIMENT_RESULTS"
                    n_experiments_already_exist=$((n_experiments_already_exist+1))
