@@ -10,7 +10,7 @@ import time
 
 ticks_per_second = 16
 
-# batch = 'noise'
+batch = 'dynam_and_evap'
 
 prefix = ''
 
@@ -348,10 +348,11 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
                     colors = plt.cm.viridis(np.linspace(0, 1, n_colors))
                     for message_loss_probability in message_loss_probabilities: #constant
                         for comm_range in comm_ranges: #constant
-                            for evaporation_time in evaporation_times: #is constant
-                    # message_loss_probability = message_loss_probabilities[0]
-                    # comm_range = comm_ranges[0]
-                    # evaporation_time = evaporation_times[0]
+                        # for evaporation_time in evaporation_times: #is constant
+                        # message_loss_probability = message_loss_probabilities[0]
+                        # comm_range = comm_ranges[0]
+                            # evaporation_time = evaporation_times[0]
+                            for evaporation_time in evaporation_times:
                                 for frontier_search_radius in frontier_search_radii: 
                                         for max_frontier_region in max_frontier_regions:
                                             for max_route_length in max_route_lengths:
@@ -443,7 +444,7 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
                                                             average_certainty_free.append(df['free'])
                                                             average_certainty_occupied.append(df['occupied'])
                                                             # print("added to average")
-                                                            if len(df['tick']) >= len(time_certainty):
+                                                            if len(df['tick']) > len(time_certainty):
                                                                 time_certainty = df['tick'].to_numpy()/ticks_per_second
                                                         
                                                         #COVERAGE
@@ -627,23 +628,20 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
                                                             average_bytes_sent.append(df['bytes_sent'].mean(axis=0))
                                                             average_bytes_received.append(df['bytes_received'].mean(axis=0))
 
-                                                    column_name = f'fsr_{frontier_search_radius}_mfr_{max_frontier_region}_mrl_{max_route_length}_{agent}'
+                                                    column_name = f'evap_{evaporation_time}_{agent}'
 
                                                     #CERTAINTY
                                                     average_certainty_all_df = pd.DataFrame(average_certainty_all)
                                                     average_certainty_all_df.fillna(method='ffill', inplace=True)
                                                     mean_certainty_seeds_all = average_certainty_all_df.mean(axis=0).to_numpy()
-                                                    std_dev_certainty_seeds_all = average_certainty_all_df.std(axis=0).to_numpy()
-
+                                                    
                                                     average_certainty_free_df = pd.DataFrame(average_certainty_free)
                                                     average_certainty_free_df.fillna(method='ffill', inplace=True)
                                                     mean_certainty_seeds_free = average_certainty_free_df.mean(axis=0).to_numpy()
-                                                    std_dev_certainty_seeds_free = average_certainty_free_df.std(axis=0).to_numpy()
 
                                                     average_certainty_occupied_df = pd.DataFrame(average_certainty_occupied)
                                                     average_certainty_occupied_df.fillna(method='ffill', inplace=True)
                                                     mean_certainty_seeds_occupied = average_certainty_occupied_df.mean(axis=0).to_numpy()
-                                                    std_dev_certainty_seeds_occupied = average_certainty_occupied_df.std(axis=0).to_numpy()
 
                                                     n_agents = agent.split('_')[0]
                                                     lbl = f'fsr {frontier_search_radius}, mfr {max_frontier_region}, mrl {max_route_length}'
@@ -653,154 +651,123 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
                                                     # column_name = 
                                                     data_for_map_spawn_time_noise_certainty['time'] = time_certainty[:exp_duration_index]
                                                     data_for_map_spawn_time_noise_certainty[f'{column_name}_all'] = mean_certainty_seeds_all[:exp_duration_index]
-                                                    data_for_map_spawn_time_noise_certainty[f'{column_name}_all_std'] = std_dev_certainty_seeds_all[:exp_duration_index]
                                                     data_for_map_spawn_time_noise_certainty[f'{column_name}_free'] = mean_certainty_seeds_free[:exp_duration_index]
-                                                    data_for_map_spawn_time_noise_certainty[f'{column_name}_free_std'] = std_dev_certainty_seeds_free[:exp_duration_index]
                                                     data_for_map_spawn_time_noise_certainty[f'{column_name}_occupied'] = mean_certainty_seeds_occupied[:exp_duration_index]
-                                                    data_for_map_spawn_time_noise_certainty[f'{column_name}_occupied_std'] = std_dev_certainty_seeds_occupied[:exp_duration_index]
 
                                                     #COVERAGE
                                                     average_coverage_df = pd.DataFrame(average_coverage)
                                                     average_coverage_df.fillna(method='ffill', inplace=True)
                                                     mean_coverage_seeds = average_coverage_df.mean(axis=0).to_numpy()
-                                                    std_dev_coverage_seeds = average_coverage_df.std(axis=0).to_numpy()
                                                     # ax1[agent_index].plot(time_coverage, mean_coverage_seeds, label=lbl, color=color)
                                                     exp_duration_index = time_coverage.tolist().index(end_time)+1
                                                     data_for_map_spawn_time_noise_coverage['time'] = time_coverage[:exp_duration_index]
                                                     data_for_map_spawn_time_noise_coverage[f'{column_name}'] = mean_coverage_seeds[:exp_duration_index]
-                                                    data_for_map_spawn_time_noise_coverage[f'{column_name}_std'] = std_dev_coverage_seeds[:exp_duration_index]
 
                                                     #NODES
                                                     average_nodes_df = pd.DataFrame(average_nodes)
                                                     average_nodes_df.fillna(method='ffill', inplace=True)
                                                     mean_nodes_seeds = average_nodes_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_nodes_df.std(axis=0).to_numpy()
                                                     average_leaves_df = pd.DataFrame(average_leaves)
                                                     average_leaves_df.fillna(method='ffill', inplace=True)
                                                     mean_leaves_seeds = average_leaves_df.mean(axis=0).to_numpy()
-                                                    std_dev_leaves_seeds = average_leaves_df.std(axis=0).to_numpy()
                                                     # ax1[agent_index].plot(time_nodes, mean_nodes_seeds, label=lbl, color=color)
                                                     # ax1[agent_index].plot(time_nodes, mean_leaves_seeds, label=lbl, color=color, linestyle='dashed')
                                                     exp_duration_index = time_nodes.tolist().index(end_time)+1
                                                     data_for_map_spawn_time_noise_nodes['time'] = time_nodes[:exp_duration_index]
                                                     data_for_map_spawn_time_noise_nodes[f'{column_name}_nodes'] = mean_nodes_seeds[:exp_duration_index]
-                                                    data_for_map_spawn_time_noise_nodes[f'{column_name}_nodes_std'] = std_dev_nodes_seeds[:exp_duration_index]
                                                     data_for_map_spawn_time_noise_nodes[f'{column_name}_leaves'] = mean_leaves_seeds[:exp_duration_index]
-                                                    data_for_map_spawn_time_noise_nodes[f'{column_name}_leaves_std'] = std_dev_leaves_seeds[:exp_duration_index]
 
                                                     #MAX NODES
                                                     average_max_nodes_df = pd.DataFrame(average_max_nodes)
                                                     mean_max_nodes_seeds = average_max_nodes_df.mean(axis=0).to_numpy()
-                                                    std_dev_max_nodes_seeds = average_max_nodes_df.std(axis=0).to_numpy()
                                                     average_max_leaves_df = pd.DataFrame(average_max_leaves)
                                                     mean_max_leaves_seeds = average_max_leaves_df.mean(axis=0).to_numpy()
-                                                    std_dev_max_leaves_seeds = average_max_leaves_df.std(axis=0).to_numpy()
                                                     # ax1[agent_index].plot(time_nodes, mean_max_nodes_seeds, label=lbl, color=color)
                                                     # ax1[agent_index].plot(time_nodes, mean_max_leaves_seeds, label=lbl, color=color, linestyle='dashed')
                                                     data_for_map_spawn_time_noise_max_nodes[f'{column_name}_max_nodes'] = mean_max_nodes_seeds
-                                                    data_for_map_spawn_time_noise_max_nodes[f'{column_name}_max_nodes_std'] = std_dev_max_nodes_seeds
                                                     data_for_map_spawn_time_noise_max_nodes[f'{column_name}_max_leaves'] = mean_max_leaves_seeds
-                                                    data_for_map_spawn_time_noise_max_nodes[f'{column_name}_max_leaves_std'] = std_dev_max_leaves_seeds
 
                                                     #TRAVELED PATH
                                                     average_traveled_path_df = pd.DataFrame(average_traveled_path)
                                                     mean_nodes_seeds = average_traveled_path_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_traveled_path_df.std(axis=0).to_numpy()
 
                                                     data_for_map_spawn_time_noise_traveled_path[f'{column_name}'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_traveled_path[f'{column_name}_std'] = std_dev_nodes_seeds
 
                                                     #BATTERY USAGE
                                                     average_battery_usage_df = pd.DataFrame(average_battery_usage)
                                                     mean_nodes_seeds = average_battery_usage_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_battery_usage_df.std(axis=0).to_numpy()
 
                                                     data_for_map_spawn_time_noise_battery_usage[f'{column_name}'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_battery_usage[f'{column_name}_std'] = std_dev_nodes_seeds
                                                     
                                                     #MISSION TIME
                                                     average_mission_time_df = pd.DataFrame(average_mission_time)
                                                     mean_nodes_seeds = average_mission_time_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_mission_time_df.std(axis=0).to_numpy()
                                                     data_for_map_spawn_time_noise_mission_time[f'{column_name}'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_mission_time[f'{column_name}_std'] = std_dev_nodes_seeds
                                                     #DISTANCE TO DEPLOYMENT SITE
                                                     average_distance_to_deployment_site_df = pd.DataFrame(average_distance_to_deployment_site)
                                                     mean_nodes_seeds = average_distance_to_deployment_site_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_distance_to_deployment_site_df.std(axis=0).to_numpy()
                                                     data_for_map_spawn_time_noise_distance_to_deployment_site[f'{column_name}'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_distance_to_deployment_site[f'{column_name}_std'] = std_dev_nodes_seeds
                                                     #COLLISIONS
                                                     average_agent_obstacle_collisions_df = pd.DataFrame(average_agent_obstacle_collisions)
                                                     mean_nodes_seeds = average_agent_obstacle_collisions_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_agent_obstacle_collisions_df.std(axis=0).to_numpy()
                                                     data_for_map_spawn_time_noise_collisions[f'{column_name}_obstacle'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_collisions[f'{column_name}_obstacle_std'] = std_dev_nodes_seeds
                                                     average_agent_agent_collisions_df = pd.DataFrame(average_agent_agent_collisions)
                                                     mean_nodes_seeds = average_agent_agent_collisions_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_agent_agent_collisions_df.std(axis=0).to_numpy()
                                                     data_for_map_spawn_time_noise_collisions[f'{column_name}_agent'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_collisions[f'{column_name}_agent_std'] = std_dev_nodes_seeds
 
                                                     #BYTES SENT AND RECEIVED
                                                     average_bytes_sent_df = pd.DataFrame(average_bytes_sent)
                                                     mean_nodes_seeds = average_bytes_sent_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_bytes_sent_df.std(axis=0).to_numpy()
                                                     data_for_map_spawn_time_noise_bytes_sent_received[f'{column_name}_bytes_sent'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_bytes_sent_received[f'{column_name}_bytes_sent_std'] = std_dev_nodes_seeds
                                                     average_bytes_received_df = pd.DataFrame(average_bytes_received)
                                                     mean_nodes_seeds = average_bytes_received_df.mean(axis=0).to_numpy()
-                                                    std_dev_nodes_seeds = average_bytes_received_df.std(axis=0).to_numpy()
                                                     data_for_map_spawn_time_noise_bytes_sent_received[f'{column_name}_bytes_received'] = mean_nodes_seeds
-                                                    data_for_map_spawn_time_noise_bytes_sent_received[f'{column_name}_bytes_received_std'] = std_dev_nodes_seeds
 
-                                #create dataframes
-                                data_for_map_spawn_time_noise_certainty = pd.DataFrame(data_for_map_spawn_time_noise_certainty)
-                                data_for_map_spawn_time_noise_coverage = pd.DataFrame(data_for_map_spawn_time_noise_coverage)
-                                data_for_map_spawn_time_noise_nodes = pd.DataFrame(data_for_map_spawn_time_noise_nodes)
-                                data_for_map_spawn_time_noise_max_nodes = pd.DataFrame(data_for_map_spawn_time_noise_max_nodes)
-                                data_for_map_spawn_time_noise_traveled_path = pd.DataFrame(data_for_map_spawn_time_noise_traveled_path)
-                                data_for_map_spawn_time_noise_battery_usage = pd.DataFrame(data_for_map_spawn_time_noise_battery_usage)
-                                data_for_map_spawn_time_noise_mission_time = pd.DataFrame(data_for_map_spawn_time_noise_mission_time)
-                                data_for_map_spawn_time_noise_distance_to_deployment_site = pd.DataFrame(data_for_map_spawn_time_noise_distance_to_deployment_site)
-                                data_for_map_spawn_time_noise_collisions = pd.DataFrame(data_for_map_spawn_time_noise_collisions)
-                                data_for_map_spawn_time_noise_bytes_sent_received = pd.DataFrame(data_for_map_spawn_time_noise_bytes_sent_received)
-                                
+                    #create dataframes
+                    data_for_map_spawn_time_noise_certainty = pd.DataFrame(data_for_map_spawn_time_noise_certainty)
+                    data_for_map_spawn_time_noise_coverage = pd.DataFrame(data_for_map_spawn_time_noise_coverage)
+                    data_for_map_spawn_time_noise_nodes = pd.DataFrame(data_for_map_spawn_time_noise_nodes)
+                    data_for_map_spawn_time_noise_max_nodes = pd.DataFrame(data_for_map_spawn_time_noise_max_nodes)
+                    data_for_map_spawn_time_noise_traveled_path = pd.DataFrame(data_for_map_spawn_time_noise_traveled_path)
+                    data_for_map_spawn_time_noise_battery_usage = pd.DataFrame(data_for_map_spawn_time_noise_battery_usage)
+                    data_for_map_spawn_time_noise_mission_time = pd.DataFrame(data_for_map_spawn_time_noise_mission_time)
+                    data_for_map_spawn_time_noise_distance_to_deployment_site = pd.DataFrame(data_for_map_spawn_time_noise_distance_to_deployment_site)
+                    data_for_map_spawn_time_noise_collisions = pd.DataFrame(data_for_map_spawn_time_noise_collisions)
+                    data_for_map_spawn_time_noise_bytes_sent_received = pd.DataFrame(data_for_map_spawn_time_noise_bytes_sent_received)
+                    
 
-                                #export data to csv
-                                data_for_map_spawn_time_noise_certainty.to_csv(datafile_certainty)
-                                data_for_map_spawn_time_noise_coverage.to_csv(datafile_coverage)
-                                data_for_map_spawn_time_noise_nodes.to_csv(datafile_nodes)
-                                data_for_map_spawn_time_noise_max_nodes.to_csv(datafile_max_nodes)
-                                data_for_map_spawn_time_noise_traveled_path.to_csv(datafile_traveled_path)
-                                data_for_map_spawn_time_noise_battery_usage.to_csv(datafile_battery_usage)
-                                data_for_map_spawn_time_noise_mission_time.to_csv(datafile_mission_time)
-                                data_for_map_spawn_time_noise_distance_to_deployment_site.to_csv(datafile_distance_to_deployment_site)
-                                data_for_map_spawn_time_noise_collisions.to_csv(datafile_collisions)
-                                data_for_map_spawn_time_noise_bytes_sent_received.to_csv(datafile_bytes_sent_received)
+                    #export data to csv
+                    data_for_map_spawn_time_noise_certainty.to_csv(datafile_certainty)
+                    data_for_map_spawn_time_noise_coverage.to_csv(datafile_coverage)
+                    data_for_map_spawn_time_noise_nodes.to_csv(datafile_nodes)
+                    data_for_map_spawn_time_noise_max_nodes.to_csv(datafile_max_nodes)
+                    data_for_map_spawn_time_noise_traveled_path.to_csv(datafile_traveled_path)
+                    data_for_map_spawn_time_noise_battery_usage.to_csv(datafile_battery_usage)
+                    data_for_map_spawn_time_noise_mission_time.to_csv(datafile_mission_time)
+                    data_for_map_spawn_time_noise_distance_to_deployment_site.to_csv(datafile_distance_to_deployment_site)
+                    data_for_map_spawn_time_noise_collisions.to_csv(datafile_collisions)
+                    data_for_map_spawn_time_noise_bytes_sent_received.to_csv(datafile_bytes_sent_received)
     
 
         
-usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/', '/media/hugo/Thesis_Data/CLARE_wallfollowing/']
-batches = ['fsr_mfr_mrl', 'fsr_mfr']
-# batches = ['noise_QT']
-for i, usb_drive in enumerate(usb_drive_dirs):
-    batch = batches[i]
 
-    overview = {}
 
-    configs = []
+overview = {}
 
-    print("Getting all configs")
-    #get all files in 'implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'
-    for file in os.listdir('implementation_and_examples/agent_implementation/configs/'+batch):
-        config_name = file.split('.')[0]
-        configs.append(config_name)    
+configs = []
 
-    print("Getting all files in the usb drive")
-    zipfiles = []
-    completed_per_zip = []
-    # for all files in the usb drive
+print("Getting all configs")
+#get all files in 'implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'
+for file in os.listdir('implementation_and_examples/agent_implementation/configs/'+batch):
+    config_name = file.split('.')[0]
+    configs.append(config_name)    
+
+print("Getting all files in the usb drive")
+usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/']
+zipfiles = []
+completed_per_zip = []
+# for all files in the usb drive
+for usb_drive in usb_drive_dirs:
     for file in os.listdir(usb_drive):
         if file.endswith(".zip"):
             if file =='experiment_results_afternoon_11-03.zip':
@@ -808,13 +775,14 @@ for i, usb_drive in enumerate(usb_drive_dirs):
             zip_file = usb_drive + file
             zipfiles.append(zip_file)
 
-    print("Getting all unique experiments from the zip files")
-    completed_experiments, categories_and_values = get_values_for_each_category(configs) 
-    print("Checking if all required experiments are done")  
-    check_if_all_required_experiments_done(completed_experiments, categories_and_values)
-    print("Exporting average certainty, coverage, and nodes")
+print("Getting all unique experiments from the zip files")
+completed_experiments, categories_and_values = get_values_for_each_category(configs) 
+print("Checking if all required experiments are done")  
+check_if_all_required_experiments_done(completed_experiments, categories_and_values)
+print("Exporting average certainty, coverage, and nodes")
+for usb_drive in usb_drive_dirs:
     export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zipfiles, categories_and_values)
-    # plot_certainty_with_different_configs(usb_drive, zipfiles, categories_and_values)
+# plot_certainty_with_different_configs(usb_drive, zipfiles, categories_and_values)
 
 # usb_drive = '/media/hugo/main/'
 

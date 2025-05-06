@@ -608,7 +608,7 @@ def calculate_precision_recall_coverage(union_map, str_tree, str_tree_with_spawn
         #     for interior in poly.interiors:
         #         x, y = interior.xy
         #         ax.fill(x, y,color="grey", alpha=0.5    , edgecolor="grey")
-        for poly in grid_with_spawn_boxes:
+        for poly in grid:
             x, y = poly.exterior.xy
             patch = patches.Polygon(list(poly.exterior.coords), closed=True, facecolor="grey", edgecolor="none", alpha=0.5)
             ax.add_patch(patch)

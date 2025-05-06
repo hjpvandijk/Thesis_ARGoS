@@ -9,9 +9,10 @@ noise_full_orientation = 8
 noise_full_orientation_jitter = 5
 noise_distance_jitter = 10
 
-active = "noise"
+active = "comm" # "comm", "noise", "dynam_evap", "fsr_mfr_mrl", "fsr_mfr", "dynam_and_evap", "try"
 
-prefix = "AAVFIX_"
+prefix = "AAVFIXwallfollowing_"
+# prefix = "AAVFIX_"
 
 def update_yaml_value(oldfile_path,file_path, key, new_value):
     """Updates a nested key in a YAML file using dot notation (e.g., 'settings.display.brightness')."""
@@ -79,7 +80,7 @@ def create_configs(options, dir, prefix):
 
 if active == "comm":
     #Comm range and loss
-    dir = "implementation_and_examples/agent_implementation/configs/comm_range_and_loss"
+    dir = "implementation_and_examples/agent_implementation/configs/comm_range_and_loss_wallfollowing"
     #make directory
     os.makedirs(dir, exist_ok=True)
 
@@ -124,10 +125,10 @@ elif active == "noise":
 
     create_configs(options, dir, prefix)
 
-elif active == "dynam_evap":
+elif active == "dynam_and_evap":
 
     #Noise
-    dir = "implementation_and_examples/agent_implementation/configs/dynamic_evap"
+    dir = "implementation_and_examples/agent_implementation/configs/dynam_and_evap"
     #make directory
     os.makedirs(dir, exist_ok=True)
 
@@ -138,8 +139,8 @@ elif active == "dynam_evap":
     options = {
         "mission.end_time": [400, 600, 1000],
         "noise": [0, 1],
-        "communication.wifi_range": [15],
-        "communication.message_loss_probability": [0, 0.1, 0.25, 0.5],
+        "communication.wifi_range": [99999],
+        "communication.message_loss_probability": [0],
         "forces.frontier_search_radius" : [99999],
         "forces.max_frontier_regions" : [99999],
         "quadtree.evaporation_time" : [50, 100, 150, 200, 99999],
@@ -174,10 +175,10 @@ elif active == "fsr_mfr_mrl":
 
     create_configs(options, dir, prefix)
 
-elif active == "dynam_and_evap":
+elif active == "fsr_mfr":
 
     #Noise
-    dir = "implementation_and_examples/agent_implementation/configs/dynam_and_evap"
+    dir = "implementation_and_examples/agent_implementation/configs/fsr_mfr"
     #make directory
     os.makedirs(dir, exist_ok=True)
 
@@ -188,15 +189,39 @@ elif active == "dynam_and_evap":
     options = {
         "mission.end_time": [400, 600, 1000],
         "noise": [0, 1],
-        "communication.wifi_range": [15],
+        "communication.wifi_range": [99999],
         "communication.message_loss_probability": [0],
-        "forces.frontier_search_radius" : [99999],
-        "forces.max_frontier_regions" : [99999],
-        "quadtree.evaporation_time" : [50, 100, 150, 200, 99999],
+        "forces.frontier_search_radius" : [99999, 15, 5],
+        "forces.max_frontier_regions" : [99999, 20],
+        "quadtree.evaporation_time" : [100],
         "control.path_planning.max_route_length" : [99999],
     }
 
     create_configs(options, dir, prefix)
+
+# elif active == "dynam_and_evap":
+
+#     #Noise
+#     dir = "implementation_and_examples/agent_implementation/configs/dynam_and_evap"
+#     #make directory
+#     os.makedirs(dir, exist_ok=True)
+
+#     #clear directory
+#     for file in os.listdir(dir):
+#         os.remove(os.path.join(dir, file))
+
+#     options = {
+#         "mission.end_time": [400, 600, 1000],
+#         "noise": [0, 1],
+#         "communication.wifi_range": [15],
+#         "communication.message_loss_probability": [0],
+#         "forces.frontier_search_radius" : [99999],
+#         "forces.max_frontier_regions" : [99999],
+#         "quadtree.evaporation_time" : [50, 100, 150, 200, 99999],
+#         "control.path_planning.max_route_length" : [99999],
+#     }
+
+#     create_configs(options, dir, prefix)
 
 elif active == "try":
 

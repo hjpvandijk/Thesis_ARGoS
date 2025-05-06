@@ -208,23 +208,27 @@ def csv_to_latex_table(directory, type, exps, noiseval, spawn_timeval, n_columns
         except Exception as e:
             print(f"Error writing to {output_filepath}: {e}")
     else:
-        print("No CSV files found in the directory: ", directory)
+        print(f"No CSV files found in the directory: {directory} with type {type} and noise {noiseval} and spawn time {spawn_timeval}")
 
 if __name__ == "__main__":
     # Specify the directory containing the CSV files
-    # input_directory = "coverage_plots/fsr_mfr_mrl/csv_tables"
-    # types = ["ACP", "CP(T_end)", "AAC", "AC(T_end)"]
-    # n_columns = 2
-    # max_vertical_tables = 6
+    input_directory = "results/coverage_plots/fsr_mfr_mrl/csv_tables"
+    types = ["ACP", "CP(T_end)"]
+    n_columns = 2
+    multicols = False
+    max_vertical_tables = 6
 
     # input_directory = "accuracy_plots/fsr_mfr_mrl/csv_tables"
     # types = ["accuracy"]
+    # n_columns = 2
+    # multicols = True
+    # max_vertical_tables = 6
 
-    input_directory = "traveled_path/fsr_mfr_mrl/csv_tables"
-    types = ["traveled_path"]
-    n_columns = 3
-    multicols = False
-    max_vertical_tables = 99999
+    # input_directory = "traveled_path/fsr_mfr_mrl/csv_tables"
+    # types = ["traveled_path"]
+    # n_columns = 3
+    # multicols = False
+    # max_vertical_tables = 99999
     noises = [0,0.5,1,1.5]
     spawn_times = [0,100,180]
 

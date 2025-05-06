@@ -627,7 +627,7 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
                                                             average_bytes_sent.append(df['bytes_sent'].mean(axis=0))
                                                             average_bytes_received.append(df['bytes_received'].mean(axis=0))
 
-                                                    column_name = f'fsr_{frontier_search_radius}_mfr_{max_frontier_region}_mrl_{max_route_length}_{agent}'
+                                                    column_name = f'{agent}'
 
                                                     #CERTAINTY
                                                     average_certainty_all_df = pd.DataFrame(average_certainty_all)
@@ -782,7 +782,7 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
 
         
 usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/', '/media/hugo/Thesis_Data/CLARE_wallfollowing/']
-batches = ['fsr_mfr_mrl', 'fsr_mfr']
+batches = ['noise', 'noise_wallfollowing']
 # batches = ['noise_QT']
 for i, usb_drive in enumerate(usb_drive_dirs):
     batch = batches[i]

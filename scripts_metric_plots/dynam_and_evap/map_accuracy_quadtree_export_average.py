@@ -15,7 +15,7 @@ import concurrent.futures
 
 ticks_per_second = 16
 
-batch = 'fsr_mfr_mrl'
+batch = 'dynam_and_evap'
 
 prefix = ''
 
@@ -137,6 +137,8 @@ def get_unique_experiments_from_zip(configs):
                 # next(reader) #to skip potential header
                 for row in reader:
                     config = row[0].split('/')[1]
+                    if 'evaporation_time_200' in config:
+                        continue
                     if config not in configs:
                         continue
                     completed_unique[map].append(row[0])
@@ -367,8 +369,8 @@ def export_average_precision_recall_with_different_configs(usb_drive, zipfiles, 
         os.makedirs(dir_accuracy)
 
     for map, map_values in categories_and_values.items():
-        #if map != 'house':
-         #   continue
+        # if map != 'museum_tilted':
+        #     continue
         print("MAP:", map)
         set_variables_based_on_map(map)
 
@@ -410,84 +412,76 @@ def export_average_precision_recall_with_different_configs(usb_drive, zipfiles, 
                     quadtree_for_map_spawn_time_noise = pd.DataFrame()
                     new_columns = {}
 
-                    for message_loss_probability in message_loss_probabilities:
-                        for comm_range in comm_ranges: 
-                            for evaporation_time in evaporation_times: #is constant
-                    # message_loss_probability = message_loss_probabilities[0]
-                    # comm_range = comm_ranges[0]
-                    # evaporation_time = evaporation_times[0]
-                                for frontier_search_radius in frontier_search_radii: #constant
-                                        for max_frontier_region in max_frontier_regions: #constant
-                                            for max_route_length in max_route_lengths: #constant
-                    # frontier_search_radius = frontier_search_radii[0]
-                    # max_frontier_region = max_frontier_regions[0]
-                    # max_route_length = max_route_lengths[0]
-                                                for agent in agents:
-                                                    # if agent != '15_agents':
-                                                    #     continue
-                                                    for quadtree_type in ['quadtree_returning_','quadtree_finished_exploring_', 'quadtree_map_relayed_']:
-                                                        if quadtree_type != 'quadtree_map_relayed_':
-                                                            continue
+                    # for message_loss_probability in message_loss_probabilities:
+                    #     for comm_range in comm_ranges: 
+                    for evaporation_time in evaporation_times: #is constant
+                        message_loss_probability = message_loss_probabilities[0]
+                        comm_range = comm_ranges[0]
+                        # evaporation_time = evaporation_times[0]
+                        # for frontier_search_radius in frontier_search_radii: #constant
+                        #         for max_frontier_region in max_frontier_regions: #constant
+                        #             for max_route_length in max_route_lengths: #constant
+                        frontier_search_radius = frontier_search_radii[0]
+                        max_frontier_region = max_frontier_regions[0]
+                        max_route_length = max_route_lengths[0]
+                        for agent in agents:
+                            # if agent != '15_agents':
+                            #     continue
+                            for quadtree_type in ['quadtree_returning_','quadtree_finished_exploring_', 'quadtree_map_relayed_']:
+                                if quadtree_type != 'quadtree_map_relayed_':
+                                    continue
 
 
-                                                        #certainty
-                                                        average_precision = []
-                                                        average_recall = []
-                                                        average_coverage = []
-                                                        average_covered_invalid_area = []
+                                #certainty
+                                average_precision = []
+                                average_recall = []
+                                average_coverage = []
+                                average_covered_invalid_area = []
 
-                                                        config = create_experiment_string(
-                                                            end_time, noise, comm_range, message_loss_probability,
-                                                            frontier_search_radius, evaporation_time, max_frontier_region, max_route_length
-                                                        )
-                                                        
-                                                        with concurrent.futures.ProcessPoolExecutor() as executor:
-                                                            future_to_seed = {executor.submit(process_experiment, seed, map, prefix, config, spawn_time, agent, quadtree_type, zipfiles, u_map, tree, grid): seed for seed in seeds}
-                                                            for future in concurrent.futures.as_completed(future_to_seed):
-                                                                result = future.result()
-                                                                if result:
-                                                                    precision, recall, coverage, covered_invalid_area = result
-                                                                    average_precision.append(precision)
-                                                                    average_recall.append(recall)
-                                                                    average_coverage.append(coverage)
-                                                                    average_covered_invalid_area.append(covered_invalid_area)
-                                                                    run_experiments += 1
-                                                                    print(f"run experiments: {run_experiments}/{n_experiments}")
+                                config = create_experiment_string(
+                                    end_time, noise, comm_range, message_loss_probability,
+                                    frontier_search_radius, evaporation_time, max_frontier_region, max_route_length
+                                )
+                                
+                                with concurrent.futures.ProcessPoolExecutor() as executor:
+                                    future_to_seed = {executor.submit(process_experiment, seed, map, prefix, config, spawn_time, agent, quadtree_type, zipfiles, u_map, tree, grid): seed for seed in seeds}
+                                    for future in concurrent.futures.as_completed(future_to_seed):
+                                        result = future.result()
+                                        if result:
+                                            precision, recall, coverage, covered_invalid_area = result
+                                            average_precision.append(precision)
+                                            average_recall.append(recall)
+                                            average_coverage.append(coverage)
+                                            average_covered_invalid_area.append(covered_invalid_area)
+                                            run_experiments += 1
+                                            print(f"run experiments: {run_experiments}/{n_experiments}")
 
-                                                        
-                                                                
+                                
+                                        
 
-                                                        #ACCURACY
-                                                        average_precision_df = pd.DataFrame(average_precision)
-                                                        mean_precision_seeds_all = average_precision_df.mean(axis=0).to_numpy()
-                                                        std_dev_precision_seeds_all = average_precision_df.std(axis=0).to_numpy()
-                                                        
-                                                        average_recall_df = pd.DataFrame(average_recall)
-                                                        mean_recall_seeds_all = average_recall_df.mean(axis=0).to_numpy()
-                                                        std_dev_recall_seeds_all = average_recall_df.std(axis=0).to_numpy()
+                                #ACCURACY
+                                average_precision_df = pd.DataFrame(average_precision)
+                                mean_precision_seeds_all = average_precision_df.mean(axis=0).to_numpy()
+                                
+                                average_recall_df = pd.DataFrame(average_recall)
+                                mean_recall_seeds_all = average_recall_df.mean(axis=0).to_numpy()
 
-                                                        average_coverage_df = pd.DataFrame(average_coverage)
-                                                        mean_coverage_seeds_all = average_coverage_df.mean(axis=0).to_numpy()
-                                                        std_dev_coverage_seeds_all = average_coverage_df.std(axis=0).to_numpy()
+                                average_coverage_df = pd.DataFrame(average_coverage)
+                                mean_coverage_seeds_all = average_coverage_df.mean(axis=0).to_numpy()
 
-                                                        average_covered_invalid_area_df = pd.DataFrame(average_covered_invalid_area)
-                                                        mean_covered_invalid_area_seeds_all = average_covered_invalid_area_df.mean(axis=0).to_numpy()
-                                                        std_dev_covered_invalid_area_seeds_all = average_covered_invalid_area_df.std(axis=0).to_numpy()
+                                average_covered_invalid_area_df = pd.DataFrame(average_covered_invalid_area)
+                                mean_covered_invalid_area_seeds_all = average_covered_invalid_area_df.mean(axis=0).to_numpy()
 
-                                                        n_agents = agent.split('_')[0]
-                                                        column = f'fsr_{frontier_search_radius}_mfr_{max_frontier_region}_mrl_{max_route_length}'                                                       
-                                                        agent_index = agents.index(agent)
-                                                        print("updating columns:" ,f'{column}_{agent}_{quadtree_type}')
-                                                        # quadtree_for_map_spawn_time_noise[f'{column}_{agent}_{quadtree_type}precision'] =  mean_precision_seeds_all
-                                                        # quadtree_for_map_spawn_time_noise[f'{column}_{agent}_{quadtree_type}recall'] = mean_recall_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}precision'] = mean_precision_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}std_dev_precision'] = std_dev_precision_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}recall'] = mean_recall_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}std_dev_recall'] = std_dev_recall_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}coverage'] = mean_coverage_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}std_dev_coverage'] = std_dev_coverage_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}covered_invalid_area'] = mean_covered_invalid_area_seeds_all
-                                                        new_columns[f'{column}_{agent}_{quadtree_type}std_dev_covered_invalid_area'] = std_dev_covered_invalid_area_seeds_all
+                                n_agents = agent.split('_')[0]
+                                column = f'evap_{evaporation_time}'
+                                agent_index = agents.index(agent)
+                                print("updating columns:" ,f'{column}_{agent}_{quadtree_type}')
+                                # quadtree_for_map_spawn_time_noise[f'{column}_{agent}_{quadtree_type}precision'] =  mean_precision_seeds_all
+                                # quadtree_for_map_spawn_time_noise[f'{column}_{agent}_{quadtree_type}recall'] = mean_recall_seeds_all
+                                new_columns[f'{column}_{agent}_{quadtree_type}precision'] = mean_precision_seeds_all
+                                new_columns[f'{column}_{agent}_{quadtree_type}recall'] = mean_recall_seeds_all
+                                new_columns[f'{column}_{agent}_{quadtree_type}coverage'] = mean_coverage_seeds_all
+                                new_columns[f'{column}_{agent}_{quadtree_type}covered_invalid_area'] = mean_covered_invalid_area_seeds_all
                     
                     quadtree_for_map_spawn_time_noise = pd.DataFrame(new_columns)
                     print("exporting to", datafile)
@@ -519,5 +513,5 @@ print("Getting all unique experiments from the zip files")
 completed_experiments, categories_and_values = get_values_for_each_category(configs) 
 # print("Checking if all required experiments are done")  
 check_if_all_required_experiments_done(completed_experiments, categories_and_values)
-# print("Exporting average precision and recall")
-export_average_precision_recall_with_different_configs(usb_drive, zipfiles, categories_and_values)
+print("Exporting average precision and recall")
+# export_average_precision_recall_with_different_configs(usb_drive, zipfiles, categories_and_values)

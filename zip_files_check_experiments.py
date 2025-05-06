@@ -77,7 +77,7 @@ completed_experiments_per_zip = {}
 non_completed_experiments_all = {}
 completed_total = 0
 non_completed_total = 0
-usb_drive_dirs = ['/media/hugo/Philips_main/CLARE_wallfollowing/']
+usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/', '/media/hugo/Thesis_Data/CLARE_wallfollowing/', '/media/hugo/Thesis_Data/CLARE_m1o5/', '/media/hugo/Thesis_Data/CLARE_oorm0o3/']
 #for all files in the usb drive
 for usb_drive in usb_drive_dirs:
     for file in os.listdir(usb_drive):

@@ -315,6 +315,7 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
                     datafile_bytes_sent_received = f'{dir_bytes_sent_received}{map}_{spawn_time}_noise_{noise}.csv'
                     
                     if os.path.exists(datafile_certainty) and os.path.exists(datafile_coverage) and os.path.exists(datafile_nodes) and os.path.exists(datafile_max_nodes) and os.path.exists(datafile_traveled_path) and os.path.exists(datafile_battery_usage) and os.path.exists(datafile_mission_time) and os.path.exists(datafile_distance_to_deployment_site) and os.path.exists(datafile_collisions) and os.path.exists(datafile_bytes_sent_received):
+                        print("already exists:", datafile_certainty)
                         continue
 
                     # data_for_map_spawn_time_noise_certainty = pd.DataFrame()
@@ -627,7 +628,7 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
                                                             average_bytes_sent.append(df['bytes_sent'].mean(axis=0))
                                                             average_bytes_received.append(df['bytes_received'].mean(axis=0))
 
-                                                    column_name = f'fsr_{frontier_search_radius}_mfr_{max_frontier_region}_mrl_{max_route_length}_{agent}'
+                                                    column_name = f'cr_{comm_range}_cl_{message_loss_probability}_{agent}'
 
                                                     #CERTAINTY
                                                     average_certainty_all_df = pd.DataFrame(average_certainty_all)
@@ -781,8 +782,8 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
     
 
         
-usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/', '/media/hugo/Thesis_Data/CLARE_wallfollowing/']
-batches = ['fsr_mfr_mrl', 'fsr_mfr']
+usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/']
+batches = ['comm_range_and_loss']
 # batches = ['noise_QT']
 for i, usb_drive in enumerate(usb_drive_dirs):
     batch = batches[i]
@@ -811,7 +812,7 @@ for i, usb_drive in enumerate(usb_drive_dirs):
     print("Getting all unique experiments from the zip files")
     completed_experiments, categories_and_values = get_values_for_each_category(configs) 
     print("Checking if all required experiments are done")  
-    check_if_all_required_experiments_done(completed_experiments, categories_and_values)
+    # check_if_all_required_experiments_done(completed_experiments, categories_and_values)
     print("Exporting average certainty, coverage, and nodes")
     export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zipfiles, categories_and_values)
     # plot_certainty_with_different_configs(usb_drive, zipfiles, categories_and_values)

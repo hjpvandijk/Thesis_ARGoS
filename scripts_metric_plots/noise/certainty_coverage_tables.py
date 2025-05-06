@@ -15,6 +15,9 @@ from statistics import mean
 ticks_per_second = 16
 prefix = ''
 
+batch = "noise"
+algorithm_dir = 'CLARE'
+
 def parse_experiment_string(s):
     if not s.startswith('end'):
         end_index = s.index('end')
@@ -204,7 +207,7 @@ def generate_high_contrast_hsv_colors(n_colors):
     return [colorsys.hsv_to_rgb(hues[i], saturations[i], values[i]) for i in range(n_colors)]
 
 def plot_certainty_with_different_configs(usb_drive, categories_and_values):
-    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/certainty/'
+    dir = f'{usb_drive}averaged_data/{batch}/certainty/'
     if not os.path.exists(dir):
         os.makedirs(dir)
     #for all csv files in the directory
@@ -287,7 +290,7 @@ def plot_certainty_with_different_configs(usb_drive, categories_and_values):
             #make sure the color is the same for all three certainty types
             #also make sure same config has same color, between the different agents
             color_index = hash(config) % n_colors
-            color = colors[color_index]
+            # color = colors[color_index]
             #label is column without agent number
             lbl = column.split('_')[:-3]
             lbl = '_'.join(lbl)
@@ -329,20 +332,20 @@ def plot_certainty_with_different_configs(usb_drive, categories_and_values):
                 elif key.endswith('all'):
                     end_certainties_for_n_agents_all.append(value)
                 
-            end_certainty_stats["mean free"] = (mean(end_certainties_for_n_agents_free))
-            end_certainty_stats["min free"] = (min(end_certainties_for_n_agents_free))
-            end_certainty_stats["median free"] = (np.median(end_certainties_for_n_agents_free))
-            end_certainty_stats["max free"] = (max(end_certainties_for_n_agents_free))
+            end_certainty_stats["free"] = (mean(end_certainties_for_n_agents_free))
+            # end_certainty_stats["min free"] = (min(end_certainties_for_n_agents_free))
+            # end_certainty_stats["median free"] = (np.median(end_certainties_for_n_agents_free))
+            # end_certainty_stats["max free"] = (max(end_certainties_for_n_agents_free))
             end_certainty_stats["Standard Deviation free"] = (np.std(end_certainties_for_n_agents_free))
-            end_certainty_stats["mean occupied"] = (mean(end_certainties_for_n_agents_occupied))
-            end_certainty_stats["min occupied"] = (min(end_certainties_for_n_agents_occupied))
-            end_certainty_stats["median occupied"] = (np.median(end_certainties_for_n_agents_occupied))
-            end_certainty_stats["max occupied"] = (max(end_certainties_for_n_agents_occupied))
+            end_certainty_stats["occupied"] = (mean(end_certainties_for_n_agents_occupied))
+            # end_certainty_stats["min occupied"] = (min(end_certainties_for_n_agents_occupied))
+            # end_certainty_stats["median occupied"] = (np.median(end_certainties_for_n_agents_occupied))
+            # end_certainty_stats["max occupied"] = (max(end_certainties_for_n_agents_occupied))
             end_certainty_stats["Standard Deviation occupied"] = (np.std(end_certainties_for_n_agents_occupied))
-            end_certainty_stats["mean all"] = (mean(end_certainties_for_n_agents_all))
-            end_certainty_stats["min all"] = (min(end_certainties_for_n_agents_all))
-            end_certainty_stats["median all"] = (np.median(end_certainties_for_n_agents_all))
-            end_certainty_stats["max all"] = (max(end_certainties_for_n_agents_all))
+            end_certainty_stats["all"] = (mean(end_certainties_for_n_agents_all))
+            # end_certainty_stats["min all"] = (min(end_certainties_for_n_agents_all))
+            # end_certainty_stats["median all"] = (np.median(end_certainties_for_n_agents_all))
+            # end_certainty_stats["max all"] = (max(end_certainties_for_n_agents_all))
             end_certainty_stats["Standard Deviation all"] = (np.std(end_certainties_for_n_agents_all))
 
             end_time_certainty_stats_per_n_agents[n_agents_string] = end_certainty_stats
@@ -360,37 +363,46 @@ def plot_certainty_with_different_configs(usb_drive, categories_and_values):
                     avg_certainties_for_n_agents_occupied.append(value)
                 elif key.endswith('all'):
                     avg_certainties_for_n_agents_all.append(value)
-            AAC_stats["mean free"] = (mean(avg_certainties_for_n_agents_free))
-            AAC_stats["min free"] = (min(avg_certainties_for_n_agents_free))
-            AAC_stats["median free"] = (np.median(avg_certainties_for_n_agents_free))
-            AAC_stats["max free"] = (max(avg_certainties_for_n_agents_free))
+            AAC_stats["free"] = (mean(avg_certainties_for_n_agents_free))
+            # AAC_stats["min free"] = (min(avg_certainties_for_n_agents_free))
+            # AAC_stats["median free"] = (np.median(avg_certainties_for_n_agents_free))
+            # AAC_stats["max free"] = (max(avg_certainties_for_n_agents_free))
             AAC_stats["Standard Deviation free"] = (np.std(avg_certainties_for_n_agents_free))
-            AAC_stats["mean occupied"] = (mean(avg_certainties_for_n_agents_occupied))
-            AAC_stats["min occupied"] = (min(avg_certainties_for_n_agents_occupied))
-            AAC_stats["median occupied"] = (np.median(avg_certainties_for_n_agents_occupied))
-            AAC_stats["max occupied"] = (max(avg_certainties_for_n_agents_occupied))
+            AAC_stats["occupied"] = (mean(avg_certainties_for_n_agents_occupied))
+            # AAC_stats["min occupied"] = (min(avg_certainties_for_n_agents_occupied))
+            # AAC_stats["median occupied"] = (np.median(avg_certainties_for_n_agents_occupied))
+            # AAC_stats["max occupied"] = (max(avg_certainties_for_n_agents_occupied))
             AAC_stats["Standard Deviation occupied"] = (np.std(avg_certainties_for_n_agents_occupied))
-            AAC_stats["mean all"] = (mean(avg_certainties_for_n_agents_all))
-            AAC_stats["min all"] = (min(avg_certainties_for_n_agents_all))
-            AAC_stats["median all"] = (np.median(avg_certainties_for_n_agents_all))
-            AAC_stats["max all"] = (max(avg_certainties_for_n_agents_all))
+            AAC_stats["all"] = (mean(avg_certainties_for_n_agents_all))
+            # AAC_stats["min all"] = (min(avg_certainties_for_n_agents_all))
+            # AAC_stats["median all"] = (np.median(avg_certainties_for_n_agents_all))
+            # AAC_stats["max all"] = (max(avg_certainties_for_n_agents_all))
             AAC_stats["Standard Deviation all"] = (np.std(avg_certainties_for_n_agents_all))
             
             AAC_stats_per_n_agents[n_agents_string] = AAC_stats
 
-        if not os.path.exists('results_BICLARE/certainty_plots/fsr_mfr_mrl/csv_tables'):
-            os.makedirs('results_BICLARE/certainty_plots/fsr_mfr_mrl/csv_tables')
+        if not os.path.exists(f'results_{algorithm_dir}/certainty_plots/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/certainty_plots/{batch}/csv_tables')
 
 
         end_certainty_stats_per_n_agents_df = pd.DataFrame.from_dict(end_time_certainty_stats_per_n_agents, orient='index').reset_index()
         end_certainty_stats_per_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #sort based on n_agents value
+        end_certainty_stats_per_n_agents_df['n_agents'] = end_certainty_stats_per_n_agents_df['n_agents'].apply(lambda x: int(x.split('_')[0]))
+        end_certainty_stats_per_n_agents_df = end_certainty_stats_per_n_agents_df.sort_values(by='n_agents')
+        end_certainty_stats_per_n_agents_df['n_agents'] = end_certainty_stats_per_n_agents_df['n_agents'].apply(lambda x: str(x) + '_agents')
         #export to csv
-        end_certainty_stats_per_n_agents_df.to_csv(f'results_BICLARE/certainty_plots/fsr_mfr_mrl/csv_tables/AC(T_end)_{map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        end_certainty_stats_per_n_agents_df.to_csv(f'results_{algorithm_dir}/certainty_plots/{batch}/csv_tables/AC(T_end)_{map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
         AAC_stats_per_n_agents_df = pd.DataFrame.from_dict(AAC_stats_per_n_agents, orient='index').reset_index()
         AAC_stats_per_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #sort based on n_agents value
+        AAC_stats_per_n_agents_df['n_agents'] = AAC_stats_per_n_agents_df['n_agents'].apply(lambda x: int(x.split('_')[0]))
+        AAC_stats_per_n_agents_df = AAC_stats_per_n_agents_df.sort_values(by='n_agents')
+        AAC_stats_per_n_agents_df['n_agents'] = AAC_stats_per_n_agents_df['n_agents'].apply(lambda x: str(x) + '_agents')
+    
         #export to csv
-        AAC_stats_per_n_agents_df.to_csv(f'results_BICLARE/certainty_plots/fsr_mfr_mrl/csv_tables/AAC_{map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        AAC_stats_per_n_agents_df.to_csv(f'results_{algorithm_dir}/certainty_plots/{batch}/csv_tables/AAC_{map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
 
         # fig_all.tight_layout()
@@ -428,7 +440,7 @@ def end_time_for_map(map):
     
                    
 def plot_coverage_with_different_configs(usb_drive, categories_and_values):
-    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/coverage/'
+    dir = f'{usb_drive}averaged_data/{batch}/coverage/'
     if not os.path.exists(dir):
         os.makedirs(dir)
     #for all csv files in the directory
@@ -530,25 +542,25 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
             
             color_index = config_to_color_index[config]
 
-            color = colors[color_index]
+            # color = colors[color_index]
             # color = colors[(i-i_irrelevant)%n_colors]   
             #label is column without agent number
             lbl = column.split('_')[:-2]
             lbl = '_'.join(lbl) 
 
-            fsr_symbol = '$R_f$'
-            fsr = lbl.split('_')[1] #R_f
-            if int(fsr) == 99999:
-                fsr = '$\infty$'
-            mfr_symbol = '$N_f$'
-            mfr = lbl.split('_')[3] #N_f
-            if int(mfr) == 99999:
-                mfr = '$\infty$'
-            mrl_symbol = '$N_s$'
-            mrl = lbl.split('_')[5] #N_s
-            if int(mrl) == 99999:
-                mrl = '$\infty$'
-            lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            # fsr_symbol = '$R_f$'
+            # fsr = lbl.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = lbl.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = lbl.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
             agents_string = n_agents + '_agents'
             # ax[agents.index(agents_string)].plot(time.to_numpy(), data[column].to_numpy(), label=lbl, color=color)
 
@@ -592,19 +604,19 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
                 lbl = column.split('_')[:-2]
                 lbl = '_'.join(lbl) 
 
-                fsr_symbol = '$R_f$'
-                fsr = lbl.split('_')[1] #R_f
-                if int(fsr) == 99999:
-                    fsr = '$\infty$'
-                mfr_symbol = '$N_f$'
-                mfr = lbl.split('_')[3] #N_f
-                if int(mfr) == 99999:
-                    mfr = '$\infty$'
-                mrl_symbol = '$N_s$'
-                mrl = lbl.split('_')[5] #N_s
-                if int(mrl) == 99999:
-                    mrl = '$\infty$'
-                lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+                # fsr_symbol = '$R_f$'
+                # fsr = lbl.split('_')[1] #R_f
+                # if int(fsr) == 99999:
+                #     fsr = '$\infty$'
+                # mfr_symbol = '$N_f$'
+                # mfr = lbl.split('_')[3] #N_f
+                # if int(mfr) == 99999:
+                #     mfr = '$\infty$'
+                # mrl_symbol = '$N_s$'
+                # mrl = lbl.split('_')[5] #N_s
+                # if int(mrl) == 99999:
+                #     mrl = '$\infty$'
+                # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
                 coverage = data_end_time[column]
                 if coverage > max_coverage:
                     max_coverage = coverage
@@ -638,10 +650,10 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
             end_coverage_stats = {}
 
             end_coverages_for_n_agents =  list(coverages_at_end_time[n_agents_string].values())
-            end_coverage_stats["mean"] = mean(end_coverages_for_n_agents)
-            end_coverage_stats["median"] = np.median(end_coverages_for_n_agents)
-            end_coverage_stats["min"] = (min(end_coverages_for_n_agents))
-            end_coverage_stats["max"] = (max(end_coverages_for_n_agents))
+            end_coverage_stats["CP(T_end)"] = mean(end_coverages_for_n_agents)
+            # end_coverage_stats["median"] = np.median(end_coverages_for_n_agents)
+            # end_coverage_stats["min"] = (min(end_coverages_for_n_agents))
+            # end_coverage_stats["max"] = (max(end_coverages_for_n_agents))
             end_coverage_stats["Standard Deviation"] = (np.std(end_coverages_for_n_agents))
 
             end_time_coverage_stats_per_n_agents[n_agents_string] = end_coverage_stats
@@ -649,10 +661,10 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
             ACP_stats = {}
 
             avg_coverages_for_n_agents =  list(average_coverages[n_agents_string].values())
-            ACP_stats["mean"] = (mean(avg_coverages_for_n_agents))
-            ACP_stats["min"] = (min(avg_coverages_for_n_agents))
-            ACP_stats["median"] = np.median(avg_coverages_for_n_agents)
-            ACP_stats["max"] = (max(avg_coverages_for_n_agents))
+            ACP_stats["ACP"] = (mean(avg_coverages_for_n_agents))
+            # ACP_stats["min"] = (min(avg_coverages_for_n_agents))
+            # ACP_stats["median"] = np.median(avg_coverages_for_n_agents)
+            # ACP_stats["max"] = (max(avg_coverages_for_n_agents))
             ACP_stats["Standard Deviation"] = (np.std(avg_coverages_for_n_agents))
 
             # Create a pandas DataFrame for the statistics
@@ -660,73 +672,81 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
             # print(f"Coverage statistics for {n_agents_string}:\n", coverage_stats_df)
             ACP_stats_per_n_agents[n_agents_string] = ACP_stats
 
-            if 'max' not in counts['fsr']:
-                counts['fsr']['max'] = {}
-            if 'min' not in counts['fsr']:
-                counts['fsr']['min'] = {}
+            # if 'max' not in counts['fsr']:
+            #     counts['fsr']['max'] = {}
+            # if 'min' not in counts['fsr']:
+            #     counts['fsr']['min'] = {}
     
-            if 'max' not in counts['mfr']:
-                counts['mfr']['max'] = {}
-            if 'min' not in counts['mfr']:
-                counts['mfr']['min'] = {}
+            # if 'max' not in counts['mfr']:
+            #     counts['mfr']['max'] = {}
+            # if 'min' not in counts['mfr']:
+            #     counts['mfr']['min'] = {}
            
-            if 'max' not in counts['mrl']:
-                counts['mrl']['max'] = {}
-            if 'min' not in counts['mrl']:
-                counts['mrl']['min'] = {}
+            # if 'max' not in counts['mrl']:
+            #     counts['mrl']['max'] = {}
+            # if 'min' not in counts['mrl']:
+            #     counts['mrl']['min'] = {}
 
         
 
             #get the fsr, mfr and mrl from the label
-            fsr_min = min_average_coverage_column.split('=')[1].split(',')[0]
-            mfr_min = min_average_coverage_column.split('=')[2].split(',')[0]
-            mrl_min = min_average_coverage_column.split('=')[3].split(',')[0]
-            fsr_max = max_average_coverage_column.split('=')[1].split(',')[0]
-            mfr_max = max_average_coverage_column.split('=')[2].split(',')[0]
-            mrl_max = max_average_coverage_column.split('=')[3].split(',')[0]
+            # fsr_min = min_average_coverage_column.split('=')[1].split(',')[0]
+            # mfr_min = min_average_coverage_column.split('=')[2].split(',')[0]
+            # mrl_min = min_average_coverage_column.split('=')[3].split(',')[0]
+            # fsr_max = max_average_coverage_column.split('=')[1].split(',')[0]
+            # mfr_max = max_average_coverage_column.split('=')[2].split(',')[0]
+            # mrl_max = max_average_coverage_column.split('=')[3].split(',')[0]
 
             
-            if fsr_max not in counts['fsr']['max']:
-                counts['fsr']['max'][fsr_max] = 1
-            else:
-                counts['fsr']['max'][fsr_max] += 1
-            if fsr_min not in counts['fsr']['min']:
-                counts['fsr']['min'][fsr_min] = 1
-            else:
-                counts['fsr']['min'][fsr_min] += 1
+            # if fsr_max not in counts['fsr']['max']:
+            #     counts['fsr']['max'][fsr_max] = 1
+            # else:
+            #     counts['fsr']['max'][fsr_max] += 1
+            # if fsr_min not in counts['fsr']['min']:
+            #     counts['fsr']['min'][fsr_min] = 1
+            # else:
+            #     counts['fsr']['min'][fsr_min] += 1
 
-            if mfr_max not in counts['mfr']['max']:
-                counts['mfr']['max'][mfr_max] = 1
-            else:
-                counts['mfr']['max'][mfr_max] += 1
-            if mfr_min not in counts['mfr']['min']:
-                counts['mfr']['min'][mfr_min] = 1
-            else:
-                counts['mfr']['min'][mfr_min] += 1
+            # if mfr_max not in counts['mfr']['max']:
+            #     counts['mfr']['max'][mfr_max] = 1
+            # else:
+            #     counts['mfr']['max'][mfr_max] += 1
+            # if mfr_min not in counts['mfr']['min']:
+            #     counts['mfr']['min'][mfr_min] = 1
+            # else:
+            #     counts['mfr']['min'][mfr_min] += 1
 
-            if mrl_max not in counts['mrl']['max']:
-                counts['mrl']['max'][mrl_max] = 1
-            else:
-                counts['mrl']['max'][mrl_max] += 1
-            if mrl_min not in counts['mrl']['min']:
-                counts['mrl']['min'][mrl_min] = 1
-            else:
-                counts['mrl']['min'][mrl_min] += 1
+            # if mrl_max not in counts['mrl']['max']:
+            #     counts['mrl']['max'][mrl_max] = 1
+            # else:
+            #     counts['mrl']['max'][mrl_max] += 1
+            # if mrl_min not in counts['mrl']['min']:
+            #     counts['mrl']['min'][mrl_min] = 1
+            # else:
+            #     counts['mrl']['min'][mrl_min] += 1
 
         #if not exists
-        if not os.path.exists(f'results_BICLARE/coverage_plots/fsr_mfr_mrl/csv_tables'):
-            os.makedirs(f'results_BICLARE/coverage_plots/fsr_mfr_mrl/csv_tables')
+        if not os.path.exists(f'results_{algorithm_dir}/coverage_plots/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/coverage_plots/{batch}/csv_tables')
 
         end_coverages_per_n_agents_df = pd.DataFrame.from_dict(end_time_coverage_stats_per_n_agents, orient='index').reset_index()
         end_coverages_per_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #sort based on n_agents value
+        end_coverages_per_n_agents_df['n_agents'] = end_coverages_per_n_agents_df['n_agents'].apply(lambda x: int(x.split('_')[0]))
+        end_coverages_per_n_agents_df = end_coverages_per_n_agents_df.sort_values(by='n_agents')
+        end_coverages_per_n_agents_df['n_agents'] = end_coverages_per_n_agents_df['n_agents'].apply(lambda x: str(x) + '_agents')
         #export to csv
-        end_coverages_per_n_agents_df.to_csv(f'results_BICLARE/coverage_plots/fsr_mfr_mrl/csv_tables/CP(T_end)_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        end_coverages_per_n_agents_df.to_csv(f'results_{algorithm_dir}/coverage_plots/{batch}/csv_tables/CP(T_end)_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
 
         ACP_stats_per_n_agents_df = pd.DataFrame.from_dict(ACP_stats_per_n_agents, orient='index').reset_index()
         ACP_stats_per_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #sort based on n_agents value
+        ACP_stats_per_n_agents_df['n_agents'] = ACP_stats_per_n_agents_df['n_agents'].apply(lambda x: int(x.split('_')[0]))
+        ACP_stats_per_n_agents_df = ACP_stats_per_n_agents_df.sort_values(by='n_agents')
+        ACP_stats_per_n_agents_df['n_agents'] = ACP_stats_per_n_agents_df['n_agents'].apply(lambda x: str(x) + '_agents')
         #export to csv
-        ACP_stats_per_n_agents_df.to_csv(f'results_BICLARE/coverage_plots/fsr_mfr_mrl/csv_tables/ACP_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        ACP_stats_per_n_agents_df.to_csv(f'results_{algorithm_dir}/coverage_plots/{batch}/csv_tables/ACP_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
             #set legend
             # ax[agents.index(n_agents_string)].legend(loc='center right', fontsize=8)
 
@@ -766,11 +786,11 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
         #     f.write(tabulate(counts['mrl']['min'].items(), headers=['MRL', 'Count'], tablefmt='grid'))
         
 def aggregate_metrics_per_env_map():
-    results_dir = 'results'
+    results_dir = 'results_' + algorithm_dir
     aggregated_data = {}
 
     for metric_type in ['certainty_plots', 'coverage_plots']:
-        metric_dir = os.path.join(results_dir, metric_type, 'fsr_mfr_mrl', 'csv_tables')
+        metric_dir = os.path.join(results_dir, metric_type, f'{batch}', 'csv_tables')
         if not os.path.exists(metric_dir):
             continue
 
@@ -889,15 +909,15 @@ def aggregate_metrics_per_env_map():
 
     #export to csv
     # Export aggregated data to CSV
-    rows = []
-    for env_map, metrics_data in aggregated_data.items():
-        for metric_name, agents_data in metrics_data.items():
-            for n_agents, metrics in agents_data.items():
-                row = {'env_map': env_map, 'metric_name': metric_name, 'n_agents': n_agents}
-                row.update(metrics)
-                rows.append(row)
-    aggregated_df = pd.DataFrame(rows)
-    # aggregated_df.to_csv('results_BICLARE/aggregated_metrics.csv', index=False)
+    # rows = []
+    # for env_map, metrics_data in aggregated_data.items():
+    #     for metric_name, agents_data in metrics_data.items():
+    #         for n_agents, metrics in agents_data.items():
+    #             row = {'env_map': env_map, 'metric_name': metric_name, 'n_agents': n_agents}
+    #             row.update(metrics)
+    #             rows.append(row)
+    # aggregated_df = pd.DataFrame(rows)
+    # aggregated_df.to_csv('results_{algorithm_dir}/aggregated_metrics.csv', index=False)
     # Separate aggregated data for certainty and coverage
     certainty_rows = []
     coverage_rows = []
@@ -917,13 +937,154 @@ def aggregate_metrics_per_env_map():
     coverage_df = pd.DataFrame(coverage_rows)
 
     # Export to separate CSV files
-    certainty_df.to_csv('results_BICLARE/aggregated_certainty_metrics.csv', index=False)
-    coverage_df.to_csv('results_BICLARE/aggregated_coverage_metrics.csv', index=False)
+    certainty_df.to_csv(f'results_{algorithm_dir}/certainty_plots/{batch}/aggregated_certainty_metrics.csv', index=False)
+    coverage_df.to_csv(f'results_{algorithm_dir}/coverage_plots/{batch}/aggregated_coverage_metrics.csv', index=False)
+
+def aggregate_metrics_per_env_map_per_noise():
+    results_dir = f'results_{algorithm_dir}'
+    aggregated_data = {}
+
+    for metric_type in ['certainty_plots', 'coverage_plots']:
+        metric_dir = os.path.join(results_dir, metric_type, f'{batch}', 'csv_tables')
+        if not os.path.exists(metric_dir):
+            continue
+
+        for file in os.listdir(metric_dir):
+            if not file.endswith('.csv'):
+                continue
+
+            # Extract env_map from filename
+            parts = file.split('_')
+            metric_name = parts[0]  # e.g., "ACP" or "CP(T_end)"
+            if metric_name == 'CP(T':
+                metric_name = 'CP(T_end)'
+            elif metric_name == 'AC(T':
+                metric_name = 'AC(T_end)'
+            file_without_metric = file.replace(metric_name + '_', '')
+            env_map = file_without_metric.split('_')[0]
+            if file_without_metric.split('_')[1] == 'tilted':
+                env_map += '_tilted'
+
+            noise  = file_without_metric.split('_')[-4]
+            noise = float(noise)
+
+            # Read the CSV file
+            filepath = os.path.join(metric_dir, file)
+            data = pd.read_csv(filepath)
+
+            # Initialize storage for this env_map and metric
+            if env_map not in aggregated_data:
+                aggregated_data[env_map] = {}
+            if noise not in aggregated_data[env_map]:
+                aggregated_data[env_map][noise] = {}
+            # if metric_name not in aggregated_data[env_map][noise]:
+            #     aggregated_data[env_map][noise][metric_name] = {}
+
+            # Aggregate metrics per agent
+            for _, row in data.iterrows():
+                n_agents = row['n_agents']
+                if n_agents not in aggregated_data[env_map][noise]:
+                    aggregated_data[env_map][noise][n_agents] = {}
+
+
+                metrics = aggregated_data[env_map][noise][n_agents]
+                for column in row.index:
+                    if column in ['n_agents', 'Unnamed: 0']:
+                        continue
+                    
+                    if column not in metrics:
+                        metrics[column] = []
+                    metrics[column].append(row[column])
+                        
+                # # metrics['min_of_min'] = min(metrics['min_of_min'], row['min'])
+                # # metrics['max_of_max'] = max(metrics['max_of_max'], row['max'])
+                # print(type(metrics['mean_of_means']))
+                # metrics['mean_of_means'].append(row['mean'])
+                # metrics['max_std_dev'] = max(metrics['max_std_dev'], row['Standard Deviation'])
+                # metrics['median_of_medians'].append(row['median'])
+                # Finalize aggregation (calculate mean of means and median of medians)
+    # Finalize aggregation across all files
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                for key in metrics.keys():
+                    if key == 'n_agents':
+                        continue
+                        # if 'mean of means' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = mean(metrics[key])
+                        # elif 'median of medians' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = np.median(metrics[key])
+                    if isinstance(metrics[key], list):
+                        if 'Standard Deviation' in key:
+                            #calculate pooled std deviation
+                            squared_standard_devs = [x**2 for x in metrics[key]]
+                            pooled_variance = np.mean(squared_standard_devs)
+                            metrics[key] = np.sqrt(pooled_variance)
+                        else:
+                            metrics[key] = mean(metrics[key])
+
+    # Print or save aggregated data for insights
+    # for env_map, metrics_data in aggregated_data.items():
+    #     print(f"Aggregated metrics for {env_map}:")
+    #     for metric_name, agents_data in metrics_data.items():
+    #         print(f"  {metric_name}:")
+    #         for n_agents, metrics in agents_data.items():
+    #             print(f"    {n_agents}: {metrics}")
+
+    #export to csv
+    # Export aggregated data to CSV
+    # rows = []
+    # for env_map, permap in aggregated_data.items():
+    #     for noise, pernoise in permap.items():
+    #         # for metric_name, agents_data in pernoise.items():
+    #         for n_agents, metrics in pernoise.items():
+    #             row = {
+    #                 'env_map': env_map,
+    #                 'noise': noise,
+    #                 'n_agents': n_agents,
+    #             }
+    #             row.update(metrics)
+    #             rows.append(row)
+    # aggregated_df = pd.DataFrame(rows)
+    #change any column names with 'Standard Deviation' to 'pooled standard deviation'
+    # aggregated_df.rename(columns=lambda x: x.replace('Standard Deviation', '$s_p$'), inplace=True)
+
+    # aggregated_df.to_csv(f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv', index=False)
+    # Separate aggregated data for certainty and coverage
+    
+    certainty_rows = []
+    coverage_rows = []
+
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                row = {
+                    'env_map': env_map,
+                    'noise': noise,
+                    'n_agents': n_agents,
+                }
+                row.update(metrics)
+                if metric_name in ['AC(T_end)', 'AAC']:
+                    certainty_rows.append(row)
+                elif metric_name in ['CP(T_end)', 'ACP']:
+                    coverage_rows.append(row)
+
+    # Create DataFrames for certainty and coverage
+    certainty_df = pd.DataFrame(certainty_rows)
+    coverage_df = pd.DataFrame(coverage_rows)
+
+    # Export to separate CSV files
+    certainty_df.to_csv(f'results_{algorithm_dir}/certainty_plots/{batch}/aggregated_certainty_metrics.csv', index=False)
+    coverage_df.to_csv(f'results_{algorithm_dir}/coverage_plots/{batch}/aggregated_coverage_metrics.csv', index=False)
+
+
 
 configs = []
 
 #get all files in 'implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'
-for file in os.listdir('implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'):
+for file in os.listdir(f'implementation_and_examples/agent_implementation/configs/{batch}'):
     config_name = file.split('.')[0]
     configs.append(config_name)    
 
@@ -951,7 +1112,8 @@ if not os.path.exists('certainty_plots'):
 
 completed_experiments, categories_and_values = get_values_for_each_category(configs)   
 # check_if_all_required_experiments_done(completed_experiments, categories_and_values)
-# for usb_drive in usb_drive_dirs:
-#     plot_certainty_with_different_configs(usb_drive, categories_and_values)
-#     plot_coverage_with_different_configs(usb_drive, categories_and_values)
-aggregate_metrics_per_env_map()
+for usb_drive in usb_drive_dirs:
+    plot_certainty_with_different_configs(usb_drive, categories_and_values)
+    plot_coverage_with_different_configs(usb_drive, categories_and_values)
+# aggregate_metrics_per_env_map()
+aggregate_metrics_per_env_map_per_noise()

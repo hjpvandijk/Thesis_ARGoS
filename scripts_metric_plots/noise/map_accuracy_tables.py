@@ -14,6 +14,9 @@ from statistics import mean
 
 ticks_per_second = 16
 prefix = ''
+batch = "noise"
+
+algorithm_dir = 'CLARE'
 
 def parse_experiment_string(s):
     if not s.startswith('end'):
@@ -213,7 +216,7 @@ def end_time_for_map(map):
     
                    
 def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_and_values):
-    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/accuracy_first_map_relayed/'
+    dir = f'{usb_drive}averaged_data/{batch}/accuracy_first_map_relayed/'
     if not os.path.exists(dir):
         os.makedirs(dir)
     #for all csv files in the directory
@@ -224,13 +227,13 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
         if splitted[1] == 'tilted':
             map += '_tilted'
         spawn_time = int(splitted[-4])
-        noise = splitted[-2].split('.')[0]
+        noise = splitted[-2]
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-3])
-            noise = splitted[-3] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-3])
+        #     noise = splitted[-3] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -292,8 +295,11 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
         counts['mfr'] = {}
         counts['fsr'] = {}
         recalls = {}
+        std_dev_recalls = {}
         precisions = {}
+        std_dev_precisions = {}
         coverages = {}
+        std_dev_coverages = {}
         invalid_area_coverages = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
@@ -303,39 +309,39 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
             data[column] *= 100
             # print("data for column:", column, data[column])
 
-            n_agents = column.split('_')[-6]
+            n_agents = column.split('_')[1]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
             precision_or_recall_or_coverage = column.split('_')[-1]
 
-            fsr_symbol = '$R_f$'
-            fsr = config.split('_')[1] #R_f
-            if int(fsr) == 99999:
-                fsr     = '$\infty$'
-            mfr_symbol = '$N_f$'
-            mfr = config.split('_')[3] #N_f
-            if int(mfr) == 99999:
-                mfr = '$\infty$'
-            mrl_symbol = '$N_s$'
-            mrl = config.split('_')[5] #N_s
-            if int(mrl) == 99999:
-                mrl = '$\infty$'
-            lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            # fsr_symbol = '$R_f$'
+            # fsr = config.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr     = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = config.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = config.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
 
-            if lbl not in config_labels:
-                config_labels.append(lbl)
+            # if lbl not in config_labels:
+            #     config_labels.append(lbl)
 
             #make sure the color is the same for all three certainty types
-            #also make sure same config has same color, between the different agents
-            if 'config_to_color_index' not in locals():
-                config_to_color_index = {}
-                current_color_index = 0
+            # #also make sure same config has same color, between the different agents
+            # if 'config_to_color_index' not in locals():
+            #     config_to_color_index = {}
+            #     current_color_index = 0
 
-            if config not in config_to_color_index:
-                config_to_color_index[config] = current_color_index
-                current_color_index += 1
+            # if config not in config_to_color_index:
+            #     config_to_color_index[config] = current_color_index
+            #     current_color_index += 1
 
-            color_index = config_to_color_index[config]
+            # color_index = config_to_color_index[config]
             # print("config:", config, "color_index:", color_index)
             # print("color_index:", color_index)
             # color = colors[color_index]
@@ -347,40 +353,46 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
 
             if agents_string not in recalls:
                 recalls[agents_string] = []
+            if agents_string not in std_dev_recalls:
+                std_dev_recalls[agents_string] = []
             if agents_string not in precisions:
                 precisions[agents_string] = []
+            if agents_string not in std_dev_precisions:
+                std_dev_precisions[agents_string] = []
             if agents_string not in coverages:
                 coverages[agents_string] = []
+            if agents_string not in std_dev_coverages:
+                std_dev_coverages[agents_string] = []
             if agents_string not in invalid_area_coverages:
                 invalid_area_coverages[agents_string] = []
 
             # ax[agents.index(agents_string)].plot(time, data[column], label=lbl, color=color)
             # make bar plot
-            if agents_string not in min_recalls:
-                min_recalls[agents_string] = {}
-                min_recalls[agents_string]['recall'] = 100
-                min_recalls[agents_string]['config'] = config
-                min_recalls[agents_string]['lbl'] = lbl
-                max_recalls[agents_string] = {}
-                max_recalls[agents_string]['recall'] = 0
-                max_recalls[agents_string]['config'] = config
-                max_recalls[agents_string]['lbl'] = lbl
-                min_precisions[agents_string] = {}
-                min_precisions[agents_string]['precision'] = 100
-                min_precisions[agents_string]['config'] = config
-                min_precisions[agents_string]['lbl'] = lbl
-                max_precisions[agents_string] = {}
-                max_precisions[agents_string]['precision'] = 0
-                max_precisions[agents_string]['config'] = config
-                max_precisions[agents_string]['lbl'] = lbl
-                min_coverages[agents_string] = {}
-                min_coverages[agents_string]['coverage'] = 100
-                min_coverages[agents_string]['config'] = config
-                min_coverages[agents_string]['lbl'] = lbl
-                max_coverages[agents_string] = {}
-                max_coverages[agents_string]['coverage'] = 0
-                max_coverages[agents_string]['config'] = config
-                max_coverages[agents_string]['lbl'] = lbl
+            # if agents_string not in min_recalls:
+            #     min_recalls[agents_string] = {}
+            #     min_recalls[agents_string]['recall'] = 100
+            #     min_recalls[agents_string]['config'] = config
+            #     min_recalls[agents_string]['lbl'] = lbl
+            #     max_recalls[agents_string] = {}
+            #     max_recalls[agents_string]['recall'] = 0
+            #     max_recalls[agents_string]['config'] = config
+            #     max_recalls[agents_string]['lbl'] = lbl
+            #     min_precisions[agents_string] = {}
+            #     min_precisions[agents_string]['precision'] = 100
+            #     min_precisions[agents_string]['config'] = config
+            #     min_precisions[agents_string]['lbl'] = lbl
+            #     max_precisions[agents_string] = {}
+            #     max_precisions[agents_string]['precision'] = 0
+            #     max_precisions[agents_string]['config'] = config
+            #     max_precisions[agents_string]['lbl'] = lbl
+            #     min_coverages[agents_string] = {}
+            #     min_coverages[agents_string]['coverage'] = 100
+            #     min_coverages[agents_string]['config'] = config
+            #     min_coverages[agents_string]['lbl'] = lbl
+            #     max_coverages[agents_string] = {}
+            #     max_coverages[agents_string]['coverage'] = 0
+            #     max_coverages[agents_string]['config'] = config
+            #     max_coverages[agents_string]['lbl'] = lbl
 
             
 
@@ -391,16 +403,21 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
                 #write the value in the bar
                 # for j, v in enumerate(data[column]):
                 #     ax[agents.index(agents_string)].text(color_index, 0.05, f'{v:.2f}', ha='center', va='bottom', fontsize=6)
-                precision = data[column][0]
-                if precision < min_precisions[agents_string]['precision']:
-                    min_precisions[agents_string]['precision'] = precision
-                    min_precisions[agents_string]['config'] = config
-                    min_precisions[agents_string]['lbl'] = lbl
-                if precision > max_precisions[agents_string]['precision']:
-                    max_precisions[agents_string]['precision'] = precision
-                    max_precisions[agents_string]['config'] = config
-                    min_precisions[agents_string]['lbl'] = lbl
-                precisions[agents_string].append(precision)
+                if 'std_dev' in column:
+                    std_dev_precision = data[column][0]
+                    std_dev_precisions[agents_string].append(std_dev_precision)
+                else:
+
+                    precision = data[column][0]
+                    # if precision < min_precisions[agents_string]['precision']:
+                    #     min_precisions[agents_string]['precision'] = precision
+                    #     min_precisions[agents_string]['config'] = config
+                    #     min_precisions[agents_string]['lbl'] = lbl
+                    # if precision > max_precisions[agents_string]['precision']:
+                    #     max_precisions[agents_string]['precision'] = precision
+                    #     max_precisions[agents_string]['config'] = config
+                    #     min_precisions[agents_string]['lbl'] = lbl
+                    precisions[agents_string].append(precision)
             elif precision_or_recall_or_coverage == 'recall':   
                 color = 'tab:orange'
                 #plot it on the other half of the bar space
@@ -408,16 +425,20 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
                 #write the value in the bar
                 # for j, v in enumerate(data[column]):
                 #     ax[agents.index(agents_string)].text(color_index + bar_width, 0.05, f'{v:.2f}', ha='center', va='bottom', fontsize=6)
-                recall = data[column][0]
-                if recall < min_recalls[agents_string]['recall']:
-                    min_recalls[agents_string]['recall'] = recall
-                    min_recalls[agents_string]['config'] = config
-                    min_recalls[agents_string]['lbl'] = lbl
-                if recall > max_recalls[agents_string]['recall']:
-                    max_recalls[agents_string]['recall'] = recall
-                    max_recalls[agents_string]['config'] = config
-                    max_recalls[agents_string]['lbl'] = lbl
-                recalls[agents_string].append(recall)
+                if 'std_dev' in column:
+                    std_dev_recall = data[column][0]
+                    std_dev_recalls[agents_string].append(std_dev_recall)
+                else:
+                    recall = data[column][0]
+                    # if recall < min_recalls[agents_string]['recall']:
+                    #     min_recalls[agents_string]['recall'] = recall
+                    #     min_recalls[agents_string]['config'] = config
+                    #     min_recalls[agents_string]['lbl'] = lbl
+                    # if recall > max_recalls[agents_string]['recall']:
+                    #     max_recalls[agents_string]['recall'] = recall
+                    #     max_recalls[agents_string]['config'] = config
+                    #     max_recalls[agents_string]['lbl'] = lbl
+                    recalls[agents_string].append(recall)
             elif precision_or_recall_or_coverage == 'coverage':
                 color = 'tab:green'
                 #plot it on the other half of the bar space
@@ -425,16 +446,20 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
                 #write the value in the bar
                 # for j, v in enumerate(data[column]):
                 #     ax[agents.index(agents_string)].text(color_index - bar_width, 0.05, f'{v:.2f}', ha='center', va='bottom', fontsize=6)
-                coverage = data[column][0]
-                if coverage < min_coverages[agents_string]['coverage']:
-                    min_coverages[agents_string]['coverage'] = coverage
-                    min_coverages[agents_string]['config'] = config
-                    min_coverages[agents_string]['lbl'] = lbl
-                if coverage > max_coverages[agents_string]['coverage']:
-                    max_coverages[agents_string]['coverage'] = coverage
-                    max_coverages[agents_string]['config'] = config
-                    max_coverages[agents_string]['lbl'] = lbl
-                coverages[agents_string].append(coverage)
+                if 'std_dev' in column:
+                    std_dev_coverage = data[column][0]
+                    std_dev_coverages[agents_string].append(std_dev_coverage)
+                else:
+                    coverage = data[column][0]
+                    # if coverage < min_coverages[agents_string]['coverage']:
+                    #     min_coverages[agents_string]['coverage'] = coverage
+                    #     min_coverages[agents_string]['config'] = config
+                    #     min_coverages[agents_string]['lbl'] = lbl
+                    # if coverage > max_coverages[agents_string]['coverage']:
+                    #     max_coverages[agents_string]['coverage'] = coverage
+                    #     max_coverages[agents_string]['config'] = config
+                    #     max_coverages[agents_string]['lbl'] = lbl
+                    coverages[agents_string].append(coverage)
             # if precision_or_recall_or_coverage == 'covered_invalid_area':
             #     invalid_area_coverage = data[column][0]
             #     invalid_area_coverages[agents_string].append(invalid_area_coverage)
@@ -454,31 +479,31 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
             #data at end_time
             data_end_time = data.iloc[-1,2:]
 
-            min_recall = min_recalls[n_agents_string]['recall']
-            min_recall_config = min_recalls[n_agents_string]['config']
-            min_recall_lbl = min_recalls[n_agents_string]['lbl']
-            max_recall = max_recalls[n_agents_string]['recall']
-            max_recall_config = max_recalls[n_agents_string]['config']
-            max_recall_lbl = max_recalls[n_agents_string]['lbl']
-            min_precision = min_precisions[n_agents_string]['precision']
-            min_precision_config = min_precisions[n_agents_string]['config']
-            min_precision_lbl = min_precisions[n_agents_string]['lbl']
-            max_precision = max_precisions[n_agents_string]['precision']
-            max_precision_config = max_precisions[n_agents_string]['config']
-            max_precision_lbl = max_precisions[n_agents_string]['lbl']
-            min_coverage = min_coverages[n_agents_string]['coverage']
-            min_coverage_config = min_coverages[n_agents_string]['config']
-            min_coverage_lbl = min_coverages[n_agents_string]['lbl']
-            max_coverage = max_coverages[n_agents_string]['coverage']
-            max_coverage_config = max_coverages[n_agents_string]['config']
-            max_coverage_lbl = max_coverages[n_agents_string]['lbl']
+            # min_recall = min_recalls[n_agents_string]['recall']
+            # min_recall_config = min_recalls[n_agents_string]['config']
+            # min_recall_lbl = min_recalls[n_agents_string]['lbl']
+            # max_recall = max_recalls[n_agents_string]['recall']
+            # max_recall_config = max_recalls[n_agents_string]['config']
+            # max_recall_lbl = max_recalls[n_agents_string]['lbl']
+            # min_precision = min_precisions[n_agents_string]['precision']
+            # min_precision_config = min_precisions[n_agents_string]['config']
+            # min_precision_lbl = min_precisions[n_agents_string]['lbl']
+            # max_precision = max_precisions[n_agents_string]['precision']
+            # max_precision_config = max_precisions[n_agents_string]['config']
+            # max_precision_lbl = max_precisions[n_agents_string]['lbl']
+            # min_coverage = min_coverages[n_agents_string]['coverage']
+            # min_coverage_config = min_coverages[n_agents_string]['config']
+            # min_coverage_lbl = min_coverages[n_agents_string]['lbl']
+            # max_coverage = max_coverages[n_agents_string]['coverage']
+            # max_coverage_config = max_coverages[n_agents_string]['config']
+            # max_coverage_lbl = max_coverages[n_agents_string]['lbl']
 
-            min_recall_color_index = config_to_color_index[min_recall_config]
-            max_recall_color_index = config_to_color_index[max_recall_config]
-            min_precision_color_index = config_to_color_index[min_precision_config]
-            max_precision_color_index = config_to_color_index[max_precision_config]
-            min_coverage_color_index = config_to_color_index[min_coverage_config]
-            max_coverage_color_index = config_to_color_index[max_coverage_config]
+            # min_recall_color_index = config_to_color_index[min_recall_config]
+            # max_recall_color_index = config_to_color_index[max_recall_config]
+            # min_precision_color_index = config_to_color_index[min_precision_config]
+            # max_precision_color_index = config_to_color_index[max_precision_config]
+            # min_coverage_color_index = config_to_color_index[min_coverage_config]
+            # max_coverage_color_index = config_to_color_index[max_coverage_config]
         
             #Circle the bars with min and max recall and precision
             # ax[agents.index(n_agents_string)].bar(min_precision_color_index, min_precisions[n_agents_string]['precision'], label='min precision', facecolor='none', edgecolor='deepskyblue', linewidth=4, width=bar_width)
@@ -508,25 +533,28 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
 
             accuracy_stats = {}
             recalls_for_n_agents = recalls[n_agents_string]
+            std_dev_recalls_for_n_agents = std_dev_recalls[n_agents_string]
             precisions_for_n_agents = precisions[n_agents_string]
+            std_dev_precisions_for_n_agents = std_dev_precisions[n_agents_string]
             coverages_for_n_agents = coverages[n_agents_string]
+            std_dev_coverages_for_n_agents = std_dev_coverages[n_agents_string]
             invalid_area_coverages_for_n_agents = invalid_area_coverages[n_agents_string]
 
-            accuracy_stats["mean recall"] = mean(recalls_for_n_agents)
-            accuracy_stats["min recall"] = min(recalls_for_n_agents)
-            accuracy_stats["median recall"] = np.median(recalls_for_n_agents)
-            accuracy_stats["max recall"] = max(recalls_for_n_agents)
-            accuracy_stats["Standard Deviation recall"] = np.std(recalls_for_n_agents)
-            accuracy_stats["mean precision"] = mean(precisions_for_n_agents)
-            accuracy_stats["min precision"] = min(precisions_for_n_agents)
-            accuracy_stats["median precision"] = np.median(precisions_for_n_agents)
-            accuracy_stats["max precision"] = max(precisions_for_n_agents)
-            accuracy_stats["Standard Deviation precision"] = np.std(precisions_for_n_agents)
-            accuracy_stats["mean coverage"] = mean(coverages_for_n_agents)
-            accuracy_stats["min coverage"] = min(coverages_for_n_agents)
-            accuracy_stats["median coverage"] = np.median(coverages_for_n_agents)
-            accuracy_stats["max coverage"] = max(coverages_for_n_agents)
-            accuracy_stats["Standard Deviation coverage"] = np.std(coverages_for_n_agents)
+            accuracy_stats["recall"] = mean(recalls_for_n_agents)
+            # accuracy_stats["min recall"] = min(recalls_for_n_agents)
+            # accuracy_stats["median recall"] = np.median(recalls_for_n_agents)
+            # accuracy_stats["max recall"] = max(recalls_for_n_agents)
+            accuracy_stats["Standard Deviation recall"] = mean(std_dev_recalls_for_n_agents)
+            accuracy_stats["precision"] = mean(precisions_for_n_agents)
+            # accuracy_stats["min precision"] = min(precisions_for_n_agents)
+            # accuracy_stats["median precision"] = np.median(precisions_for_n_agents)
+            # accuracy_stats["max precision"] = max(precisions_for_n_agents)
+            accuracy_stats["Standard Deviation precision"] = mean(std_dev_precisions_for_n_agents)
+            accuracy_stats["coverage"] = mean(coverages_for_n_agents)
+            # accuracy_stats["min coverage"] = min(coverages_for_n_agents)
+            # accuracy_stats["median coverage"] = np.median(coverages_for_n_agents)
+            # accuracy_stats["max coverage"] = max(coverages_for_n_agents)
+            accuracy_stats["Standard Deviation coverage"] = mean(std_dev_coverages_for_n_agents)
             # accuracy_stats["mean invalid area coverage"] = mean(invalid_area_coverages_for_n_agents)
             # accuracy_stats["min invalid area coverage"] = min(invalid_area_coverages_for_n_agents)
             # accuracy_stats["max invalid area coverage"] = max(invalid_area_coverages_for_n_agents)
@@ -537,10 +565,10 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
         accuracy_stats_per_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
 
         #create dir if not exists
-        if not os.path.exists(f'results_BICLARE/accuracy_plots/fsr_mfr_mrl/csv_tables'):
-            os.makedirs(f'results_BICLARE/accuracy_plots/fsr_mfr_mrl/csv_tables')   
+        if not os.path.exists(f'results_{algorithm_dir}/accuracy_plots/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/accuracy_plots/{batch}/csv_tables')   
 
-        accuracy_stats_per_n_agents_df.to_csv(f'results_BICLARE/accuracy_plots/fsr_mfr_mrl/csv_tables/accuracy_{map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        accuracy_stats_per_n_agents_df.to_csv(f'results_{algorithm_dir}/accuracy_plots/{batch}/csv_tables/accuracy_{map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
         
 
@@ -562,12 +590,12 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
         # plt.savefig(f'accuracy_plots/fsr_mfr_mrl/accuracy_fsr_mfr_mrl_{map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
         # print(f'accuracy_plots/fsr_mfr_mrl/accuracy_fsr_mfr_mrl_{map}_noise_{noise}_spawn_time_{spawn_time}.png')
         
-def aggregate_metrics_per_env_map():
-    results_dir = 'results'
+def aggregate_metrics_per_env_map_per_noise():
+    results_dir = f'results_{algorithm_dir}'
     aggregated_data = {}
 
     for metric_type in ['accuracy_plots']:
-        metric_dir = os.path.join(results_dir, metric_type, 'fsr_mfr_mrl', 'csv_tables')
+        metric_dir = os.path.join(results_dir, metric_type, f'{batch}', 'csv_tables')
         if not os.path.exists(metric_dir):
             continue
 
@@ -587,6 +615,9 @@ def aggregate_metrics_per_env_map():
             if file_without_metric.split('_')[1] == 'tilted':
                 env_map += '_tilted'
 
+            noise  = file_without_metric.split('_')[-4]
+            noise = float(noise)
+
             # Read the CSV file
             filepath = os.path.join(metric_dir, file)
             data = pd.read_csv(filepath)
@@ -594,70 +625,26 @@ def aggregate_metrics_per_env_map():
             # Initialize storage for this env_map and metric
             if env_map not in aggregated_data:
                 aggregated_data[env_map] = {}
-            if metric_name not in aggregated_data[env_map]:
-                aggregated_data[env_map][metric_name] = {}
+            if noise not in aggregated_data[env_map]:
+                aggregated_data[env_map][noise] = {}
+            # if metric_name not in aggregated_data[env_map][noise]:
+            #     aggregated_data[env_map][noise][metric_name] = {}
 
             # Aggregate metrics per agent
             for _, row in data.iterrows():
                 n_agents = row['n_agents']
-                if n_agents not in aggregated_data[env_map][metric_name]:
-                    aggregated_data[env_map][metric_name][n_agents] = {
-                        # 'min_of_min': float('inf'),
-                        # 'max_of_max': float('-inf'),
-                        # 'mean_of_means': [],
-                        # 'max_std_dev': float('-inf'),
-                        # 'median_of_medians': []
-                    }
+                if n_agents not in aggregated_data[env_map][noise]:
+                    aggregated_data[env_map][noise][n_agents] = {}
 
 
-
-                metrics = aggregated_data[env_map][metric_name][n_agents]
+                metrics = aggregated_data[env_map][noise][n_agents]
                 for column in row.index:
-                    if 'min' in column:
-                        typename = column.replace('min ', '')
-                        if typename != 'min':
-                            sub_name = f'min of min {typename}' 
-                        else:
-                            sub_name = 'min of min'
-                        if sub_name not in metrics:
-                            metrics[sub_name] = float('inf')
-                        metrics[sub_name] = min(metrics[sub_name], row[column])
-                    elif 'max' in column:
-                        typename = column.replace('max ', '')
-                        if typename != 'max':
-                            sub_name = f'max of max {typename}' 
-                        else:
-                            sub_name = 'max of max'
-                        if sub_name not in metrics:
-                            metrics[sub_name] = float('-inf')
-                        metrics[sub_name] = max(metrics[sub_name], row[column])
-                    elif 'mean' in column:
-                        typename = column.replace('mean ', '')
-                        if typename != 'mean':
-                            sub_name = f'mean of means {typename}' 
-                        else:
-                            sub_name = 'mean of means'
-                        if sub_name not in metrics:
-                            metrics[sub_name] = []
-                        metrics[sub_name].append(row[column])
-                    elif 'Standard Deviation' in column:
-                        typename = column.replace('Standard Deviation ', '')
-                        if typename != 'Standard Deviation':
-                            sub_name = f'max std dev {typename}' 
-                        else:
-                            sub_name = 'max std dev'
-                        if sub_name not in metrics:
-                            metrics[sub_name] = float('-inf')
-                        metrics[sub_name] = max(metrics[sub_name], row[column])
-                    elif 'median' in column:
-                        typename = column.replace('median ', '')
-                        if typename != 'median':
-                            sub_name = f'median of medians {typename}' 
-                        else:
-                            sub_name = 'median of medians'
-                        if sub_name not in metrics:
-                            metrics[sub_name] = []
-                        metrics[sub_name].append(row[column])
+                    if column in ['n_agents', 'Unnamed: 0']:
+                        continue
+                    
+                    if column not in metrics:
+                        metrics[column] = []
+                    metrics[column].append(row[column])
                         
                 # # metrics['min_of_min'] = min(metrics['min_of_min'], row['min'])
                 # # metrics['max_of_max'] = max(metrics['max_of_max'], row['max'])
@@ -667,14 +654,25 @@ def aggregate_metrics_per_env_map():
                 # metrics['median_of_medians'].append(row['median'])
                 # Finalize aggregation (calculate mean of means and median of medians)
     # Finalize aggregation across all files
-    for env_map, metrics_data in aggregated_data.items():
-        for metric_name, agents_data in metrics_data.items():
-            for n_agents, metrics in agents_data.items():
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
                 for key in metrics.keys():
-                        if 'mean of means' in key and isinstance(metrics[key], list):
+                    if key == 'n_agents':
+                        continue
+                        # if 'mean of means' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = mean(metrics[key])
+                        # elif 'median of medians' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = np.median(metrics[key])
+                    if isinstance(metrics[key], list):
+                        if 'Standard Deviation' in key:
+                            #calculate pooled std deviation
+                            squared_standard_devs = [x**2 for x in metrics[key]]
+                            pooled_variance = np.mean(squared_standard_devs)
+                            metrics[key] = np.sqrt(pooled_variance)
+                        else:
                             metrics[key] = mean(metrics[key])
-                        elif 'median of medians' in key and isinstance(metrics[key], list):
-                            metrics[key] = np.median(metrics[key])
 
     # Print or save aggregated data for insights
     # for env_map, metrics_data in aggregated_data.items():
@@ -687,28 +685,224 @@ def aggregate_metrics_per_env_map():
     #export to csv
     # Export aggregated data to CSV
     rows = []
-    for env_map, metrics_data in aggregated_data.items():
-        for metric_name, agents_data in metrics_data.items():
-            for n_agents, metrics in agents_data.items():
-                row = {'env_map': env_map, 'metric_name': metric_name, 'n_agents': n_agents}
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                row = {
+                    'env_map': env_map,
+                    'noise': noise,
+                    'n_agents': n_agents,
+                }
                 row.update(metrics)
                 rows.append(row)
     aggregated_df = pd.DataFrame(rows)
-    aggregated_df.to_csv('results_BICLARE/accuracy_plots/fsr_mfr_mrl/aggregated_metrics.csv', index=False)
+    #change any column names with 'Standard Deviation' to 'pooled standard deviation'
+    aggregated_df.rename(columns=lambda x: x.replace('Standard Deviation', '$s_p$'), inplace=True)
+
+    aggregated_df.to_csv(f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv', index=False)
     # Separate aggregated data for certainty and coverage
 
 # def aggregate_metrics_per_noise_level():
 
+def average_aggregated_metrics():
+    input_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv'
+    output_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/averaged_metrics.csv'
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+    
+    # Group by 'noise' and calculate the mean for each group
+    grouped = aggregated_df.groupby('noise')
 
+    # Create a new DataFrame to store the averaged results
+    averaged_df = grouped.mean().reset_index()
+
+    # Add standard deviation columns for each numeric column
+    for column in aggregated_df.columns:
+        if column not in ['env_map', 'n_agents', 'noise'] and '$s_p$' not in column:
+            std_dev_column = grouped[column].std().reset_index(name=f"std dev {column}")
+            averaged_df = pd.merge(averaged_df, std_dev_column, on='noise', how='left')
+
+    #remove columns with '$s_p$'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('\$s_p\$')]
+
+    # Save the averaged metrics to a new CSV file
+    averaged_df.to_csv(output_file, index=False)
+    
+    print(f"Averaged metrics saved to {output_file}")
+
+def average_aggregated_metrics_f1():
+    input_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv'
+    output_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/averaged_metrics_f1.csv'
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+    
+    #for each row, calculate f1 score with recall and precision
+    aggregated_df['f1_score'] = 0
+    for index, row in aggregated_df.iterrows():
+        precision = row['precision']
+        recall = row['recall']
+        if precision + recall == 0:
+            f1_score = 0
+        else:
+            f1_score = 2 * (precision * recall) / (precision + recall)
+        aggregated_df.at[index, 'f1_score'] = f1_score
+
+    # Group by 'noise' and calculate the mean for each group
+    grouped = aggregated_df.groupby('noise')
+
+    # Create a new DataFrame to store the averaged results
+    averaged_df = grouped.mean().reset_index()
+
+    # Add standard deviation columns for each numeric column
+    for column in aggregated_df.columns:
+        if column not in ['env_map', 'n_agents', 'noise'] and '$s_p$' not in column:
+            std_dev_column = grouped[column].std().reset_index(name=f"std dev {column}")
+            averaged_df = pd.merge(averaged_df, std_dev_column, on='noise', how='left')
+
+    averaged_df['min f1_score'] = aggregated_df.groupby('noise')['f1_score'].min().reset_index(name='min f1_score')['min f1_score']
+    averaged_df['max f1_score'] = aggregated_df.groupby('noise')['f1_score'].max().reset_index(name='max f1_score')['max f1_score']
+    #remove columns with '$s_p$'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('\$s_p\$')]
+    
+    #remove columns with 'precision' and 'recall' and 'coverage'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('precision|recall|coverage')]
+
+
+    # Save the averaged metrics to a new CSV file
+    averaged_df.to_csv(output_file, index=False)
+    
+    print(f"Averaged metrics saved to {output_file}")
+
+def average_aggregated_metrics_cpm():
+    input_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv'
+    output_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/averaged_metrics_cp_m.csv'
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+    
+    # Group by 'noise' and calculate the mean for each group
+    grouped = aggregated_df.groupby('noise')
+
+    # Create a new DataFrame to store the averaged results
+    averaged_df = grouped.mean().reset_index()
+
+    # Add standard deviation columns for each numeric column
+    for column in aggregated_df.columns:
+        if column not in ['env_map', 'n_agents', 'noise'] and '$s_p$' not in column:
+            std_dev_column = grouped[column].std().reset_index(name=f"std dev {column}")
+            averaged_df = pd.merge(averaged_df, std_dev_column, on='noise', how='left')
+
+    #remove columns with '$s_p$'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('\$s_p\$')]
+    
+    #remove columns with 'precision' and 'recall'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('precision|recall')]
+
+
+    # Save the averaged metrics to a new CSV file
+    averaged_df.to_csv(output_file, index=False)
+    
+    print(f"Averaged metrics saved to {output_file}")
+
+def extract_aggregated_metrics_per_n_agents():
+    input_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv'
+    output_dir = f'results_{algorithm_dir}/accuracy_plots/{batch}/per_n_agents'
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+    
+    # Group by 'n_agents' and save each group to a separate CSV
+    grouped = aggregated_df.groupby('n_agents')
+    min_recall = grouped['recall'].min()
+    max_recall = grouped['recall'].max()
+    print("min recall:", min_recall)
+    print("max recall:", max_recall)
+    min_precision = grouped['precision'].min()
+    max_precision = grouped['precision'].max()
+    print("min precision:", min_precision)
+    print("max precision:", max_precision)
+    min_coverage = grouped['coverage'].min()
+    max_coverage = grouped['coverage'].max()
+    print("min coverage:", min_coverage)
+    print("max coverage:", max_coverage)
+    for n_agents, group in grouped:
+        grouped_by_map = group.groupby('env_map')
+        for map_name, map_group in grouped_by_map:
+        #exclude 'n_agents' and 'env_map' columns as they will be the same 
+            map_group = map_group.drop(columns=['n_agents', 'env_map'])    
+
+            #sort by noise
+            map_group = map_group.sort_values(by=['noise'])
+
+            # Save each map group to a separate CSV
+            map_output_file = os.path.join(output_dir, f'aggregated_metrics_{n_agents}_{map_name}.csv')
+            map_group.to_csv(map_output_file, index=False)
+        # output_file = os.path.join(output_dir, f'aggregated_metrics_{n_agents}_agents.csv')
+        # group.to_csv(output_file, index=False)
+
+def extract_aggregated_metrics_per_n_agents_per_map_duo():
+    input_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv'
+    output_dir = f'results_{algorithm_dir}/accuracy_plots/{batch}/per_n_agents'
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+    
+    # Group by 'n_agents' and save each group to a separate CSV
+    grouped = aggregated_df.groupby('n_agents')
+    # min_recall = grouped['recall'].min()
+    # max_recall = grouped['recall'].max()
+    # print("min recall:", min_recall)
+    # print("max recall:", max_recall)
+    # min_precision = grouped['precision'].min()
+    # max_precision = grouped['precision'].max()
+    # print("min precision:", min_precision)
+    # print("max precision:", max_precision)
+    # min_coverage = grouped['coverage'].min()
+    # max_coverage = grouped['coverage'].max()
+    # print("min coverage:", min_coverage)
+    # print("max coverage:", max_coverage)
+    for n_agents, group in grouped:
+        grouped_by_map = group.groupby(group['env_map'].str.replace('_tilted', '', regex=False))
+
+        for map_name, map_group in grouped_by_map:
+            #average rows with the same value for 'noise'
+            map_group = map_group.groupby('noise', as_index=False).agg(['mean', 'std']).reset_index()
+            # Flatten the multi-level columns
+            map_group.columns = ['_'.join(col).strip('_') if isinstance(col, tuple) else col for col in map_group.columns]
+
+            # #exclude 'n_agents' and 'env_map' columns as they will be the same 
+            # map_group = map_group.drop(columns=['n_agents', 'env_map'])
+
+            #drop any columns with '$s_p$'
+            map_group = map_group.loc[:, ~map_group.columns.str.contains('\$s_p\$')]
+
+            #sort by noise
+            map_group = map_group.sort_values(by=['noise'])
+
+            # Save each map group to a separate CSV
+            map_output_file = os.path.join(output_dir, f'aggregated_metrics_{n_agents}_{map_name}+tilted.csv')
+            map_group.to_csv(map_output_file, index=False)
+        # output_file = os.path.join(output_dir, f'aggregated_metrics_{n_agents}_agents.csv')
+        # group.to_csv(output_file, index=False)
+        
 
 configs = []
 
 #get all files in 'implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'
-for file in os.listdir('implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'):
+for file in os.listdir(f'implementation_and_examples/agent_implementation/configs/{batch}'):
     config_name = file.split('.')[0]
     configs.append(config_name)    
 
-usb_drive = '/media/hugo/Thesis_Data/CLARE_wallfollowing/'
+usb_drive = f'/media/hugo/Thesis_Data/{algorithm_dir}/'
 zipfiles = []
 completed_per_zip = []
 # for all files in the usb drive
@@ -720,12 +914,22 @@ for file in os.listdir(usb_drive):
         zipfiles.append(zip_file)
 
 #if directory 'accuracy' does not exist, create it
-if not os.path.exists('results_BICLARE/accuracy_plots'):
-    os.makedirs('results_BICLARE/accuracy_plots')
+if not os.path.exists(f'results_{algorithm_dir}/accuracy_plots'):
+    os.makedirs(f'results_{algorithm_dir}/accuracy_plots')
+if not os.path.exists(f'results_{algorithm_dir}/accuracy_plots/' + batch):
+    os.makedirs(f'results_{algorithm_dir}/accuracy_plots/' + batch)
 
 completed_experiments, categories_and_values = get_values_for_each_category(configs)   
 # check_if_all_required_experiments_done(completed_experiments, categories_and_values)
 # plot_certainty_with_different_configs(usb_drive, categories_and_values)
 plot_precision_recall_coverage_with_different_configs(usb_drive, categories_and_values)
 
-aggregate_metrics_per_env_map()
+aggregate_metrics_per_env_map_per_noise()
+
+average_aggregated_metrics()
+
+average_aggregated_metrics_f1()
+average_aggregated_metrics_cpm()
+
+extract_aggregated_metrics_per_n_agents()
+extract_aggregated_metrics_per_n_agents_per_map_duo()
