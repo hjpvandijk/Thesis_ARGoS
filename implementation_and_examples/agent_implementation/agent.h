@@ -5,9 +5,12 @@
 #ifndef THESIS_ARGOS_AGENT_H
 #define THESIS_ARGOS_AGENT_H
 
-#include "coordinate.h"
-#include "PheromoneMatrix.h"
-//#include "Quadtree.h"
+#include "agent_implementation/feature_config.h"
+#ifdef USING_CONFIDENCE_TREE
+#include "utils/Quadtree.h"
+#else
+#include "utils/PheromoneMatrix.h"
+#endif
 #include <string>
 #include <argos3/core/utility/math/vector2.h>
 #include <argos3/core/utility/math/quaternion.h>
@@ -17,6 +20,13 @@
 #include "agent_control/motion/simulation/DifferentialDrive.h"
 #include "agent_control/communication/simulation/Radio.h"
 #include "agent_control/communication/TimeSynchronizer.h"
+#include "utils/coordinate.h"
+#include "agent_control/sensing/simulation/distance_sensor/hc_sr04.h"
+#ifdef USING_CONFIDENCE_TREE
+#include "agent_control/path_planning/ForceVectorCalculatorQuadtree.h"
+#else
+#include "agent_control/path_planning/ForceVectorCalculatorMatrix.h"
+#endif
 
 
 class Agent {
@@ -26,13 +36,18 @@ public:
     argos::CRadians heading;
     argos::CRadians targetHeading;
     float speed{};
+    //Distance sensors
     static constexpr double num_sensors = 4;
-    std::array<double, static_cast<int>(num_sensors)> lastRangeReadings{};
+    std::array<HC_SR04, static_cast<int>(num_sensors)> distance_sensors{};
 
     struct Config {
+        double ROBOT_RADIUS;
         float ROBOT_WEIGHT;
         float ROBOT_WHEEL_RADIUS;
         float ROBOT_INTER_WHEEL_DISTANCE;
+
+        float MISSION_END_TIME_S;
+        float MISSION_END_BATTERY_LEVEL;
 
         double OBJECT_SAFETY_RADIUS;
         double AGENT_SAFETY_RADIUS;
@@ -42,10 +57,11 @@ public:
         double STEPS_360_DEGREES;
 
         double AGENT_LOCATION_RELEVANT_S;
+        double MAP_EXCHANGE_INTERVAL_S;
         double TIME_SYNC_INTERVAL_S;
-        double MATRIX_EXCHANGE_INTERVAL_S;
 
-        double DISTANCE_SENSOR_NOISE_CM;
+        double DISTANCE_SENSOR_JITTER_CM;
+        double DISTANCE_SENSOR_NOISE_FACTOR;
         double ORIENTATION_NOISE_DEGREES;
         double ORIENTATION_JITTER_DEGREES;
         double POSITION_NOISE_CM;
@@ -56,24 +72,56 @@ public:
         double AGENT_COHESION_WEIGHT;
         double AGENT_AVOIDANCE_WEIGHT;
         double AGENT_ALIGNMENT_WEIGHT;
-        double UNEXPLORED_FRONTIER_WEIGHT;
+        double TARGET_WEIGHT;
 
         double FRONTIER_DISTANCE_WEIGHT;
         double FRONTIER_SIZE_WEIGHT;
-
+        #ifdef USING_CONFIDENCE_TREE
+        double FRONTIER_PHEROMONE_WEIGHT;
+        double FRONTIER_PHEROMONE_K;
+        double FRONTIER_PHEROMONE_N;
+        double FRONTIER_PHEROMONE_M;
+        double FRONTIER_PHEROMONE_L;
+        #endif
 
         double FRONTIER_SEARCH_RADIUS;
 //        int MAX_FRONTIER_CELLS;
+        double FRONTIER_CELL_RATIO;
 //        int MAX_FRONTIER_REGIONS;
         double AGENT_COHESION_RADIUS;
         double AGENT_AVOIDANCE_RADIUS;
         double AGENT_ALIGNMENT_RADIUS ;
         double OBJECT_AVOIDANCE_RADIUS;
 
+        double FRONTIER_DIST_UNTIL_REACHED;
+
+        #if defined(SEPARATE_FRONTIERS)
+        double FRONTIER_SEPARATION_THRESHOLD;
+        #endif
+
+
+        #ifdef USING_CONFIDENCE_TREE
+        double P_FREE;
+        double P_OCCUPIED;
+        float ALPHA_RECEIVE;
+        float P_FREE_THRESHOLD;
+        float P_OCCUPIED_THRESHOLD;
+        float P_MAX;
+        float P_MIN;
+        float P_AT_MAX_SENSOR_RANGE;
+
+        double QUADTREE_RESOLUTION;
+        double QUADTREE_EVAPORATION_TIME_S;
+        double QUADTREE_EVAPORATED_PHEROMONE_FACTOR;
+        double QUADTREE_MERGE_MAX_VISITED_TIME_DIFF;
+        double QUADTREE_MERGE_MAX_P_CONFIDENCE_DIFF;
+
+        #else
         double COVERAGE_MATRIX_RESOLUTION;
         double COVERAGE_MATRIX_EVAPORATION_TIME_S;
         double OBSTACLE_MATRIX_RESOLUTION;
         double OBSTACLE_MATRIX_EVAPORATION_TIME_S;
+        #endif
 
 
         double BATTERY_CAPACITY;
@@ -84,16 +132,21 @@ public:
         double MOTOR_NO_LOAD_CURRENT;
 
         double WIFI_SPEED_MBPS;
+        double WIFI_RANGE_M;
         double MAX_JITTER_MS;
         double MESSAGE_LOSS_PROBABILITY;
 
     };
     Config config;
 
+    #ifdef SEPARATE_FRONTIERS
+    std::map<std::string, std::tuple<Coordinate, Coordinate, double>> agentLocations; //id: (location, target, timestamp)
+    #else
     std::map<std::string, std::pair<Coordinate, double>> agentLocations; //id: (location, timestamp)
-     std::map<std::string, double> agentMatrixSent; //id: sent timestamp
-    std::map<std::string, int> agentMatrixBytesReceived; //id: bytes received
-    std::map<std::string, std::pair<argos::CVector2, double>> agentVelocities;
+    #endif
+    std::map<std::string, double> agentMapSent; //id: sent timestamp
+    std::map<std::string, int> agentMapBytesReceived; //id: bytes received
+    std::map<std::string, argos::CVector2> agentVelocities;
 
 //    argos::CCI_PiPuckDifferentialDriveActuator *diffdrive{};
     DifferentialDrive differential_drive;
@@ -116,14 +169,15 @@ public:
     //Force vector deciding the next position
     argos::CVector2 force_vector;
 
-    //Some sort of map or grid to keep track of the environment
-    //Some sort of list of agents to keep track of other agents
+    Coordinate deploymentLocation;
+    double min_distance_to_deployment_location = MAXFLOAT;
+    double deployment_location_reach_distance;
 
 
 
     Agent() {}
 
-    explicit Agent(std::string id);
+    explicit Agent(std::string id, double rootbox_size, const std::string& config_file);
 
     void setPosition(double new_x, double new_y);
 
@@ -159,6 +213,8 @@ public:
 
     void calculateNextPosition();
 
+    void startMission();
+
     void doStep();
 
     void timeSyncWithCloseAgents();
@@ -169,40 +225,55 @@ public:
 
     void parseMessages();
 
+    double getTimeFromAgentLocation(std::string agentId);
+
 
 
     std::vector<std::string> getMessages();
 
-
+    #ifdef USING_CONFIDENCE_TREE
+    std::unique_ptr<quadtree::Quadtree> quadtree;
+    void sendQuadtreeToCloseAgents();
+    #else
     std::unique_ptr<PheromoneMatrix> coverageMatrix; //Cells that contain pheromone > 0, are covered and obstacle free
     std::unique_ptr<PheromoneMatrix> obstacleMatrix; //Cells that contain pheromone > 0, are covered and contain an obstacle
-
+    void sendMatricesToCloseAgents();
+    #endif
     Coordinate left_right_borders = {-10,10};
-    Coordinate upper_lower_borders = {10,-10};
+    Coordinate upper_lower_borders = {-10,10};
 
     Coordinate currentBestFrontier = {0,0};
 
-    double ticks_per_second = 30;
+    double ticks_per_second = 16;
+
+    enum class State {
+        NO_MISSION,
+        EXPLORING,
+        RETURNING,
+        FINISHED_EXPLORING,
+        MAP_RELAYED
+    };
+
+    State state = State::NO_MISSION;
+
     uint32_t elapsed_ticks = 0;
 
+    #ifdef USING_CONFIDENCE_TREE
+    std::vector<std::pair<quadtree::Box, double>> current_frontiers;
+    std::vector<std::vector<std::pair<quadtree::Box, double>>> current_frontier_regions;
+    std::vector<std::pair<quadtree::Box, double>> bestFrontierRegionBoxes = {};
+    #else
     std::vector<Coordinate> current_frontiers;
     std::vector<std::vector<std::pair<int,int>>> current_frontier_regions;
+    #endif
 
     std::set<argos::CDegrees> freeAnglesVisualization;
 
-private:
-    std::string config_file = "agent_implementation/config.yaml";
-    void loadConfig();
-    void checkForObstacles();
+    double sensor_reading_distance_probability;
 
-    bool calculateObjectAvoidanceAngle(argos::CRadians* relativeObjectAvoidanceAngle, argos::CRadians targetAngle);
-    argos::CVector2 getVirtualWallAvoidanceVector() const;
-    bool getAverageNeighborLocation(Coordinate* averageNeighborLocation, double range);
-    argos::CVector2 calculateAgentCohesionVector();
-    argos::CVector2 calculateAgentAvoidanceVector();
-    argos::CVector2 calculateAgentAlignmentVector();
-    argos::CVector2 calculateUnexploredFrontierVector();
-    std::vector<std::pair<int, int>> getFrontierCells(double currentTimeS, double searchRadius);
+private:
+    void loadConfig(const std::string& config_file, double rootbox_size);
+    void checkForObstacles();
 
     std::vector<std::string> messages;
 
@@ -214,9 +285,17 @@ private:
 
     std::string GetId() const;
 
+    void checkMissionEnd();
 
-    void addObjectLocation(Coordinate objectCoordinate) const;
-    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2) const;
+    #ifdef USING_CONFIDENCE_TREE
+    quadtree::Box addObjectLocation(Coordinate objectCoordinate) const;
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2, quadtree::Box objectBox);
+    void addFreeAreaBetween(Coordinate agentCoordinate, Coordinate coordinate2);
+    #else
+    void addObjectLocation(Coordinate objectCoordinate);
+    void addFreeAreaBetween(Coordinate coordinate1, Coordinate coordinate2);
+
+    #endif
 
 
 
