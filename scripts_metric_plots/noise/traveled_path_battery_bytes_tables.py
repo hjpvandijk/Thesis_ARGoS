@@ -15,9 +15,6 @@ from statistics import mean
 ticks_per_second = 16
 prefix = ''
 
-batch = "noise"
-
-algorithm_dir = 'CLARE'
 
 def parse_experiment_string(s):
     if not s.startswith('end'):
@@ -58,8 +55,8 @@ def create_experiment_string(
         f"_wifi_range_{format_value(comm_range)}"
         f"_message_loss_probability_{format_value(message_loss_probability)}"
         f"_frontier_search_radius_{format_value(frontier_search_radius)}"
-        f"_evaporation_time_{format_value(evaporation_time)}"
         f"_max_frontier_regions_{format_value(max_frontier_regions)}"
+        f"_evaporation_time_{format_value(evaporation_time)}"
         f"_max_route_length_{format_value(max_route_length)}"
     )
     
@@ -220,13 +217,13 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -265,16 +262,18 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
         total_min = 999999999
         total_max = 0
         average_traveled_paths = {}
+        std_dev_traveled_paths = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
 
-            if 'std' in column:
-                continue
+            
 
-            n_agents = column.split('_')[-2]
-            # print("colorindex: ", (i-i_irrelevant)%n_colors)
+            if 'std' in column:
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]            # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
             #make sure the color is the same for all three certainty types
@@ -317,14 +316,23 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
             # ax[agents.index(agents_string)].bar(color_index, data[column].to_numpy()[-1], color='green')
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
-            
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_traveled_path = data[column][0] #should be only 1 value
+                assert(data[column].shape[0] == 1)
+                if agents_string not in std_dev_traveled_paths:
+                    std_dev_traveled_paths[agents_string] = {}
+                std_dev_traveled_paths[agents_string][lbl] = std_dev_traveled_path
+                
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
 
-            average_traveled_path = data[column].mean() #should be only 1 value
-            if agents_string not in average_traveled_paths:
-                average_traveled_paths[agents_string] = {}
-            average_traveled_paths[agents_string][lbl] = average_traveled_path
+                
+                average_traveled_path = data[column].mean() #should be only 1 value
+                if agents_string not in average_traveled_paths:
+                    average_traveled_paths[agents_string] = {}
+                average_traveled_paths[agents_string][lbl] = average_traveled_path
+
 
         average_traveled_path_stats_per_n_agents = {}
         for n_agents_string in agents:
@@ -439,17 +447,27 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
 
             traveled_path_stats = {}
             traveled_path_for_n_agents = list(average_traveled_paths[n_agents_string].values())
+            std_traveled_path_for_n_agents = list(std_dev_traveled_paths[n_agents_string].values())
             # traveled_path_stats['min'] = min(traveled_path_for_n_agents)
             # traveled_path_stats['median'] = np.median(traveled_path_for_n_agents)
             # traveled_path_stats['max'] = max(traveled_path_for_n_agents)
             traveled_path_stats['mean'] = mean(traveled_path_for_n_agents)
-            traveled_path_stats['Standard Deviation'] = np.std(traveled_path_for_n_agents)
+            assert(len(traveled_path_for_n_agents) == len(std_traveled_path_for_n_agents))
+            assert(len(std_traveled_path_for_n_agents) == 1)
+            traveled_path_stats['Sample Standard Deviation'] = std_traveled_path_for_n_agents[0]
 
             average_traveled_path_stats_per_n_agents[n_agents_string] = traveled_path_stats
 
 
         traveled_path_for_n_agents_df = pd.DataFrame.from_dict(average_traveled_path_stats_per_n_agents, orient='index').reset_index()
         traveled_path_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #sort based on n_agents
+        traveled_path_for_n_agents_df['n_agents'] = traveled_path_for_n_agents_df['n_agents'].apply(lambda x: int(x.split('_')[0]))
+        traveled_path_for_n_agents_df.sort_values(by='n_agents', inplace=True)
+        #add _agents to n_agents
+        traveled_path_for_n_agents_df['n_agents'] = traveled_path_for_n_agents_df['n_agents'].apply(lambda x: str(x) + '_agents')
+        
+        #sirt
         #export to csv
         if not os.path.exists(f'results_{algorithm_dir}/traveled_path/{batch}/csv_tables'):
             os.makedirs(f'results_{algorithm_dir}/traveled_path/{batch}/csv_tables')
@@ -502,13 +520,13 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
-        #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        noise = splitted[-1].replace('.csv', '')
+        # #if splitted[-2] is a number, prepend it to noise with a decimal
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -547,15 +565,16 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
         total_min = 999999999
         total_max = 0
         average_battery_usages = {}
+        std_dev_battery_usages = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
+            
             if 'std' in column:
-                continue
-
-
-            n_agents = column.split('_')[-2]
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -600,13 +619,20 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_battery_usage = data[column][0]
+                assert(data[column].shape[0] == 1)
+                if agents_string not in std_dev_battery_usages:
+                    std_dev_battery_usages[agents_string] = {}
+                std_dev_battery_usages[agents_string][lbl] = std_dev_battery_usage
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
 
-            average_battery_usage = data[column].mean() #should be only 1 value
-            if agents_string not in average_battery_usages:
-                average_battery_usages[agents_string] = {}
-            average_battery_usages[agents_string][lbl] = average_battery_usage
+                average_battery_usage = data[column].mean() #should be only 1 value
+                if agents_string not in average_battery_usages:
+                    average_battery_usages[agents_string] = {}
+                average_battery_usages[agents_string][lbl] = average_battery_usage
 
         average_battery_usage_stats_per_n_agents = {}
         for n_agents_string in agents:
@@ -721,11 +747,14 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
 
             battery_usage_stats = {}
             battery_usage_for_n_agents = list(average_battery_usages[n_agents_string].values())
+            std_battery_usage_for_n_agents = list(std_dev_battery_usages[n_agents_string].values())
             # battery_usage_stats['min'] = min(battery_usage_for_n_agents)
             # battery_usage_stats['median'] = np.median(battery_usage_for_n_agents)
             # battery_usage_stats['max'] = max(battery_usage_for_n_agents)
             battery_usage_stats['mean'] = mean(battery_usage_for_n_agents)
-            battery_usage_stats['Standard Deviation'] = np.std(battery_usage_for_n_agents)
+            assert(len(battery_usage_for_n_agents) == len(std_battery_usage_for_n_agents))
+            assert(len(std_battery_usage_for_n_agents) == 1)
+            battery_usage_stats['Sample Standard Deviation'] = std_battery_usage_for_n_agents[0]
 
             average_battery_usage_stats_per_n_agents[n_agents_string] = battery_usage_stats
 
@@ -783,13 +812,13 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -828,16 +857,17 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
         total_min = 999999999
         total_max = 0
         averages_bytes_sent = {}
+        std_dev_bytes_sent = {}
         averages_bytes_received = {}
+        std_dev_bytes_received = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
             if 'std' in column:
-                continue
-
-
-            n_agents = column.split('_')[-4]
+                n_agents = column.split('_')[-5]
+            else:
+                n_agents = column.split('_')[-4]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -846,15 +876,15 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
             # color_index = int(hashlib.md5(str(config).encode()).hexdigest(), 16) % n_colors
             #make sure the color is the same for all three certainty types
             #also make sure same config has same color, between the different agents
-            if 'config_to_color_index' not in locals():
-                config_to_color_index = {}
-                current_color_index = 0
+            # if 'config_to_color_index' not in locals():
+            #     config_to_color_index = {}
+            #     current_color_index = 0
 
-            if config not in config_to_color_index:
-                config_to_color_index[config] = current_color_index
-                current_color_index += 1
+            # if config not in config_to_color_index:
+            #     config_to_color_index[config] = current_color_index
+            #     current_color_index += 1
             
-            color_index = config_to_color_index[config]
+            # color_index = config_to_color_index[config]
 
             # color = colors[color_index]
             # color = colors[(i-i_irrelevant)%n_colors]   
@@ -882,19 +912,32 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_bytes_sent_received = data[column][0]
+                assert(data[column].shape[0] == 1)
 
-            if column.endswith('bytes_sent'):
-                average_bytes_sent = data[column].mean() #should be only 1 value
-                if agents_string not in averages_bytes_sent:
-                    averages_bytes_sent[agents_string] = {}
-                averages_bytes_sent[agents_string][lbl] = average_bytes_sent
-            elif column.endswith('bytes_received'):
-                average_bytes_received = data[column].mean()
-                if agents_string not in averages_bytes_received:
-                    averages_bytes_received[agents_string] = {}
-                averages_bytes_received[agents_string][lbl] = average_bytes_received
+                if 'bytes_sent' in column:
+                    if agents_string not in std_dev_bytes_sent:
+                        std_dev_bytes_sent[agents_string] = {}
+                    std_dev_bytes_sent[agents_string][lbl] = std_dev_bytes_sent_received
+                elif 'bytes_received' in column:
+                    if agents_string not in std_dev_bytes_received:
+                        std_dev_bytes_received[agents_string] = {}
+                    std_dev_bytes_received[agents_string][lbl] = std_dev_bytes_sent_received
+            else:
+
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+                if column.endswith('bytes_sent'):
+                    average_bytes_sent = data[column].mean() #should be only 1 value
+                    if agents_string not in averages_bytes_sent:
+                        averages_bytes_sent[agents_string] = {}
+                    averages_bytes_sent[agents_string][lbl] = average_bytes_sent
+                elif column.endswith('bytes_received'):
+                    average_bytes_received = data[column].mean()
+                    if agents_string not in averages_bytes_received:
+                        averages_bytes_received[agents_string] = {}
+                    averages_bytes_received[agents_string][lbl] = average_bytes_received
 
 
         average_bytes_sent_received_stats_per_n_agents = {}
@@ -1010,17 +1053,23 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
 
             bytes_sent_received_stats = {}
             bytes_sent_for_n_agents = list(averages_bytes_sent[n_agents_string].values())
+            std_bytes_sent_for_n_agents = list(std_dev_bytes_sent[n_agents_string].values())
             bytes_received_for_n_agents = list(averages_bytes_received[n_agents_string].values())
+            std_bytes_received_for_n_agents = list(std_dev_bytes_received[n_agents_string].values())
             # bytes_sent_received_stats['min sent'] = min(bytes_sent_for_n_agents)
             # bytes_sent_received_stats['median sent'] = np.median(bytes_sent_for_n_agents)
             # bytes_sent_received_stats['max sent'] = max(bytes_sent_for_n_agents)
             bytes_sent_received_stats['mean sent'] = mean(bytes_sent_for_n_agents)
-            bytes_sent_received_stats['Standard Deviation sent'] = np.std(bytes_sent_for_n_agents)
+            assert(len(bytes_sent_for_n_agents) == len(std_bytes_sent_for_n_agents))
+            assert(len(std_bytes_sent_for_n_agents) == 1)
+            bytes_sent_received_stats['Sample Standard Deviation sent'] = std_bytes_sent_for_n_agents[0]
             # bytes_sent_received_stats['min received'] = min(bytes_received_for_n_agents)
             # bytes_sent_received_stats['median received'] = np.median(bytes_received_for_n_agents)
             # bytes_sent_received_stats['max received'] = max(bytes_received_for_n_agents)
             bytes_sent_received_stats['mean received'] = mean(bytes_received_for_n_agents)
-            bytes_sent_received_stats['Standard Deviation received'] = np.std(bytes_received_for_n_agents)
+            assert(len(bytes_received_for_n_agents) == len(std_bytes_received_for_n_agents))
+            assert(len(std_bytes_received_for_n_agents) == 1)
+            bytes_sent_received_stats['Standard Deviation received'] = std_bytes_received_for_n_agents[0]
 
             average_bytes_sent_received_stats_per_n_agents[n_agents_string] = bytes_sent_received_stats
 
@@ -1078,13 +1127,13 @@ def plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_value
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -1123,16 +1172,17 @@ def plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_value
         total_min = 999999999
         total_max = 0
         average_max_nodes = {}
+        std_dev_max_nodes = {}
         average_max_leaves = {}
+        std_dev_max_leaves = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
             if 'std' in column:
-                continue
-
-
-            n_agents = column.split('_')[-4]
+                n_agents = column.split('_')[-5]
+            else:
+                n_agents = column.split('_')[-4]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -1177,19 +1227,33 @@ def plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_value
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_max_nodes_leaves = data[column][0]
+                assert(data[column].shape[0] == 1)
 
-            if column.endswith('max_leaves'):
-                average_bytes_sent = data[column].mean() #should be only 1 value
-                if agents_string not in average_max_nodes:
-                    average_max_nodes[agents_string] = {}
-                average_max_nodes[agents_string][lbl] = average_bytes_sent
-            elif column.endswith('max_nodes'):
-                average_bytes_received = data[column].mean()
-                if agents_string not in average_max_leaves:
-                    average_max_leaves[agents_string] = {}
-                average_max_leaves[agents_string][lbl] = average_bytes_received
+                if 'max_leaves' in column:
+                    if agents_string not in std_dev_max_leaves:
+                        std_dev_max_leaves[agents_string] = {}
+                    std_dev_max_leaves[agents_string][lbl] = std_dev_max_nodes_leaves
+                elif 'max_nodes' in column:
+                    if agents_string not in std_dev_max_nodes:
+                        std_dev_max_nodes[agents_string] = {}
+                    std_dev_max_nodes[agents_string][lbl] = std_dev_max_nodes_leaves
+            else:
+
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                if column.endswith('max_nodes'):
+                    average_bytes_sent = data[column].mean() #should be only 1 value
+                    if agents_string not in average_max_nodes:
+                        average_max_nodes[agents_string] = {}
+                    average_max_nodes[agents_string][lbl] = average_bytes_sent
+                elif column.endswith('max_leaves'):
+                    average_bytes_received = data[column].mean()
+                    if agents_string not in average_max_leaves:
+                        average_max_leaves[agents_string] = {}
+                    average_max_leaves[agents_string][lbl] = average_bytes_received
 
 
         average_max_nodes_and_leaves_stats_per_n_agents = {}
@@ -1305,17 +1369,23 @@ def plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_value
 
             max_nodes_leaves_stats = {}
             max_nodes_for_n_agents = list(average_max_nodes[n_agents_string].values())
+            std_max_nodes_for_n_agents = list(std_dev_max_nodes[n_agents_string].values())
             max_leaves_for_n_agents = list(average_max_leaves[n_agents_string].values())
+            std_max_leaves_for_n_agents = list(std_dev_max_leaves[n_agents_string].values())
             # max_nodes_leaves_stats['min max nodes'] = min(max_nodes_for_n_agents)
             # max_nodes_leaves_stats['median max nodes'] = np.median(max_nodes_for_n_agents)
             # max_nodes_leaves_stats['max max nodes'] = max(max_nodes_for_n_agents)
             max_nodes_leaves_stats['mean max nodes'] = mean(max_nodes_for_n_agents)
-            max_nodes_leaves_stats['Standard Deviation max nodes'] = np.std(max_nodes_for_n_agents)
+            assert(len(max_nodes_for_n_agents) == len(std_max_nodes_for_n_agents))
+            assert(len(std_max_nodes_for_n_agents) == 1)
+            max_nodes_leaves_stats['Sample Standard Deviation max nodes'] = std_max_nodes_for_n_agents[0]
             # max_nodes_leaves_stats['min max leaves'] = min(max_leaves_for_n_agents)
             # max_nodes_leaves_stats['median max leaves'] = np.median(max_leaves_for_n_agents)
             # max_nodes_leaves_stats['max max leaves'] = max(max_leaves_for_n_agents)
             max_nodes_leaves_stats['mean max leaves'] = mean(max_leaves_for_n_agents)
-            max_nodes_leaves_stats['Standard Deviation max leaves'] = np.std(max_leaves_for_n_agents)
+            assert(len(max_leaves_for_n_agents) == len(std_max_leaves_for_n_agents))
+            assert(len(std_max_leaves_for_n_agents) == 1)
+            max_nodes_leaves_stats['Standard Deviation max leaves'] = std_max_leaves_for_n_agents[0]
 
             average_max_nodes_and_leaves_stats_per_n_agents[n_agents_string] = max_nodes_leaves_stats
 
@@ -1373,13 +1443,13 @@ def plot_collisions_with_different_configs(usb_drive, categories_and_values):
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -1418,16 +1488,18 @@ def plot_collisions_with_different_configs(usb_drive, categories_and_values):
         total_min = 999999999
         total_max = 0
         average_obstacle = {}
+        std_dev_obstacle = {}
         average_agent = {}
+        std_dev_agent = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
 
             if 'std' in column:
-                continue
-
-            n_agents = column.split('_')[-3]
+                n_agents = column.split('_')[-4]
+            else:
+                n_agents = column.split('_')[-3]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -1472,19 +1544,32 @@ def plot_collisions_with_different_configs(usb_drive, categories_and_values):
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_obstacle_collisions = data[column][0]
+                assert(data[column].shape[0] == 1)
 
-            if column.endswith('obstacle'):
-                average_obstacle_collisions = data[column].mean() #should be only 1 value
-                if agents_string not in average_obstacle:
-                    average_obstacle[agents_string] = {}
-                average_obstacle[agents_string][lbl] = average_obstacle_collisions
-            elif column.endswith('agent'):
-                average_agent_collisions = data[column].mean()
-                if agents_string not in average_agent:
-                    average_agent[agents_string] = {}
-                average_agent[agents_string][lbl] = average_agent_collisions
+                if column.endswith('obstacle_std'):
+                    if agents_string not in std_dev_obstacle:
+                        std_dev_obstacle[agents_string] = {}
+                    std_dev_obstacle[agents_string][lbl] = std_dev_obstacle_collisions / int(n_agents)
+                elif column.endswith('agent_std'):
+                    if agents_string not in std_dev_agent:
+                        std_dev_agent[agents_string] = {}
+                    std_dev_agent[agents_string][lbl] = std_dev_obstacle_collisions / int(n_agents)
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                if column.endswith('obstacle'):
+                    average_obstacle_collisions = data[column].mean() #should be only 1 value
+                    if agents_string not in average_obstacle:
+                        average_obstacle[agents_string] = {}
+                    average_obstacle[agents_string][lbl] = average_obstacle_collisions / int(n_agents)
+                elif column.endswith('agent'):
+                    average_agent_collisions = data[column].mean()
+                    if agents_string not in average_agent:
+                        average_agent[agents_string] = {}
+                    average_agent[agents_string][lbl] = average_agent_collisions / int(n_agents)
 
 
         average_collisions_stats_per_n_agents = {}
@@ -1526,13 +1611,13 @@ def plot_mission_time_with_different_configs(usb_drive, categories_and_values):
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -1571,15 +1656,15 @@ def plot_mission_time_with_different_configs(usb_drive, categories_and_values):
         total_min = 999999999
         total_max = 0
         average_mission_times = {}
+        std_dev_mission_times = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
             if 'std' in column:
-                continue
-
-
-            n_agents = column.split('_')[-2]
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -1624,13 +1709,22 @@ def plot_mission_time_with_different_configs(usb_drive, categories_and_values):
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_mission_time = data[column][0]
+                assert(data[column].shape[0] == 1)
 
-            average_mission_time = data[column].mean() #should be only 1 value
-            if agents_string not in average_mission_times:
-                average_mission_times[agents_string] = {}
-            average_mission_times[agents_string][lbl] = average_mission_time
+                if agents_string not in std_dev_mission_times:
+                    std_dev_mission_times[agents_string] = {}
+                std_dev_mission_times[agents_string][lbl] = std_dev_mission_time
+            else:
+
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                average_mission_time = data[column].mean() #should be only 1 value
+                if agents_string not in average_mission_times:
+                    average_mission_times[agents_string] = {}
+                average_mission_times[agents_string][lbl] = average_mission_time
 
         average_mission_time_stats_per_n_agents = {}
         for n_agents_string in agents:
@@ -1681,11 +1775,14 @@ def plot_mission_time_with_different_configs(usb_drive, categories_and_values):
     
             mission_time_stats = {}
             mission_time_for_n_agents = list(average_mission_times[n_agents_string].values())
+            std_mission_time_for_n_agents = list(std_dev_mission_times[n_agents_string].values())
             # traveled_path_stats['min'] = min(traveled_path_for_n_agents)
             # traveled_path_stats['median'] = np.median(traveled_path_for_n_agents)
             # traveled_path_stats['max'] = max(traveled_path_for_n_agents)
             mission_time_stats['mean'] = mean(mission_time_for_n_agents)
-            mission_time_stats['Standard Deviation'] = np.std(mission_time_for_n_agents)
+            assert(len(mission_time_for_n_agents) == len(std_mission_time_for_n_agents))
+            assert(len(std_mission_time_for_n_agents) == 1)
+            mission_time_stats['Sample Standard Deviation'] = std_mission_time_for_n_agents[0]
 
             average_mission_time_stats_per_n_agents[n_agents_string] = mission_time_stats
 
@@ -1709,13 +1806,13 @@ def plot_return_rate_with_different_configs(usb_drive, categories_and_values):
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -1754,15 +1851,15 @@ def plot_return_rate_with_different_configs(usb_drive, categories_and_values):
         total_min = 999999999
         total_max = 0
         average_return_rates = {}
+        std_dev_return_rates = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
             if 'std' in column:
-                continue
-
-
-            n_agents = column.split('_')[-2]
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -1807,13 +1904,21 @@ def plot_return_rate_with_different_configs(usb_drive, categories_and_values):
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_return_rate = data[column][0]
+                assert(data[column].shape[0] == 1)
 
-            average_return_rate = data[column].mean() #should be only 1 value
-            if agents_string not in average_return_rates:
-                average_return_rates[agents_string] = {}
-            average_return_rates[agents_string][lbl] = average_return_rate
+                if agents_string not in std_dev_return_rates:
+                    std_dev_return_rates[agents_string] = {}
+                std_dev_return_rates[agents_string][lbl] = std_dev_return_rate
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                average_return_rate = data[column].mean() #should be only 1 value
+                if agents_string not in average_return_rates:
+                    average_return_rates[agents_string] = {}
+                average_return_rates[agents_string][lbl] = average_return_rate
 
         average_return_rate_stats_per_n_agents = {}
         for n_agents_string in agents:
@@ -1864,11 +1969,14 @@ def plot_return_rate_with_different_configs(usb_drive, categories_and_values):
     
             return_rate_stats = {}
             return_rate_for_n_agents = list(average_return_rates[n_agents_string].values())
+            std_return_rate_for_n_agents = list(std_dev_return_rates[n_agents_string].values())
             # traveled_path_stats['min'] = min(traveled_path_for_n_agents)
             # traveled_path_stats['median'] = np.median(traveled_path_for_n_agents)
             # traveled_path_stats['max'] = max(traveled_path_for_n_agents)
             return_rate_stats['mean'] = mean(return_rate_for_n_agents)
-            return_rate_stats['Standard Deviation'] = np.std(return_rate_for_n_agents)
+            assert(len(return_rate_for_n_agents) == len(std_return_rate_for_n_agents))
+            assert(len(std_return_rate_for_n_agents) == 1)
+            return_rate_stats['Sample Standard Deviation'] = std_return_rate_for_n_agents[0]
 
             average_return_rate_stats_per_n_agents[n_agents_string] = return_rate_stats
 
@@ -1880,47 +1988,324 @@ def plot_return_rate_with_different_configs(usb_drive, categories_and_values):
             os.makedirs(f'results_{algorithm_dir}/return_rate/{batch}/csv_tables')
         return_rate_for_n_agents_df.to_csv(f'results_{algorithm_dir}/return_rate/{batch}/csv_tables/return_rate_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
+def aggregate_metrics_per_env_map_per_noise(metric_name):
+    results_dir = f'results_{algorithm_dir}'
+    aggregated_data = {}
 
-configs = []
-
-#get all files in 'implementation_and_examples/agent_implementation/configs/{batch}'
-for file in os.listdir(f'implementation_and_examples/agent_implementation/configs/{batch}'):
-    config_name = file.split('.')[0]
-    configs.append(config_name)    
-
-usb_drive = f'/media/hugo/Thesis_Data/{algorithm_dir}/'
-zipfiles = []
-completed_per_zip = []
-# for all files in the usb drive
-for file in os.listdir(usb_drive):
-    if file.endswith(".zip"):
-        if file =='experiment_results_afternoon_11-03.zip':
+    for metric_type in [metric_name]:
+        metric_dir = os.path.join(results_dir, metric_type, f'{batch}', 'csv_tables')
+        if not os.path.exists(metric_dir):
             continue
-        zip_file = usb_drive + file
-        zipfiles.append(zip_file)
 
-#if directory  does not exist, create it
-if not os.path.exists(f'results_{algorithm_dir}/traveled_path'):
-    os.makedirs(f'results_{algorithm_dir}/traveled_path')
-if not os.path.exists(f'results_{algorithm_dir}/traveled_path/{batch}'):
-    os.makedirs(f'results_{algorithm_dir}/traveled_path/{batch}')
+        for file in os.listdir(metric_dir):
+            if not file.endswith('.csv'):
+                continue
 
-if not os.path.exists(f'results_{algorithm_dir}/battery_usage'):
-    os.makedirs(f'results_{algorithm_dir}/battery_usage')
-if not os.path.exists(f'results_{algorithm_dir}/battery_usage/{batch}'):
-    os.makedirs(f'results_{algorithm_dir}/battery_usage/{batch}')
+            # Extract env_map from filename
+            parts = file.split('_')
+            # underscores_in_metric_name = metric_name.count('_')
+            # if metric_name == 'CP(T':
+            #     metric_name = 'CP(T_end)'
+            # elif metric_name == 'AC(T':
+            #     metric_name = 'AC(T_end)'
+            file_without_metric = file.replace(metric_name + '_', '')
+            env_map = file_without_metric.split('_')[0]
+            if file_without_metric.split('_')[1] == 'tilted':
+                env_map += '_tilted'
+
+            noise  = file_without_metric.split('_')[-4]
+            noise = float(noise)
+
+            # Read the CSV file
+            filepath = os.path.join(metric_dir, file)
+            data = pd.read_csv(filepath)
+
+            # Initialize storage for this env_map and metric
+            if env_map not in aggregated_data:
+                aggregated_data[env_map] = {}
+            if noise not in aggregated_data[env_map]:
+                aggregated_data[env_map][noise] = {}
+            # if metric_name not in aggregated_data[env_map][noise]:
+            #     aggregated_data[env_map][noise][metric_name] = {}
+
+            # Aggregate metrics per agent
+            for _, row in data.iterrows():
+                n_agents = row['n_agents']
+                if n_agents not in aggregated_data[env_map][noise]:
+                    aggregated_data[env_map][noise][n_agents] = {}
+
+
+                metrics = aggregated_data[env_map][noise][n_agents]
+                for column in row.index:
+                    if column in ['n_agents', 'Unnamed: 0']:
+                        continue
+                    
+                    if column not in metrics:
+                        metrics[column] = []
+                    metrics[column].append(row[column])
+                        
+                # # metrics['min_of_min'] = min(metrics['min_of_min'], row['min'])
+                # # metrics['max_of_max'] = max(metrics['max_of_max'], row['max'])
+                # print(type(metrics['mean_of_means']))
+                # metrics['mean_of_means'].append(row['mean'])
+                # metrics['max_std_dev'] = max(metrics['max_std_dev'], row['Standard Deviation'])
+                # metrics['median_of_medians'].append(row['median'])
+                # Finalize aggregation (calculate mean of means and median of medians)
+    # Finalize aggregation across all files
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                for key in metrics.keys():
+                    if key == 'n_agents':
+                        continue
+                        # if 'mean of means' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = mean(metrics[key])
+                        # elif 'median of medians' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = np.median(metrics[key])
+                    if isinstance(metrics[key], list):
+                        if 'Standard Deviation' in key:
+                            #calculate pooled std deviation
+                            squared_standard_devs = [x**2 for x in metrics[key]]
+                            pooled_variance = np.mean(squared_standard_devs)
+                            metrics[key] = np.sqrt(pooled_variance)
+                        else:
+                            metrics[key] = mean(metrics[key])
+
+    # Print or save aggregated data for insights
+    # for env_map, metrics_data in aggregated_data.items():
+    #     print(f"Aggregated metrics for {env_map}:")
+    #     for metric_name, agents_data in metrics_data.items():
+    #         print(f"  {metric_name}:")
+    #         for n_agents, metrics in agents_data.items():
+    #             print(f"    {n_agents}: {metrics}")
+
+    #export to csv
+    # Export aggregated data to CSV
+    rows = []
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                row = {
+                    'env_map': env_map,
+                    'noise': noise,
+                    'n_agents': n_agents,
+                }
+                row.update(metrics)
+                rows.append(row)
+    aggregated_df = pd.DataFrame(rows)
+    #change any column names with 'Standard Deviation' to 'pooled standard deviation'
+    aggregated_df.rename(columns=lambda x: x.replace('Sample Standard Deviation', '$s_p$'), inplace=True)
+
+    aggregated_df.to_csv(f'results_{algorithm_dir}/{metric_type}/{batch}/aggregated_metrics.csv', index=False)
+    # Separate aggregated data for certainty and coverage
+
+def aggregate_metrics_per_env_map_per_noise_spawn_time_100(metric_name):
+    results_dir = f'results_{algorithm_dir}'
+    aggregated_data = {}
+
+    for metric_type in [metric_name]:
+        metric_dir = os.path.join(results_dir, metric_type, f'{batch}', 'csv_tables')
+        if not os.path.exists(metric_dir):
+            continue
+
+        for file in os.listdir(metric_dir):
+            if not file.endswith('.csv'):
+                continue
+
+            # Extract env_map from filename
+            parts = file.split('_')
+            # underscores_in_metric_name = metric_name.count('_')
+            # if metric_name == 'CP(T':
+            #     metric_name = 'CP(T_end)'
+            # elif metric_name == 'AC(T':
+            #     metric_name = 'AC(T_end)'
+            file_without_metric = file.replace(metric_name + '_', '')
+            env_map = file_without_metric.split('_')[0]
+            if file_without_metric.split('_')[1] == 'tilted':
+                env_map += '_tilted'
+
+            noise  = file_without_metric.split('_')[-4]
+            noise = float(noise)
+
+            spawn_time = file_without_metric.split('_')[-1].replace('.csv', '')
+            if spawn_time != '100':
+                continue
+
+            # Read the CSV file
+            filepath = os.path.join(metric_dir, file)
+            data = pd.read_csv(filepath)
+
+            # Initialize storage for this env_map and metric
+            if env_map not in aggregated_data:
+                aggregated_data[env_map] = {}
+            if noise not in aggregated_data[env_map]:
+                aggregated_data[env_map][noise] = {}
+            # if metric_name not in aggregated_data[env_map][noise]:
+            #     aggregated_data[env_map][noise][metric_name] = {}
+
+            # Aggregate metrics per agent
+            for _, row in data.iterrows():
+                n_agents = row['n_agents']
+                if n_agents not in aggregated_data[env_map][noise]:
+                    aggregated_data[env_map][noise][n_agents] = {}
+
+
+                metrics = aggregated_data[env_map][noise][n_agents]
+                for column in row.index:
+                    if column in ['n_agents', 'Unnamed: 0']:
+                        continue
+                    
+                    if column not in metrics:
+                        metrics[column] = []
+                    metrics[column].append(row[column])
+                        
+                # # metrics['min_of_min'] = min(metrics['min_of_min'], row['min'])
+                # # metrics['max_of_max'] = max(metrics['max_of_max'], row['max'])
+                # print(type(metrics['mean_of_means']))
+                # metrics['mean_of_means'].append(row['mean'])
+                # metrics['max_std_dev'] = max(metrics['max_std_dev'], row['Standard Deviation'])
+                # metrics['median_of_medians'].append(row['median'])
+                # Finalize aggregation (calculate mean of means and median of medians)
+    # Finalize aggregation across all files
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                for key in metrics.keys():
+                    if key == 'n_agents':
+                        continue
+                        # if 'mean of means' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = mean(metrics[key])
+                        # elif 'median of medians' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = np.median(metrics[key])
+                    if isinstance(metrics[key], list):
+                        if 'Standard Deviation' in key:
+                            #calculate pooled std deviation
+                            squared_standard_devs = [x**2 for x in metrics[key]]
+                            pooled_variance = np.mean(squared_standard_devs)
+                            metrics[key] = np.sqrt(pooled_variance)
+                        else:
+                            metrics[key] = mean(metrics[key])
+
+    # Print or save aggregated data for insights
+    # for env_map, metrics_data in aggregated_data.items():
+    #     print(f"Aggregated metrics for {env_map}:")
+    #     for metric_name, agents_data in metrics_data.items():
+    #         print(f"  {metric_name}:")
+    #         for n_agents, metrics in agents_data.items():
+    #             print(f"    {n_agents}: {metrics}")
+
+    #export to csv
+    # Export aggregated data to CSV
+    rows = []
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                row = {
+                    'env_map': env_map,
+                    'noise': noise,
+                    'n_agents': n_agents,
+                }
+                row.update(metrics)
+                rows.append(row)
+    aggregated_df = pd.DataFrame(rows)
+    #change any column names with 'Standard Deviation' to 'pooled standard deviation'
+    aggregated_df.rename(columns=lambda x: x.replace('Sample Standard Deviation', '$s_p$'), inplace=True)
+
+    aggregated_df.to_csv(f'results_{algorithm_dir}/{metric_type}/{batch}/aggregated_metrics.csv', index=False)
+    # Separate aggregated data for certainty and coverage
+
+
+# def aggregate_metrics_per_noise_level():
+
+def average_aggregated_metrics(metric):
+    input_file = f'results_{algorithm_dir}/{metric}/{batch}/aggregated_metrics.csv'
+    output_file = f'results_{algorithm_dir}/{metric}/{batch}/averaged_metrics.csv'
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+    
+    # Group by 'noise' and calculate the mean for each group
+    grouped = aggregated_df.groupby('noise')
+
+    # Create a new DataFrame to store the averaged results
+    averaged_df = grouped.mean().reset_index()
+
+    # Add standard deviation columns for each numeric column
+    for column in aggregated_df.columns:
+        if column not in ['env_map', 'n_agents', 'noise'] and '$s_p$' not in column:
+            std_dev_column = grouped[column].std().reset_index(name=f"std dev {column}")
+            averaged_df = pd.merge(averaged_df, std_dev_column, on='noise', how='left')
+
+    #remove columns with '$s_p$'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('\$s_p\$')]
+
+    # Save the averaged metrics to a new CSV file
+    averaged_df.to_csv(output_file, index=False)
+    
+    print(f"Averaged metrics saved to {output_file}")
+
+# batch = "noise"
+# # batch = "noise_wallfollowing"
+
+# algorithm_dir = 'CLARE'
+# # algorithm_dir = 'CLARE_wallfollowing'
+
+# algorithm_dirs = ['CLARE', 'CLARE_wallfollowing']
+# batches = ['noise', 'noise_wallfollowing']
+algorithm_dirs = ['CLARE_oorm0o3']
+batches = ['noise_oorm0o3']
+
+for i, algorithm_dir in enumerate(algorithm_dirs):
+    batch = batches[i]
+
+    configs = []
+
+    #get all files in 'implementation_and_examples/agent_implementation/configs/{batch}'
+    for file in os.listdir(f'implementation_and_examples/agent_implementation/configs/{batch}'):
+        config_name = file.split('.')[0]
+        configs.append(config_name)    
+
+    usb_drive = f'/media/hugo/Thesis_Data/{algorithm_dir}/'
+    zipfiles = []
+    completed_per_zip = []
+    # for all files in the usb drive
+    for file in os.listdir(usb_drive):
+        if file.endswith(".zip"):
+            if file =='experiment_results_afternoon_11-03.zip':
+                continue
+            zip_file = usb_drive + file
+            zipfiles.append(zip_file)
+
+    #if directory  does not exist, create it
+    if not os.path.exists(f'results_{algorithm_dir}/traveled_path'):
+        os.makedirs(f'results_{algorithm_dir}/traveled_path')
+    if not os.path.exists(f'results_{algorithm_dir}/traveled_path/{batch}'):
+        os.makedirs(f'results_{algorithm_dir}/traveled_path/{batch}')
+
+    if not os.path.exists(f'results_{algorithm_dir}/battery_usage'):
+        os.makedirs(f'results_{algorithm_dir}/battery_usage')
+    if not os.path.exists(f'results_{algorithm_dir}/battery_usage/{batch}'):
+        os.makedirs(f'results_{algorithm_dir}/battery_usage/{batch}')
 
 
 
 
 
-completed_experiments, categories_and_values = get_values_for_each_category(configs)   
-# check_if_all_required_experiments_done(completed_experiments, categories_and_values)
-# plot_certainty_with_different_configs(usb_drive, categories_and_values)
-# plot_battery_usage_with_different_configs(usb_drive, categories_and_values)
-# plot_traveled_path_with_different_configs(usb_drive, categories_and_values)
-# plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_values)
-# plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_values)
-plot_collisions_with_different_configs(usb_drive, categories_and_values)
-plot_mission_time_with_different_configs(usb_drive, categories_and_values)
-plot_return_rate_with_different_configs(usb_drive, categories_and_values)
+    completed_experiments, categories_and_values = get_values_for_each_category(configs)   
+    # check_if_all_required_experiments_done(completed_experiments, categories_and_values)
+    # plot_certainty_with_different_configs(usb_drive, categories_and_values)
+    # plot_battery_usage_with_different_configs(usb_drive, categories_and_values)
+    # plot_traveled_path_with_different_configs(usb_drive, categories_and_values)
+    # plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_values)
+    # plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_values)
+    plot_collisions_with_different_configs(usb_drive, categories_and_values)
+    # plot_mission_time_with_different_configs(usb_drive, categories_and_values)
+    # plot_return_rate_with_different_configs(usb_drive, categories_and_values)
+    aggregate_metrics_per_env_map_per_noise('collisions') #collisions, battery_usage, traveled_path, bytes_sent_received, max_nodes_leaves, return_rate, mission_time
+    average_aggregated_metrics('collisions')
+    # aggregate_metrics_per_env_map_per_noise_spawn_time_100('max_nodes_and_leaves') #collisions, battery_usage, traveled_path, bytes_sent_received, max_nodes_leaves, return_rate, mission_time
+    # average_aggregated_metrics('max_nodes_and_leaves')

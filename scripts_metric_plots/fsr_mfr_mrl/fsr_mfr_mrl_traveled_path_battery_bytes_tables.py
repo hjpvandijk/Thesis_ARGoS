@@ -15,6 +15,12 @@ from statistics import mean
 ticks_per_second = 16
 prefix = ''
 
+batch = "fsr_mfr_mrl"
+# batch = "fsr_mfr"
+
+algorithm_dir = 'CLARE'
+# algorithm_dir = 'CLARE_wallfollowing'
+
 def parse_experiment_string(s):
     if not s.startswith('end'):
         end_index = s.index('end')
@@ -54,8 +60,8 @@ def create_experiment_string(
         f"_wifi_range_{format_value(comm_range)}"
         f"_message_loss_probability_{format_value(message_loss_probability)}"
         f"_frontier_search_radius_{format_value(frontier_search_radius)}"
-        f"_evaporation_time_{format_value(evaporation_time)}"
         f"_max_frontier_regions_{format_value(max_frontier_regions)}"
+        f"_evaporation_time_{format_value(evaporation_time)}"
         f"_max_route_length_{format_value(max_route_length)}"
     )
     
@@ -205,7 +211,7 @@ def generate_high_contrast_hsv_colors(n_colors):
 
                    
 def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
-    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/traveled_path/'
+    dir = f'{usb_drive}averaged_data/{batch}/traveled_path/'
     if not os.path.exists(dir):
         os.makedirs(dir)
     #for all csv files in the directory
@@ -216,13 +222,13 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -261,14 +267,18 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
         total_min = 999999999
         total_max = 0
         average_traveled_paths = {}
+        std_dev_traveled_paths = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
 
+            
 
-            n_agents = column.split('_')[-2]
-            # print("colorindex: ", (i-i_irrelevant)%n_colors)
+            if 'std' in column:
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]            # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
             #make sure the color is the same for all three certainty types
@@ -292,33 +302,42 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
             lbl = column.split('_')[:-2]
             lbl = '_'.join(lbl) 
 
-            fsr_symbol = '$R_f$'
-            fsr = lbl.split('_')[1] #R_f
-            if int(fsr) == 99999:
-                fsr = '$\infty$'
-            mfr_symbol = '$N_f$'
-            mfr = lbl.split('_')[3] #N_f
-            if int(mfr) == 99999:
-                mfr = '$\infty$'
-            mrl_symbol = '$N_s$'
-            mrl = lbl.split('_')[5] #N_s
-            if int(mrl) == 99999:
-                mrl = '$\infty$'
-            lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            # fsr_symbol = '$R_f$'
+            # fsr = lbl.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = lbl.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = lbl.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
             if lbl not in config_labels:
                 config_labels.append(lbl)
             agents_string = n_agents + '_agents'
             # ax[agents.index(agents_string)].bar(color_index, data[column].to_numpy()[-1], color='green')
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
-            
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_traveled_path = data[column][0] #should be only 1 value
+                assert(data[column].shape[0] == 1)
+                if agents_string not in std_dev_traveled_paths:
+                    std_dev_traveled_paths[agents_string] = {}
+                std_dev_traveled_paths[agents_string][lbl] = std_dev_traveled_path
+                
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
 
-            average_traveled_path = data[column].mean() #should be only 1 value
-            if agents_string not in average_traveled_paths:
-                average_traveled_paths[agents_string] = {}
-            average_traveled_paths[agents_string][lbl] = average_traveled_path
+                
+                average_traveled_path = data[column].mean() #should be only 1 value
+                if agents_string not in average_traveled_paths:
+                    average_traveled_paths[agents_string] = {}
+                average_traveled_paths[agents_string][lbl] = average_traveled_path
+
 
         average_traveled_path_stats_per_n_agents = {}
         for n_agents_string in agents:
@@ -345,19 +364,19 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
                 lbl = column.split('_')[:-2]
                 lbl = '_'.join(lbl) 
 
-                fsr_symbol = '$R_f$'
-                fsr = lbl.split('_')[1] #R_f
-                if int(fsr) == 99999:
-                    fsr = '$\infty$'
-                mfr_symbol = '$N_f$'
-                mfr = lbl.split('_')[3] #N_f
-                if int(mfr) == 99999:
-                    mfr = '$\infty$'
-                mrl_symbol = '$N_s$'
-                mrl = lbl.split('_')[5] #N_s
-                if int(mrl) == 99999:
-                    mrl = '$\infty$'
-                lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+                # fsr_symbol = '$R_f$'
+                # fsr = lbl.split('_')[1] #R_f
+                # if int(fsr) == 99999:
+                #     fsr = '$\infty$'
+                # mfr_symbol = '$N_f$'
+                # mfr = lbl.split('_')[3] #N_f
+                # if int(mfr) == 99999:
+                #     mfr = '$\infty$'
+                # mrl_symbol = '$N_s$'
+                # mrl = lbl.split('_')[5] #N_s
+                # if int(mrl) == 99999:
+                #     mrl = '$\infty$'
+                # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
                 traveled_path = data[column].to_numpy()[-1]
                 if traveled_path > max_traveled_path:
                     max_traveled_path = traveled_path
@@ -373,58 +392,58 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
             # ax[agents.index(n_agents_string)].bar(min_traveled_path_color_index, min_traveled_path, facecolor='none', edgecolor='springgreen', linewidth=4)
             # ax[agents.index(n_agents_string)].bar(max_traveled_path_color_index, max_traveled_path, facecolor='none', edgecolor='darkslategray', linewidth=4)
 
-            if 'max' not in counts['fsr']:
-                counts['fsr']['max'] = {}
-            if 'min' not in counts['fsr']:
-                counts['fsr']['min'] = {}
+            # if 'max' not in counts['fsr']:
+            #     counts['fsr']['max'] = {}
+            # if 'min' not in counts['fsr']:
+            #     counts['fsr']['min'] = {}
     
-            if 'max' not in counts['mfr']:
-                counts['mfr']['max'] = {}
-            if 'min' not in counts['mfr']:
-                counts['mfr']['min'] = {}
+            # if 'max' not in counts['mfr']:
+            #     counts['mfr']['max'] = {}
+            # if 'min' not in counts['mfr']:
+            #     counts['mfr']['min'] = {}
            
-            if 'max' not in counts['mrl']:
-                counts['mrl']['max'] = {}
-            if 'min' not in counts['mrl']:
-                counts['mrl']['min'] = {}
+            # if 'max' not in counts['mrl']:
+            #     counts['mrl']['max'] = {}
+            # if 'min' not in counts['mrl']:
+            #     counts['mrl']['min'] = {}
 
         
 
             #get the fsr, mfr and mrl from the label
-            fsr_min = min_traveled_path_column.split('_')[1] #fsr
-            mfr_min = min_traveled_path_column.split('_')[3] #mfr
-            mrl_min = min_traveled_path_column.split('_')[5] #mrl
-            fsr_max = max_traveled_path_column.split('_')[1] #fsr
-            mfr_max = max_traveled_path_column.split('_')[3] #mfr
-            mrl_max = max_traveled_path_column.split('_')[5] #mrl
+            # fsr_min = min_traveled_path_column.split('_')[1] #fsr
+            # mfr_min = min_traveled_path_column.split('_')[3] #mfr
+            # mrl_min = min_traveled_path_column.split('_')[5] #mrl
+            # fsr_max = max_traveled_path_column.split('_')[1] #fsr
+            # mfr_max = max_traveled_path_column.split('_')[3] #mfr
+            # mrl_max = max_traveled_path_column.split('_')[5] #mrl
 
             
-            if fsr_max not in counts['fsr']['max']:
-                counts['fsr']['max'][fsr_max] = 1
-            else:
-                counts['fsr']['max'][fsr_max] += 1
-            if fsr_min not in counts['fsr']['min']:
-                counts['fsr']['min'][fsr_min] = 1
-            else:
-                counts['fsr']['min'][fsr_min] += 1
+            # if fsr_max not in counts['fsr']['max']:
+            #     counts['fsr']['max'][fsr_max] = 1
+            # else:
+            #     counts['fsr']['max'][fsr_max] += 1
+            # if fsr_min not in counts['fsr']['min']:
+            #     counts['fsr']['min'][fsr_min] = 1
+            # else:
+            #     counts['fsr']['min'][fsr_min] += 1
 
-            if mfr_max not in counts['mfr']['max']:
-                counts['mfr']['max'][mfr_max] = 1
-            else:
-                counts['mfr']['max'][mfr_max] += 1
-            if mfr_min not in counts['mfr']['min']:
-                counts['mfr']['min'][mfr_min] = 1
-            else:
-                counts['mfr']['min'][mfr_min] += 1
+            # if mfr_max not in counts['mfr']['max']:
+            #     counts['mfr']['max'][mfr_max] = 1
+            # else:
+            #     counts['mfr']['max'][mfr_max] += 1
+            # if mfr_min not in counts['mfr']['min']:
+            #     counts['mfr']['min'][mfr_min] = 1
+            # else:
+            #     counts['mfr']['min'][mfr_min] += 1
 
-            if mrl_max not in counts['mrl']['max']:
-                counts['mrl']['max'][mrl_max] = 1
-            else:
-                counts['mrl']['max'][mrl_max] += 1
-            if mrl_min not in counts['mrl']['min']:
-                counts['mrl']['min'][mrl_min] = 1
-            else:
-                counts['mrl']['min'][mrl_min] += 1
+            # if mrl_max not in counts['mrl']['max']:
+            #     counts['mrl']['max'][mrl_max] = 1
+            # else:
+            #     counts['mrl']['max'][mrl_max] += 1
+            # if mrl_min not in counts['mrl']['min']:
+            #     counts['mrl']['min'][mrl_min] = 1
+            # else:
+            #     counts['mrl']['min'][mrl_min] += 1
             
 
 
@@ -433,21 +452,31 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
 
             traveled_path_stats = {}
             traveled_path_for_n_agents = list(average_traveled_paths[n_agents_string].values())
-            traveled_path_stats['min'] = min(traveled_path_for_n_agents)
-            traveled_path_stats['median'] = np.median(traveled_path_for_n_agents)
-            traveled_path_stats['max'] = max(traveled_path_for_n_agents)
+            std_traveled_path_for_n_agents = list(std_dev_traveled_paths[n_agents_string].values())
+            # traveled_path_stats['min'] = min(traveled_path_for_n_agents)
+            # traveled_path_stats['median'] = np.median(traveled_path_for_n_agents)
+            # traveled_path_stats['max'] = max(traveled_path_for_n_agents)
             traveled_path_stats['mean'] = mean(traveled_path_for_n_agents)
-            traveled_path_stats['Standard Deviation'] = np.std(traveled_path_for_n_agents)
+            assert(len(traveled_path_for_n_agents) == len(std_traveled_path_for_n_agents))
+            assert(len(std_traveled_path_for_n_agents) == 1)
+            traveled_path_stats['Sample Standard Deviation'] = std_traveled_path_for_n_agents[0]
 
             average_traveled_path_stats_per_n_agents[n_agents_string] = traveled_path_stats
 
 
         traveled_path_for_n_agents_df = pd.DataFrame.from_dict(average_traveled_path_stats_per_n_agents, orient='index').reset_index()
         traveled_path_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #sort based on n_agents
+        traveled_path_for_n_agents_df['n_agents'] = traveled_path_for_n_agents_df['n_agents'].apply(lambda x: int(x.split('_')[0]))
+        traveled_path_for_n_agents_df.sort_values(by='n_agents', inplace=True)
+        #add _agents to n_agents
+        traveled_path_for_n_agents_df['n_agents'] = traveled_path_for_n_agents_df['n_agents'].apply(lambda x: str(x) + '_agents')
+        
+        #sirt
         #export to csv
-        if not os.path.exists(f'results/traveled_path/fsr_mfr_mrl/csv_tables'):
-            os.makedirs(f'results/traveled_path/fsr_mfr_mrl/csv_tables')
-        traveled_path_for_n_agents_df.to_csv(f'results/traveled_path/fsr_mfr_mrl/csv_tables/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        if not os.path.exists(f'results_{algorithm_dir}/traveled_path/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/traveled_path/{batch}/csv_tables')
+        traveled_path_for_n_agents_df.to_csv(f'results_{algorithm_dir}/traveled_path/{batch}/csv_tables/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
 
         # fig.text(0.04, 0.5, 'Traveled path (m)', va='center', rotation='vertical')
@@ -465,10 +494,10 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
         #set plot size
         # fig.set_size_inches(14, 25)
         # plt.show()
-        # plt.savefig(f'traveled_path/fsr_mfr_mrl/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
-        # print(f'traveled_path/fsr_mfr_mrl/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
+        # plt.savefig(f'traveled_path/{batch}/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
+        # print(f'traveled_path/{batch}/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
         # #export counts to txt file, table format
-        # with open(f'traveled_path/fsr_mfr_mrl/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
+        # with open(f'traveled_path/{batch}/traveled_path_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
         #     f.write(f'Counts for map {env_map}, noise {noise}, spawn time {spawn_time}\n')
         #     f.write('Counts for max ACP\n')
         #     f.write(tabulate(counts['fsr']['max'].items(), headers=['FSR', 'Count'], tablefmt='grid'))
@@ -485,7 +514,7 @@ def plot_traveled_path_with_different_configs(usb_drive, categories_and_values):
         #     f.write(tabulate(counts['mrl']['min'].items(), headers=['MRL', 'Count'], tablefmt='grid'))
 
 def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
-    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/battery_usage/'
+    dir = f'{usb_drive}averaged_data/{batch}/battery_usage/'
     if not os.path.exists(dir):
         os.makedirs(dir)
     #for all csv files in the directory
@@ -496,13 +525,13 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
-        #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        noise = splitted[-1].replace('.csv', '')
+        # #if splitted[-2] is a number, prepend it to noise with a decimal
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -534,20 +563,23 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
         
         x = np.arange(n_configs)
         config_labels = []
-        counts = {}
-        counts['mrl'] = {}
-        counts['mfr'] = {}
-        counts['fsr'] = {}
+        # counts = {}
+        # counts['mrl'] = {}
+        # counts['mfr'] = {}
+        # counts['fsr'] = {}
         total_min = 999999999
         total_max = 0
         average_battery_usages = {}
+        std_dev_battery_usages = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
-
-
-            n_agents = column.split('_')[-2]
+            
+            if 'std' in column:
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -592,13 +624,20 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_battery_usage = data[column][0]
+                assert(data[column].shape[0] == 1)
+                if agents_string not in std_dev_battery_usages:
+                    std_dev_battery_usages[agents_string] = {}
+                std_dev_battery_usages[agents_string][lbl] = std_dev_battery_usage
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
 
-            average_battery_usage = data[column].mean() #should be only 1 value
-            if agents_string not in average_battery_usages:
-                average_battery_usages[agents_string] = {}
-            average_battery_usages[agents_string][lbl] = average_battery_usage
+                average_battery_usage = data[column].mean() #should be only 1 value
+                if agents_string not in average_battery_usages:
+                    average_battery_usages[agents_string] = {}
+                average_battery_usages[agents_string][lbl] = average_battery_usage
 
         average_battery_usage_stats_per_n_agents = {}
         for n_agents_string in agents:
@@ -653,58 +692,58 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
             # ax[agents.index(n_agents_string)].bar(min_battery_color_index, min_battery, facecolor='none', edgecolor='springgreen', linewidth=4)
             # ax[agents.index(n_agents_string)].bar(max_battery_color_index, max_battery, facecolor='none', edgecolor='darkslategray', linewidth=4)
 
-            if 'max' not in counts['fsr']:
-                counts['fsr']['max'] = {}
-            if 'min' not in counts['fsr']:
-                counts['fsr']['min'] = {}
+            # if 'max' not in counts['fsr']:
+            #     counts['fsr']['max'] = {}
+            # if 'min' not in counts['fsr']:
+            #     counts['fsr']['min'] = {}
     
-            if 'max' not in counts['mfr']:
-                counts['mfr']['max'] = {}
-            if 'min' not in counts['mfr']:
-                counts['mfr']['min'] = {}
+            # if 'max' not in counts['mfr']:
+            #     counts['mfr']['max'] = {}
+            # if 'min' not in counts['mfr']:
+            #     counts['mfr']['min'] = {}
            
-            if 'max' not in counts['mrl']:
-                counts['mrl']['max'] = {}
-            if 'min' not in counts['mrl']:
-                counts['mrl']['min'] = {}
+            # if 'max' not in counts['mrl']:
+            #     counts['mrl']['max'] = {}
+            # if 'min' not in counts['mrl']:
+            #     counts['mrl']['min'] = {}
 
         
 
-            #get the fsr, mfr and mrl from the label
-            fsr_min = min_battery_column.split('_')[1] #fsr
-            mfr_min = min_battery_column.split('_')[3] #mfr
-            mrl_min = min_battery_column.split('_')[5] #mrl
-            fsr_max = max_battery_column.split('_')[1] #fsr
-            mfr_max = max_battery_column.split('_')[3] #mfr
-            mrl_max = max_battery_column.split('_')[5] #mrl
+            # #get the fsr, mfr and mrl from the label
+            # fsr_min = min_battery_column.split('_')[1] #fsr
+            # mfr_min = min_battery_column.split('_')[3] #mfr
+            # mrl_min = min_battery_column.split('_')[5] #mrl
+            # fsr_max = max_battery_column.split('_')[1] #fsr
+            # mfr_max = max_battery_column.split('_')[3] #mfr
+            # mrl_max = max_battery_column.split('_')[5] #mrl
 
             
-            if fsr_max not in counts['fsr']['max']:
-                counts['fsr']['max'][fsr_max] = 1
-            else:
-                counts['fsr']['max'][fsr_max] += 1
-            if fsr_min not in counts['fsr']['min']:
-                counts['fsr']['min'][fsr_min] = 1
-            else:
-                counts['fsr']['min'][fsr_min] += 1
+            # if fsr_max not in counts['fsr']['max']:
+            #     counts['fsr']['max'][fsr_max] = 1
+            # else:
+            #     counts['fsr']['max'][fsr_max] += 1
+            # if fsr_min not in counts['fsr']['min']:
+            #     counts['fsr']['min'][fsr_min] = 1
+            # else:
+            #     counts['fsr']['min'][fsr_min] += 1
 
-            if mfr_max not in counts['mfr']['max']:
-                counts['mfr']['max'][mfr_max] = 1
-            else:
-                counts['mfr']['max'][mfr_max] += 1
-            if mfr_min not in counts['mfr']['min']:
-                counts['mfr']['min'][mfr_min] = 1
-            else:
-                counts['mfr']['min'][mfr_min] += 1
+            # if mfr_max not in counts['mfr']['max']:
+            #     counts['mfr']['max'][mfr_max] = 1
+            # else:
+            #     counts['mfr']['max'][mfr_max] += 1
+            # if mfr_min not in counts['mfr']['min']:
+            #     counts['mfr']['min'][mfr_min] = 1
+            # else:
+            #     counts['mfr']['min'][mfr_min] += 1
 
-            if mrl_max not in counts['mrl']['max']:
-                counts['mrl']['max'][mrl_max] = 1
-            else:
-                counts['mrl']['max'][mrl_max] += 1
-            if mrl_min not in counts['mrl']['min']:
-                counts['mrl']['min'][mrl_min] = 1
-            else:
-                counts['mrl']['min'][mrl_min] += 1
+            # if mrl_max not in counts['mrl']['max']:
+            #     counts['mrl']['max'][mrl_max] = 1
+            # else:
+            #     counts['mrl']['max'][mrl_max] += 1
+            # if mrl_min not in counts['mrl']['min']:
+            #     counts['mrl']['min'][mrl_min] = 1
+            # else:
+            #     counts['mrl']['min'][mrl_min] += 1
             
 
 
@@ -713,20 +752,23 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
 
             battery_usage_stats = {}
             battery_usage_for_n_agents = list(average_battery_usages[n_agents_string].values())
-            battery_usage_stats['min'] = min(battery_usage_for_n_agents)
-            battery_usage_stats['median'] = np.median(battery_usage_for_n_agents)
-            battery_usage_stats['max'] = max(battery_usage_for_n_agents)
+            std_battery_usage_for_n_agents = list(std_dev_battery_usages[n_agents_string].values())
+            # battery_usage_stats['min'] = min(battery_usage_for_n_agents)
+            # battery_usage_stats['median'] = np.median(battery_usage_for_n_agents)
+            # battery_usage_stats['max'] = max(battery_usage_for_n_agents)
             battery_usage_stats['mean'] = mean(battery_usage_for_n_agents)
-            battery_usage_stats['Standard Deviation'] = np.std(battery_usage_for_n_agents)
+            assert(len(battery_usage_for_n_agents) == len(std_battery_usage_for_n_agents))
+            assert(len(std_battery_usage_for_n_agents) == 1)
+            battery_usage_stats['Sample Standard Deviation'] = std_battery_usage_for_n_agents[0]
 
             average_battery_usage_stats_per_n_agents[n_agents_string] = battery_usage_stats
 
         battery_usage_for_n_agents_df = pd.DataFrame.from_dict(average_battery_usage_stats_per_n_agents, orient='index').reset_index()
         battery_usage_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
         #export to csv
-        if not os.path.exists(f'results/battery_usage/fsr_mfr_mrl/csv_tables'):
-            os.makedirs(f'results/battery_usage/fsr_mfr_mrl/csv_tables')
-        battery_usage_for_n_agents_df.to_csv(f'results/battery_usage/fsr_mfr_mrl/csv_tables/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        if not os.path.exists(f'results_{algorithm_dir}/battery_usage/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/battery_usage/{batch}/csv_tables')
+        battery_usage_for_n_agents_df.to_csv(f'results_{algorithm_dir}/battery_usage/{batch}/csv_tables/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
         # fig.text(0.04, 0.5, 'Traveled path (m)', va='center', rotation='vertical')
         # plt.xticks(x-0.5, config_labels, rotation=45)
@@ -743,10 +785,10 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
         # #set plot size
         # fig.set_size_inches(14, 25)
         # # plt.show()
-        # plt.savefig(f'battery_usage/fsr_mfr_mrl/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
-        # print(f'battery_usage/fsr_mfr_mrl/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
+        # plt.savefig(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
+        # print(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
         # #export counts to txt file, table format
-        # with open(f'battery_usage/fsr_mfr_mrl/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
+        # with open(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
         #     f.write(f'Counts for map {env_map}, noise {noise}, spawn time {spawn_time}\n')
         #     f.write('Counts for max ACP\n')
         #     f.write(tabulate(counts['fsr']['max'].items(), headers=['FSR', 'Count'], tablefmt='grid'))
@@ -763,7 +805,7 @@ def plot_battery_usage_with_different_configs(usb_drive, categories_and_values):
         #     f.write(tabulate(counts['mrl']['min'].items(), headers=['MRL', 'Count'], tablefmt='grid'))
     
 def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_values):
-    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/bytes_sent_received/'
+    dir = f'{usb_drive}averaged_data/{batch}/bytes_sent_received/'
     if not os.path.exists(dir):
         print(f'Directory {dir} does not exist')
         return
@@ -775,13 +817,13 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
         if splitted[1] == 'tilted':
             env_map += '_tilted'
         spawn_time = int(splitted[-3])
-        noise = splitted[-1].split('.')[0]
+        noise = splitted[-1].replace('.csv', '')
         #if splitted[-2] is a number, prepend it to noise with a decimal
-        try:
-            int(splitted[-2])
-            noise = splitted[-2] + '.' + noise
-        except:
-            pass
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
         noise = float(noise)
 
         print("noise:", noise)
@@ -820,14 +862,17 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
         total_min = 999999999
         total_max = 0
         averages_bytes_sent = {}
+        std_dev_bytes_sent = {}
         averages_bytes_received = {}
+        std_dev_bytes_received = {}
         for i,column in enumerate(columns):
             if column.startswith('Unnamed'):
                 i_irrelevant += 1
                 continue
-
-
-            n_agents = column.split('_')[-4]
+            if 'std' in column:
+                n_agents = column.split('_')[-5]
+            else:
+                n_agents = column.split('_')[-4]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
 
@@ -836,15 +881,15 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
             # color_index = int(hashlib.md5(str(config).encode()).hexdigest(), 16) % n_colors
             #make sure the color is the same for all three certainty types
             #also make sure same config has same color, between the different agents
-            if 'config_to_color_index' not in locals():
-                config_to_color_index = {}
-                current_color_index = 0
+            # if 'config_to_color_index' not in locals():
+            #     config_to_color_index = {}
+            #     current_color_index = 0
 
-            if config not in config_to_color_index:
-                config_to_color_index[config] = current_color_index
-                current_color_index += 1
+            # if config not in config_to_color_index:
+            #     config_to_color_index[config] = current_color_index
+            #     current_color_index += 1
             
-            color_index = config_to_color_index[config]
+            # color_index = config_to_color_index[config]
 
             # color = colors[color_index]
             # color = colors[(i-i_irrelevant)%n_colors]   
@@ -852,19 +897,19 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
             lbl = column.split('_')[:-2]
             lbl = '_'.join(lbl) 
 
-            fsr_symbol = '$R_f$'
-            fsr = lbl.split('_')[1] #R_f
-            if int(fsr) == 99999:
-                fsr = '$\infty$'
-            mfr_symbol = '$N_f$'
-            mfr = lbl.split('_')[3] #N_f
-            if int(mfr) == 99999:
-                mfr = '$\infty$'
-            mrl_symbol = '$N_s$'
-            mrl = lbl.split('_')[5] #N_s
-            if int(mrl) == 99999:
-                mrl = '$\infty$'
-            lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            # fsr_symbol = '$R_f$'
+            # fsr = lbl.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = lbl.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = lbl.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
             if lbl not in config_labels:
                 config_labels.append(lbl)
             agents_string = n_agents + '_agents'
@@ -872,19 +917,32 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
             # for v in data[column].to_numpy():
             #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
             
-            total_min = min(total_min, data[column][0])
-            total_max = max(total_max, data[column][0])
+            if 'std' in column:
+                std_dev_bytes_sent_received = data[column][0]
+                assert(data[column].shape[0] == 1)
 
-            if column.endswith('bytes_sent'):
-                average_bytes_sent = data[column].mean() #should be only 1 value
-                if agents_string not in averages_bytes_sent:
-                    averages_bytes_sent[agents_string] = {}
-                averages_bytes_sent[agents_string][lbl] = average_bytes_sent
-            elif column.endswith('bytes_received'):
-                average_bytes_received = data[column].mean()
-                if agents_string not in averages_bytes_received:
-                    averages_bytes_received[agents_string] = {}
-                averages_bytes_received[agents_string][lbl] = average_bytes_received
+                if 'bytes_sent' in column:
+                    if agents_string not in std_dev_bytes_sent:
+                        std_dev_bytes_sent[agents_string] = {}
+                    std_dev_bytes_sent[agents_string][lbl] = std_dev_bytes_sent_received
+                elif 'bytes_received' in column:
+                    if agents_string not in std_dev_bytes_received:
+                        std_dev_bytes_received[agents_string] = {}
+                    std_dev_bytes_received[agents_string][lbl] = std_dev_bytes_sent_received
+            else:
+
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+                if column.endswith('bytes_sent'):
+                    average_bytes_sent = data[column].mean() #should be only 1 value
+                    if agents_string not in averages_bytes_sent:
+                        averages_bytes_sent[agents_string] = {}
+                    averages_bytes_sent[agents_string][lbl] = average_bytes_sent
+                elif column.endswith('bytes_received'):
+                    average_bytes_received = data[column].mean()
+                    if agents_string not in averages_bytes_received:
+                        averages_bytes_received[agents_string] = {}
+                    averages_bytes_received[agents_string][lbl] = average_bytes_received
 
 
         average_bytes_sent_received_stats_per_n_agents = {}
@@ -1000,26 +1058,32 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
 
             bytes_sent_received_stats = {}
             bytes_sent_for_n_agents = list(averages_bytes_sent[n_agents_string].values())
+            std_bytes_sent_for_n_agents = list(std_dev_bytes_sent[n_agents_string].values())
             bytes_received_for_n_agents = list(averages_bytes_received[n_agents_string].values())
-            bytes_sent_received_stats['min sent'] = min(bytes_sent_for_n_agents)
-            bytes_sent_received_stats['median sent'] = np.median(bytes_sent_for_n_agents)
-            bytes_sent_received_stats['max sent'] = max(bytes_sent_for_n_agents)
+            std_bytes_received_for_n_agents = list(std_dev_bytes_received[n_agents_string].values())
+            # bytes_sent_received_stats['min sent'] = min(bytes_sent_for_n_agents)
+            # bytes_sent_received_stats['median sent'] = np.median(bytes_sent_for_n_agents)
+            # bytes_sent_received_stats['max sent'] = max(bytes_sent_for_n_agents)
             bytes_sent_received_stats['mean sent'] = mean(bytes_sent_for_n_agents)
-            bytes_sent_received_stats['Standard Deviation sent'] = np.std(bytes_sent_for_n_agents)
-            bytes_sent_received_stats['min received'] = min(bytes_received_for_n_agents)
-            bytes_sent_received_stats['median received'] = np.median(bytes_received_for_n_agents)
-            bytes_sent_received_stats['max received'] = max(bytes_received_for_n_agents)
+            assert(len(bytes_sent_for_n_agents) == len(std_bytes_sent_for_n_agents))
+            assert(len(std_bytes_sent_for_n_agents) == 1)
+            bytes_sent_received_stats['Sample Standard Deviation sent'] = std_bytes_sent_for_n_agents[0]
+            # bytes_sent_received_stats['min received'] = min(bytes_received_for_n_agents)
+            # bytes_sent_received_stats['median received'] = np.median(bytes_received_for_n_agents)
+            # bytes_sent_received_stats['max received'] = max(bytes_received_for_n_agents)
             bytes_sent_received_stats['mean received'] = mean(bytes_received_for_n_agents)
-            bytes_sent_received_stats['Standard Deviation received'] = np.std(bytes_received_for_n_agents)
+            assert(len(bytes_received_for_n_agents) == len(std_bytes_received_for_n_agents))
+            assert(len(std_bytes_received_for_n_agents) == 1)
+            bytes_sent_received_stats['Standard Deviation received'] = std_bytes_received_for_n_agents[0]
 
             average_bytes_sent_received_stats_per_n_agents[n_agents_string] = bytes_sent_received_stats
 
         bytes_sent_received_for_n_agents_df = pd.DataFrame.from_dict(average_bytes_sent_received_stats_per_n_agents, orient='index').reset_index()
         bytes_sent_received_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
         #export to csv
-        if not os.path.exists(f'results/bytes_sent_received/fsr_mfr_mrl/csv_tables'):
-            os.makedirs(f'results/bytes_sent_received/fsr_mfr_mrl/csv_tables')
-        bytes_sent_received_for_n_agents_df.to_csv(f'results/bytes_sent_received/fsr_mfr_mrl/csv_tables/bytes_sent_received_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+        if not os.path.exists(f'results_{algorithm_dir}/bytes_sent_received/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/bytes_sent_received/{batch}/csv_tables')
+        bytes_sent_received_for_n_agents_df.to_csv(f'results_{algorithm_dir}/bytes_sent_received/{batch}/csv_tables/bytes_sent_received_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
 
         # fig.text(0.04, 0.5, 'Traveled path (m)', va='center', rotation='vertical')
         # plt.xticks(x-0.5, config_labels, rotation=45)
@@ -1036,10 +1100,10 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
         # #set plot size
         # fig.set_size_inches(14, 25)
         # # plt.show()
-        # plt.savefig(f'battery_usage/fsr_mfr_mrl/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
-        # print(f'battery_usage/fsr_mfr_mrl/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
+        # plt.savefig(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
+        # print(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
         # #export counts to txt file, table format
-        # with open(f'battery_usage/fsr_mfr_mrl/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
+        # with open(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
         #     f.write(f'Counts for map {env_map}, noise {noise}, spawn time {spawn_time}\n')
         #     f.write('Counts for max ACP\n')
         #     f.write(tabulate(counts['fsr']['max'].items(), headers=['FSR', 'Count'], tablefmt='grid'))
@@ -1054,16 +1118,1031 @@ def plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_va
         #     f.write(tabulate(counts['mfr']['min'].items(), headers=['MFR', 'Count'], tablefmt='grid'))
         #     f.write('\n')
         #     f.write(tabulate(counts['mrl']['min'].items(), headers=['MRL', 'Count'], tablefmt='grid'))
-                
+
+def plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_values):
+    dir = f'{usb_drive}averaged_data/{batch}/max_nodes_and_leaves/'
+    if not os.path.exists(dir):
+        print(f'Directory {dir} does not exist')
+        return
+    #for all csv files in the directory
+    for file in os.listdir(dir):
+        filename = os.fsdecode(file)
+        splitted = filename.split('_')
+        env_map = splitted[0]
+        if splitted[1] == 'tilted':
+            env_map += '_tilted'
+        spawn_time = int(splitted[-3])
+        noise = splitted[-1].replace('.csv', '')
+        #if splitted[-2] is a number, prepend it to noise with a decimal
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
+        noise = float(noise)
+
+        print("noise:", noise)
+        print("spawn_time:", spawn_time)
+        # if noise != 0.0:
+        #     continue
+        # if spawn_time != 0:
+        #     continue
+
+
+        filepath = os.path.join(dir, filename)
+    
+        print("opening file:",filepath)
+        data = pd.read_csv(filepath)
+        columns = data.columns
+        
+        agents = sorted(categories_and_values[env_map]['agents'], key=lambda x: int(x.split('_')[0]))
+
+    
+        # fig,ax = plt.subplots(len(agents),1)
+    
+        # color = 'tab:red'
+        n_configs = int((len(columns)-1)/len(agents)) #-2 because of time and first unnamed
+        print("n_colors:", len(columns)-1, '/', len(agents), n_configs)
+        # colors = plt.cm.viridis(np.linspace(0, 1, n_colors))
+        # colors = [plt.cm.get_cmap("Set3")(i % 12) for i in range(n_colors)]  # Categorical colors
+        colors = generate_high_contrast_hsv_colors(n_configs)
+        i_irrelevant = 0
+        
+        x = np.arange(n_configs)
+        config_labels = []
+        counts = {}
+        counts['mrl'] = {}
+        counts['mfr'] = {}
+        counts['fsr'] = {}
+        total_min = 999999999
+        total_max = 0
+        average_max_nodes = {}
+        std_dev_max_nodes = {}
+        average_max_leaves = {}
+        std_dev_max_leaves = {}
+        for i,column in enumerate(columns):
+            if column.startswith('Unnamed'):
+                i_irrelevant += 1
+                continue
+            if 'std' in column:
+                n_agents = column.split('_')[-5]
+            else:
+                n_agents = column.split('_')[-4]
+            # print("colorindex: ", (i-i_irrelevant)%n_colors)
+            config = '_'.join(column.split('_')[0:6])
+
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            # color_index = int(hashlib.md5(str(config).encode()).hexdigest(), 16) % n_colors
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            if 'config_to_color_index' not in locals():
+                config_to_color_index = {}
+                current_color_index = 0
+
+            if config not in config_to_color_index:
+                config_to_color_index[config] = current_color_index
+                current_color_index += 1
+            
+            color_index = config_to_color_index[config]
+
+            # color = colors[color_index]
+            # color = colors[(i-i_irrelevant)%n_colors]   
+            #label is column without agent number
+            lbl = column.split('_')[:-2]
+            lbl = '_'.join(lbl) 
+
+            # fsr_symbol = '$R_f$'
+            # fsr = lbl.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = lbl.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = lbl.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            if lbl not in config_labels:
+                config_labels.append(lbl)
+            agents_string = n_agents + '_agents'
+            # ax[agents.index(agents_string)].bar(color_index, data[column].to_numpy()[-1], color='green')
+            # for v in data[column].to_numpy():
+            #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
+            
+            if 'std' in column:
+                std_dev_max_nodes_leaves = data[column][0]
+                assert(data[column].shape[0] == 1)
+
+                if 'max_leaves' in column:
+                    if agents_string not in std_dev_max_leaves:
+                        std_dev_max_leaves[agents_string] = {}
+                    std_dev_max_leaves[agents_string][lbl] = std_dev_max_nodes_leaves
+                elif 'max_nodes' in column:
+                    if agents_string not in std_dev_max_nodes:
+                        std_dev_max_nodes[agents_string] = {}
+                    std_dev_max_nodes[agents_string][lbl] = std_dev_max_nodes_leaves
+            else:
+
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                if column.endswith('max_leaves'):
+                    average_bytes_sent = data[column].mean() #should be only 1 value
+                    if agents_string not in average_max_nodes:
+                        average_max_nodes[agents_string] = {}
+                    average_max_nodes[agents_string][lbl] = average_bytes_sent
+                elif column.endswith('max_nodes'):
+                    average_bytes_received = data[column].mean()
+                    if agents_string not in average_max_leaves:
+                        average_max_leaves[agents_string] = {}
+                    average_max_leaves[agents_string][lbl] = average_bytes_received
+
+
+        average_max_nodes_and_leaves_stats_per_n_agents = {}
+        for n_agents_string in agents:
+            n_agents = n_agents_string.split('_')[0]
+            # for t in data['time']:
+            #     ax[agents.index(n_agents_string)].axvline(x=t, color='gray', linestyle='--', linewidth=0.5)
+            # ax[agents.index(n_agents_string)].set_xlabel('')
+            # ax[agents.index(n_agents_string)].set_ylabel('')
+            # ax[agents.index(n_agents_string)].set_title(f'{n_agents} agents', wrap=True)
+            # ax[agents.index(n_agents_string)].set_ylim(0,100)
+
+
+            # min_bytes_sent = 0
+            # max_battery_column = ''
+            # min_battery = 999
+            # min_battery_column = ''
+            # for i,column in enumerate(columns):
+            #     if column == 'time' or column.startswith('Unnamed'):
+            #         continue
+            #     #if column agents is not the same as n_agents_string, skip
+            #     if column.split('_')[-2] != n_agents:
+            #         continue
+            #     config = '_'.join(column.split('_')[0:6])
+            #     lbl = column.split('_')[:-2]
+            #     lbl = '_'.join(lbl) 
+
+            #     fsr_symbol = '$R_f$'
+            #     fsr = lbl.split('_')[1] #R_f
+            #     if int(fsr) == 99999:
+            #         fsr = '$\infty$'
+            #     mfr_symbol = '$N_f$'
+            #     mfr = lbl.split('_')[3] #N_f
+            #     if int(mfr) == 99999:
+            #         mfr = '$\infty$'
+            #     mrl_symbol = '$N_s$'
+            #     mrl = lbl.split('_')[5] #N_s
+            #     if int(mrl) == 99999:
+            #         mrl = '$\infty$'
+            #     lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            #     battery = data[column].to_numpy()[-1]
+            #     if battery > min_bytes_sent:
+            #         min_bytes_sent = battery
+            #         max_battery_column = config
+            #     if battery < min_battery:
+            #         min_battery = battery
+            # #         min_battery_column = config
+
+            
+            # # min_battery_color_index = config_to_color_index[min_battery_column]
+            # # max_battery_color_index = config_to_color_index[max_battery_column]
+            # # ax[agents.index(n_agents_string)].set_ylim(total_min * 0.9, total_max * 1.1)
+            # # ax[agents.index(n_agents_string)].bar(min_battery_color_index, min_battery, facecolor='none', edgecolor='springgreen', linewidth=4)
+            # # ax[agents.index(n_agents_string)].bar(max_battery_color_index, max_battery, facecolor='none', edgecolor='darkslategray', linewidth=4)
+
+            # if 'max' not in counts['fsr']:
+            #     counts['fsr']['max'] = {}
+            # if 'min' not in counts['fsr']:
+            #     counts['fsr']['min'] = {}
+    
+            # if 'max' not in counts['mfr']:
+            #     counts['mfr']['max'] = {}
+            # if 'min' not in counts['mfr']:
+            #     counts['mfr']['min'] = {}
+           
+            # if 'max' not in counts['mrl']:
+            #     counts['mrl']['max'] = {}
+            # if 'min' not in counts['mrl']:
+            #     counts['mrl']['min'] = {}
+
+        
+
+            # #get the fsr, mfr and mrl from the label
+            # fsr_min = min_battery_column.split('_')[1] #fsr
+            # mfr_min = min_battery_column.split('_')[3] #mfr
+            # mrl_min = min_battery_column.split('_')[5] #mrl
+            # fsr_max = max_battery_column.split('_')[1] #fsr
+            # mfr_max = max_battery_column.split('_')[3] #mfr
+            # mrl_max = max_battery_column.split('_')[5] #mrl
+
+            
+            # if fsr_max not in counts['fsr']['max']:
+            #     counts['fsr']['max'][fsr_max] = 1
+            # else:
+            #     counts['fsr']['max'][fsr_max] += 1
+            # if fsr_min not in counts['fsr']['min']:
+            #     counts['fsr']['min'][fsr_min] = 1
+            # else:
+            #     counts['fsr']['min'][fsr_min] += 1
+
+            # if mfr_max not in counts['mfr']['max']:
+            #     counts['mfr']['max'][mfr_max] = 1
+            # else:
+            #     counts['mfr']['max'][mfr_max] += 1
+            # if mfr_min not in counts['mfr']['min']:
+            #     counts['mfr']['min'][mfr_min] = 1
+            # else:
+            #     counts['mfr']['min'][mfr_min] += 1
+
+            # if mrl_max not in counts['mrl']['max']:
+            #     counts['mrl']['max'][mrl_max] = 1
+            # else:
+            #     counts['mrl']['max'][mrl_max] += 1
+            # if mrl_min not in counts['mrl']['min']:
+            #     counts['mrl']['min'][mrl_min] = 1
+            # else:
+            #     counts['mrl']['min'][mrl_min] += 1
+            
+
+
+            #set legend
+            # ax[agents.index(n_agents_string)].legend(loc='center right', fontsize=8)
+
+            max_nodes_leaves_stats = {}
+            max_nodes_for_n_agents = list(average_max_nodes[n_agents_string].values())
+            std_max_nodes_for_n_agents = list(std_dev_max_nodes[n_agents_string].values())
+            max_leaves_for_n_agents = list(average_max_leaves[n_agents_string].values())
+            std_max_leaves_for_n_agents = list(std_dev_max_leaves[n_agents_string].values())
+            # max_nodes_leaves_stats['min max nodes'] = min(max_nodes_for_n_agents)
+            # max_nodes_leaves_stats['median max nodes'] = np.median(max_nodes_for_n_agents)
+            # max_nodes_leaves_stats['max max nodes'] = max(max_nodes_for_n_agents)
+            max_nodes_leaves_stats['mean max nodes'] = mean(max_nodes_for_n_agents)
+            assert(len(max_nodes_for_n_agents) == len(std_max_nodes_for_n_agents))
+            assert(len(std_max_nodes_for_n_agents) == 1)
+            max_nodes_leaves_stats['Sample Standard Deviation max nodes'] = std_max_nodes_for_n_agents[0]
+            # max_nodes_leaves_stats['min max leaves'] = min(max_leaves_for_n_agents)
+            # max_nodes_leaves_stats['median max leaves'] = np.median(max_leaves_for_n_agents)
+            # max_nodes_leaves_stats['max max leaves'] = max(max_leaves_for_n_agents)
+            max_nodes_leaves_stats['mean max leaves'] = mean(max_leaves_for_n_agents)
+            assert(len(max_leaves_for_n_agents) == len(std_max_leaves_for_n_agents))
+            assert(len(std_max_leaves_for_n_agents) == 1)
+            max_nodes_leaves_stats['Standard Deviation max leaves'] = std_max_leaves_for_n_agents[0]
+
+            average_max_nodes_and_leaves_stats_per_n_agents[n_agents_string] = max_nodes_leaves_stats
+
+        max_nodes_leaves_for_n_agents_df = pd.DataFrame.from_dict(average_max_nodes_and_leaves_stats_per_n_agents, orient='index').reset_index()
+        max_nodes_leaves_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #export to csv
+        if not os.path.exists(f'results_{algorithm_dir}/max_nodes_and_leaves/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/max_nodes_and_leaves/{batch}/csv_tables')
+        max_nodes_leaves_for_n_agents_df.to_csv(f'results_{algorithm_dir}/max_nodes_and_leaves/{batch}/csv_tables/max_nodes_and_leaves_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+
+        # fig.text(0.04, 0.5, 'Traveled path (m)', va='center', rotation='vertical')
+        # plt.xticks(x-0.5, config_labels, rotation=45)
+
+        # fig.tight_layout()
+        #set left, bottom, right, top, wspace, hspace
+        # fig.suptitle(f'Coverage for map {map},  noise {noise}, spawn time {spawn_time}, coverage', wrap=True)
+        #only keep unique labels in legend
+        # handles, labels = ax[0].get_legend_handles_labels()
+        # unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
+        # fig.legend(*zip(*unique), loc='center right', bbox_to_anchor=(0.9, 0.1), fontsize=8)
+        
+        # plt.subplots_adjust(left=0.08, bottom=0.1, right=0.96, top=0.95, hspace=0.15, wspace=0.2)
+        # #set plot size
+        # fig.set_size_inches(14, 25)
+        # # plt.show()
+        # plt.savefig(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
+        # print(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
+        # #export counts to txt file, table format
+        # with open(f'battery_usage/{batch}/battery_usage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
+        #     f.write(f'Counts for map {env_map}, noise {noise}, spawn time {spawn_time}\n')
+        #     f.write('Counts for max ACP\n')
+        #     f.write(tabulate(counts['fsr']['max'].items(), headers=['FSR', 'Count'], tablefmt='grid'))
+        #     f.write('\n')
+        #     f.write(tabulate(counts['mfr']['max'].items(), headers=['MFR', 'Count'], tablefmt='grid'))
+        #     f.write('\n')
+        #     f.write(tabulate(counts['mrl']['max'].items(), headers=['MRL', 'Count'], tablefmt='grid'))
+        #     f.write('\n')
+        #     f.write('Counts for min ACP\n')
+        #     f.write(tabulate(counts['fsr']['min'].items(), headers=['FSR', 'Count'], tablefmt='grid'))
+        #     f.write('\n')
+        #     f.write(tabulate(counts['mfr']['min'].items(), headers=['MFR', 'Count'], tablefmt='grid'))
+        #     f.write('\n')
+        #     f.write(tabulate(counts['mrl']['min'].items(), headers=['MRL', 'Count'], tablefmt='grid')) 
+
+def plot_collisions_with_different_configs(usb_drive, categories_and_values):
+    dir = f'{usb_drive}averaged_data/{batch}/collisions/'
+    if not os.path.exists(dir):
+        print(f'Directory {dir} does not exist')
+        return
+    #for all csv files in the directory
+    for file in os.listdir(dir):
+        filename = os.fsdecode(file)
+        splitted = filename.split('_')
+        env_map = splitted[0]
+        if splitted[1] == 'tilted':
+            env_map += '_tilted'
+        spawn_time = int(splitted[-3])
+        noise = splitted[-1].replace('.csv', '')
+        #if splitted[-2] is a number, prepend it to noise with a decimal
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
+        noise = float(noise)
+
+        print("noise:", noise)
+        print("spawn_time:", spawn_time)
+        # if noise != 0.0:
+        #     continue
+        # if spawn_time != 0:
+        #     continue
+
+
+        filepath = os.path.join(dir, filename)
+    
+        print("opening file:",filepath)
+        data = pd.read_csv(filepath)
+        columns = data.columns
+        
+        agents = sorted(categories_and_values[env_map]['agents'], key=lambda x: int(x.split('_')[0]))
+
+    
+        # fig,ax = plt.subplots(len(agents),1)
+    
+        # color = 'tab:red'
+        n_configs = int((len(columns)-1)/len(agents)) #-2 because of time and first unnamed
+        print("n_colors:", len(columns)-1, '/', len(agents), n_configs)
+        # colors = plt.cm.viridis(np.linspace(0, 1, n_colors))
+        # colors = [plt.cm.get_cmap("Set3")(i % 12) for i in range(n_colors)]  # Categorical colors
+        colors = generate_high_contrast_hsv_colors(n_configs)
+        i_irrelevant = 0
+        
+        x = np.arange(n_configs)
+        config_labels = []
+        counts = {}
+        counts['mrl'] = {}
+        counts['mfr'] = {}
+        counts['fsr'] = {}
+        total_min = 999999999
+        total_max = 0
+        average_obstacle = {}
+        std_dev_obstacle = {}
+        average_agent = {}
+        std_dev_agent = {}
+        for i,column in enumerate(columns):
+            if column.startswith('Unnamed'):
+                i_irrelevant += 1
+                continue
+
+            if 'std' in column:
+                n_agents = column.split('_')[-4]
+            else:
+                n_agents = column.split('_')[-3]
+            # print("colorindex: ", (i-i_irrelevant)%n_colors)
+            config = '_'.join(column.split('_')[0:6])
+
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            # color_index = int(hashlib.md5(str(config).encode()).hexdigest(), 16) % n_colors
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            if 'config_to_color_index' not in locals():
+                config_to_color_index = {}
+                current_color_index = 0
+
+            if config not in config_to_color_index:
+                config_to_color_index[config] = current_color_index
+                current_color_index += 1
+            
+            color_index = config_to_color_index[config]
+
+            # color = colors[color_index]
+            # color = colors[(i-i_irrelevant)%n_colors]   
+            #label is column without agent number
+            lbl = column.split('_')[:-2]
+            lbl = '_'.join(lbl) 
+
+            # fsr_symbol = '$R_f$'
+            # fsr = lbl.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = lbl.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = lbl.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            if lbl not in config_labels:
+                config_labels.append(lbl)
+            agents_string = n_agents + '_agents'
+            # ax[agents.index(agents_string)].bar(color_index, data[column].to_numpy()[-1], color='green')
+            # for v in data[column].to_numpy():
+            #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
+            
+            if 'std' in column:
+                std_dev_obstacle_collisions = data[column][0]
+                assert(data[column].shape[0] == 1)
+
+                if column.endswith('obstacle_std'):
+                    if agents_string not in std_dev_obstacle:
+                        std_dev_obstacle[agents_string] = {}
+                    std_dev_obstacle[agents_string][lbl] = std_dev_obstacle_collisions
+                elif column.endswith('agent_std'):
+                    if agents_string not in std_dev_agent:
+                        std_dev_agent[agents_string] = {}
+                    std_dev_agent[agents_string][lbl] = std_dev_obstacle_collisions
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                if column.endswith('obstacle'):
+                    average_obstacle_collisions = data[column].mean() #should be only 1 value
+                    if agents_string not in average_obstacle:
+                        average_obstacle[agents_string] = {}
+                    average_obstacle[agents_string][lbl] = average_obstacle_collisions
+                elif column.endswith('agent'):
+                    average_agent_collisions = data[column].mean()
+                    if agents_string not in average_agent:
+                        average_agent[agents_string] = {}
+                    average_agent[agents_string][lbl] = average_agent_collisions
+
+
+        average_collisions_stats_per_n_agents = {}
+        for n_agents_string in agents:
+            n_agents = n_agents_string.split('_')[0]
+
+            collisions_stats = {}
+            obstacle_collisions_for_n_agents = list(average_obstacle[n_agents_string].values())
+            agent_collisions_for_n_agents = list(average_agent[n_agents_string].values())
+            # max_nodes_leaves_stats['min max nodes'] = min(max_nodes_for_n_agents)
+            # max_nodes_leaves_stats['median max nodes'] = np.median(max_nodes_for_n_agents)
+            # max_nodes_leaves_stats['max max nodes'] = max(max_nodes_for_n_agents)
+            collisions_stats['mean obstacle'] = mean(obstacle_collisions_for_n_agents)
+            collisions_stats['Standard Deviation obstacle'] = np.std(obstacle_collisions_for_n_agents)
+            # max_nodes_leaves_stats['min max leaves'] = min(max_leaves_for_n_agents)
+            # max_nodes_leaves_stats['median max leaves'] = np.median(max_leaves_for_n_agents)
+            # max_nodes_leaves_stats['max max leaves'] = max(max_leaves_for_n_agents)
+            collisions_stats['mean agent'] = mean(agent_collisions_for_n_agents)
+            collisions_stats['Standard Deviation agent'] = np.std(agent_collisions_for_n_agents)
+
+            average_collisions_stats_per_n_agents[n_agents_string] = collisions_stats
+
+        collisions_for_n_agents_df = pd.DataFrame.from_dict(average_collisions_stats_per_n_agents, orient='index').reset_index()
+        collisions_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #export to csv
+        if not os.path.exists(f'results_{algorithm_dir}/collisions/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/collisions/{batch}/csv_tables')
+        collisions_for_n_agents_df.to_csv(f'results_{algorithm_dir}/collisions/{batch}/csv_tables/collisions_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+
+def plot_mission_time_with_different_configs(usb_drive, categories_and_values):
+    dir = f'{usb_drive}averaged_data/{batch}/mission_time/'
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    #for all csv files in the directory
+    for file in os.listdir(dir):
+        filename = os.fsdecode(file)
+        splitted = filename.split('_')
+        env_map = splitted[0]
+        if splitted[1] == 'tilted':
+            env_map += '_tilted'
+        spawn_time = int(splitted[-3])
+        noise = splitted[-1].replace('.csv', '')
+        #if splitted[-2] is a number, prepend it to noise with a decimal
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
+        noise = float(noise)
+
+        print("noise:", noise)
+        print("spawn_time:", spawn_time)
+        # if noise != 0.0:
+        #     continue
+        # if spawn_time != 0:
+        #     continue
+
+
+        filepath = os.path.join(dir, filename)
+    
+        print("opening file:",filepath)
+        data = pd.read_csv(filepath)
+        columns = data.columns
+        
+        agents = sorted(categories_and_values[env_map]['agents'], key=lambda x: int(x.split('_')[0]))
+
+    
+        # fig,ax = plt.subplots(len(agents),1)
+    
+        # color = 'tab:red'
+        n_configs = int((len(columns)-1)/len(agents)) #-2 because of time and first unnamed
+        print("n_colors:", len(columns)-1, '/', len(agents), n_configs)
+        # colors = plt.cm.viridis(np.linspace(0, 1, n_colors))
+        # colors = [plt.cm.get_cmap("Set3")(i % 12) for i in range(n_colors)]  # Categorical colors
+        colors = generate_high_contrast_hsv_colors(n_configs)
+        i_irrelevant = 0
+        
+        x = np.arange(n_configs)
+        config_labels = []
+        counts = {}
+        counts['mrl'] = {}
+        counts['mfr'] = {}
+        counts['fsr'] = {}
+        total_min = 999999999
+        total_max = 0
+        average_mission_times = {}
+        std_dev_mission_times = {}
+        for i,column in enumerate(columns):
+            if column.startswith('Unnamed'):
+                i_irrelevant += 1
+                continue
+            if 'std' in column:
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]
+            # print("colorindex: ", (i-i_irrelevant)%n_colors)
+            config = '_'.join(column.split('_')[0:6])
+
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            # color_index = int(hashlib.md5(str(config).encode()).hexdigest(), 16) % n_colors
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            if 'config_to_color_index' not in locals():
+                config_to_color_index = {}
+                current_color_index = 0
+
+            if config not in config_to_color_index:
+                config_to_color_index[config] = current_color_index
+                current_color_index += 1
+            
+            color_index = config_to_color_index[config]
+
+            # color = colors[color_index]
+            # color = colors[(i-i_irrelevant)%n_colors]   
+            #label is column without agent number
+            lbl = column.split('_')[:-2]
+            lbl = '_'.join(lbl) 
+
+            # fsr_symbol = '$R_f$'
+            # fsr = lbl.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = lbl.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = lbl.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            if lbl not in config_labels:
+                config_labels.append(lbl)
+            agents_string = n_agents + '_agents'
+            # ax[agents.index(agents_string)].bar(color_index, data[column].to_numpy()[-1], color='green')
+            # for v in data[column].to_numpy():
+            #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
+            
+            if 'std' in column:
+                std_dev_mission_time = data[column][0]
+                assert(data[column].shape[0] == 1)
+
+                if agents_string not in std_dev_mission_times:
+                    std_dev_mission_times[agents_string] = {}
+                std_dev_mission_times[agents_string][lbl] = std_dev_mission_time
+            else:
+
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                average_mission_time = data[column].mean() #should be only 1 value
+                if agents_string not in average_mission_times:
+                    average_mission_times[agents_string] = {}
+                average_mission_times[agents_string][lbl] = average_mission_time
+
+        average_mission_time_stats_per_n_agents = {}
+        for n_agents_string in agents:
+            n_agents = n_agents_string.split('_')[0]
+            # for t in data['time']:
+            #     ax[agents.index(n_agents_string)].axvline(x=t, color='gray', linestyle='--', linewidth=0.5)
+            # ax[agents.index(n_agents_string)].set_xlabel('')
+            # ax[agents.index(n_agents_string)].set_ylabel('')
+            # ax[agents.index(n_agents_string)].set_title(f'{n_agents} agents', wrap=True)
+            # ax[agents.index(n_agents_string)].set_ylim(0,100)
+
+
+            max_traveled_path = 0
+            max_traveled_path_column = ''
+            min_traveled_path = 999
+            min_traveled_path_column = ''
+            for i,column in enumerate(columns):
+                if column == 'time' or column.startswith('Unnamed'):
+                    continue
+                #if column agents is not the same as n_agents_string, skip
+                if column.split('_')[-2] != n_agents:
+                    continue
+                config = '_'.join(column.split('_')[0:6])
+                lbl = column.split('_')[:-2]
+                lbl = '_'.join(lbl) 
+
+                # fsr_symbol = '$R_f$'
+                # fsr = lbl.split('_')[1] #R_f
+                # if int(fsr) == 99999:
+                #     fsr = '$\infty$'
+                # mfr_symbol = '$N_f$'
+                # mfr = lbl.split('_')[3] #N_f
+                # if int(mfr) == 99999:
+                #     mfr = '$\infty$'
+                # mrl_symbol = '$N_s$'
+                # mrl = lbl.split('_')[5] #N_s
+                # if int(mrl) == 99999:
+                #     mrl = '$\infty$'
+                # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+                traveled_path = data[column].to_numpy()[-1]
+                if traveled_path > max_traveled_path:
+                    max_traveled_path = traveled_path
+                    max_traveled_path_column = config
+                if traveled_path < min_traveled_path:
+                    min_traveled_path = traveled_path
+                    min_traveled_path_column = config
+
+    
+            mission_time_stats = {}
+            mission_time_for_n_agents = list(average_mission_times[n_agents_string].values())
+            std_mission_time_for_n_agents = list(std_dev_mission_times[n_agents_string].values())
+            # traveled_path_stats['min'] = min(traveled_path_for_n_agents)
+            # traveled_path_stats['median'] = np.median(traveled_path_for_n_agents)
+            # traveled_path_stats['max'] = max(traveled_path_for_n_agents)
+            mission_time_stats['mean'] = mean(mission_time_for_n_agents)
+            assert(len(mission_time_for_n_agents) == len(std_mission_time_for_n_agents))
+            assert(len(std_mission_time_for_n_agents) == 1)
+            mission_time_stats['Sample Standard Deviation'] = std_mission_time_for_n_agents[0]
+
+            average_mission_time_stats_per_n_agents[n_agents_string] = mission_time_stats
+
+
+        mission_time_for_n_agents_df = pd.DataFrame.from_dict(average_mission_time_stats_per_n_agents, orient='index').reset_index()
+        mission_time_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #export to csv
+        if not os.path.exists(f'results_{algorithm_dir}/mission_time/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/mission_time/{batch}/csv_tables')
+        mission_time_for_n_agents_df.to_csv(f'results_{algorithm_dir}/mission_time/{batch}/csv_tables/mission_time_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+
+def plot_return_rate_with_different_configs(usb_drive, categories_and_values):
+    dir = f'{usb_drive}averaged_data/{batch}/return_rate/'
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    #for all csv files in the directory
+    for file in os.listdir(dir):
+        filename = os.fsdecode(file)
+        splitted = filename.split('_')
+        env_map = splitted[0]
+        if splitted[1] == 'tilted':
+            env_map += '_tilted'
+        spawn_time = int(splitted[-3])
+        noise = splitted[-1].replace('.csv', '')
+        #if splitted[-2] is a number, prepend it to noise with a decimal
+        # try:
+        #     int(splitted[-2])
+        #     noise = splitted[-2] + '.' + noise
+        # except:
+        #     pass
+        noise = float(noise)
+
+        print("noise:", noise)
+        print("spawn_time:", spawn_time)
+        # if noise != 0.0:
+        #     continue
+        # if spawn_time != 0:
+        #     continue
+
+
+        filepath = os.path.join(dir, filename)
+    
+        print("opening file:",filepath)
+        data = pd.read_csv(filepath)
+        columns = data.columns
+        
+        agents = sorted(categories_and_values[env_map]['agents'], key=lambda x: int(x.split('_')[0]))
+
+    
+        # fig,ax = plt.subplots(len(agents),1)
+    
+        # color = 'tab:red'
+        n_configs = int((len(columns)-1)/len(agents)) #-2 because of time and first unnamed
+        print("n_colors:", len(columns)-1, '/', len(agents), n_configs)
+        # colors = plt.cm.viridis(np.linspace(0, 1, n_colors))
+        # colors = [plt.cm.get_cmap("Set3")(i % 12) for i in range(n_colors)]  # Categorical colors
+        colors = generate_high_contrast_hsv_colors(n_configs)
+        i_irrelevant = 0
+        
+        x = np.arange(n_configs)
+        config_labels = []
+        counts = {}
+        counts['mrl'] = {}
+        counts['mfr'] = {}
+        counts['fsr'] = {}
+        total_min = 999999999
+        total_max = 0
+        average_return_rates = {}
+        std_dev_return_rates = {}
+        for i,column in enumerate(columns):
+            if column.startswith('Unnamed'):
+                i_irrelevant += 1
+                continue
+            if 'std' in column:
+                n_agents = column.split('_')[-3]
+            else:
+                n_agents = column.split('_')[-2]
+            # print("colorindex: ", (i-i_irrelevant)%n_colors)
+            config = '_'.join(column.split('_')[0:6])
+
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            # color_index = int(hashlib.md5(str(config).encode()).hexdigest(), 16) % n_colors
+            #make sure the color is the same for all three certainty types
+            #also make sure same config has same color, between the different agents
+            if 'config_to_color_index' not in locals():
+                config_to_color_index = {}
+                current_color_index = 0
+
+            if config not in config_to_color_index:
+                config_to_color_index[config] = current_color_index
+                current_color_index += 1
+            
+            color_index = config_to_color_index[config]
+
+            # color = colors[color_index]
+            # color = colors[(i-i_irrelevant)%n_colors]   
+            #label is column without agent number
+            lbl = column.split('_')[:-2]
+            lbl = '_'.join(lbl) 
+
+            # fsr_symbol = '$R_f$'
+            # fsr = lbl.split('_')[1] #R_f
+            # if int(fsr) == 99999:
+            #     fsr = '$\infty$'
+            # mfr_symbol = '$N_f$'
+            # mfr = lbl.split('_')[3] #N_f
+            # if int(mfr) == 99999:
+            #     mfr = '$\infty$'
+            # mrl_symbol = '$N_s$'
+            # mrl = lbl.split('_')[5] #N_s
+            # if int(mrl) == 99999:
+            #     mrl = '$\infty$'
+            # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+            if lbl not in config_labels:
+                config_labels.append(lbl)
+            agents_string = n_agents + '_agents'
+            # ax[agents.index(agents_string)].bar(color_index, data[column].to_numpy()[-1], color='green')
+            # for v in data[column].to_numpy():
+            #     ax[agents.index(agents_string)].text(color_index, data[column][0]*0.9, f'{v:.2f}', ha='center', va='bottom', fontsize=8)
+            
+            if 'std' in column:
+                std_dev_return_rate = data[column][0]
+                assert(data[column].shape[0] == 1)
+
+                if agents_string not in std_dev_return_rates:
+                    std_dev_return_rates[agents_string] = {}
+                std_dev_return_rates[agents_string][lbl] = std_dev_return_rate
+            else:
+                total_min = min(total_min, data[column][0])
+                total_max = max(total_max, data[column][0])
+
+                average_return_rate = data[column].mean() #should be only 1 value
+                if agents_string not in average_return_rates:
+                    average_return_rates[agents_string] = {}
+                average_return_rates[agents_string][lbl] = average_return_rate
+
+        average_return_rate_stats_per_n_agents = {}
+        for n_agents_string in agents:
+            n_agents = n_agents_string.split('_')[0]
+            # for t in data['time']:
+            #     ax[agents.index(n_agents_string)].axvline(x=t, color='gray', linestyle='--', linewidth=0.5)
+            # ax[agents.index(n_agents_string)].set_xlabel('')
+            # ax[agents.index(n_agents_string)].set_ylabel('')
+            # ax[agents.index(n_agents_string)].set_title(f'{n_agents} agents', wrap=True)
+            # ax[agents.index(n_agents_string)].set_ylim(0,100)
+
+
+            max_traveled_path = 0
+            max_traveled_path_column = ''
+            min_traveled_path = 999
+            min_traveled_path_column = ''
+            for i,column in enumerate(columns):
+                if column == 'time' or column.startswith('Unnamed'):
+                    continue
+                #if column agents is not the same as n_agents_string, skip
+                if column.split('_')[-2] != n_agents:
+                    continue
+                config = '_'.join(column.split('_')[0:6])
+                lbl = column.split('_')[:-2]
+                lbl = '_'.join(lbl) 
+
+                # fsr_symbol = '$R_f$'
+                # fsr = lbl.split('_')[1] #R_f
+                # if int(fsr) == 99999:
+                #     fsr = '$\infty$'
+                # mfr_symbol = '$N_f$'
+                # mfr = lbl.split('_')[3] #N_f
+                # if int(mfr) == 99999:
+                #     mfr = '$\infty$'
+                # mrl_symbol = '$N_s$'
+                # mrl = lbl.split('_')[5] #N_s
+                # if int(mrl) == 99999:
+                #     mrl = '$\infty$'
+                # lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
+                traveled_path = data[column].to_numpy()[-1]
+                if traveled_path > max_traveled_path:
+                    max_traveled_path = traveled_path
+                    max_traveled_path_column = config
+                if traveled_path < min_traveled_path:
+                    min_traveled_path = traveled_path
+                    min_traveled_path_column = config
+
+    
+            return_rate_stats = {}
+            return_rate_for_n_agents = list(average_return_rates[n_agents_string].values())
+            std_return_rate_for_n_agents = list(std_dev_return_rates[n_agents_string].values())
+            # traveled_path_stats['min'] = min(traveled_path_for_n_agents)
+            # traveled_path_stats['median'] = np.median(traveled_path_for_n_agents)
+            # traveled_path_stats['max'] = max(traveled_path_for_n_agents)
+            return_rate_stats['mean'] = mean(return_rate_for_n_agents)
+            assert(len(return_rate_for_n_agents) == len(std_return_rate_for_n_agents))
+            assert(len(std_return_rate_for_n_agents) == 1)
+            return_rate_stats['Sample Standard Deviation'] = std_return_rate_for_n_agents[0]
+
+            average_return_rate_stats_per_n_agents[n_agents_string] = return_rate_stats
+
+
+        return_rate_for_n_agents_df = pd.DataFrame.from_dict(average_return_rate_stats_per_n_agents, orient='index').reset_index()
+        return_rate_for_n_agents_df.rename(columns={'index': 'n_agents'}, inplace=True)
+        #export to csv
+        if not os.path.exists(f'results_{algorithm_dir}/return_rate/{batch}/csv_tables'):
+            os.makedirs(f'results_{algorithm_dir}/return_rate/{batch}/csv_tables')
+        return_rate_for_n_agents_df.to_csv(f'results_{algorithm_dir}/return_rate/{batch}/csv_tables/return_rate_{env_map}_noise_{noise}_spawn_time_{spawn_time}.csv', index=False)
+
+def aggregate_metrics_per_env_map_per_noise(metric_name):
+    results_dir = f'results_{algorithm_dir}'
+    aggregated_data = {}
+
+    for metric_type in [metric_name]:
+        metric_dir = os.path.join(results_dir, metric_type, f'{batch}', 'csv_tables')
+        if not os.path.exists(metric_dir):
+            continue
+
+        for file in os.listdir(metric_dir):
+            if not file.endswith('.csv'):
+                continue
+
+            # Extract env_map from filename
+            parts = file.split('_')
+            # underscores_in_metric_name = metric_name.count('_')
+            # if metric_name == 'CP(T':
+            #     metric_name = 'CP(T_end)'
+            # elif metric_name == 'AC(T':
+            #     metric_name = 'AC(T_end)'
+            file_without_metric = file.replace(metric_name + '_', '')
+            env_map = file_without_metric.split('_')[0]
+            if file_without_metric.split('_')[1] == 'tilted':
+                env_map += '_tilted'
+
+            noise  = file_without_metric.split('_')[-4]
+            noise = float(noise)
+
+            # Read the CSV file
+            filepath = os.path.join(metric_dir, file)
+            data = pd.read_csv(filepath)
+
+            # Initialize storage for this env_map and metric
+            if env_map not in aggregated_data:
+                aggregated_data[env_map] = {}
+            if noise not in aggregated_data[env_map]:
+                aggregated_data[env_map][noise] = {}
+            # if metric_name not in aggregated_data[env_map][noise]:
+            #     aggregated_data[env_map][noise][metric_name] = {}
+
+            # Aggregate metrics per agent
+            for _, row in data.iterrows():
+                n_agents = row['n_agents']
+                if n_agents not in aggregated_data[env_map][noise]:
+                    aggregated_data[env_map][noise][n_agents] = {}
+
+
+                metrics = aggregated_data[env_map][noise][n_agents]
+                for column in row.index:
+                    if column in ['n_agents', 'Unnamed: 0']:
+                        continue
+                    
+                    if column not in metrics:
+                        metrics[column] = []
+                    metrics[column].append(row[column])
+                        
+                # # metrics['min_of_min'] = min(metrics['min_of_min'], row['min'])
+                # # metrics['max_of_max'] = max(metrics['max_of_max'], row['max'])
+                # print(type(metrics['mean_of_means']))
+                # metrics['mean_of_means'].append(row['mean'])
+                # metrics['max_std_dev'] = max(metrics['max_std_dev'], row['Standard Deviation'])
+                # metrics['median_of_medians'].append(row['median'])
+                # Finalize aggregation (calculate mean of means and median of medians)
+    # Finalize aggregation across all files
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                for key in metrics.keys():
+                    if key == 'n_agents':
+                        continue
+                        # if 'mean of means' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = mean(metrics[key])
+                        # elif 'median of medians' in key and isinstance(metrics[key], list):
+                        #     metrics[key] = np.median(metrics[key])
+                    if isinstance(metrics[key], list):
+                        if 'Standard Deviation' in key:
+                            #calculate pooled std deviation
+                            squared_standard_devs = [x**2 for x in metrics[key]]
+                            pooled_variance = np.mean(squared_standard_devs)
+                            metrics[key] = np.sqrt(pooled_variance)
+                        else:
+                            metrics[key] = mean(metrics[key])
+
+    # Print or save aggregated data for insights
+    # for env_map, metrics_data in aggregated_data.items():
+    #     print(f"Aggregated metrics for {env_map}:")
+    #     for metric_name, agents_data in metrics_data.items():
+    #         print(f"  {metric_name}:")
+    #         for n_agents, metrics in agents_data.items():
+    #             print(f"    {n_agents}: {metrics}")
+
+    #export to csv
+    # Export aggregated data to CSV
+    rows = []
+    for env_map, permap in aggregated_data.items():
+        for noise, pernoise in permap.items():
+            # for metric_name, agents_data in pernoise.items():
+            for n_agents, metrics in pernoise.items():
+                row = {
+                    'env_map': env_map,
+                    'noise': noise,
+                    'n_agents': n_agents,
+                }
+                row.update(metrics)
+                rows.append(row)
+    aggregated_df = pd.DataFrame(rows)
+    #change any column names with 'Standard Deviation' to 'pooled standard deviation'
+    aggregated_df.rename(columns=lambda x: x.replace('Sample Standard Deviation', '$s_p$'), inplace=True)
+
+    aggregated_df.to_csv(f'results_{algorithm_dir}/{metric_type}/{batch}/aggregated_metrics.csv', index=False)
+    # Separate aggregated data for certainty and coverage
+
+# def aggregate_metrics_per_noise_level():
+
+def average_aggregated_metrics(metric):
+    input_file = f'results_{algorithm_dir}/{metric}/{batch}/aggregated_metrics.csv'
+    output_file = f'results_{algorithm_dir}/{metric}/{batch}/averaged_metrics.csv'
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+    
+    # Group by 'noise' and calculate the mean for each group
+    grouped = aggregated_df.groupby('noise')
+
+    # Create a new DataFrame to store the averaged results
+    averaged_df = grouped.mean().reset_index()
+
+    # Add standard deviation columns for each numeric column
+    for column in aggregated_df.columns:
+        if column not in ['env_map', 'n_agents', 'noise'] and '$s_p$' not in column:
+            std_dev_column = grouped[column].std().reset_index(name=f"std dev {column}")
+            averaged_df = pd.merge(averaged_df, std_dev_column, on='noise', how='left')
+
+    #remove columns with '$s_p$'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('\$s_p\$')]
+
+    # Save the averaged metrics to a new CSV file
+    averaged_df.to_csv(output_file, index=False)
+    
+    print(f"Averaged metrics saved to {output_file}")
 
 configs = []
 
-#get all files in 'implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'
-for file in os.listdir('implementation_and_examples/agent_implementation/configs/fsr_mfr_mrl'):
+#get all files in 'implementation_and_examples/agent_implementation/configs/{batch}'
+for file in os.listdir(f'implementation_and_examples/agent_implementation/configs/{batch}'):
     config_name = file.split('.')[0]
     configs.append(config_name)    
 
-usb_drive = '/media/hugo/Thesis_Data/CLARE/'
+usb_drive = f'/media/hugo/Thesis_Data/{algorithm_dir}/'
 zipfiles = []
 completed_per_zip = []
 # for all files in the usb drive
@@ -1075,15 +2154,15 @@ for file in os.listdir(usb_drive):
         zipfiles.append(zip_file)
 
 #if directory  does not exist, create it
-if not os.path.exists('results/traveled_path'):
-    os.makedirs('results/traveled_path')
-if not os.path.exists('results/traveled_path/fsr_mfr_mrl'):
-    os.makedirs('results/traveled_path/fsr_mfr_mrl')
+if not os.path.exists(f'results_{algorithm_dir}/traveled_path'):
+    os.makedirs(f'results_{algorithm_dir}/traveled_path')
+if not os.path.exists(f'results_{algorithm_dir}/traveled_path/{batch}'):
+    os.makedirs(f'results_{algorithm_dir}/traveled_path/{batch}')
 
-if not os.path.exists('results/battery_usage'):
-    os.makedirs('results/battery_usage')
-if not os.path.exists('results/battery_usage/fsr_mfr_mrl'):
-    os.makedirs('results/battery_usage/fsr_mfr_mrl')
+if not os.path.exists(f'results_{algorithm_dir}/battery_usage'):
+    os.makedirs(f'results_{algorithm_dir}/battery_usage')
+if not os.path.exists(f'results_{algorithm_dir}/battery_usage/{batch}'):
+    os.makedirs(f'results_{algorithm_dir}/battery_usage/{batch}')
 
 
 
@@ -1094,4 +2173,10 @@ completed_experiments, categories_and_values = get_values_for_each_category(conf
 # plot_certainty_with_different_configs(usb_drive, categories_and_values)
 plot_battery_usage_with_different_configs(usb_drive, categories_and_values)
 plot_traveled_path_with_different_configs(usb_drive, categories_and_values)
-plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_values)
+# plot_bytes_sent_received_with_different_configs(usb_drive, categories_and_values)
+# plot_max_nodes_leaves_with_different_configs(usb_drive, categories_and_values)
+# plot_collisions_with_different_configs(usb_drive, categories_and_values)
+# plot_mission_time_with_different_configs(usb_drive, categories_and_values)
+# plot_return_rate_with_different_configs(usb_drive, categories_and_values)
+aggregate_metrics_per_env_map_per_noise('return_rate')
+average_aggregated_metrics('return_rate')

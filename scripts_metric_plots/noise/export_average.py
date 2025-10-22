@@ -781,8 +781,11 @@ def export_average_certainty_coverage_nodes_with_different_configs(usb_drive, zi
     
 
         
-usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/', '/media/hugo/Thesis_Data/CLARE_wallfollowing/']
-batches = ['noise', 'noise_wallfollowing']
+# usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/', '/media/hugo/Thesis_Data/CLARE_wallfollowing/']
+# batches = ['noise', 'noise_wallfollowing']
+usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE_oorm0o3/']
+batches = ['noise_oorm0o3']
+
 # batches = ['noise_QT']
 for i, usb_drive in enumerate(usb_drive_dirs):
     batch = batches[i]

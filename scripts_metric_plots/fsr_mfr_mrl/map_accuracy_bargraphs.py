@@ -529,6 +529,6 @@ if not os.path.exists('accuracy_plots'):
     os.makedirs('accuracy_plots')
 
 completed_experiments, categories_and_values = get_values_for_each_category(configs)   
-# check_if_all_required_experiments_done(completed_experiments, categories_and_values)
+check_if_all_required_experiments_done(completed_experiments, categories_and_values)
 # plot_certainty_with_different_configs(usb_drive, categories_and_values)
-plot_precision_recall_coverage_with_different_configs(usb_drive, categories_and_values)
+# plot_precision_recall_coverage_with_different_configs(usb_drive, categories_and_values)

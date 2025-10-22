@@ -14,9 +14,15 @@ from statistics import mean
 
 ticks_per_second = 16
 prefix = ''
-batch = "noise"
+# batch = "noise"
+# batch = "noise_wallfollowing"
+batch = "noise_oorm0o3"
 
-algorithm_dir = 'CLARE'
+
+# algorithm_dir = 'CLARE'
+# algorithm_dir = 'CLARE_wallfollowing'
+algorithm_dir = 'CLARE_oorm0o3'
+
 
 def parse_experiment_string(s):
     if not s.startswith('end'):
@@ -57,8 +63,8 @@ def create_experiment_string(
         f"_wifi_range_{format_value(comm_range)}"
         f"_message_loss_probability_{format_value(message_loss_probability)}"
         f"_frontier_search_radius_{format_value(frontier_search_radius)}"
-        f"_evaporation_time_{format_value(evaporation_time)}"
         f"_max_frontier_regions_{format_value(max_frontier_regions)}"
+        f"_evaporation_time_{format_value(evaporation_time)}"
         f"_max_route_length_{format_value(max_route_length)}"
     )
     
@@ -544,17 +550,17 @@ def plot_precision_recall_coverage_with_different_configs(usb_drive, categories_
             # accuracy_stats["min recall"] = min(recalls_for_n_agents)
             # accuracy_stats["median recall"] = np.median(recalls_for_n_agents)
             # accuracy_stats["max recall"] = max(recalls_for_n_agents)
-            accuracy_stats["Standard Deviation recall"] = mean(std_dev_recalls_for_n_agents)
+            accuracy_stats["Sample Standard Deviation recall"] = mean(std_dev_recalls_for_n_agents)
             accuracy_stats["precision"] = mean(precisions_for_n_agents)
             # accuracy_stats["min precision"] = min(precisions_for_n_agents)
             # accuracy_stats["median precision"] = np.median(precisions_for_n_agents)
             # accuracy_stats["max precision"] = max(precisions_for_n_agents)
-            accuracy_stats["Standard Deviation precision"] = mean(std_dev_precisions_for_n_agents)
+            accuracy_stats["Sample Standard Deviation precision"] = mean(std_dev_precisions_for_n_agents)
             accuracy_stats["coverage"] = mean(coverages_for_n_agents)
             # accuracy_stats["min coverage"] = min(coverages_for_n_agents)
             # accuracy_stats["median coverage"] = np.median(coverages_for_n_agents)
             # accuracy_stats["max coverage"] = max(coverages_for_n_agents)
-            accuracy_stats["Standard Deviation coverage"] = mean(std_dev_coverages_for_n_agents)
+            accuracy_stats["Sample Standard Deviation coverage"] = mean(std_dev_coverages_for_n_agents)
             # accuracy_stats["mean invalid area coverage"] = mean(invalid_area_coverages_for_n_agents)
             # accuracy_stats["min invalid area coverage"] = min(invalid_area_coverages_for_n_agents)
             # accuracy_stats["max invalid area coverage"] = max(invalid_area_coverages_for_n_agents)
@@ -698,7 +704,7 @@ def aggregate_metrics_per_env_map_per_noise():
                 rows.append(row)
     aggregated_df = pd.DataFrame(rows)
     #change any column names with 'Standard Deviation' to 'pooled standard deviation'
-    aggregated_df.rename(columns=lambda x: x.replace('Standard Deviation', '$s_p$'), inplace=True)
+    aggregated_df.rename(columns=lambda x: x.replace('Sample Standard Deviation', '$s_p$'), inplace=True)
 
     aggregated_df.to_csv(f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv', index=False)
     # Separate aggregated data for certainty and coverage
@@ -769,6 +775,40 @@ def average_aggregated_metrics_f1():
     
     #remove columns with 'precision' and 'recall' and 'coverage'
     averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('precision|recall|coverage')]
+
+
+    # Save the averaged metrics to a new CSV file
+    averaged_df.to_csv(output_file, index=False)
+    
+    print(f"Averaged metrics saved to {output_file}")
+
+def average_aggregated_metrics_cpm_over_agents_noise_0():
+    input_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/aggregated_metrics.csv'
+    output_file = f'results_{algorithm_dir}/accuracy_plots/{batch}/averaged_metrics_cp_m_per_agents_noise_0.csv'
+    
+    # Read the aggregated metrics CSV
+    aggregated_df = pd.read_csv(input_file)
+
+    #drop rows when noise != 0
+    aggregated_df = aggregated_df[aggregated_df['noise'] == 0]
+    
+    # Group by 'noise' and calculate the mean for each group
+    grouped = aggregated_df.groupby('n_agents')
+
+    # Create a new DataFrame to store the averaged results
+    averaged_df = grouped.mean().reset_index()
+
+    # Add standard deviation columns for each numeric column
+    for column in aggregated_df.columns:
+        if column not in ['env_map', 'n_agents', 'noise'] and '$s_p$' not in column:
+            std_dev_column = grouped[column].std().reset_index(name=f"std dev {column}")
+            averaged_df = pd.merge(averaged_df, std_dev_column, on='n_agents', how='left')
+
+    #remove columns with '$s_p$'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('\$s_p\$')]
+    
+    #remove columns with 'precision' and 'recall'
+    averaged_df = averaged_df.loc[:, ~averaged_df.columns.str.contains('precision|recall')]
 
 
     # Save the averaged metrics to a new CSV file
@@ -922,6 +962,7 @@ if not os.path.exists(f'results_{algorithm_dir}/accuracy_plots/' + batch):
 completed_experiments, categories_and_values = get_values_for_each_category(configs)   
 # check_if_all_required_experiments_done(completed_experiments, categories_and_values)
 # plot_certainty_with_different_configs(usb_drive, categories_and_values)
+
 plot_precision_recall_coverage_with_different_configs(usb_drive, categories_and_values)
 
 aggregate_metrics_per_env_map_per_noise()
@@ -930,6 +971,7 @@ average_aggregated_metrics()
 
 average_aggregated_metrics_f1()
 average_aggregated_metrics_cpm()
+average_aggregated_metrics_cpm_over_agents_noise_0()
 
-extract_aggregated_metrics_per_n_agents()
-extract_aggregated_metrics_per_n_agents_per_map_duo()
+# extract_aggregated_metrics_per_n_agents()
+# extract_aggregated_metrics_per_n_agents_per_map_duo()

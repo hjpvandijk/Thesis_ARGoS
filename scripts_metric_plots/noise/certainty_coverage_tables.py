@@ -1058,7 +1058,6 @@ def aggregate_metrics_per_env_map_per_noise():
 
     for env_map, permap in aggregated_data.items():
         for noise, pernoise in permap.items():
-            # for metric_name, agents_data in pernoise.items():
             for n_agents, metrics in pernoise.items():
                 row = {
                     'env_map': env_map,
@@ -1066,9 +1065,13 @@ def aggregate_metrics_per_env_map_per_noise():
                     'n_agents': n_agents,
                 }
                 row.update(metrics)
-                if metric_name in ['AC(T_end)', 'AAC']:
+                
+                # Determine if this is certainty or coverage data based on the metrics keys
+                is_certainty = any(key in ['free', 'occupied', 'all'] for key in metrics.keys())
+                
+                if is_certainty:
                     certainty_rows.append(row)
-                elif metric_name in ['CP(T_end)', 'ACP']:
+                else:
                     coverage_rows.append(row)
 
     # Create DataFrames for certainty and coverage
@@ -1113,7 +1116,7 @@ if not os.path.exists('certainty_plots'):
 completed_experiments, categories_and_values = get_values_for_each_category(configs)   
 # check_if_all_required_experiments_done(completed_experiments, categories_and_values)
 for usb_drive in usb_drive_dirs:
-    plot_certainty_with_different_configs(usb_drive, categories_and_values)
+#     plot_certainty_with_different_configs(usb_drive, categories_and_values)
     plot_coverage_with_different_configs(usb_drive, categories_and_values)
 # aggregate_metrics_per_env_map()
-aggregate_metrics_per_env_map_per_noise()
+# aggregate_metrics_per_env_map_per_noise()

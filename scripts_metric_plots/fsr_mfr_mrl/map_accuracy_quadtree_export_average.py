@@ -15,7 +15,7 @@ import concurrent.futures
 
 ticks_per_second = 16
 
-batch = 'fsr_mfr_mrl'
+batch = 'fsr_mfr_mrl_m1_5'
 
 prefix = ''
 
@@ -214,6 +214,8 @@ def check_if_all_required_experiments_done(completed_experiments, categories_and
     n_completed = 0
     n_non_completed = 0
     for map, map_values in categories_and_values.items():
+        if 'museum' not in map:
+            continue
         end_times = map_values['end_time']
         noises = sorted(map_values['noise'])
         comm_ranges = sorted(map_values['comm_range'])
@@ -369,6 +371,8 @@ def export_average_precision_recall_with_different_configs(usb_drive, zipfiles, 
     for map, map_values in categories_and_values.items():
         #if map != 'house':
          #   continue
+        if 'museum' not in map:
+            continue
         print("MAP:", map)
         set_variables_based_on_map(map)
 
@@ -388,6 +392,8 @@ def export_average_precision_recall_with_different_configs(usb_drive, zipfiles, 
 
         for end_time in end_times:
             for spawn_time in spawn_times:
+                if spawn_time != 'spawn_time_0':
+                    continue
                 # if spawn_time == 'spawn_time_0': #only spawn_time_0 for now
                 #     continue
                 arena_boxes = read_arena_boxes()
@@ -400,8 +406,8 @@ def export_average_precision_recall_with_different_configs(usb_drive, zipfiles, 
                 #     continue
 
                 for noise in noises:
-                    # if noise != 1:
-                    #     continue
+                    if noise != 0:
+                        continue
                     n_experiments = len(comm_ranges) * len(message_loss_probabilities) * len(frontier_search_radii) * len(evaporation_times) * len(max_frontier_regions) * len(max_route_lengths) * len(agents) * len(seeds)
                     run_experiments = 0
                     datafile = f'{dir_accuracy}{map}_{spawn_time}_noise_{noise}_.csv'
@@ -504,7 +510,7 @@ for file in os.listdir('implementation_and_examples/agent_implementation/configs
     configs.append(config_name)    
 
 print("Getting all files in the usb drive")
-usb_drive = '/media/hugo/Thesis_Data/CLARE/'
+usb_drive = '/media/hugo/Thesis_Data/CLARE_m1o5/'
 zipfiles = []
 completed_per_zip = []
 # for all files in the usb drive
@@ -518,6 +524,6 @@ for file in os.listdir(usb_drive):
 print("Getting all unique experiments from the zip files")
 completed_experiments, categories_and_values = get_values_for_each_category(configs) 
 # print("Checking if all required experiments are done")  
-check_if_all_required_experiments_done(completed_experiments, categories_and_values)
+# check_if_all_required_experiments_done(completed_experiments, categories_and_values)
 # print("Exporting average precision and recall")
 export_average_precision_recall_with_different_configs(usb_drive, zipfiles, categories_and_values)

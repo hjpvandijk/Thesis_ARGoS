@@ -203,7 +203,7 @@ def generate_high_contrast_hsv_colors(n_colors):
     return [colorsys.hsv_to_rgb(hues[i], saturations[i], values[i]) for i in range(n_colors)]
 
 def plot_certainty_with_different_configs(usb_drive, categories_and_values):
-    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/certainty/'
+    dir = f'{usb_drive}averaged_data/fsr_mfr_mrl/certainty_area_compensated/'
     if not os.path.exists(dir):
         os.makedirs(dir)
     #for all csv files in the directory
@@ -263,6 +263,9 @@ def plot_certainty_with_different_configs(usb_drive, categories_and_values):
                 max_all = max(max_all, data[column].max())
                 min_all = min(min_all, data[column].min())
 
+            if 'std' in column:
+                continue
+
             n_agents = column.split('_')[-3]
             agents_string = n_agents + '_agents'
             
@@ -276,7 +279,15 @@ def plot_certainty_with_different_configs(usb_drive, categories_and_values):
             lbl = column.split('_')[:-3]
             lbl = '_'.join(lbl)
             thisax[agents.index(agents_string)].plot(time.to_numpy(), data[column].to_numpy(), label=lbl, color=color)
-
+            if f"{column}_std" in data.columns:
+                std_dev = data[f"{column}_std"].to_numpy()
+                thisax[agents.index(agents_string)].fill_between(
+                    time.to_numpy(),
+                    data[column].to_numpy() - std_dev,
+                    data[column].to_numpy() + std_dev,
+                    color=color,
+                    alpha=0.2
+                )
 
         for n_agents_string in agents:
             n_agents = n_agents_string.split('_')[0]
@@ -405,7 +416,9 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
             data[column] /= total_area
             data[column] *= 100            
 
-
+            if 'std' in column:
+                continue
+            
             n_agents = column.split('_')[-2]
             # print("colorindex: ", (i-i_irrelevant)%n_colors)
             config = '_'.join(column.split('_')[0:6])
@@ -446,6 +459,15 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
             lbl = f'{fsr_symbol}={fsr}, {mfr_symbol}={mfr}, {mrl_symbol}={mrl}'
             agents_string = n_agents + '_agents'
             ax[agents.index(agents_string)].plot(time.to_numpy(), data[column].to_numpy(), label=lbl, color=color)
+            if f"{column}_std" in data.columns:
+                std_dev = data[f"{column}_std"].to_numpy()
+                ax[agents.index(agents_string)].fill_between(
+                    time.to_numpy(),
+                    data[column].to_numpy() - std_dev,
+                    data[column].to_numpy() + std_dev,
+                    color=color,
+                    alpha=0.2
+                )
 
             #get average coverage over time
             average_coverage = data[column].mean()
@@ -592,8 +614,8 @@ def plot_coverage_with_different_configs(usb_drive, categories_and_values):
         plt.subplots_adjust(left=0.08, bottom=0.04, right=0.96, top=0.95, hspace=0.15, wspace=0.2)
         #set plot size
         fig.set_size_inches(14, 25)
-        # plt.show()
-        plt.savefig(f'coverage_plots/fsr_mfr_mrl/coverage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
+        plt.show()
+        # plt.savefig(f'coverage_plots/fsr_mfr_mrl/coverage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png', dpi=300, transparent=False, bbox_inches='tight')
         print(f'coverage_plots/fsr_mfr_mrl/coverage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.png')
         #export counts to txt file, table format
         with open(f'coverage_plots/fsr_mfr_mrl/coverage_{env_map}_noise_{noise}_spawn_time_{spawn_time}.txt', 'w') as f:
@@ -620,7 +642,7 @@ for file in os.listdir('implementation_and_examples/agent_implementation/configs
     config_name = file.split('.')[0]
     configs.append(config_name)    
 
-usb_drive_dirs = ['/media/hugo/Philips_main/CLARE/', '/media/hugo/Philips_main/CLARE_office/']
+usb_drive_dirs = ['/media/hugo/Thesis_Data/CLARE/', '/media/hugo/Thesis_Data/CLARE_office/']
 # zipfiles = []
 # completed_per_zip = []
 # # for all files in the usb drive
@@ -633,17 +655,17 @@ usb_drive_dirs = ['/media/hugo/Philips_main/CLARE/', '/media/hugo/Philips_main/C
 #             zipfiles.append(zip_file)
 
 #if directory  does not exist, create it
-if not os.path.exists('coverage_plots'):
-    os.makedirs('coverage_plots')
+# if not os.path.exists('coverage_plots'):
+#     os.makedirs('coverage_plots')
 
-#if directory  does not exist, create it
-if not os.path.exists('certainty_plots'):
-    os.makedirs('certainty_plots')
+# #if directory  does not exist, create it
+# if not os.path.exists('certainty_plots'):
+#     os.makedirs('certainty_plots')
 
 
 
 completed_experiments, categories_and_values = get_values_for_each_category(configs)   
 # check_if_all_required_experiments_done(completed_experiments, categories_and_values)
-# plot_certainty_with_different_configs(usb_drive, categories_and_values)
 for usb_drive in usb_drive_dirs:
+    # plot_certainty_with_different_configs(usb_drive, categories_and_values)
     plot_coverage_with_different_configs(usb_drive, categories_and_values)

@@ -15,7 +15,7 @@ import concurrent.futures
 
 ticks_per_second = 16
 
-batch = 'noise'
+batch = 'noise_oorm0o3'
 
 prefix = ''
 
@@ -504,7 +504,7 @@ for file in os.listdir('implementation_and_examples/agent_implementation/configs
     configs.append(config_name)    
 
 print("Getting all files in the usb drive")
-usb_drive = '/media/hugo/Thesis_Data/CLARE_wallfollowing/'
+usb_drive = '/media/hugo/Thesis_Data/CLARE_oorm0o3/'
 zipfiles = []
 completed_per_zip = []
 # for all files in the usb drive
@@ -518,6 +518,6 @@ for file in os.listdir(usb_drive):
 print("Getting all unique experiments from the zip files")
 completed_experiments, categories_and_values = get_values_for_each_category(configs) 
 # print("Checking if all required experiments are done")  
-# check_if_all_required_experiments_done(completed_experiments, categories_and_values)
+check_if_all_required_experiments_done(completed_experiments, categories_and_values)
 # print("Exporting average precision and recall")
 export_average_precision_recall_with_different_configs(usb_drive, zipfiles, categories_and_values)
